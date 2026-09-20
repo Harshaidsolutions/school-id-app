@@ -20,6 +20,7 @@ export interface JWTPayload {
   instituteId?: string | null;
   assignedClass: string | null;
   assignedSection: string | null;
+  isSuperAdmin?: boolean;
 }
 
 export interface LoginRequest {
@@ -43,4 +44,5 @@ export interface AuthUser {
   instituteId?: string | null;
   assignedClass: string | null;
   assignedSection: string | null;
+  isSuperAdmin?: boolean;
 }

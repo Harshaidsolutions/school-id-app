@@ -33,8 +33,8 @@ import { BrandLockup } from "../components/BrandLockup";
 import { AppIcon } from "../components/AppIcon";
 import { headerLogoSize } from "../constants/headerLogo";
 import { BRAND } from "../constants/brand";
-import { SUPPORT_PHONE, buildHelpSupportMessage } from "../constants/support";
-import { openWhatsApp } from "../utils/whatsappBusiness";
+import { SUPPORT_PHONE } from "../constants/support";
+import type { NotificationsResponse } from "../types";
 
 /** Bundled locally — same assets as v1.0.38. */
 const SCHOOL_BUILDING = require("../../assets/school-building.jpg");
@@ -75,10 +75,12 @@ export function HomeScreen() {
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const notifRes = await api.get<{ unreadCount: number }>(
+      const notifRes = await api.get<NotificationsResponse>(
         "/teacher/notifications"
       );
-      setUnread(notifRes.data.unreadCount ?? 0);
+      setUnread(
+        notifRes.data.notifications.filter((n) => !n.is_read).length
+      );
     } catch {
       /* ignore */
     } finally {
@@ -289,15 +291,6 @@ export function HomeScreen() {
       </ScrollView>
 
       <View style={[styles.fabStack, { bottom: spacing.xl + insets.bottom }]}>
-        <Pressable
-          style={[styles.fab, { backgroundColor: colors.whatsappGreen }]}
-          onPress={() =>
-            void openWhatsApp(buildHelpSupportMessage("Your School"))
-          }
-          accessibilityLabel="WhatsApp support"
-        >
-          <Ionicons name="logo-whatsapp" size={icons.xl} color="#FFFFFF" />
-        </Pressable>
         <Pressable
           style={[styles.fab, { backgroundColor: colors.primaryOrange }]}
           onPress={() => void Linking.openURL(`tel:${SUPPORT_PHONE}`)}

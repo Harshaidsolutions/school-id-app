@@ -8,6 +8,7 @@ interface NavItem {
   label: string;
   icon: string;
   to: string;
+  superOnly?: boolean;
 }
 
 const NAV: NavItem[] = [
@@ -18,7 +19,7 @@ const NAV: NavItem[] = [
   { label: "Models", icon: "model", to: "/models" },
   { label: "Notifications", icon: "notification", to: "/notifications" },
   { label: "Brochures", icon: "brochure", to: "/brochures" },
-  { label: "Extra Section 1", icon: "extra", to: "/extra-1" },
+  { label: "Admin Management", icon: "extra", to: "/extra-1", superOnly: true },
   { label: "Extra Section 2", icon: "extra", to: "/extra-2" },
 ];
 
@@ -30,7 +31,7 @@ const TITLES: Record<string, string> = {
   "/models": "Models",
   "/notifications": "Notifications",
   "/brochures": "Brochures",
-  "/extra-1": "Extra Section 1",
+  "/extra-1": "Admin Management",
   "/extra-2": "Extra Section 2",
   "/students": "Students",
   "/institute-members": "Members",
@@ -110,10 +111,16 @@ function SideIcon({ name }: { name: string }) {
   }
 }
 
-function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarNav({
+  onNavigate,
+  isSuperAdmin,
+}: {
+  onNavigate?: () => void;
+  isSuperAdmin?: boolean;
+}) {
   return (
     <nav className="space-y-0.5 px-2 py-2">
-      {NAV.map((item) => (
+      {NAV.filter((item) => !item.superOnly || isSuperAdmin === true).map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
@@ -176,10 +183,22 @@ export function AppLayout() {
   const sidebarContent = (
     <>
       <div className="shrink-0 border-b border-border px-2 py-2.5">
-        <HarshaLogo compact />
+        {user?.isSuperAdmin === true || user?.isSuperAdmin === undefined ? (
+          <HarshaLogo compact />
+        ) : (
+          <div className="px-1 py-1 text-sm">
+            <div className="text-text-muted">Hi</div>
+            <div className="font-semibold text-text-navy">
+              {user?.displayName?.trim() || user?.username || user?.email}
+            </div>
+          </div>
+        )}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <SidebarNav onNavigate={() => setMobileOpen(false)} />
+        <SidebarNav
+          onNavigate={() => setMobileOpen(false)}
+          isSuperAdmin={user?.isSuperAdmin === true || user?.isSuperAdmin === undefined}
+        />
       </div>
     </>
   );

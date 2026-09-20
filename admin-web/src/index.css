@@ -196,6 +196,8 @@
   .list-table-scroll {
     @apply w-full max-w-full overflow-x-auto;
     -webkit-overflow-scrolling: touch;
+    max-height: calc(100vh - 14rem);
+    overflow-y: auto;
   }
 
   .list-data-table {
@@ -205,6 +207,9 @@
 
   .list-data-table thead {
     @apply bg-content-bg text-left text-xs font-semibold uppercase tracking-wide text-text-muted;
+    position: sticky;
+    top: 0;
+    z-index: 2;
   }
 
   .list-data-table th,

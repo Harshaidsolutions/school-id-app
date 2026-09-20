@@ -107,6 +107,22 @@ export function NotificationsScreen({ navigation, route }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<NotificationItem | null>(null);
 
+  const syncLocalReadToServer = useCallback(
+    async (notifications: NotificationItem[], localRead: string[]) => {
+      const readSet = new Set(localRead);
+      const pending = notifications.filter(
+        (n) => readSet.has(n.id) && !n.is_read
+      );
+      if (pending.length === 0) return;
+      await Promise.all(
+        pending.map((n) =>
+          api.post(`/teacher/notifications/${n.id}/read`).catch(() => undefined)
+        )
+      );
+    },
+    []
+  );
+
   const migrateLegacyHiddenNotifications = useCallback(async () => {
     try {
       const hiddenRaw = await AsyncStorage.getItem(HIDDEN_NOTIFS_KEY);
@@ -150,15 +166,23 @@ export function NotificationsScreen({ navigation, route }: Props) {
       } catch {
         localRead = [];
       }
+      await syncLocalReadToServer(data.notifications, localRead);
       const readSet = new Set(localRead);
-      setItems(data.notifications.map((n) => normalizeNotification(n, readSet)));
+      setItems(
+        data.notifications.map((n) => {
+          const norm = normalizeNotification(n, readSet);
+          return readSet.has(n.id) || norm.is_read
+            ? { ...norm, is_read: true }
+            : norm;
+        })
+      );
     } catch (err) {
       setError(getErrorMessage(err, "Failed to load notifications."));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [migrateLegacyHiddenNotifications]);
+  }, [migrateLegacyHiddenNotifications, syncLocalReadToServer]);
 
   useFocusEffect(
     useCallback(() => {

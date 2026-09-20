@@ -60,6 +60,8 @@ export async function login(
     >(
       `SELECT u.id, u.email, u.username, u.password_hash, u.role, u.school_id, u.institute_id,
               u.assigned_class, u.assigned_section, u.created_at,
+              u.display_name, u.phone, u.photo_url,
+              COALESCE(u.is_super_admin, false) AS is_super_admin,
               s.is_active AS school_is_active,
               i.is_active AS institute_is_active
        FROM users u
@@ -99,6 +101,10 @@ export async function login(
       });
     }
 
+    const isSuperAdmin =
+      user.role === "admin" &&
+      (user as User & { is_super_admin?: boolean }).is_super_admin === true;
+
     const token = signAuthToken({
       userId: user.id,
       role: user.role,
@@ -106,7 +112,15 @@ export async function login(
       instituteId: user.institute_id,
       assignedClass: user.assigned_class,
       assignedSection: user.assigned_section,
+      isSuperAdmin: isSuperAdmin || undefined,
     });
+
+    const profile = user as User & {
+      display_name?: string | null;
+      phone?: string | null;
+      photo_url?: string | null;
+      is_super_admin?: boolean;
+    };
 
     res.status(200).json({
       status: "ok",
@@ -120,6 +134,10 @@ export async function login(
         instituteId: user.institute_id,
         assignedClass: user.assigned_class,
         assignedSection: user.assigned_section,
+        displayName: profile.display_name ?? null,
+        phone: profile.phone ?? null,
+        photoUrl: profile.photo_url ?? null,
+        isSuperAdmin,
       },
     });
   } catch (error) {

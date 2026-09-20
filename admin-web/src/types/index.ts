@@ -1,10 +1,15 @@
 export interface AuthUser {
   id: string;
   email: string;
+  username?: string | null;
   role: "admin" | "teacher";
   schoolId: string | null;
   assignedClass: string | null;
   assignedSection: string | null;
+  displayName?: string | null;
+  phone?: string | null;
+  photoUrl?: string | null;
+  isSuperAdmin?: boolean;
 }
 
 export interface LoginResponse {

@@ -13,6 +13,11 @@ import {
 } from "../utils/ownerCredentials";
 import type { SchoolRow } from "../types/admin";
 import { parseBooleanField } from "../utils/parseBoolean";
+import {
+  assertSchoolOwnedByAdmin,
+  requireAdminScope,
+} from "../utils/adminScope";
+import { routeParam } from "../utils/routeParams";
 
 const SALT_ROUNDS = 10;
 
@@ -59,6 +64,7 @@ export async function createSchool(
   next: NextFunction
 ): Promise<void> {
   try {
+    const scope = await requireAdminScope(req);
     const name = String(req.body.name ?? "").trim();
     if (!name) throw new AppError("School name is required", 400);
 
@@ -69,10 +75,10 @@ export async function createSchool(
     const instructions = String(req.body.instructions ?? "").trim() || null;
 
     const inserted = await pool.query<SchoolRow>(
-      `INSERT INTO schools (name, year, phone, school_code, address, instructions)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO schools (name, year, phone, school_code, address, instructions, owner_admin_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [name, year, phone, schoolCode, address, instructions]
+      [name, year, phone, schoolCode, address, instructions, scope.adminUserId]
     );
 
     const school = inserted.rows[0];
@@ -190,9 +196,20 @@ export async function listSchools(
   next: NextFunction
 ): Promise<void> {
   try {
+    const scope = await requireAdminScope(req);
     const year =
       typeof req.query.year === "string" ? req.query.year.trim() : "";
-    const { clause: where, values } = yearFilterClause("s.year", year);
+    const filters: string[] = [];
+    const values: unknown[] = [];
+    if (year) {
+      filters.push(`s.year = $${values.length + 1}`);
+      values.push(year);
+    }
+    if (!scope.isSuperAdmin) {
+      filters.push(`s.owner_admin_id = $${values.length + 1}`);
+      values.push(scope.adminUserId);
+    }
+    const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
 
     const result = await pool.query<SchoolRow & {
       owner_username: string | null;
@@ -228,15 +245,17 @@ export async function updateSchool(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { id } = req.params;
+    const id = routeParam(req.params.id);
     if (!id) throw new AppError("School id is required", 400);
 
+    const scope = await requireAdminScope(req);
     const existing = await pool.query<SchoolRow>(
       `SELECT * FROM schools WHERE id = $1 LIMIT 1`,
       [id]
     );
     const school = existing.rows[0];
     if (!school) throw new AppError("School not found", 404);
+    await assertSchoolOwnedByAdmin(scope, id);
 
     const name =
       req.body.name !== undefined

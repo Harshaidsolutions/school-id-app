@@ -259,6 +259,43 @@ async function migrate() {
       ON notification_deletes (user_id, notification_id);
   `);
 
+  await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_url TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS is_super_admin BOOLEAN DEFAULT false;
+
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS owner_admin_id UUID REFERENCES users(id);
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS owner_admin_id UUID REFERENCES users(id);
+
+    CREATE INDEX IF NOT EXISTS idx_schools_owner_admin ON schools (owner_admin_id);
+    CREATE INDEX IF NOT EXISTS idx_institutes_owner_admin ON institutes (owner_admin_id);
+
+    UPDATE users
+    SET is_super_admin = true
+    WHERE role = 'admin'
+      AND (
+        lower(email) = 'harshaidsolutions@gmail.com'
+        OR is_super_admin IS TRUE
+      );
+
+    UPDATE schools s
+    SET owner_admin_id = u.id
+    FROM users u
+    WHERE s.owner_admin_id IS NULL
+      AND u.role = 'admin'
+      AND u.is_super_admin = true
+      AND lower(u.email) = 'harshaidsolutions@gmail.com';
+
+    UPDATE institutes i
+    SET owner_admin_id = u.id
+    FROM users u
+    WHERE i.owner_admin_id IS NULL
+      AND u.role = 'admin'
+      AND u.is_super_admin = true
+      AND lower(u.email) = 'harshaidsolutions@gmail.com';
+  `);
+
   // Templates are global (shared by all schools / teachers)
   await pool.query(`
     ALTER TABLE templates ALTER COLUMN school_id DROP NOT NULL;

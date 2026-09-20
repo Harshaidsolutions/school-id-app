@@ -293,27 +293,33 @@ export function getVisibleStudentFields(
       if (!field.enabled || field.key === "photo_id") continue;
       if (seenKeys.has(field.key)) continue;
       const value = readFieldValue(student, field.key, classSection, field.label);
-      if (value == null || !String(value).trim()) continue;
       seenKeys.add(field.key);
       rows.push({
         key: field.key,
         label: fieldLabel(formFields, field.key, field.label),
-        value: String(value),
+        value:
+          value != null && String(value).trim() !== ""
+            ? String(value).trim()
+            : "-",
       });
     }
     return rows;
   }
 
-  const standard = STUDENT_DETAIL_FIELDS.filter((field) => {
-    const value = fieldValue(field, student, classSection);
-    return value != null && value.trim() !== "";
-  }).map((field) => ({
-    key: String(field.key),
-    label: field.label,
-    value: fieldValue(field, student, classSection) ?? "",
-  }));
+  const standard = STUDENT_DETAIL_FIELDS.map((field) => {
+    const raw = fieldValue(field, student, classSection);
+    return {
+      key: String(field.key),
+      label: field.label,
+      value: raw != null && String(raw).trim() !== "" ? String(raw).trim() : "-",
+    };
+  });
 
-  return [...standard, ...dynamicEntries(student)];
+  const dynamic = dynamicEntries(student);
+  const dynamicWithEmpty = dynamic.length
+    ? dynamic
+    : [];
+  return [...standard, ...dynamicWithEmpty];
 }
 
 /** Populate edit/add forms — same resolution as student details. */

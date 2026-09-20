@@ -46,5 +46,34 @@ export async function openWhatsApp(message: string): Promise<void> {
   );
 }
 
+/** Open WhatsApp share sheet so the user picks a contact (no pre-filled admin number). */
+export async function openWhatsAppShare(message: string): Promise<void> {
+  const text = encodeURIComponent(message);
+
+  if (Platform.OS === "android") {
+    const intentUrl = `intent://send?text=${text}#Intent;scheme=whatsapp;package=${WHATSAPP_ANDROID};end`;
+    try {
+      await Linking.openURL(intentUrl);
+      return;
+    } catch {
+      /* fallback below */
+    }
+  }
+
+  const iosUrl = `whatsapp://send?text=${text}`;
+  try {
+    const canOpen = await Linking.canOpenURL(iosUrl);
+    if (canOpen) {
+      await Linking.openURL(iosUrl);
+      return;
+    }
+  } catch {
+    /* fallback below */
+  }
+
+  const waMeUrl = `https://wa.me/?text=${text}`;
+  await Linking.openURL(waMeUrl);
+}
+
 /** @deprecated Use openWhatsApp */
 export const openWhatsAppBusiness = openWhatsApp;

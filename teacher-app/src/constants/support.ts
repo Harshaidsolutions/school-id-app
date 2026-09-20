@@ -23,3 +23,8 @@ export function buildReferMessage(schoolName: string): string {
   const name = schoolName.trim() || "Your School";
   return `I would like to refer a new school from My School ID Card.\n#${name}`;
 }
+
+export function buildReferShareMessage(catalogLink: string): string {
+  const link = catalogLink.trim() || SUPPORT_WEBSITE;
+  return `I would like to refer this School ID Card Application\n\n${link}`;
+}

@@ -185,6 +185,16 @@ export function EditStudentScreen({ navigation, route }: Props) {
       return;
     }
 
+    const phoneDigits = parentPhone.replace(/\D/g, "");
+    if (!phoneDigits) {
+      setError("Phone number is required.");
+      return;
+    }
+    if (phoneDigits.length !== 10) {
+      setError("Phone number must be exactly 10 digits.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
@@ -278,7 +288,7 @@ export function EditStudentScreen({ navigation, route }: Props) {
 
       <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
         >
           <ScrollView
@@ -290,6 +300,7 @@ export function EditStudentScreen({ navigation, route }: Props) {
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
+            automaticallyAdjustKeyboardInsets
           >
 
             <View style={styles.photoRow}>
@@ -370,6 +381,7 @@ export function EditStudentScreen({ navigation, route }: Props) {
                 setExtraValues((prev) => ({ ...prev, [key]: value }))
               }
               classSectionReadOnly
+              parentPhoneTenDigits
             />
 
 

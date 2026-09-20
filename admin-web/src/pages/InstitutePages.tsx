@@ -7,6 +7,7 @@ import { PageActions } from "../components/ui/PageActions";
 import { SearchInput } from "../components/ui/SearchInput";
 import { ToggleSwitch } from "../components/ui/ToggleSwitch";
 import type { ApiErrorBody, Institute } from "../types";
+import { formatCalendarDate } from "../utils/formatCalendarDate";
 
 export function InstituteListPage() {
   const [institutes, setInstitutes] = useState<Institute[]>([]);
@@ -151,13 +152,7 @@ export function InstituteListPage() {
                     {institute.phone ?? "—"}
                   </td>
                   <td className="hidden px-2 py-3 text-xs text-text-muted sm:table-cell sm:px-3">
-                    {institute.created_at
-                      ? new Date(institute.created_at).toLocaleDateString(undefined, {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })
-                      : "—"}
+                    {formatCalendarDate(institute.created_at)}
                   </td>
                   <td className="px-2 py-3 sm:px-3">
                     <ToggleSwitch

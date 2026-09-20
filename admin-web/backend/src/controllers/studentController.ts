@@ -27,6 +27,11 @@ import { deriveCanonicalValuesFromExtraFields } from "../utils/excelSchema";
 import { studentPhotoOrgId } from "../config/storage";
 import { loadFormConfigForOrg } from "./formConfigController";
 import { routeParam } from "../utils/routeParams";
+import {
+  assertInstituteOwnedByAdmin,
+  assertSchoolOwnedByAdmin,
+  requireAdminScope,
+} from "../utils/adminScope";
 import { Student, StudentRowInput } from "../types/student";
 
 const STUDENT_SELECT = `
@@ -591,6 +596,9 @@ export async function listStudentsBySchool(
       throw new AppError("schoolId is required", 400);
     }
 
+    const scope = await requireAdminScope(req);
+    await assertSchoolOwnedByAdmin(scope, schoolId);
+
     const classFilter =
       typeof req.query.classSection === "string"
         ? req.query.classSection.trim()
@@ -637,10 +645,13 @@ export async function listStudentsAdmin(
   next: NextFunction
 ): Promise<void> {
   try {
+    const scope = await requireAdminScope(req);
     const schoolId =
       typeof req.query.schoolId === "string" ? req.query.schoolId.trim() : "";
     const instituteId =
       typeof req.query.instituteId === "string" ? req.query.instituteId.trim() : "";
+    if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
+    if (instituteId) await assertInstituteOwnedByAdmin(scope, instituteId);
     const classFilter =
       typeof req.query.classSection === "string"
         ? req.query.classSection.trim()

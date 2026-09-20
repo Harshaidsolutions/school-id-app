@@ -10,6 +10,10 @@ import {
 import { routeParam } from "../utils/routeParams";
 import { parseBooleanField } from "../utils/parseBoolean";
 import {
+  assertInstituteOwnedByAdmin,
+  requireAdminScope,
+} from "../utils/adminScope";
+import {
   findOwnerUserSql,
   ownerPasswordSelect,
   ownerUserLateralJoin,
@@ -76,6 +80,7 @@ export async function createInstitute(
   next: NextFunction
 ): Promise<void> {
   try {
+    const scope = await requireAdminScope(req);
     const name = String(req.body.name ?? "").trim();
     if (!name) throw new AppError("Institute name is required", 400);
 
@@ -88,10 +93,10 @@ export async function createInstitute(
     const instructions = String(req.body.instructions ?? "").trim() || null;
 
     const inserted = await pool.query<InstituteRow>(
-      `INSERT INTO institutes (name, year, phone, institute_code, address, instructions)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO institutes (name, year, phone, institute_code, address, instructions, owner_admin_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [name, year, phone, instituteCode, address, instructions]
+      [name, year, phone, instituteCode, address, instructions, scope.adminUserId]
     );
 
     const institute = inserted.rows[0];
@@ -213,9 +218,20 @@ export async function listInstitutes(
   next: NextFunction
 ): Promise<void> {
   try {
+    const scope = await requireAdminScope(req);
     const year =
       typeof req.query.year === "string" ? req.query.year.trim() : "";
-    const { clause: where, values } = yearFilterClause("i.year", year);
+    const filters: string[] = [];
+    const values: unknown[] = [];
+    if (year) {
+      filters.push(`i.year = $${values.length + 1}`);
+      values.push(year);
+    }
+    if (!scope.isSuperAdmin) {
+      filters.push(`i.owner_admin_id = $${values.length + 1}`);
+      values.push(scope.adminUserId);
+    }
+    const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
 
     const result = await pool.query<InstituteRow>(
       `SELECT
@@ -247,7 +263,7 @@ export async function updateInstitute(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { id } = req.params;
+    const id = routeParam(req.params.id);
     if (!id) throw new AppError("Institute id is required", 400);
 
     const existing = await pool.query<InstituteRow>(
@@ -256,6 +272,8 @@ export async function updateInstitute(
     );
     const institute = existing.rows[0];
     if (!institute) throw new AppError("Institute not found", 404);
+    const scope = await requireAdminScope(req);
+    await assertInstituteOwnedByAdmin(scope, id);
 
     const name =
       req.body.name !== undefined

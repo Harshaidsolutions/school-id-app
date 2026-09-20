@@ -75,6 +75,8 @@ export type DynamicStudentFieldListProps = {
   lockedClassSection?: string;
   /** Edit flow: show class but do not allow changes (same input styling). */
   classSectionReadOnly?: boolean;
+  /** Edit flow: parent phone required, numeric, max 10 digits. */
+  parentPhoneTenDigits?: boolean;
 };
 
 export function DynamicStudentFieldList({
@@ -116,6 +118,7 @@ export function DynamicStudentFieldList({
   hideClassField = false,
   lockedClassSection,
   classSectionReadOnly = false,
+  parentPhoneTenDigits = false,
 }: DynamicStudentFieldListProps) {
   const ordered = sortFormFields(formFields).filter((f) => f.enabled);
 
@@ -266,12 +269,24 @@ export function DynamicStudentFieldList({
 
         if (kind === "parent_phone") {
           return (
-            <Field key={field.key} label={field.label} colors={colors}>
+            <Field
+              key={field.key}
+              label={field.label}
+              colors={colors}
+              required={parentPhoneTenDigits}
+            >
               <TextInput
                 style={inputStyle}
                 value={parentPhone}
-                onChangeText={onParentPhoneChange}
+                onChangeText={(text) => {
+                  if (parentPhoneTenDigits) {
+                    onParentPhoneChange(text.replace(/\D/g, "").slice(0, 10));
+                    return;
+                  }
+                  onParentPhoneChange(text);
+                }}
                 keyboardType="phone-pad"
+                maxLength={parentPhoneTenDigits ? 10 : undefined}
                 placeholderTextColor={colors.textSubtle}
               />
             </Field>

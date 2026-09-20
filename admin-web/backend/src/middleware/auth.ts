@@ -41,6 +41,7 @@ export function authMiddleware(
       instituteId: decoded.instituteId ?? null,
       assignedClass: decoded.assignedClass ?? null,
       assignedSection: decoded.assignedSection ?? null,
+      isSuperAdmin: decoded.isSuperAdmin === true,
     };
 
     req.user = user;

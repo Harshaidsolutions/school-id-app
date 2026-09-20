@@ -56,8 +56,8 @@ function InfoRow({
   showWhenEmpty?: boolean;
   emptyLabel?: string;
 }) {
-  const display = value?.trim() || (showWhenEmpty ? emptyLabel : "");
-  if (!display) return null;
+  const display = value?.trim() || (showWhenEmpty ? emptyLabel : "-");
+  if (!showWhenEmpty && !value?.trim()) return null;
   return (
     <div className="border-b border-border px-5 py-3 last:border-b-0">
       <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>

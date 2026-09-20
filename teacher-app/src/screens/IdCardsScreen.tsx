@@ -292,18 +292,6 @@ export function IdCardsScreen() {
             onStartShouldSetResponder={() => true}
           >
             <Pressable
-              style={styles.menuItem}
-              onPress={() => {
-                setMenuOpen(false);
-                void load(true);
-              }}
-            >
-              <Ionicons name="refresh" size={18} color={colors.text} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>
-                Refresh
-              </Text>
-            </Pressable>
-            <Pressable
               style={[
                 styles.menuItem,
                 sortDir === "asc" && {

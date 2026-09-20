@@ -71,20 +71,7 @@ export function LoginPage() {
   return (
     <LoginPageLayout
       title={
-        <span
-          className="block text-center"
-          onClick={() => navigate("/forgot-password")}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              navigate("/forgot-password");
-            }
-          }}
-          role="presentation"
-          tabIndex={-1}
-        >
-          Admin Login
-        </span>
+        <span className="block text-center">Admin Login</span>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">

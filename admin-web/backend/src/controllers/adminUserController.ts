@@ -1,0 +1,311 @@
+import { Request, Response, NextFunction } from "express";
+import bcrypt from "bcrypt";
+import { pool } from "../config/database";
+import { AppError } from "../middleware/errorHandler";
+import { SCHOOL_ASSETS_BUCKET, uploadBufferToBucket } from "../config/storage";
+import { requireSuperAdmin } from "../utils/adminScope";
+import {
+  requestAdminActionOtp,
+  verifyAdminActionOtp,
+} from "../utils/adminOtp";
+import { routeParam } from "../utils/routeParams";
+
+const SALT_ROUNDS = 10;
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function normalizePhone(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 10);
+}
+
+export async function listManagedAdmins(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    await requireSuperAdmin(req);
+    const result = await pool.query(
+      `SELECT id, email, username, display_name, phone, photo_url, created_at,
+              COALESCE(is_super_admin, false) AS is_super_admin
+       FROM users
+       WHERE role = 'admin'
+       ORDER BY created_at ASC NULLS LAST`
+    );
+    res.status(200).json({ status: "ok", admins: result.rows });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createManagedAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    await requireSuperAdmin(req);
+    const displayName = String(req.body.displayName ?? req.body.name ?? "").trim();
+    const username = String(req.body.username ?? "").trim();
+    const email = String(req.body.email ?? "").trim();
+    const phone = normalizePhone(String(req.body.phone ?? ""));
+    const password = String(req.body.password ?? "");
+
+    if (!displayName) throw new AppError("Admin name is required", 400);
+    if (!username) throw new AppError("Username is required", 400);
+    if (!isValidEmail(email)) throw new AppError("Valid email is required", 400);
+    if (phone.length !== 10) throw new AppError("Phone must be 10 digits", 400);
+    if (password.length < 8) throw new AppError("Password must be at least 8 characters", 400);
+
+    const dup = await pool.query(
+      `SELECT id FROM users
+       WHERE lower(email) = lower($1)
+          OR (username IS NOT NULL AND lower(username) = lower($2))
+       LIMIT 1`,
+      [email, username]
+    );
+    if (dup.rows[0]) throw new AppError("Email or username already in use", 409);
+
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const inserted = await pool.query(
+      `INSERT INTO users (email, username, password_hash, role, display_name, phone, is_super_admin)
+       VALUES ($1, $2, $3, 'admin', $4, $5, false)
+       RETURNING id, email, username, display_name, phone, photo_url, created_at`,
+      [email, username, passwordHash, displayName, phone]
+    );
+
+    res.status(201).json({ status: "ok", admin: inserted.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateManagedAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    await requireSuperAdmin(req);
+    const id = routeParam(req.params.id);
+    if (!id) throw new AppError("Admin id is required", 400);
+
+    const existing = await pool.query(
+      `SELECT id, is_super_admin FROM users WHERE id = $1 AND role = 'admin' LIMIT 1`,
+      [id]
+    );
+    if (!existing.rows[0]) throw new AppError("Admin not found", 404);
+    if (existing.rows[0].is_super_admin) {
+      throw new AppError("Super admin account cannot be edited here", 403);
+    }
+
+    const displayName =
+      req.body.displayName !== undefined
+        ? String(req.body.displayName).trim()
+        : undefined;
+    const username =
+      req.body.username !== undefined ? String(req.body.username).trim() : undefined;
+    const email =
+      req.body.email !== undefined ? String(req.body.email).trim() : undefined;
+    const phone =
+      req.body.phone !== undefined ? normalizePhone(String(req.body.phone)) : undefined;
+
+    if (email !== undefined && !isValidEmail(email)) {
+      throw new AppError("Valid email is required", 400);
+    }
+    if (phone !== undefined && phone.length !== 10) {
+      throw new AppError("Phone must be 10 digits", 400);
+    }
+
+    const updated = await pool.query(
+      `UPDATE users SET
+         display_name = COALESCE($2, display_name),
+         username = COALESCE($3, username),
+         email = COALESCE($4, email),
+         phone = COALESCE($5, phone)
+       WHERE id = $1
+       RETURNING id, email, username, display_name, phone, photo_url, created_at`,
+      [id, displayName ?? null, username ?? null, email ?? null, phone ?? null]
+    );
+
+    res.status(200).json({ status: "ok", admin: updated.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function requestManagedAdminDeleteOtp(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const superScope = await requireSuperAdmin(req);
+    const id = routeParam(req.params.id);
+    if (!id) throw new AppError("Admin id is required", 400);
+
+    const target = await pool.query<{ email: string; is_super_admin: boolean | null }>(
+      `SELECT email, is_super_admin FROM users WHERE id = $1 AND role = 'admin' LIMIT 1`,
+      [id]
+    );
+    if (!target.rows[0]) throw new AppError("Admin not found", 404);
+    if (target.rows[0].is_super_admin) {
+      throw new AppError("Super admin cannot be deleted", 403);
+    }
+
+    const superRow = await pool.query<{ email: string }>(
+      `SELECT email FROM users WHERE id = $1 LIMIT 1`,
+      [superScope.adminUserId]
+    );
+    const adminEmail = superRow.rows[0]?.email;
+    if (!adminEmail) throw new AppError("Super admin email is required", 400);
+
+    const otpResult = await requestAdminActionOtp({
+      adminUserId: superScope.adminUserId,
+      adminEmail,
+      actionType: "delete_managed_admin",
+      resourceId: id,
+      emailSubject: "Confirm admin account deletion",
+      emailIntro: "Confirm deletion of the managed admin account.",
+      logPrefix: "[admin-delete]",
+    });
+
+    res.status(200).json({ status: "ok", ...otpResult });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteManagedAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const superScope = await requireSuperAdmin(req);
+    const id = routeParam(req.params.id);
+    if (!id) throw new AppError("Admin id is required", 400);
+
+    const otp = String(req.body?.otp ?? "").trim();
+    await verifyAdminActionOtp({
+      adminUserId: superScope.adminUserId,
+      actionType: "delete_managed_admin",
+      resourceId: id,
+      otp,
+    });
+
+    const target = await pool.query(
+      `SELECT id, is_super_admin FROM users WHERE id = $1 AND role = 'admin' LIMIT 1`,
+      [id]
+    );
+    if (!target.rows[0]) throw new AppError("Admin not found", 404);
+    if (target.rows[0].is_super_admin) {
+      throw new AppError("Super admin cannot be deleted", 403);
+    }
+
+    await pool.query(`DELETE FROM users WHERE id = $1`, [id]);
+    res.status(200).json({ status: "ok", deleted: true });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function requestManagedAdminPasswordOtp(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const superScope = await requireSuperAdmin(req);
+    const id = routeParam(req.params.id);
+    if (!id) throw new AppError("Admin id is required", 400);
+
+    const superRow = await pool.query<{ email: string }>(
+      `SELECT email FROM users WHERE id = $1 LIMIT 1`,
+      [superScope.adminUserId]
+    );
+    const adminEmail = superRow.rows[0]?.email;
+    if (!adminEmail) throw new AppError("Super admin email is required", 400);
+
+    const otpResult = await requestAdminActionOtp({
+      adminUserId: superScope.adminUserId,
+      adminEmail,
+      actionType: "change_managed_admin_password",
+      resourceId: id,
+      emailSubject: "Confirm admin password change",
+      emailIntro: "Confirm password change for the managed admin account.",
+      logPrefix: "[admin-password]",
+    });
+
+    res.status(200).json({ status: "ok", ...otpResult });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function changeManagedAdminPassword(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const superScope = await requireSuperAdmin(req);
+    const id = routeParam(req.params.id);
+    const password = String(req.body.password ?? "");
+    const otp = String(req.body.otp ?? "").trim();
+
+    if (!id) throw new AppError("Admin id is required", 400);
+    if (password.length < 8) throw new AppError("Password must be at least 8 characters", 400);
+
+    await verifyAdminActionOtp({
+      adminUserId: superScope.adminUserId,
+      actionType: "change_managed_admin_password",
+      resourceId: id,
+      otp,
+    });
+
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    await pool.query(`UPDATE users SET password_hash = $2 WHERE id = $1 AND role = 'admin'`, [
+      id,
+      passwordHash,
+    ]);
+
+    res.status(200).json({ status: "ok", updated: true });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadManagedAdminPhoto(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    await requireSuperAdmin(req);
+    const id = routeParam(req.params.id);
+    const file = req.file;
+    if (!id) throw new AppError("Admin id is required", 400);
+    if (!file) throw new AppError("Photo file is required", 400);
+
+    const ext = file.mimetype === "image/png" ? "png" : "jpg";
+    const photoUrl = await uploadBufferToBucket(
+      SCHOOL_ASSETS_BUCKET,
+      `admin-users/${id}/photo.${ext}`,
+      file.buffer,
+      file.mimetype
+    );
+    const updated = await pool.query(
+      `UPDATE users SET photo_url = $2 WHERE id = $1 AND role = 'admin'
+       RETURNING id, email, username, display_name, phone, photo_url`,
+      [id, photoUrl]
+    );
+    if (!updated.rows[0]) throw new AppError("Admin not found", 404);
+
+    res.status(200).json({ status: "ok", admin: updated.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+}

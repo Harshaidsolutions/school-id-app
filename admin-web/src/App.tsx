@@ -17,11 +17,8 @@ import { OrganizationInfoPage } from "./pages/OrganizationInfoPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { VerifyOtpPage } from "./pages/VerifyOtpPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
-import {
-  BrochuresPage,
-  ExtraSection1Page,
-  ExtraSection2Page,
-} from "./pages/CatalogPages";
+import { BrochuresPage, ExtraSection2Page } from "./pages/CatalogPages";
+import { AdminManagementPage } from "./pages/AdminManagementPage";
 
 export default function App() {
   return (
@@ -50,7 +47,7 @@ export default function App() {
               <Route path="/institute-info" element={<OrganizationInfoPage mode="institute" />} />
               <Route path="/models" element={<ModelsPage />} />
               <Route path="/brochures" element={<BrochuresPage />} />
-              <Route path="/extra-1" element={<ExtraSection1Page />} />
+              <Route path="/extra-1" element={<AdminManagementPage />} />
               <Route path="/extra-2" element={<ExtraSection2Page />} />
               <Route path="/students" element={<StudentsPage mode="school" />} />
               <Route path="/institute-members" element={<StudentsPage mode="institute" />} />

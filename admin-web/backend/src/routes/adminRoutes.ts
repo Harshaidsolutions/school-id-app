@@ -83,6 +83,16 @@ import {
   updateCatalogItem,
 } from "../controllers/catalogController";
 import { uploadCatalogFile } from "../middleware/upload";
+import {
+  changeManagedAdminPassword,
+  createManagedAdmin,
+  deleteManagedAdmin,
+  listManagedAdmins,
+  requestManagedAdminDeleteOtp,
+  requestManagedAdminPasswordOtp,
+  updateManagedAdmin,
+  uploadManagedAdminPhoto,
+} from "../controllers/adminUserController";
 
 const router = Router();
 
@@ -175,5 +185,19 @@ router.put("/form-config", putFormConfig);
 
 // Cleanup
 router.post("/run-cleanup-now", runCleanupNow);
+
+// Super admin — managed admin accounts
+router.get("/managed-admins", listManagedAdmins);
+router.post("/managed-admins", createManagedAdmin);
+router.put("/managed-admins/:id", updateManagedAdmin);
+router.post("/managed-admins/:id/request-delete-otp", requestManagedAdminDeleteOtp);
+router.post("/managed-admins/:id/delete", deleteManagedAdmin);
+router.post("/managed-admins/:id/request-password-otp", requestManagedAdminPasswordOtp);
+router.post("/managed-admins/:id/password", changeManagedAdminPassword);
+router.post(
+  "/managed-admins/:id/photo",
+  uploadStudentPhoto.single("photo"),
+  uploadManagedAdminPhoto
+);
 
 export default router;
