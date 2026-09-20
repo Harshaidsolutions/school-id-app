@@ -190,3 +190,28 @@ export async function loadOrgOwnerAdminId(
   );
   return row.rows[0]?.owner_admin_id ?? null;
 }
+
+/** Notifications tied to schools/institutes the admin may access. */
+export async function assertNotificationOwnedByAdmin(
+  scope: AdminScope,
+  seeAll: boolean,
+  notificationId: string
+): Promise<void> {
+  if (seeAll) return;
+  const row = await pool.query<{ id: string }>(
+    `SELECT n.id
+     FROM notifications n
+     LEFT JOIN schools s ON s.id = n.school_id
+     LEFT JOIN institutes i ON i.id = n.institute_id
+     WHERE n.id = $1
+       AND (
+         s.owner_admin_id = $2
+         OR i.owner_admin_id = $2
+       )
+     LIMIT 1`,
+    [notificationId, scope.adminUserId]
+  );
+  if (!row.rows[0]) {
+    throw new AppError("Notification not found", 404);
+  }
+}

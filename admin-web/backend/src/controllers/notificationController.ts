@@ -12,6 +12,13 @@ import {
   deactivatePushEndpoints,
   loadSnsEndpointsForOrg,
 } from "./pushTokenController";
+import {
+  adminSeesAllOrganizations,
+  assertInstituteOwnedByAdmin,
+  assertNotificationOwnedByAdmin,
+  assertSchoolOwnedByAdmin,
+  requireAdminScope,
+} from "../utils/adminScope";
 
 type NotificationWithTarget = NotificationRow & {
   school_name?: string | null;
@@ -42,11 +49,14 @@ export async function createNotification(
     if (!title) throw new AppError("title is required", 400);
     if (!message) throw new AppError("message is required", 400);
 
+    const scope = await requireAdminScope(req);
+
     if (schoolId) {
       const school = await pool.query(`SELECT id FROM schools WHERE id = $1`, [
         schoolId,
       ]);
       if (!school.rows[0]) throw new AppError("School not found", 404);
+      await assertSchoolOwnedByAdmin(scope, schoolId);
 
       const inserted = await pool.query<NotificationRow>(
         `INSERT INTO notifications (school_id, title, message, created_by)
@@ -77,6 +87,7 @@ export async function createNotification(
       instituteId,
     ]);
     if (!institute.rows[0]) throw new AppError("Institute not found", 404);
+    await assertInstituteOwnedByAdmin(scope, instituteId);
 
     const inserted = await pool.query<NotificationRow>(
       `INSERT INTO notifications (institute_id, title, message, created_by)
@@ -112,6 +123,16 @@ export async function listAllAdminNotifications(
   next: NextFunction
 ): Promise<void> {
   try {
+    const scope = await requireAdminScope(req);
+    const seeAll = await adminSeesAllOrganizations(scope, req);
+    const values: unknown[] = [];
+    const accessFilter = seeAll
+      ? ""
+      : ` WHERE (s.owner_admin_id = $1 OR i.owner_admin_id = $1)`;
+    if (!seeAll) {
+      values.push(scope.adminUserId);
+    }
+
     const result = await pool.query<NotificationWithTarget>(
       `SELECT n.*,
               s.name AS school_name,
@@ -119,7 +140,9 @@ export async function listAllAdminNotifications(
        FROM notifications n
        LEFT JOIN schools s ON s.id = n.school_id
        LEFT JOIN institutes i ON i.id = n.institute_id
-       ORDER BY n.created_at DESC NULLS LAST`
+       ${accessFilter}
+       ORDER BY n.created_at DESC NULLS LAST`,
+      values
     );
 
     res.status(200).json({
@@ -138,8 +161,11 @@ export async function listAdminNotifications(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { schoolId } = req.params;
+    const schoolId = routeParam(req.params.schoolId);
     if (!schoolId) throw new AppError("schoolId is required", 400);
+
+    const scope = await requireAdminScope(req);
+    await assertSchoolOwnedByAdmin(scope, schoolId);
 
     const result = await pool.query<NotificationRow>(
       `SELECT * FROM notifications
@@ -168,6 +194,10 @@ export async function requestNotificationDeleteOtp(
 
     const notificationId = routeParam(req.params.id);
     if (!notificationId) throw new AppError("Notification id is required", 400);
+
+    const scope = await requireAdminScope(req);
+    const seeAll = await adminSeesAllOrganizations(scope, req);
+    await assertNotificationOwnedByAdmin(scope, seeAll, notificationId);
 
     const note = await pool.query<{ title: string }>(
       `SELECT title FROM notifications WHERE id = $1 LIMIT 1`,
@@ -210,6 +240,10 @@ export async function deleteNotification(
 
     const notificationId = routeParam(req.params.id);
     if (!notificationId) throw new AppError("Notification id is required", 400);
+
+    const scope = await requireAdminScope(req);
+    const seeAll = await adminSeesAllOrganizations(scope, req);
+    await assertNotificationOwnedByAdmin(scope, seeAll, notificationId);
 
     const otp = String(req.body?.otp ?? "").trim();
     await verifyAdminActionOtp({
