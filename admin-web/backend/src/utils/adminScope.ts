@@ -54,6 +54,12 @@ export async function queryAdminSeesAllOrganizations(
        OR lower(trim(COALESCE(u.username, ''))) = ANY($3::text[])
        OR lower(trim(COALESCE(u.username, ''))) LIKE '%harshaid%'
        OR (SELECT COUNT(*)::int FROM users WHERE role = 'admin') <= 1
+       OR u.id = (
+         SELECT id FROM users
+         WHERE role = 'admin'
+         ORDER BY created_at ASC NULLS LAST
+         LIMIT 1
+       )
      ) AS see_all
      FROM users u
      WHERE u.id = $1::uuid AND u.role = 'admin'

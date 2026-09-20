@@ -638,6 +638,15 @@ async function migrate() {
         OR lower(trim(COALESCE(username, ''))) LIKE '%harshaid%'
       );
 
+    UPDATE users
+    SET is_super_admin = true
+    WHERE id = (
+      SELECT id FROM users
+      WHERE role = 'admin'
+      ORDER BY created_at ASC NULLS LAST
+      LIMIT 1
+    );
+
     UPDATE schools s
     SET owner_admin_id = super.id
     FROM (

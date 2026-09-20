@@ -11,7 +11,8 @@
     "migrate": "tsx scripts/migrate.ts",
     "migrate:photos-to-s3": "tsx scripts/migratePhotosToS3.ts",
     "migrate:supabase-to-rds": "tsx scripts/migrateSupabaseToRds.ts",
-    "verify:db-counts": "tsx scripts/verifyDbCounts.ts"
+    "verify:db-counts": "tsx scripts/verifyDbCounts.ts",
+    "diagnose:admin-scope": "tsx scripts/diagnoseAdminScope.ts"
   },
   "keywords": [],
   "author": "",

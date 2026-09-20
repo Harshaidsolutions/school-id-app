@@ -41,6 +41,20 @@ export async function getAdminProfile(
     );
     if (!row.rows[0]) throw new AppError("Admin account not found", 404);
     const u = row.rows[0];
+    const orgCounts = await pool.query<{
+      total_schools: number;
+      total_institutes: number;
+      owned_schools: number;
+      owned_institutes: number;
+    }>(
+      `SELECT
+         (SELECT COUNT(*)::int FROM schools) AS total_schools,
+         (SELECT COUNT(*)::int FROM institutes) AS total_institutes,
+         (SELECT COUNT(*)::int FROM schools WHERE owner_admin_id = $1) AS owned_schools,
+         (SELECT COUNT(*)::int FROM institutes WHERE owner_admin_id = $1) AS owned_institutes`,
+      [scope.adminUserId]
+    );
+    const counts = orgCounts.rows[0];
     res.status(200).json({
       status: "ok",
       user: {
@@ -56,6 +70,12 @@ export async function getAdminProfile(
         photoUrl: u.photo_url,
         isSuperAdmin: scope.isSuperAdmin,
         canListAllOrganizations: scope.isSuperAdmin,
+        orgScope: {
+          totalSchools: counts?.total_schools ?? 0,
+          totalInstitutes: counts?.total_institutes ?? 0,
+          ownedSchools: counts?.owned_schools ?? 0,
+          ownedInstitutes: counts?.owned_institutes ?? 0,
+        },
       },
     });
   } catch (error) {

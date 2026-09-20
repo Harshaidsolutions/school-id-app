@@ -12,7 +12,10 @@ import {
   UserRole,
 } from "../types/auth";
 import { assertTeacherOrgActive } from "../middleware/orgAccess";
-import { resolveIsSuperAdmin } from "../utils/adminScope";
+import {
+  queryAdminSeesAllOrganizations,
+  resolveIsSuperAdmin,
+} from "../utils/adminScope";
 
 const SALT_ROUNDS = 10;
 const VALID_ROLES: UserRole[] = ["admin", "teacher"];
@@ -112,12 +115,16 @@ export async function login(
       });
     }
 
-    const isSuperAdmin = resolveIsSuperAdmin({
-      role: user.role,
-      email: user.email,
-      username: user.username,
-      is_super_admin: (user as User & { is_super_admin?: boolean }).is_super_admin,
-    });
+    const isSuperAdmin =
+      user.role === "admin"
+        ? await queryAdminSeesAllOrganizations(user.id)
+        : resolveIsSuperAdmin({
+            role: user.role,
+            email: user.email,
+            username: user.username,
+            is_super_admin: (user as User & { is_super_admin?: boolean })
+              .is_super_admin,
+          });
 
     const token = signAuthToken({
       userId: user.id,
