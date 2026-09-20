@@ -2,14 +2,33 @@ import type { Request } from "express";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
 
+/** Primary super admin account (matches migrate backfill). */
+export const SUPER_ADMIN_EMAIL = "harshaidsolutions@gmail.com";
+
 export type AdminScope = {
   adminUserId: string;
   isSuperAdmin: boolean;
 };
 
+export function resolveIsSuperAdmin(user: {
+  role?: string | null;
+  email?: string | null;
+  is_super_admin?: boolean | null;
+}): boolean {
+  if (user.role !== "admin") return false;
+  if (user.is_super_admin === true) return true;
+  const email = String(user.email ?? "")
+    .trim()
+    .toLowerCase();
+  return email === SUPER_ADMIN_EMAIL;
+}
+
 export async function loadAdminScope(userId: string): Promise<AdminScope> {
-  const row = await pool.query<{ is_super_admin: boolean | null }>(
-    `SELECT COALESCE(is_super_admin, false) AS is_super_admin
+  const row = await pool.query<{
+    email: string;
+    is_super_admin: boolean | null;
+  }>(
+    `SELECT email, COALESCE(is_super_admin, false) AS is_super_admin
      FROM users WHERE id = $1 AND role = 'admin' LIMIT 1`,
     [userId]
   );
@@ -18,7 +37,11 @@ export async function loadAdminScope(userId: string): Promise<AdminScope> {
   }
   return {
     adminUserId: userId,
-    isSuperAdmin: row.rows[0].is_super_admin === true,
+    isSuperAdmin: resolveIsSuperAdmin({
+      role: "admin",
+      email: row.rows[0].email,
+      is_super_admin: row.rows[0].is_super_admin,
+    }),
   };
 }
 

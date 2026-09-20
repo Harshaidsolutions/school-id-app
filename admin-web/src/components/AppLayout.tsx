@@ -183,7 +183,7 @@ export function AppLayout() {
   const sidebarContent = (
     <>
       <div className="shrink-0 border-b border-border px-2 py-2.5">
-        {user?.isSuperAdmin === true || user?.isSuperAdmin === undefined ? (
+        {user?.isSuperAdmin === true ? (
           <HarshaLogo compact />
         ) : (
           <div className="px-1 py-1 text-sm">
@@ -197,7 +197,7 @@ export function AppLayout() {
       <div className="min-h-0 flex-1 overflow-y-auto">
         <SidebarNav
           onNavigate={() => setMobileOpen(false)}
-          isSuperAdmin={user?.isSuperAdmin === true || user?.isSuperAdmin === undefined}
+          isSuperAdmin={user?.isSuperAdmin === true}
         />
       </div>
     </>
