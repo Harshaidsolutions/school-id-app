@@ -77,7 +77,17 @@ export type DynamicStudentFieldListProps = {
   classSectionReadOnly?: boolean;
   /** Edit flow: parent phone required, numeric, max 10 digits. */
   parentPhoneTenDigits?: boolean;
+  onInputFocus?: (nativeTarget: number) => void;
 };
+
+function focusProps(onInputFocus?: (nativeTarget: number) => void) {
+  return onInputFocus
+    ? {
+        onFocus: (e: { nativeEvent: { target: number } }) =>
+          onInputFocus(e.nativeEvent.target),
+      }
+    : {};
+}
 
 export function DynamicStudentFieldList({
   formFields,
@@ -119,7 +129,9 @@ export function DynamicStudentFieldList({
   lockedClassSection,
   classSectionReadOnly = false,
   parentPhoneTenDigits = false,
+  onInputFocus,
 }: DynamicStudentFieldListProps) {
+  const focus = focusProps(onInputFocus);
   const ordered = sortFormFields(formFields).filter((f) => f.enabled);
 
   return (
@@ -139,6 +151,7 @@ export function DynamicStudentFieldList({
                   onChangeText={onFirstNameChange}
                   placeholderTextColor={colors.textSubtle}
                   autoCapitalize="words"
+                  {...focus}
                 />
               </Field>
               <Field label="Last Name" colors={colors}>
@@ -148,6 +161,7 @@ export function DynamicStudentFieldList({
                   onChangeText={onLastNameChange}
                   placeholderTextColor={colors.textSubtle}
                   autoCapitalize="words"
+                  {...focus}
                 />
               </Field>
             </View>
@@ -196,6 +210,7 @@ export function DynamicStudentFieldList({
                 placeholder='e.g. "5th A"'
                 editable={!classSectionReadOnly}
                 showSoftInputOnFocus={!classSectionReadOnly}
+                {...focus}
               />
             </Field>
           );
@@ -209,6 +224,7 @@ export function DynamicStudentFieldList({
                 value={rollNo}
                 onChangeText={onRollNoChange}
                 placeholderTextColor={colors.textSubtle}
+                {...focus}
               />
             </Field>
           );
@@ -262,6 +278,7 @@ export function DynamicStudentFieldList({
                 onChangeText={onParentNameChange}
                 placeholderTextColor={colors.textSubtle}
                 autoCapitalize="words"
+                {...focus}
               />
             </Field>
           );
@@ -288,6 +305,7 @@ export function DynamicStudentFieldList({
                 keyboardType="phone-pad"
                 maxLength={parentPhoneTenDigits ? 10 : undefined}
                 placeholderTextColor={colors.textSubtle}
+                {...focus}
               />
             </Field>
           );
@@ -302,6 +320,7 @@ export function DynamicStudentFieldList({
                 onChangeText={onAddressChange}
                 placeholderTextColor={colors.textSubtle}
                 multiline
+                {...focus}
               />
             </Field>
           );
@@ -315,6 +334,7 @@ export function DynamicStudentFieldList({
                 value={custom1}
                 onChangeText={onCustom1Change}
                 placeholderTextColor={colors.textSubtle}
+                {...focus}
               />
             </Field>
           );
@@ -328,6 +348,7 @@ export function DynamicStudentFieldList({
                 value={custom2}
                 onChangeText={onCustom2Change}
                 placeholderTextColor={colors.textSubtle}
+                {...focus}
               />
             </Field>
           );
@@ -341,6 +362,7 @@ export function DynamicStudentFieldList({
                 value={custom3}
                 onChangeText={onCustom3Change}
                 placeholderTextColor={colors.textSubtle}
+                {...focus}
               />
             </Field>
           );
@@ -353,6 +375,7 @@ export function DynamicStudentFieldList({
               value={extraValues[field.key] ?? ""}
               onChangeText={(value) => onExtraChange?.(field.key, value)}
               placeholderTextColor={colors.textSubtle}
+              {...focus}
             />
           </Field>
         );

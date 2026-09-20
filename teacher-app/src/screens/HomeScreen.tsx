@@ -35,6 +35,10 @@ import { headerLogoSize } from "../constants/headerLogo";
 import { BRAND } from "../constants/brand";
 import { SUPPORT_PHONE } from "../constants/support";
 import type { NotificationsResponse } from "../types";
+import {
+  notificationIsRead,
+  subscribeNotificationBadgeRefresh,
+} from "../utils/notificationReadState";
 
 /** Bundled locally — same assets as v1.0.38. */
 const SCHOOL_BUILDING = require("../../assets/school-building.jpg");
@@ -78,9 +82,12 @@ export function HomeScreen() {
       const notifRes = await api.get<NotificationsResponse>(
         "/teacher/notifications"
       );
-      setUnread(
-        notifRes.data.notifications.filter((n) => !n.is_read).length
-      );
+      const unreadFromApi =
+        typeof notifRes.data.unreadCount === "number"
+          ? notifRes.data.unreadCount
+          : notifRes.data.notifications.filter((n) => !notificationIsRead(n))
+              .length;
+      setUnread(unreadFromApi);
     } catch {
       /* ignore */
     } finally {
@@ -91,6 +98,9 @@ export function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       void load();
+      const unsub = subscribeNotificationBadgeRefresh(() => {
+        void load();
+      });
       if (route.params?.scrollTo === "instructions") {
         requestAnimationFrame(() => {
           scrollRef.current?.scrollTo({
@@ -101,6 +111,7 @@ export function HomeScreen() {
       } else {
         scrollRef.current?.scrollTo({ y: 0, animated: false });
       }
+      return unsub;
     }, [load, route.params?.scrollTo])
   );
 

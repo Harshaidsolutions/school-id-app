@@ -26,25 +26,18 @@ import { fonts, type as typeScale } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
 import type { AppColors } from "../theme/palettes";
 import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
+import {
+  emitNotificationBadgeRefresh,
+  notificationIsRead,
+} from "../utils/notificationReadState";
 
 const HIDDEN_NOTIFS_KEY = "teacher_hidden_notifications";
-const READ_NOTIFS_KEY = "teacher_notification_read_ids";
 
-function normalizeNotification(
-  item: NotificationItem,
-  localRead: Set<string>
-): NotificationItem {
-  const raw = item as NotificationItem & {
-    read?: boolean | number;
-    isRead?: boolean | number;
-    is_read?: boolean | number;
+function normalizeNotification(item: NotificationItem): NotificationItem {
+  return {
+    ...item,
+    is_read: notificationIsRead(item),
   };
-  const fromApi = raw.is_read ?? raw.read ?? raw.isRead;
-  const isRead =
-    localRead.has(item.id) ||
-    fromApi === true ||
-    fromApi === 1;
-  return { ...item, is_read: isRead };
 }
 
 type Props = NativeStackScreenProps<RootStackParamList, "Notifications">;
@@ -107,22 +100,6 @@ export function NotificationsScreen({ navigation, route }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<NotificationItem | null>(null);
 
-  const syncLocalReadToServer = useCallback(
-    async (notifications: NotificationItem[], localRead: string[]) => {
-      const readSet = new Set(localRead);
-      const pending = notifications.filter(
-        (n) => readSet.has(n.id) && !n.is_read
-      );
-      if (pending.length === 0) return;
-      await Promise.all(
-        pending.map((n) =>
-          api.post(`/teacher/notifications/${n.id}/read`).catch(() => undefined)
-        )
-      );
-    },
-    []
-  );
-
   const migrateLegacyHiddenNotifications = useCallback(async () => {
     try {
       const hiddenRaw = await AsyncStorage.getItem(HIDDEN_NOTIFS_KEY);
@@ -156,33 +133,17 @@ export function NotificationsScreen({ navigation, route }: Props) {
     setError(null);
     try {
       await migrateLegacyHiddenNotifications();
-      const [{ data }, readRaw] = await Promise.all([
-        api.get<NotificationsResponse>("/teacher/notifications"),
-        AsyncStorage.getItem(READ_NOTIFS_KEY),
-      ]);
-      let localRead: string[] = [];
-      try {
-        localRead = readRaw ? (JSON.parse(readRaw) as string[]) : [];
-      } catch {
-        localRead = [];
-      }
-      await syncLocalReadToServer(data.notifications, localRead);
-      const readSet = new Set(localRead);
-      setItems(
-        data.notifications.map((n) => {
-          const norm = normalizeNotification(n, readSet);
-          return readSet.has(n.id) || norm.is_read
-            ? { ...norm, is_read: true }
-            : norm;
-        })
+      const { data } = await api.get<NotificationsResponse>(
+        "/teacher/notifications"
       );
+      setItems(data.notifications.map((n) => normalizeNotification(n)));
     } catch (err) {
       setError(getErrorMessage(err, "Failed to load notifications."));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [migrateLegacyHiddenNotifications, syncLocalReadToServer]);
+  }, [migrateLegacyHiddenNotifications]);
 
   useFocusEffect(
     useCallback(() => {
@@ -198,10 +159,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
     );
     try {
       await api.post(`/teacher/notifications/${id}/read`);
-      const raw = await AsyncStorage.getItem(READ_NOTIFS_KEY);
-      const readIds: string[] = raw ? (JSON.parse(raw) as string[]) : [];
-      if (!readIds.includes(id)) readIds.push(id);
-      await AsyncStorage.setItem(READ_NOTIFS_KEY, JSON.stringify(readIds));
+      emitNotificationBadgeRefresh();
     } catch {
       setItems((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: false } : n))
@@ -227,6 +185,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
     if (detailItem?.id === id) setDetailItem(null);
     try {
       await api.post(`/teacher/notifications/${id}/delete`);
+      emitNotificationBadgeRefresh();
     } catch {
       setItems(previous);
       setDetailItem(previousDetail);
@@ -266,6 +225,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
             void (async () => {
               try {
                 await api.post("/teacher/notifications/delete-all");
+                emitNotificationBadgeRefresh();
               } catch {
                 setItems(previous);
                 setDetailItem(previousDetail);
@@ -279,7 +239,6 @@ export function NotificationsScreen({ navigation, route }: Props) {
 
   async function markAllRead() {
     if (items.length === 0) return;
-    const allIds = items.map((n) => n.id);
     setItems((prev) => prev.map((n) => ({ ...n, is_read: true })));
     setDetailItem((prev) => (prev ? { ...prev, is_read: true } : prev));
     try {
@@ -287,10 +246,10 @@ export function NotificationsScreen({ navigation, route }: Props) {
       await Promise.all(
         unread.map((n) => api.post(`/teacher/notifications/${n.id}/read`))
       );
+      emitNotificationBadgeRefresh();
     } catch {
       /* keep optimistic read state */
     }
-    await AsyncStorage.setItem(READ_NOTIFS_KEY, JSON.stringify(allIds));
   }
 
   function openNotification(item: NotificationItem) {

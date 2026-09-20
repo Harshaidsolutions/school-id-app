@@ -1,7 +1,9 @@
-import { useCallback, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -23,6 +25,7 @@ import {
   type PhotoSource,
 } from "../utils/studentPhotoPicker";
 import { uploadStudentPhoto } from "../utils/uploadStudentPhoto";
+import { scrollToFocusedInput } from "../utils/scrollToFocusedInput";
 import { AddStudentForm } from "../components/AddStudentForm";
 import {
   getCachedStudents,
@@ -75,6 +78,7 @@ export function StudentListScreen({ navigation, route }: Props) {
   const [flowVisible, setFlowVisible] = useState(false);
   const [flowIndex, setFlowIndex] = useState(0);
   const [addModalVisible, setAddModalVisible] = useState(false);
+  const addScrollRef = useRef<ScrollView>(null);
   const [pendingPhotoStudent, setPendingPhotoStudent] = useState<TeacherStudent | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
 
@@ -356,26 +360,36 @@ export function StudentListScreen({ navigation, route }: Props) {
             </Text>
             <View style={styles.addBtnPlaceholder} />
           </View>
-          <ScrollView
-            contentContainerStyle={styles.addModalScroll}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
+          <KeyboardAvoidingView
+            style={styles.flex}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
           >
-            {addModalVisible ? (
-              <AddStudentForm
-                key={`add-student-${classSection}`}
-                classSection={classSection}
-                showHeading={false}
-                showPhotoCapture
-                onSuccess={() => {
-                  setAddModalVisible(false);
-                  showToast("Student added successfully.");
-                  invalidateStudentsCache(classSection);
-                  void loadStudents(true);
-                }}
-              />
-            ) : null}
-          </ScrollView>
+            <ScrollView
+              ref={addScrollRef}
+              contentContainerStyle={styles.addModalScroll}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              automaticallyAdjustKeyboardInsets
+            >
+              {addModalVisible ? (
+                <AddStudentForm
+                  key={`add-student-${classSection}`}
+                  classSection={classSection}
+                  showHeading={false}
+                  showPhotoCapture
+                  onInputFocus={(target) =>
+                    scrollToFocusedInput(addScrollRef, target)
+                  }
+                  onSuccess={() => {
+                    setAddModalVisible(false);
+                    showToast("Student added successfully.");
+                    invalidateStudentsCache(classSection);
+                    void loadStudents(true);
+                  }}
+                />
+              ) : null}
+            </ScrollView>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -453,6 +467,7 @@ function useStudentListStyles() {
       paddingHorizontal: spacing.xl,
       paddingTop: spacing.xxl,
     },
+    flex: { flex: 1 },
     addModalRoot: {
       flex: 1,
       paddingHorizontal: spacing.lg,

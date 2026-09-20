@@ -75,7 +75,7 @@ export function InstituteListPage() {
   }
 
   return (
-    <div className="app-page">
+    <div className="app-page school-list-page">
       <PageActions
         search={
           <SearchInput
@@ -95,7 +95,7 @@ export function InstituteListPage() {
 
       {error && <div className="mb-4 alert-error">{error}</div>}
 
-      <div className="card list-table-scroll">
+      <div className="card list-table-scroll school-list-table-panel">
         <table className="list-data-table">
           <thead>
             <tr>

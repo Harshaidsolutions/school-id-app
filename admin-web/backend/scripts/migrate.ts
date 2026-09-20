@@ -601,6 +601,29 @@ async function migrate() {
     );
   `);
 
+  await pool.query(`
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS photo_capture_seq INTEGER NOT NULL DEFAULT 0;
+
+    UPDATE schools sc
+    SET photo_capture_seq = GREATEST(
+      COALESCE(sc.photo_capture_seq, 0),
+      COALESCE(
+        (
+          SELECT MAX((regexp_match(s.photo_id, '^ADD_([0-9]+)$'))[1]::integer)
+          FROM students s
+          WHERE s.school_id = sc.id
+        ),
+        0
+      )
+    );
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+
+    UPDATE users
+    SET is_active = true
+    WHERE role = 'admin' AND is_active IS NULL;
+  `);
+
   console.log("Migration completed successfully.");
 }
 

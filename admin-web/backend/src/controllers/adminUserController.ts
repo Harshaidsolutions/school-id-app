@@ -29,7 +29,9 @@ export async function listManagedAdmins(
     await requireSuperAdmin(req);
     const result = await pool.query(
       `SELECT id, email, username, display_name, phone, photo_url, created_at,
-              COALESCE(is_super_admin, false) AS is_super_admin
+              COALESCE(is_super_admin, false) AS is_super_admin,
+              COALESCE(is_active, true) AS is_active,
+              NULLIF(TRIM(password_plain), '') AS password_plain
        FROM users
        WHERE role = 'admin'
        ORDER BY created_at ASC NULLS LAST`
@@ -70,10 +72,12 @@ export async function createManagedAdmin(
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     const inserted = await pool.query(
-      `INSERT INTO users (email, username, password_hash, role, display_name, phone, is_super_admin)
-       VALUES ($1, $2, $3, 'admin', $4, $5, false)
-       RETURNING id, email, username, display_name, phone, photo_url, created_at`,
-      [email, username, passwordHash, displayName, phone]
+      `INSERT INTO users (email, username, password_hash, password_plain, role, display_name, phone, is_super_admin, is_active)
+       VALUES ($1, $2, $3, $4, 'admin', $5, $6, false, true)
+       RETURNING id, email, username, display_name, phone, photo_url, created_at,
+                 COALESCE(is_active, true) AS is_active,
+                 NULLIF(TRIM(password_plain), '') AS password_plain`,
+      [email, username, passwordHash, password, displayName, phone]
     );
 
     res.status(201).json({ status: "ok", admin: inserted.rows[0] });
@@ -266,11 +270,20 @@ export async function changeManagedAdminPassword(
       otp,
     });
 
+    const target = await pool.query(
+      `SELECT is_super_admin FROM users WHERE id = $1 AND role = 'admin' LIMIT 1`,
+      [id]
+    );
+    if (!target.rows[0]) throw new AppError("Admin not found", 404);
+    if (target.rows[0].is_super_admin) {
+      throw new AppError("Super admin password cannot be changed here", 403);
+    }
+
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    await pool.query(`UPDATE users SET password_hash = $2 WHERE id = $1 AND role = 'admin'`, [
-      id,
-      passwordHash,
-    ]);
+    await pool.query(
+      `UPDATE users SET password_hash = $2, password_plain = $3 WHERE id = $1 AND role = 'admin'`,
+      [id, passwordHash, password]
+    );
 
     res.status(200).json({ status: "ok", updated: true });
   } catch (error) {
@@ -303,6 +316,45 @@ export async function uploadManagedAdminPhoto(
       [id, photoUrl]
     );
     if (!updated.rows[0]) throw new AppError("Admin not found", 404);
+
+    res.status(200).json({ status: "ok", admin: updated.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function setManagedAdminActive(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    await requireSuperAdmin(req);
+    const id = routeParam(req.params.id);
+    if (!id) throw new AppError("Admin id is required", 400);
+
+    const existing = await pool.query(
+      `SELECT id, is_super_admin FROM users WHERE id = $1 AND role = 'admin' LIMIT 1`,
+      [id]
+    );
+    if (!existing.rows[0]) throw new AppError("Admin not found", 404);
+    if (existing.rows[0].is_super_admin) {
+      throw new AppError("Super admin status cannot be changed", 403);
+    }
+
+    const isActive = req.body.isActive ?? req.body.is_active;
+    if (typeof isActive !== "boolean") {
+      throw new AppError("isActive boolean is required", 400);
+    }
+
+    const updated = await pool.query(
+      `UPDATE users SET is_active = $2 WHERE id = $1 AND role = 'admin'
+       RETURNING id, email, username, display_name, phone, photo_url, created_at,
+                 COALESCE(is_super_admin, false) AS is_super_admin,
+                 COALESCE(is_active, true) AS is_active,
+                 NULLIF(TRIM(password_plain), '') AS password_plain`,
+      [id, isActive]
+    );
 
     res.status(200).json({ status: "ok", admin: updated.rows[0] });
   } catch (error) {

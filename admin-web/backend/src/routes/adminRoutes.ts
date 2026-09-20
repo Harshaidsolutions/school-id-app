@@ -92,6 +92,7 @@ import {
   requestManagedAdminPasswordOtp,
   updateManagedAdmin,
   uploadManagedAdminPhoto,
+  setManagedAdminActive,
 } from "../controllers/adminUserController";
 
 const router = Router();
@@ -190,6 +191,7 @@ router.post("/run-cleanup-now", runCleanupNow);
 router.get("/managed-admins", listManagedAdmins);
 router.post("/managed-admins", createManagedAdmin);
 router.put("/managed-admins/:id", updateManagedAdmin);
+router.patch("/managed-admins/:id/active", setManagedAdminActive);
 router.post("/managed-admins/:id/request-delete-otp", requestManagedAdminDeleteOtp);
 router.post("/managed-admins/:id/delete", deleteManagedAdmin);
 router.post("/managed-admins/:id/request-password-otp", requestManagedAdminPasswordOtp);

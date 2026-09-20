@@ -37,6 +37,7 @@ type Props = {
   showHeading?: boolean;
   showPhotoCapture?: boolean;
   instituteMode?: boolean;
+  onInputFocus?: (nativeTarget: number) => void;
 };
 
 export function AddStudentForm({
@@ -45,6 +46,7 @@ export function AddStudentForm({
   showHeading = true,
   showPhotoCapture = false,
   instituteMode = false,
+  onInputFocus,
 }: Props) {
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -297,6 +299,7 @@ export function AddStudentForm({
         }
         nameRequired
         classRequired={!instituteMode}
+        onInputFocus={onInputFocus}
       />
 
       {error ? (

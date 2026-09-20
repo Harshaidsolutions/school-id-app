@@ -1,7 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   Text,
@@ -38,6 +40,7 @@ import {
   type PhotoSource,
 } from "../utils/studentPhotoPicker";
 import { uploadStudentPhoto } from "../utils/uploadStudentPhoto";
+import { scrollToFocusedInput } from "../utils/scrollToFocusedInput";
 
 const INSTITUTE_CACHE_KEY = "__institute__";
 const NUM_COLS = 2;
@@ -76,6 +79,7 @@ export function InstituteMembersPanel({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addModalVisible, setAddModalVisible] = useState(false);
+  const addScrollRef = useRef<ScrollView>(null);
   const [flowVisible, setFlowVisible] = useState(false);
   const [flowIndex, setFlowIndex] = useState(0);
   const [pendingPhotoStudent, setPendingPhotoStudent] =
@@ -344,25 +348,35 @@ export function InstituteMembersPanel({
             </Text>
             <View style={styles.headerSide} />
           </View>
-          <ScrollView
-            contentContainerStyle={styles.addModalScroll}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
           >
-            {addModalVisible ? (
-              <AddStudentForm
-                instituteMode
-                showHeading={false}
-                showPhotoCapture
-                onSuccess={() => {
-                  setAddModalVisible(false);
-                  showToast("Member added successfully.");
-                  invalidateStudentsCache(INSTITUTE_CACHE_KEY);
-                  void loadMembers(true);
-                }}
-              />
-            ) : null}
-          </ScrollView>
+            <ScrollView
+              ref={addScrollRef}
+              contentContainerStyle={styles.addModalScroll}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              automaticallyAdjustKeyboardInsets
+            >
+              {addModalVisible ? (
+                <AddStudentForm
+                  instituteMode
+                  showHeading={false}
+                  showPhotoCapture
+                  onInputFocus={(target) =>
+                    scrollToFocusedInput(addScrollRef, target)
+                  }
+                  onSuccess={() => {
+                    setAddModalVisible(false);
+                    showToast("Member added successfully.");
+                    invalidateStudentsCache(INSTITUTE_CACHE_KEY);
+                    void loadMembers(true);
+                  }}
+                />
+              ) : null}
+            </ScrollView>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 

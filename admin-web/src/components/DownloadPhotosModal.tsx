@@ -1,19 +1,8 @@
 import { useMemo, useState } from "react";
+import { calendarDaysFromCreated } from "../utils/calendarDays";
+import { formatCalendarDate } from "../utils/formatCalendarDate";
 
 type Step = "choose" | "date-wise";
-
-function eachDay(fromIso: string, to: Date): string[] {
-  const start = new Date(fromIso);
-  if (Number.isNaN(start.getTime())) return [];
-  const days: string[] = [];
-  const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  const end = new Date(to.getFullYear(), to.getMonth(), to.getDate());
-  while (cursor <= end) {
-    days.push(cursor.toISOString().slice(0, 10));
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  return days.reverse();
-}
 
 export function DownloadPhotosModal({
   schoolCreatedAt,
@@ -32,7 +21,7 @@ export function DownloadPhotosModal({
   const [selectedDate, setSelectedDate] = useState("");
 
   const dateOptions = useMemo(
-    () => eachDay(schoolCreatedAt ?? new Date().toISOString(), new Date()),
+    () => calendarDaysFromCreated(schoolCreatedAt),
     [schoolCreatedAt]
   );
 
@@ -98,7 +87,7 @@ export function DownloadPhotosModal({
                 <option value="">Choose a date…</option>
                 {dateOptions.map((d) => (
                   <option key={d} value={d}>
-                    {d}
+                    {formatCalendarDate(d)}
                   </option>
                 ))}
               </select>

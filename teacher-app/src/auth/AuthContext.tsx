@@ -88,6 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.multiRemove([
       INSTRUCTIONS_READ_KEY,
       ONBOARDING_COMPLETE_KEY,
+      "teacher_hidden_notifications",
+      "teacher_notification_read_ids",
     ]);
     await clearAuthStorage();
     setInstructionsDone(false);

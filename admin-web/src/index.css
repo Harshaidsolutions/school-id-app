@@ -193,6 +193,20 @@
     }
   }
 
+  .school-list-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: calc(100dvh - 5.5rem);
+  }
+
+  .school-list-table-panel {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+  }
+
   .list-table-scroll {
     @apply w-full max-w-full overflow-x-auto;
     -webkit-overflow-scrolling: touch;
@@ -210,6 +224,10 @@
     position: sticky;
     top: 0;
     z-index: 2;
+  }
+
+  .list-data-table thead th {
+    @apply bg-content-bg;
   }
 
   .list-data-table th,

@@ -62,6 +62,7 @@ export async function login(
               u.assigned_class, u.assigned_section, u.created_at,
               u.display_name, u.phone, u.photo_url,
               COALESCE(u.is_super_admin, false) AS is_super_admin,
+              COALESCE(u.is_active, true) AS is_active,
               s.is_active AS school_is_active,
               i.is_active AS institute_is_active
        FROM users u
@@ -90,6 +91,11 @@ export async function login(
     }
     if (!passwordMatches) {
       throw new AppError("Wrong password", 401);
+    }
+
+    const userActive = (user as User & { is_active?: boolean }).is_active !== false;
+    if (user.role === "admin" && !userActive) {
+      throw new AppError("This admin account is disabled. Contact the super admin.", 403);
     }
 
     if (user.role === "teacher" || user.role === "institute_staff") {

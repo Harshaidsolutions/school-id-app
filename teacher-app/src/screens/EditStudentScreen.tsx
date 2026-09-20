@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 
 import {
@@ -57,6 +57,7 @@ import {
   initialExtraValuesFromStudent,
 } from "../utils/studentFieldForm";
 import { pickStudentPhotoFromCamera } from "../utils/studentPhotoPicker";
+import { scrollToFocusedInput } from "../utils/scrollToFocusedInput";
 
 
 
@@ -93,6 +94,7 @@ export function EditStudentScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { scale } = useResponsiveLayout();
   const photoSize = scale(120);
+  const scrollRef = useRef<ScrollView>(null);
 
   const { student, returnToFlow } = route.params;
 
@@ -289,9 +291,10 @@ export function EditStudentScreen({ navigation, route }: Props) {
       <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
+          keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 56 : 0}
         >
           <ScrollView
+            ref={scrollRef}
             style={styles.flex}
             contentContainerStyle={[
               styles.scroll,
@@ -382,6 +385,9 @@ export function EditStudentScreen({ navigation, route }: Props) {
               }
               classSectionReadOnly
               parentPhoneTenDigits
+              onInputFocus={(target) =>
+                scrollToFocusedInput(scrollRef, target)
+              }
             />
 
 

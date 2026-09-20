@@ -23,6 +23,10 @@ import {
   allocateInstitutePhotoId,
   isInstituteCapturePhotoId,
 } from "../utils/institutePhotoId";
+import {
+  allocateSchoolPhotoId,
+  isSchoolCapturePhotoId,
+} from "../utils/schoolPhotoId";
 import { studentPhotoOrgId } from "../config/storage";
 
 interface TeacherStudentRow {
@@ -370,12 +374,7 @@ export async function createTeacherStudent(
     const custom3 =
       optionalBodyString(body, ["custom_3", "custom3"]) ?? null;
 
-    let photoId = String(
-      req.body.photo_id ?? req.body.photoId ?? ""
-    ).trim();
-    if (!photoId) {
-      photoId = `T-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    }
+    const photoId = String(req.body.photo_id ?? req.body.photoId ?? "").trim() || null;
 
     const extraFields = parseExtraFields(req.body.extra_fields ?? req.body.extraFields);
 
@@ -473,6 +472,7 @@ export async function uploadStudentPhoto(
 
     const instituteId = student.institute_id;
     const instituteCapture = Boolean(instituteId);
+    const schoolId = student.school_id;
 
     const client = await pool.connect();
     let updatedStudent: TeacherStudentRow | undefined;
@@ -486,10 +486,16 @@ export async function uploadStudentPhoto(
         } else {
           capturePhotoId = await allocateInstitutePhotoId(client, instituteId);
         }
+      } else if (schoolId) {
+        if (isSchoolCapturePhotoId(student.photo_id)) {
+          capturePhotoId = student.photo_id!.trim();
+        } else {
+          capturePhotoId = await allocateSchoolPhotoId(client, schoolId);
+        }
       }
 
       const updated = await client.query<TeacherStudentRow>(
-        instituteCapture
+        capturePhotoId
           ? `UPDATE students
              SET photo_url = $1,
                  photo_id = $2,
@@ -505,7 +511,7 @@ export async function uploadStudentPhoto(
                  updated_at = NOW()
              WHERE id = $2
              RETURNING ${TEACHER_STUDENT_SELECT}`,
-        instituteCapture
+        capturePhotoId
           ? [photoUrl, capturePhotoId, student.id]
           : [photoUrl, student.id]
       );

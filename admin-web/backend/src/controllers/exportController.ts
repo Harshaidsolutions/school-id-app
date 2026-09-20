@@ -77,7 +77,10 @@ async function downloadOrgPhotosZip(
            WHERE ${whereOrg}
              AND photo_url IS NOT NULL
              AND status IN ('captured', 'printed')
-             AND (updated_at AT TIME ZONE 'UTC')::date = $2::date
+             AND COALESCE(
+                   (photo_captured_at AT TIME ZONE 'UTC')::date,
+                   (updated_at AT TIME ZONE 'UTC')::date
+                 ) = $2::date
            ORDER BY photo_id ASC NULLS LAST`
         : `SELECT photo_id, photo_url
            FROM students
