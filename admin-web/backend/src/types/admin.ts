@@ -36,6 +36,7 @@ export interface SchoolRow {
   tags?: string | null;
   phone2?: string | null;
   template_id: string | null;
+  owner_admin_id?: string | null;
   created_at: Date | null;
   is_active?: boolean | null;
   owner_username?: string | null;
@@ -55,6 +56,7 @@ export interface InstituteRow {
   model?: string | null;
   tags?: string | null;
   template_id?: string | null;
+  owner_admin_id?: string | null;
   created_at: Date | null;
   is_active?: boolean | null;
   owner_username?: string | null;

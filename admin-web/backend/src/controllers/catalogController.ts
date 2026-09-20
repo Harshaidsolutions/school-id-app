@@ -2,6 +2,16 @@ import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
 import { uploadCatalogFile } from "../config/storage";
+import {
+  adminCatalogOwnerSql,
+  assertCatalogRowOwnedByAdmin,
+  loadOrgOwnerAdminId,
+  requireAdminScope,
+} from "../utils/adminScope";
+import {
+  getTeacherOrgId,
+  isInstituteStaff,
+} from "../utils/teacherOrgScope";
 
 export const CATALOG_KINDS = [
   "model",
@@ -45,13 +55,15 @@ export async function listCatalogItems(
   next: NextFunction
 ): Promise<void> {
   try {
+    const scope = await requireAdminScope(req);
     const kind = resolveCatalogKind(req);
+    const owner = adminCatalogOwnerSql(scope, "catalog_items", 2);
     const result = await pool.query<CatalogRow>(
       `SELECT id, kind, name, description, image_url, file_size, created_at
        FROM catalog_items
-       WHERE kind = $1
+       WHERE kind = $1${owner.clause}
        ORDER BY created_at DESC`,
-      [kind]
+      [kind, owner.value]
     );
     res.status(200).json({
       status: "ok",
@@ -69,6 +81,7 @@ export async function createCatalogItem(
   next: NextFunction
 ): Promise<void> {
   try {
+    const scope = await requireAdminScope(req);
     const kind = resolveCatalogKind(req);
     const rawName = String(req.body.name ?? "").trim();
     const name =
@@ -82,10 +95,10 @@ export async function createCatalogItem(
     if (!req.file) throw new AppError("Image file is required", 400);
 
     const inserted = await pool.query<CatalogRow>(
-      `INSERT INTO catalog_items (kind, name, description, file_size)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO catalog_items (kind, name, description, file_size, owner_admin_id)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id, kind, name, description, image_url, file_size, created_at`,
-      [kind, name, description, req.file.size]
+      [kind, name, description, req.file.size, scope.adminUserId]
     );
     const item = inserted.rows[0];
     if (!item) throw new AppError("Failed to create item", 500);
@@ -109,8 +122,11 @@ export async function updateCatalogItem(
   next: NextFunction
 ): Promise<void> {
   try {
+    const scope = await requireAdminScope(req);
     const id = String(req.params.id ?? "").trim();
     if (!id) throw new AppError("id is required", 400);
+
+    await assertCatalogRowOwnedByAdmin(scope, "catalog_items", id);
 
     const existing = await pool.query<CatalogRow>(
       `SELECT id, kind, name, description, image_url, file_size, created_at
@@ -156,7 +172,9 @@ export async function deleteCatalogItem(
   next: NextFunction
 ): Promise<void> {
   try {
+    const scope = await requireAdminScope(req);
     const id = String(req.params.id ?? "").trim();
+    await assertCatalogRowOwnedByAdmin(scope, "catalog_items", id);
     const result = await pool.query(
       `DELETE FROM catalog_items WHERE id = $1 RETURNING id`,
       [id]
@@ -168,17 +186,30 @@ export async function deleteCatalogItem(
   }
 }
 
+async function teacherCatalogOwnerId(req: Request): Promise<string | null> {
+  if (!req.user) throw new AppError("Authentication required", 401);
+  const orgId = getTeacherOrgId(req.user);
+  const orgTable = isInstituteStaff(req.user) ? "institutes" : "schools";
+  return loadOrgOwnerAdminId(orgTable, orgId);
+}
+
 export async function listTeacherBrochures(
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
+    const ownerAdminId = await teacherCatalogOwnerId(req);
+    if (!ownerAdminId) {
+      res.status(200).json({ status: "ok", count: 0, brochures: [] });
+      return;
+    }
     const result = await pool.query<CatalogRow>(
       `SELECT id, kind, name, description, image_url, file_size, created_at
        FROM catalog_items
-       WHERE kind = 'brochure' AND image_url IS NOT NULL
-       ORDER BY created_at DESC`
+       WHERE kind = 'brochure' AND image_url IS NOT NULL AND owner_admin_id = $1
+       ORDER BY created_at DESC`,
+      [ownerAdminId]
     );
     res.status(200).json({
       status: "ok",
@@ -196,17 +227,23 @@ export async function listTeacherBrochures(
 }
 
 export async function getLatestTeacherBrochure(
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
+    const ownerAdminId = await teacherCatalogOwnerId(req);
+    if (!ownerAdminId) {
+      res.status(200).json({ status: "ok", brochure: null });
+      return;
+    }
     const result = await pool.query<CatalogRow>(
       `SELECT id, kind, name, description, image_url, file_size, created_at
        FROM catalog_items
-       WHERE kind = 'brochure' AND image_url IS NOT NULL
+       WHERE kind = 'brochure' AND image_url IS NOT NULL AND owner_admin_id = $1
        ORDER BY created_at DESC
-       LIMIT 1`
+       LIMIT 1`,
+      [ownerAdminId]
     );
     const row = result.rows[0] ?? null;
     res.status(200).json({

@@ -178,6 +178,8 @@ export function AppLayout() {
         : baseTitle;
 
   const isDashboard = location.pathname === "/";
+  const isOrgListPage =
+    location.pathname === "/schools" || location.pathname === "/institutes";
   const showCenteredHeading = true;
 
   const sidebarContent = (
@@ -332,9 +334,15 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <main
+          className={`min-h-0 min-w-0 flex-1 overflow-x-hidden ${
+            isOrgListPage ? "overflow-hidden" : "overflow-y-auto"
+          }`}
+        >
           <div
-            className={`min-w-0 max-w-full ${isDashboard ? "px-[clamp(1rem,2.5vw,1.5rem)] py-4" : "px-[clamp(1rem,2.5vw,1.5rem)] py-5"}`}
+            className={`min-w-0 max-w-full ${
+              isDashboard ? "px-[clamp(1rem,2.5vw,1.5rem)] py-4" : "px-[clamp(1rem,2.5vw,1.5rem)] py-5"
+            } ${isOrgListPage ? "flex h-full min-h-0 flex-col" : ""}`}
           >
             <Outlet />
           </div>

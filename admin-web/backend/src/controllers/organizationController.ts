@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
 import { uploadSchoolAsset } from "../config/storage";
+import { loadOrgOwnerAdminId } from "../utils/adminScope";
 import {
   getTeacherOrgId,
   isInstituteStaff,
@@ -65,11 +66,18 @@ export async function getTeacherOrganization(
       );
     }
 
-    const templates = await pool.query<Pick<TemplateRow, "id" | "name" | "orientation">>(
-      `SELECT id, name, orientation
-       FROM templates
-       ORDER BY name ASC`
-    );
+    const orgTable = isInstituteStaff(req.user) ? "institutes" : "schools";
+    const ownerAdminId = await loadOrgOwnerAdminId(orgTable, orgId);
+    const templates =
+      ownerAdminId != null
+        ? await pool.query<Pick<TemplateRow, "id" | "name" | "orientation">>(
+            `SELECT id, name, orientation
+             FROM templates
+             WHERE owner_admin_id = $1
+             ORDER BY name ASC`,
+            [ownerAdminId]
+          )
+        : { rows: [] };
 
     res.status(200).json({
       status: "ok",
@@ -145,9 +153,10 @@ export async function updateTeacherOrganization(
           : institute.template_id ?? null;
 
       if (templateId) {
+        const ownerAdminId = await loadOrgOwnerAdminId("institutes", orgId);
         const tpl = await pool.query(
-          `SELECT id FROM templates WHERE id = $1 LIMIT 1`,
-          [templateId]
+          `SELECT id FROM templates WHERE id = $1 AND owner_admin_id = $2 LIMIT 1`,
+          [templateId, ownerAdminId]
         );
         if (!tpl.rows[0]) {
           throw new AppError("Template not found", 400);
@@ -248,9 +257,10 @@ export async function updateTeacherOrganization(
         : school.template_id;
 
     if (templateId) {
+      const ownerAdminId = await loadOrgOwnerAdminId("schools", orgId);
       const tpl = await pool.query(
-        `SELECT id FROM templates WHERE id = $1 LIMIT 1`,
-        [templateId]
+        `SELECT id FROM templates WHERE id = $1 AND owner_admin_id = $2 LIMIT 1`,
+        [templateId, ownerAdminId]
       );
       if (!tpl.rows[0]) {
         throw new AppError("Template not found", 400);

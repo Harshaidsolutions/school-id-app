@@ -28,6 +28,7 @@ import {
   isSchoolCapturePhotoId,
 } from "../utils/schoolPhotoId";
 import { studentPhotoOrgId } from "../config/storage";
+import { loadOrgOwnerAdminId } from "../utils/adminScope";
 
 interface TeacherStudentRow {
   id: string;
@@ -1008,23 +1009,33 @@ export async function getTeacherHome(
 }
 
 export async function listTeacherModels(
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const orgId = getTeacherOrgId(req.user);
+    const orgTable = isInstituteStaff(req.user) ? "institutes" : "schools";
+    const ownerAdminId = await loadOrgOwnerAdminId(orgTable, orgId);
+    if (!ownerAdminId) {
+      res.status(200).json({ status: "ok", count: 0, models: [], tags: [] });
+      return;
+    }
     const [modelsResult, tagsResult] = await Promise.all([
       pool.query<TeacherModelRow>(
         `SELECT id, kind, name, description, image_url, created_at
          FROM catalog_items
-         WHERE kind = 'model'
-         ORDER BY created_at DESC`
+         WHERE kind = 'model' AND owner_admin_id = $1
+         ORDER BY created_at DESC`,
+        [ownerAdminId]
       ),
       pool.query<TeacherModelRow>(
         `SELECT id, kind, name, description, image_url, created_at
          FROM catalog_items
-         WHERE kind = 'tag'
-         ORDER BY created_at DESC`
+         WHERE kind = 'tag' AND owner_admin_id = $1
+         ORDER BY created_at DESC`,
+        [ownerAdminId]
       ),
     ]);
     const models = modelsResult.rows.map((row) => ({

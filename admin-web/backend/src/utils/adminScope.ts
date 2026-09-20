@@ -150,3 +150,43 @@ export async function assertInstituteOwnedByAdmin(
     throw new AppError("Institute not found", 404);
   }
 }
+
+/** Templates, models, tags, brochures — each admin owns their own catalog (no sharing). */
+export function adminCatalogOwnerSql(
+  scope: AdminScope,
+  tableAlias: string,
+  paramIndex: number
+): { clause: string; value: string } {
+  return {
+    clause: ` AND ${tableAlias}.owner_admin_id = $${paramIndex}`,
+    value: scope.adminUserId,
+  };
+}
+
+export async function assertCatalogRowOwnedByAdmin(
+  scope: AdminScope,
+  table: "templates" | "catalog_items",
+  rowId: string
+): Promise<void> {
+  const row = await pool.query<{ owner_admin_id: string | null }>(
+    `SELECT owner_admin_id FROM ${table} WHERE id = $1 LIMIT 1`,
+    [rowId]
+  );
+  if (!row.rows[0]) {
+    throw new AppError("Item not found", 404);
+  }
+  if (row.rows[0].owner_admin_id !== scope.adminUserId) {
+    throw new AppError("Item not found", 404);
+  }
+}
+
+export async function loadOrgOwnerAdminId(
+  orgTable: "schools" | "institutes",
+  orgId: string
+): Promise<string | null> {
+  const row = await pool.query<{ owner_admin_id: string | null }>(
+    `SELECT owner_admin_id FROM ${orgTable} WHERE id = $1 LIMIT 1`,
+    [orgId]
+  );
+  return row.rows[0]?.owner_admin_id ?? null;
+}

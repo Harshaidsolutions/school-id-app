@@ -23,7 +23,7 @@ export async function getSchoolOrganizationInfo(
     >(
       `SELECT s.id, s.name, s.year, s.phone, s.phone2, s.school_code, s.address, s.instructions,
               s.logo_url, s.signature_url, s.organization_photo_url, s.model, s.tags,
-              s.template_id, s.created_at,
+              s.template_id, s.owner_admin_id, s.created_at,
               t.name AS template_name,
               t.image_url AS template_image_url
        FROM schools s
@@ -36,9 +36,10 @@ export async function getSchoolOrganizationInfo(
     const school = result.rows[0];
     if (!school) throw new AppError("School not found", 404);
 
+    const ownerAdminId = school.owner_admin_id ?? null;
     const [model_image_url, tag_items] = await Promise.all([
-      resolveModelImageUrl(school.model),
-      resolveTagSelections(school.tags),
+      resolveModelImageUrl(school.model, ownerAdminId),
+      resolveTagSelections(school.tags, ownerAdminId),
     ]);
     const template_image_url =
       school.template_image_url ??
@@ -79,7 +80,7 @@ export async function getInstituteOrganizationInfo(
     >(
       `SELECT i.id, i.name, i.year, i.phone, i.institute_code, i.address, i.instructions,
               i.logo_url, i.signature_url, i.created_at,
-              i.model, i.tags, i.template_id,
+              i.model, i.tags, i.template_id, i.owner_admin_id,
               t.name AS template_name,
               t.image_url AS template_image_url
        FROM institutes i
@@ -92,9 +93,10 @@ export async function getInstituteOrganizationInfo(
     const institute = result.rows[0];
     if (!institute) throw new AppError("Institute not found", 404);
 
+    const ownerAdminId = institute.owner_admin_id ?? null;
     const [model_image_url, tag_items] = await Promise.all([
-      resolveModelImageUrl(institute.model),
-      resolveTagSelections(institute.tags),
+      resolveModelImageUrl(institute.model, ownerAdminId),
+      resolveTagSelections(institute.tags, ownerAdminId),
     ]);
     const template_image_url =
       institute.template_image_url ??

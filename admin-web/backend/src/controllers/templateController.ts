@@ -3,6 +3,12 @@ import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
 import { uploadTemplateImage } from "../config/storage";
 import {
+  adminCatalogOwnerSql,
+  assertCatalogRowOwnedByAdmin,
+  loadOrgOwnerAdminId,
+  requireAdminScope,
+} from "../utils/adminScope";
+import {
   getTeacherOrgId,
   isInstituteStaff,
 } from "../utils/teacherOrgScope";
@@ -10,6 +16,7 @@ import {
   isTemplateOrientation,
   type TemplateRow,
 } from "../types/admin";
+import { routeParam } from "../utils/routeParams";
 
 function parseConfigJson(raw: unknown): unknown {
   if (raw == null || raw === "") return null;
@@ -24,16 +31,14 @@ function parseConfigJson(raw: unknown): unknown {
   return null;
 }
 
-/** Admin: create a global template (visible to all schools / teachers).
- * school_id in the request body is ignored — templates are not school-scoped.
- */
+/** Admin: create a template owned by the logged-in admin (not shared with other admins). */
 export async function createTemplate(
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
-    // Intentionally ignore school_id / schoolId if clients still send them
+    const scope = await requireAdminScope(req);
     const name = String(req.body.name ?? "").trim();
     const orientation = String(req.body.orientation ?? "").trim();
     const configJson = parseConfigJson(req.body.config_json ?? req.body.configJson);
@@ -47,10 +52,10 @@ export async function createTemplate(
     }
 
     const inserted = await pool.query<TemplateRow>(
-      `INSERT INTO templates (school_id, name, orientation, config_json)
-       VALUES (NULL, $1, $2, $3)
+      `INSERT INTO templates (school_id, name, orientation, config_json, owner_admin_id)
+       VALUES (NULL, $1, $2, $3, $4)
        RETURNING *`,
-      [name, orientation, configJson]
+      [name, orientation, configJson, scope.adminUserId]
     );
 
     const template = inserted.rows[0];
@@ -72,13 +77,14 @@ export async function createTemplate(
   }
 }
 
-/** Admin: list all global templates (optional orientation filter). */
+/** Admin: list templates owned by the logged-in admin. */
 export async function listTemplates(
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
+    const scope = await requireAdminScope(req);
     const orientation =
       typeof req.query.orientation === "string"
         ? req.query.orientation.trim()
@@ -86,6 +92,9 @@ export async function listTemplates(
 
     const values: unknown[] = [];
     const conditions: string[] = [];
+    const owner = adminCatalogOwnerSql(scope, "templates", 1);
+    conditions.push(`owner_admin_id = $${values.length + 1}`);
+    values.push(owner.value);
     if (orientation) {
       if (!isTemplateOrientation(orientation)) {
         throw new AppError("Invalid orientation filter", 400);
@@ -94,8 +103,7 @@ export async function listTemplates(
       conditions.push(`orientation = $${values.length}`);
     }
 
-    const where =
-      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const where = `WHERE ${conditions.join(" AND ")}`;
 
     const result = await pool.query<TemplateRow>(
       `SELECT * FROM templates
@@ -129,8 +137,11 @@ export async function updateTemplate(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { id } = req.params;
+    const scope = await requireAdminScope(req);
+    const id = routeParam(req.params.id);
     if (!id) throw new AppError("Template id is required", 400);
+
+    await assertCatalogRowOwnedByAdmin(scope, "templates", id);
 
     const existing = await pool.query<TemplateRow>(
       `SELECT * FROM templates WHERE id = $1 LIMIT 1`,
@@ -185,8 +196,11 @@ export async function deleteTemplate(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { id } = req.params;
+    const scope = await requireAdminScope(req);
+    const id = routeParam(req.params.id);
     if (!id) throw new AppError("Template id is required", 400);
+
+    await assertCatalogRowOwnedByAdmin(scope, "templates", id);
 
     const result = await pool.query(
       `DELETE FROM templates WHERE id = $1 RETURNING id`,
@@ -221,8 +235,21 @@ export async function listTeacherTemplates(
         ? req.query.orientation.trim()
         : "";
 
-    const values: unknown[] = [];
-    const conditions: string[] = [];
+    const orgId = getTeacherOrgId(req.user);
+    const orgTable = isInstituteStaff(req.user) ? "institutes" : "schools";
+    const ownerAdminId = await loadOrgOwnerAdminId(orgTable, orgId);
+    if (!ownerAdminId) {
+      res.status(200).json({
+        status: "ok",
+        count: 0,
+        selectedTemplateId: null,
+        templates: [],
+      });
+      return;
+    }
+
+    const values: unknown[] = [ownerAdminId];
+    const conditions: string[] = [`owner_admin_id = $1`];
     if (orientation) {
       if (!isTemplateOrientation(orientation)) {
         throw new AppError("Invalid orientation filter", 400);
@@ -231,8 +258,7 @@ export async function listTeacherTemplates(
       conditions.push(`orientation = $${values.length}`);
     }
 
-    const where =
-      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const where = `WHERE ${conditions.join(" AND ")}`;
 
     const result = await pool.query<TemplateRow>(
       `SELECT * FROM templates
@@ -240,8 +266,6 @@ export async function listTeacherTemplates(
        ORDER BY created_at DESC`,
       values
     );
-
-    const orgId = getTeacherOrgId(req.user);
     const selected = isInstituteStaff(req.user)
       ? await pool.query<{ template_id: string | null }>(
           `SELECT template_id FROM institutes WHERE id = $1`,
@@ -276,15 +300,20 @@ export async function selectTeacherTemplate(
     const { id } = req.params;
     if (!id) throw new AppError("Template id is required", 400);
 
+    const orgId = getTeacherOrgId(req.user);
+    const orgTable = isInstituteStaff(req.user) ? "institutes" : "schools";
+    const ownerAdminId = await loadOrgOwnerAdminId(orgTable, orgId);
+    if (!ownerAdminId) {
+      throw new AppError("Template not found", 404);
+    }
+
     const template = await pool.query<TemplateRow>(
-      `SELECT * FROM templates WHERE id = $1 LIMIT 1`,
-      [id]
+      `SELECT * FROM templates WHERE id = $1 AND owner_admin_id = $2 LIMIT 1`,
+      [id, ownerAdminId]
     );
     if (!template.rows[0]) {
       throw new AppError("Template not found", 404);
     }
-
-    const orgId = getTeacherOrgId(req.user);
     if (isInstituteStaff(req.user)) {
       await pool.query(`UPDATE institutes SET template_id = $1 WHERE id = $2`, [
         id,

@@ -668,6 +668,34 @@ async function migrate() {
     WHERE i.owner_admin_id IS NULL;
   `);
 
+  await pool.query(`
+    ALTER TABLE templates ADD COLUMN IF NOT EXISTS owner_admin_id UUID REFERENCES users(id);
+    ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS owner_admin_id UUID REFERENCES users(id);
+
+    CREATE INDEX IF NOT EXISTS idx_templates_owner_admin ON templates (owner_admin_id);
+    CREATE INDEX IF NOT EXISTS idx_catalog_items_owner_admin ON catalog_items (owner_admin_id);
+
+    UPDATE templates t
+    SET owner_admin_id = super.id
+    FROM (
+      SELECT id FROM users
+      WHERE role = 'admin' AND is_super_admin = true
+      ORDER BY created_at ASC NULLS LAST
+      LIMIT 1
+    ) super
+    WHERE t.owner_admin_id IS NULL;
+
+    UPDATE catalog_items c
+    SET owner_admin_id = super.id
+    FROM (
+      SELECT id FROM users
+      WHERE role = 'admin' AND is_super_admin = true
+      ORDER BY created_at ASC NULLS LAST
+      LIMIT 1
+    ) super
+    WHERE c.owner_admin_id IS NULL;
+  `);
+
   console.log("Migration completed successfully.");
 }
 
