@@ -87,6 +87,7 @@ import {
   changeManagedAdminPassword,
   createManagedAdmin,
   deleteManagedAdmin,
+  getAdminProfile,
   listManagedAdmins,
   requestManagedAdminDeleteOtp,
   requestManagedAdminPasswordOtp,
@@ -98,6 +99,8 @@ import {
 const router = Router();
 
 router.use(authMiddleware, requireRole("admin"));
+
+router.get("/profile", getAdminProfile);
 
 // Dashboard
 router.get("/dashboard-summary", getDashboardSummary);

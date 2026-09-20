@@ -111,6 +111,7 @@ export async function login(
     const isSuperAdmin = resolveIsSuperAdmin({
       role: user.role,
       email: user.email,
+      username: user.username,
       is_super_admin: (user as User & { is_super_admin?: boolean }).is_super_admin,
     });
 

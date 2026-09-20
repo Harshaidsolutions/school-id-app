@@ -5,6 +5,13 @@ import { AppError } from "../middleware/errorHandler";
 /** Primary super admin account (matches migrate backfill). */
 export const SUPER_ADMIN_EMAIL = "harshaidsolutions@gmail.com";
 
+const SUPER_ADMIN_USERNAMES = new Set([
+  "harsha",
+  "harshaidsolutions",
+  "harshaid",
+  "harshaidsolutions@gmail.com",
+]);
+
 export type AdminScope = {
   adminUserId: string;
   isSuperAdmin: boolean;
@@ -13,6 +20,7 @@ export type AdminScope = {
 export function resolveIsSuperAdmin(user: {
   role?: string | null;
   email?: string | null;
+  username?: string | null;
   is_super_admin?: boolean | null;
 }): boolean {
   if (user.role !== "admin") return false;
@@ -20,15 +28,21 @@ export function resolveIsSuperAdmin(user: {
   const email = String(user.email ?? "")
     .trim()
     .toLowerCase();
-  return email === SUPER_ADMIN_EMAIL;
+  if (email === SUPER_ADMIN_EMAIL) return true;
+  const username = String(user.username ?? "")
+    .trim()
+    .toLowerCase();
+  if (SUPER_ADMIN_USERNAMES.has(username)) return true;
+  return false;
 }
 
 export async function loadAdminScope(userId: string): Promise<AdminScope> {
   const row = await pool.query<{
     email: string;
+    username: string | null;
     is_super_admin: boolean | null;
   }>(
-    `SELECT email, COALESCE(is_super_admin, false) AS is_super_admin
+    `SELECT email, username, COALESCE(is_super_admin, false) AS is_super_admin
      FROM users WHERE id = $1 AND role = 'admin' LIMIT 1`,
     [userId]
   );
@@ -40,9 +54,18 @@ export async function loadAdminScope(userId: string): Promise<AdminScope> {
     isSuperAdmin: resolveIsSuperAdmin({
       role: "admin",
       email: row.rows[0].email,
+      username: row.rows[0].username,
       is_super_admin: row.rows[0].is_super_admin,
     }),
   };
+}
+
+/** Super admin sees every school/institute; scoped admins see only owned orgs. */
+export function adminSeesAllOrganizations(
+  scope: AdminScope,
+  req: Request
+): boolean {
+  return scope.isSuperAdmin || req.user?.isSuperAdmin === true;
 }
 
 export async function requireAdminScope(req: Request): Promise<AdminScope> {

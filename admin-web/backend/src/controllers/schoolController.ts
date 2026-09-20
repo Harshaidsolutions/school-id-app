@@ -14,6 +14,7 @@ import {
 import type { SchoolRow } from "../types/admin";
 import { parseBooleanField } from "../utils/parseBoolean";
 import {
+  adminSeesAllOrganizations,
   assertSchoolOwnedByAdmin,
   requireAdminScope,
 } from "../utils/adminScope";
@@ -205,7 +206,7 @@ export async function listSchools(
       filters.push(`s.year = $${values.length + 1}`);
       values.push(year);
     }
-    if (!scope.isSuperAdmin) {
+    if (!adminSeesAllOrganizations(scope, req)) {
       filters.push(`s.owner_admin_id = $${values.length + 1}`);
       values.push(scope.adminUserId);
     }

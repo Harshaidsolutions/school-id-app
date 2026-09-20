@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
 import { SCHOOL_ASSETS_BUCKET, uploadBufferToBucket } from "../config/storage";
-import { requireSuperAdmin } from "../utils/adminScope";
+import { requireAdminScope, requireSuperAdmin } from "../utils/adminScope";
 import {
   requestAdminActionOtp,
   verifyAdminActionOtp,
@@ -18,6 +18,48 @@ function isValidEmail(value: string): boolean {
 
 function normalizePhone(value: string): string {
   return value.replace(/\D/g, "").slice(0, 10);
+}
+
+export async function getAdminProfile(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const row = await pool.query<{
+      id: string;
+      email: string;
+      username: string | null;
+      display_name: string | null;
+      phone: string | null;
+      photo_url: string | null;
+    }>(
+      `SELECT id, email, username, display_name, phone, photo_url
+       FROM users WHERE id = $1 AND role = 'admin' LIMIT 1`,
+      [scope.adminUserId]
+    );
+    if (!row.rows[0]) throw new AppError("Admin account not found", 404);
+    const u = row.rows[0];
+    res.status(200).json({
+      status: "ok",
+      user: {
+        id: u.id,
+        email: u.email,
+        username: u.username,
+        role: "admin",
+        schoolId: null,
+        assignedClass: null,
+        assignedSection: null,
+        displayName: u.display_name,
+        phone: u.phone,
+        photoUrl: u.photo_url,
+        isSuperAdmin: scope.isSuperAdmin,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function listManagedAdmins(

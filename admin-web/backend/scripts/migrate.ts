@@ -626,23 +626,35 @@ async function migrate() {
     UPDATE users
     SET is_super_admin = true
     WHERE role = 'admin'
-      AND lower(trim(email)) = 'harshaidsolutions@gmail.com';
+      AND (
+        lower(trim(email)) = 'harshaidsolutions@gmail.com'
+        OR lower(trim(COALESCE(username, ''))) IN (
+          'harsha',
+          'harshaidsolutions',
+          'harshaid',
+          'harshaidsolutions@gmail.com'
+        )
+      );
 
     UPDATE schools s
-    SET owner_admin_id = u.id
-    FROM users u
-    WHERE s.owner_admin_id IS NULL
-      AND u.role = 'admin'
-      AND u.is_super_admin = true
-      AND lower(trim(u.email)) = 'harshaidsolutions@gmail.com';
+    SET owner_admin_id = super.id
+    FROM (
+      SELECT id FROM users
+      WHERE role = 'admin' AND is_super_admin = true
+      ORDER BY created_at ASC NULLS LAST
+      LIMIT 1
+    ) super
+    WHERE s.owner_admin_id IS NULL;
 
     UPDATE institutes i
-    SET owner_admin_id = u.id
-    FROM users u
-    WHERE i.owner_admin_id IS NULL
-      AND u.role = 'admin'
-      AND u.is_super_admin = true
-      AND lower(trim(u.email)) = 'harshaidsolutions@gmail.com';
+    SET owner_admin_id = super.id
+    FROM (
+      SELECT id FROM users
+      WHERE role = 'admin' AND is_super_admin = true
+      ORDER BY created_at ASC NULLS LAST
+      LIMIT 1
+    ) super
+    WHERE i.owner_admin_id IS NULL;
   `);
 
   console.log("Migration completed successfully.");

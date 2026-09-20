@@ -11,6 +11,7 @@ import { routeParam } from "../utils/routeParams";
 import { parseBooleanField } from "../utils/parseBoolean";
 import {
   assertInstituteOwnedByAdmin,
+  adminSeesAllOrganizations,
   requireAdminScope,
 } from "../utils/adminScope";
 import {
@@ -227,7 +228,7 @@ export async function listInstitutes(
       filters.push(`i.year = $${values.length + 1}`);
       values.push(year);
     }
-    if (!scope.isSuperAdmin) {
+    if (!adminSeesAllOrganizations(scope, req)) {
       filters.push(`i.owner_admin_id = $${values.length + 1}`);
       values.push(scope.adminUserId);
     }
