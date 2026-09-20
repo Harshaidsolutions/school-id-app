@@ -194,24 +194,21 @@
   }
 
   .school-list-page {
-    @apply flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden;
+    @apply flex h-full min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden;
   }
 
   .school-list-page > :not(.school-list-table-panel) {
     @apply shrink-0;
   }
 
+  /* Only this panel scrolls; search/actions above stay fixed */
   .school-list-table-panel {
-    @apply min-h-0 w-full min-w-0 flex-1;
-  }
-
-  .school-list-page .list-table-scroll {
-    @apply min-h-0 flex-1 overflow-y-auto overflow-x-auto;
+    @apply min-h-0 w-full min-w-0 flex-1 overflow-y-auto overflow-x-auto;
     -webkit-overflow-scrolling: touch;
-    max-height: none;
+    flex: 1 1 0;
   }
 
-  .list-table-scroll {
+  .list-table-scroll:not(.school-list-table-panel) {
     @apply w-full max-w-full overflow-x-auto;
     -webkit-overflow-scrolling: touch;
     max-height: min(calc(100dvh - 12rem), 72rem);

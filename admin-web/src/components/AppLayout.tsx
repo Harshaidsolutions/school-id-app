@@ -232,8 +232,12 @@ export function AppLayout() {
         </>
       )}
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
-        <header className="sticky top-0 z-20 flex shrink-0 items-center gap-3 border-b border-border bg-white px-4 py-3 sm:px-6">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <header
+          className={`z-20 flex shrink-0 items-center gap-3 border-b border-border bg-white px-4 py-3 sm:px-6 ${
+            isOrgListPage ? "" : "sticky top-0"
+          }`}
+        >
           {hideSidebar && (isSchoolDetail || isInstituteDetail) ? (
             <button
               type="button"
@@ -335,14 +339,18 @@ export function AppLayout() {
         </header>
 
         <main
-          className={`min-h-0 min-w-0 flex-1 overflow-x-hidden ${
+          className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden ${
             isOrgListPage ? "overflow-hidden" : "overflow-y-auto"
           }`}
         >
           <div
-            className={`min-w-0 max-w-full ${
-              isDashboard ? "px-[clamp(1rem,2.5vw,1.5rem)] py-4" : "px-[clamp(1rem,2.5vw,1.5rem)] py-5"
-            } ${isOrgListPage ? "flex h-full min-h-0 flex-col" : ""}`}
+            className={`min-h-0 min-w-0 max-w-full ${
+              isOrgListPage
+                ? "flex min-h-0 flex-1 flex-col overflow-hidden px-[clamp(1rem,2.5vw,1.5rem)] pb-4 pt-4"
+                : isDashboard
+                  ? "px-[clamp(1rem,2.5vw,1.5rem)] py-4"
+                  : "px-[clamp(1rem,2.5vw,1.5rem)] py-5"
+            }`}
           >
             <Outlet />
           </div>
