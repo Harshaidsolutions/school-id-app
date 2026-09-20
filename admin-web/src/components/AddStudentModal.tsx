@@ -1,0 +1,241 @@
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import axios from "axios";
+import api from "../api/client";
+import type { ApiErrorBody, Student } from "../types";
+import type { FormFieldConfig } from "../constants/formFields";
+import {
+  activeFormFields,
+  findClassField,
+  findStudentNameField,
+} from "../utils/formFieldHelpers";
+
+const GENDER_OPTIONS = ["Male", "Female", "Other"] as const;
+const BLOOD_GROUP_OPTIONS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
+
+export function AddStudentModal({
+  open,
+  onClose,
+  schoolId,
+  instituteId,
+  formFields,
+  classOptions,
+  onCreated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  schoolId?: string;
+  instituteId?: string;
+  formFields: FormFieldConfig[];
+  classOptions: string[];
+  onCreated: (student: Student) => void;
+}) {
+  const fields = useMemo(() => activeFormFields(formFields), [formFields]);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setValues({});
+    setError(null);
+  }, [open, formFields]);
+
+  if (!open) return null;
+
+  function setField(key: string, value: string) {
+    setValues((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function fieldValue(key: string): string {
+    return values[key] ?? "";
+  }
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+
+    const nameField = findStudentNameField(fields);
+    const classField = findClassField(fields);
+    if (nameField && !fieldValue(nameField.key).trim()) {
+      setError(`${nameField.label} is required.`);
+      return;
+    }
+    if (classField && !fieldValue(classField.key).trim()) {
+      setError(`${classField.label} is required.`);
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const nameRaw = nameField ? fieldValue(nameField.key).trim() : "";
+      const nameParts = nameRaw.split(/\s+/);
+      const extraFields: Record<string, string | null> = {};
+      const payload: Record<string, unknown> = {
+        firstName: nameParts[0] ?? "",
+        lastName: nameParts.slice(1).join(" "),
+        studentName: nameRaw || undefined,
+        classSection: classField ? fieldValue(classField.key).trim() || undefined : undefined,
+        schoolId: schoolId || undefined,
+        instituteId: instituteId || undefined,
+      };
+
+      for (const field of fields) {
+        const value = fieldValue(field.key).trim();
+        extraFields[field.key] = value || null;
+        payload[field.key] = value || undefined;
+      }
+      payload.extra_fields = extraFields;
+
+      const { data } = await api.post<{ student: Student }>("/admin/students", payload);
+      onCreated(data.student);
+      onClose();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const body = err.response?.data as ApiErrorBody | undefined;
+        setError(body?.message ?? "Failed to add student.");
+      } else setError("Failed to add student.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function renderField(field: FormFieldConfig) {
+    const label = field.label;
+    const key = field.key;
+
+    if (key === "class_section") {
+      return (
+        <label key={key} className="block text-sm">
+          <span className="mb-1.5 block font-medium text-text-navy">{label} *</span>
+          {classOptions.length > 0 ? (
+            <select
+              required
+              value={fieldValue(key)}
+              onChange={(e) => setField(key, e.target.value)}
+              className="input-field"
+            >
+              <option value="">Select class</option>
+              {classOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              required
+              value={fieldValue(key)}
+              onChange={(e) => setField(key, e.target.value)}
+              className="input-field"
+            />
+          )}
+        </label>
+      );
+    }
+
+    if (key === "gender") {
+      return (
+        <label key={key} className="block text-sm">
+          <span className="mb-1.5 block font-medium text-text-navy">{label}</span>
+          <select value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field">
+            <option value="">Select gender</option>
+            {GENDER_OPTIONS.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        </label>
+      );
+    }
+
+    if (key === "blood_group") {
+      return (
+        <label key={key} className="block text-sm">
+          <span className="mb-1.5 block font-medium text-text-navy">{label}</span>
+          <select value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field">
+            <option value="">Select blood group</option>
+            {BLOOD_GROUP_OPTIONS.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        </label>
+      );
+    }
+
+    if (key === "dob") {
+      return (
+        <label key={key} className="block text-sm">
+          <span className="mb-1.5 block font-medium text-text-navy">{label}</span>
+          <input
+            type="date"
+            value={fieldValue(key)}
+            onChange={(e) => setField(key, e.target.value)}
+            className="input-field"
+          />
+        </label>
+      );
+    }
+
+    if (key === "address") {
+      return (
+        <label key={key} className="block text-sm">
+          <span className="mb-1.5 block font-medium text-text-navy">{label}</span>
+          <textarea
+            rows={3}
+            value={fieldValue(key)}
+            onChange={(e) => setField(key, e.target.value)}
+            className="input-field"
+          />
+        </label>
+      );
+    }
+
+    if (key === "student_name") {
+      return (
+        <label key={key} className="block text-sm">
+          <span className="mb-1.5 block font-medium text-text-navy">{label} *</span>
+          <input
+            required
+            value={fieldValue(key)}
+            onChange={(e) => setField(key, e.target.value)}
+            className="input-field"
+          />
+        </label>
+      );
+    }
+
+    return (
+      <label key={key} className="block text-sm">
+        <span className="mb-1.5 block font-medium text-text-navy">{label}</span>
+        <input value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field" />
+      </label>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4 py-8">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="page-heading text-xl">{instituteId ? "Add Member" : "Add Student"}</h2>
+        {fields.length === 0 ? (
+          <p className="mt-4 text-sm text-text-muted">Upload Excel first to configure form fields.</p>
+        ) : (
+          <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
+            {fields.map((field) => renderField(field))}
+            {error && <div className="alert-error">{error}</div>}
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={onClose} className="btn-secondary flex-1">
+                Cancel
+              </button>
+              <button type="submit" disabled={saving} className="btn-primary flex-1">
+                {saving ? "Saving…" : instituteId ? "Add Member" : "Add Student"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}

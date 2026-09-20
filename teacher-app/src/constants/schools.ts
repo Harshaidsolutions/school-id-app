@@ -1,0 +1,17 @@
+export const BEST_SCHOOLS: { name: string; stars: 5 | 4.5 | 4 }[] = [
+  { name: "Little Flower School", stars: 5 },
+  { name: "Brilliant Star's School", stars: 5 },
+  { name: "Gnana Jyothi Vidyalayam", stars: 5 },
+  { name: "Inspira School", stars: 5 },
+  { name: "New Chaitanya School", stars: 5 },
+  { name: "Sri Saraswathi Vidyalayam", stars: 5 },
+  { name: "Sri Narayana School", stars: 5 },
+  { name: "Global Educational Institutions", stars: 5 },
+  { name: "SUN School", stars: 5 },
+  { name: "R.C.M. St. John's", stars: 5 },
+  { name: "St. Joseph's High School", stars: 4.5 },
+  { name: "R.C.M. Loyola E.M. School", stars: 4.5 },
+  { name: "Krishnaveni Talent Schools", stars: 4.5 },
+  { name: "Rising Stars School", stars: 4 },
+  { name: "Aditya Vidyanilayam", stars: 4 },
+];

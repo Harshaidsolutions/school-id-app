@@ -1,0 +1,99 @@
+{
+  "expo": {
+    "name": "My School ID Card",
+    "slug": "teacher-app",
+    "version": "1.0.117",
+    "orientation": "portrait",
+    "icon": "./assets/app-icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "enabled": false,
+      "url": "https://u.expo.dev/bf055884-b890-4e33-ae21-08109bccfa95",
+      "checkAutomatically": "NEVER",
+      "fallbackToCacheTimeout": 0,
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
+    },
+    "splash": {
+      "backgroundColor": "#FF8C1A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.schoolid.teacher",
+      "infoPlist": {
+        "CFBundleDisplayName": "My School ID Card",
+        "NSCameraUsageDescription": "Camera access is required to capture student ID photos with face alignment."
+      }
+    },
+    "android": {
+      "versionCode": 117,
+      "package": "com.schoolid.teacher",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon-foreground.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED"
+      ],
+      "googleServicesFile": "./google-services.json",
+      "usesCleartextTraffic": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-dev-client",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FF8C1A"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Teacher ID Capture to use your camera for student photos.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Teacher ID Capture to select student photos from your gallery, and school logo, signature, and organization photos."
+        }
+      ],
+      "expo-secure-store",
+      "expo-font",
+      "expo-sensors",
+      "expo-updates",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#FF8C1A",
+          "defaultChannel": "harsha_teacher_alerts_v2",
+          "sounds": []
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "http://13.203.129.105",
+      "eas": {
+        "projectId": "bf055884-b890-4e33-ae21-08109bccfa95"
+      }
+    },
+    "owner": "praveen_uppada"
+  }
+}

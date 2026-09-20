@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+admin-web/backend/public/
+
+# Expo
+.expo/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+*.log
+*.bak
+.claude/
+.cursor/
+CLAUDE.md
+AGENTS.md
+GEMINI.md

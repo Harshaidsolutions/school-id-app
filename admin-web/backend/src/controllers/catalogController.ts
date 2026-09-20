@@ -1,0 +1,226 @@
+import { Request, Response, NextFunction } from "express";
+import { pool } from "../config/database";
+import { AppError } from "../middleware/errorHandler";
+import { uploadCatalogFile } from "../config/storage";
+
+export const CATALOG_KINDS = [
+  "model",
+  "tag",
+  "brochure",
+  "extra_1",
+  "extra_2",
+] as const;
+export type CatalogKind = (typeof CATALOG_KINDS)[number];
+
+interface CatalogRow {
+  id: string;
+  kind: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  file_size: number | null;
+  created_at: string;
+}
+
+function parseKind(raw: unknown): CatalogKind {
+  let kind = String(raw ?? "").trim().toLowerCase();
+  if (kind === "tags") kind = "tag";
+  if (kind === "models") kind = "model";
+  if ((CATALOG_KINDS as readonly string[]).includes(kind)) {
+    return kind as CatalogKind;
+  }
+  throw new AppError("Invalid catalog kind", 400);
+}
+
+function resolveCatalogKind(req: Request): CatalogKind {
+  const fromQuery = req.query.kind;
+  const fromBody = req.body?.kind;
+  const fromParams = req.params.kind;
+  return parseKind(fromQuery ?? fromBody ?? fromParams);
+}
+
+export async function listCatalogItems(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const kind = resolveCatalogKind(req);
+    const result = await pool.query<CatalogRow>(
+      `SELECT id, kind, name, description, image_url, file_size, created_at
+       FROM catalog_items
+       WHERE kind = $1
+       ORDER BY created_at DESC`,
+      [kind]
+    );
+    res.status(200).json({
+      status: "ok",
+      count: result.rows.length,
+      items: result.rows,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createCatalogItem(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const kind = resolveCatalogKind(req);
+    const rawName = String(req.body.name ?? "").trim();
+    const name =
+      rawName ||
+      (req.file?.originalname
+        ? req.file.originalname.replace(/\.[^.]+$/, "").trim()
+        : "");
+    const description = String(req.body.description ?? "").trim() || null;
+
+    if (!name) throw new AppError("Name is required", 400);
+    if (!req.file) throw new AppError("Image file is required", 400);
+
+    const inserted = await pool.query<CatalogRow>(
+      `INSERT INTO catalog_items (kind, name, description, file_size)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, kind, name, description, image_url, file_size, created_at`,
+      [kind, name, description, req.file.size]
+    );
+    const item = inserted.rows[0];
+    if (!item) throw new AppError("Failed to create item", 500);
+
+    const imageUrl = await uploadCatalogFile(kind, item.id, req.file);
+    const updated = await pool.query<CatalogRow>(
+      `UPDATE catalog_items SET image_url = $1 WHERE id = $2
+       RETURNING id, kind, name, description, image_url, file_size, created_at`,
+      [imageUrl, item.id]
+    );
+
+    res.status(201).json({ status: "ok", item: updated.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateCatalogItem(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const id = String(req.params.id ?? "").trim();
+    if (!id) throw new AppError("id is required", 400);
+
+    const existing = await pool.query<CatalogRow>(
+      `SELECT id, kind, name, description, image_url, file_size, created_at
+       FROM catalog_items WHERE id = $1`,
+      [id]
+    );
+    const row = existing.rows[0];
+    if (!row) throw new AppError("Item not found", 404);
+
+    const name =
+      req.body.name !== undefined
+        ? String(req.body.name).trim()
+        : row.name;
+    const description =
+      req.body.description !== undefined
+        ? String(req.body.description).trim() || null
+        : row.description;
+
+    let imageUrl = row.image_url;
+    let fileSize = row.file_size;
+    if (req.file) {
+      imageUrl = await uploadCatalogFile(row.kind, row.id, req.file);
+      fileSize = req.file.size;
+    }
+
+    const updated = await pool.query<CatalogRow>(
+      `UPDATE catalog_items
+       SET name = $1, description = $2, image_url = $3, file_size = $4
+       WHERE id = $5
+       RETURNING id, kind, name, description, image_url, file_size, created_at`,
+      [name, description, imageUrl, fileSize, id]
+    );
+
+    res.status(200).json({ status: "ok", item: updated.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteCatalogItem(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const id = String(req.params.id ?? "").trim();
+    const result = await pool.query(
+      `DELETE FROM catalog_items WHERE id = $1 RETURNING id`,
+      [id]
+    );
+    if (!result.rows[0]) throw new AppError("Item not found", 404);
+    res.status(200).json({ status: "ok" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listTeacherBrochures(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const result = await pool.query<CatalogRow>(
+      `SELECT id, kind, name, description, image_url, file_size, created_at
+       FROM catalog_items
+       WHERE kind = 'brochure' AND image_url IS NOT NULL
+       ORDER BY created_at DESC`
+    );
+    res.status(200).json({
+      status: "ok",
+      count: result.rows.length,
+      brochures: result.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        fileUrl: row.image_url,
+        createdAt: row.created_at,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getLatestTeacherBrochure(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const result = await pool.query<CatalogRow>(
+      `SELECT id, kind, name, description, image_url, file_size, created_at
+       FROM catalog_items
+       WHERE kind = 'brochure' AND image_url IS NOT NULL
+       ORDER BY created_at DESC
+       LIMIT 1`
+    );
+    const row = result.rows[0] ?? null;
+    res.status(200).json({
+      status: "ok",
+      brochure: row
+        ? {
+            id: row.id,
+            name: row.name,
+            fileUrl: row.image_url,
+            createdAt: row.created_at,
+          }
+        : null,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
