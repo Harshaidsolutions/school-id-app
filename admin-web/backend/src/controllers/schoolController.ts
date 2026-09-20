@@ -206,7 +206,7 @@ export async function listSchools(
       filters.push(`s.year = $${values.length + 1}`);
       values.push(year);
     }
-    if (!adminSeesAllOrganizations(scope, req)) {
+    if (!(await adminSeesAllOrganizations(scope, req))) {
       filters.push(`s.owner_admin_id = $${values.length + 1}`);
       values.push(scope.adminUserId);
     }

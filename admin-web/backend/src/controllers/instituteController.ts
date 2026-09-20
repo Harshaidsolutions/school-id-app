@@ -228,7 +228,7 @@ export async function listInstitutes(
       filters.push(`i.year = $${values.length + 1}`);
       values.push(year);
     }
-    if (!adminSeesAllOrganizations(scope, req)) {
+    if (!(await adminSeesAllOrganizations(scope, req))) {
       filters.push(`i.owner_admin_id = $${values.length + 1}`);
       values.push(scope.adminUserId);
     }

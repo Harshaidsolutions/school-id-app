@@ -55,6 +55,7 @@ export async function getAdminProfile(
         phone: u.phone,
         photoUrl: u.photo_url,
         isSuperAdmin: scope.isSuperAdmin,
+        canListAllOrganizations: scope.isSuperAdmin,
       },
     });
   } catch (error) {

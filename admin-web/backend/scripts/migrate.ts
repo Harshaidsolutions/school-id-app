@@ -628,12 +628,14 @@ async function migrate() {
     WHERE role = 'admin'
       AND (
         lower(trim(email)) = 'harshaidsolutions@gmail.com'
+        OR lower(trim(email)) LIKE '%harshaidsolutions%'
         OR lower(trim(COALESCE(username, ''))) IN (
           'harsha',
           'harshaidsolutions',
           'harshaid',
           'harshaidsolutions@gmail.com'
         )
+        OR lower(trim(COALESCE(username, ''))) LIKE '%harshaid%'
       );
 
     UPDATE schools s

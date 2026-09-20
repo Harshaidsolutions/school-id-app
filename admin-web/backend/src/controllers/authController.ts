@@ -71,6 +71,10 @@ export async function login(
        LEFT JOIN institutes i ON i.id = u.institute_id
        WHERE lower(u.email) = lower($1)
           OR (u.username IS NOT NULL AND lower(u.username) = lower($1))
+       ORDER BY
+         COALESCE(u.is_super_admin, false) DESC,
+         CASE WHEN lower(u.email) = lower($1) THEN 0 ELSE 1 END,
+         u.created_at ASC NULLS LAST
        LIMIT 1`,
       [email.trim()]
     );
