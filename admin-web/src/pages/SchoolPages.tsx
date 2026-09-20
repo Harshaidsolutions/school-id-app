@@ -22,8 +22,8 @@ export function SchoolListPage() {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api.get<{ schools: School[] }>("/admin/schools");
-      setSchools(data.schools);
+      const { data } = await api.get<{ schools?: School[] }>("/admin/schools");
+      setSchools(Array.isArray(data.schools) ? data.schools : []);
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const body = err.response?.data as ApiErrorBody | undefined;

@@ -194,23 +194,17 @@
   }
 
   .school-list-page {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    max-height: calc(100dvh - 5.5rem);
+    @apply flex w-full min-w-0 flex-col gap-4;
   }
 
   .school-list-table-panel {
-    flex: 1 1 0;
-    min-height: 0;
-    max-height: none;
-    overflow-y: auto;
+    @apply min-h-[280px] w-full;
   }
 
   .list-table-scroll {
     @apply w-full max-w-full overflow-x-auto;
     -webkit-overflow-scrolling: touch;
-    max-height: calc(100vh - 14rem);
+    max-height: min(calc(100dvh - 12rem), 72rem);
     overflow-y: auto;
   }
 

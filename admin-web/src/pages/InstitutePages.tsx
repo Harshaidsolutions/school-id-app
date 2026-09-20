@@ -23,8 +23,10 @@ export function InstituteListPage() {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api.get<{ institutes: Institute[] }>("/admin/institutes");
-      setInstitutes(data.institutes);
+      const { data } = await api.get<{ institutes?: Institute[] }>(
+        "/admin/institutes"
+      );
+      setInstitutes(Array.isArray(data.institutes) ? data.institutes : []);
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const body = err.response?.data as ApiErrorBody | undefined;
