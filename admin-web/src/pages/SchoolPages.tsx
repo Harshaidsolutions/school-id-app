@@ -74,7 +74,7 @@ export function SchoolListPage() {
   }
 
   return (
-    <div className="app-page school-list-page">
+    <div className="app-page school-list-page admin-scroll-root">
       <PageActions
         search={
           <SearchInput
@@ -94,7 +94,7 @@ export function SchoolListPage() {
 
       {error && <div className="mb-4 alert-error">{error}</div>}
 
-      <div className="card list-table-scroll school-list-table-panel">
+      <div className="card list-table-scroll school-list-table-panel admin-scroll-panel">
         <table className="list-data-table">
           <thead>
             <tr>

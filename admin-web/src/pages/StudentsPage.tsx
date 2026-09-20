@@ -487,8 +487,13 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   }
 
   return (
-    <div className={isDetailView ? "detail-page-shell" : "min-w-0 max-w-full"}>
-      <div className={isDetailView ? "detail-page-content" : undefined}>
+    <div
+      className={
+        isDetailView
+          ? "detail-page-shell admin-scroll-root"
+          : "detail-page-content min-w-0 max-w-full"
+      }
+    >
       {isDetailView && (
         <Link
           to={isInstitute ? "/institutes" : "/schools"}
@@ -499,7 +504,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       )}
 
       {isDetailView ? (
-        <div className="detail-toolbar-shell mb-4">
+        <div className="detail-toolbar-shell">
           <div className="detail-toolbar-row1">
             <button
               type="button"
@@ -639,7 +644,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             </button>
           </div>
         </div>
-      ) : (
+      ) : !isDetailView ? (
         <>
           <div className="mb-3 flex gap-1 border-b border-border">
             {(
@@ -719,7 +724,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             </select>
           </div>
         </>
-      )}
+      ) : null}
 
       {error && <div className="mb-4 alert-error">{error}</div>}
 
@@ -730,7 +735,13 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       ) : null}
 
       {(hasExcelUploaded || !isDetailView) && (
-      <div className="students-table-scroll">
+      <div
+        className={
+          isDetailView
+            ? "students-table-scroll admin-scroll-panel"
+            : "students-table-scroll"
+        }
+      >
         <table className="students-data-table">
           <thead>
             <tr>
@@ -866,8 +877,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         </table>
       </div>
       )}
-
-      </div>
 
       {showBulkUploadModal && orgId && (
         <BulkUploadModal

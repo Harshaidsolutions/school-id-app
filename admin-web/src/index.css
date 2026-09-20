@@ -193,19 +193,29 @@
     }
   }
 
-  .school-list-page {
+  /* Schools / institutes / student-member lists: chrome fixed, table body scrolls */
+  .admin-scroll-root {
     @apply flex h-full min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden;
   }
 
-  .school-list-page > :not(.school-list-table-panel) {
+  .admin-scroll-root > :not(.admin-scroll-panel) {
     @apply shrink-0;
   }
 
-  /* Only this panel scrolls; search/actions above stay fixed */
-  .school-list-table-panel {
-    @apply min-h-0 w-full min-w-0 flex-1 overflow-y-auto overflow-x-auto;
-    -webkit-overflow-scrolling: touch;
+  .admin-scroll-panel {
     flex: 1 1 0;
+    @apply min-h-0 w-full min-w-0 overflow-x-auto overflow-y-auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .school-list-page.admin-scroll-root {
+    @apply flex h-full min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden;
+  }
+
+  .school-list-table-panel.admin-scroll-panel {
+    flex: 1 1 0;
+    @apply min-h-0 w-full min-w-0 overflow-x-auto overflow-y-auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .list-table-scroll:not(.school-list-table-panel) {
@@ -413,8 +423,18 @@
     @apply min-w-0 w-full max-w-full box-border;
   }
 
+  .detail-page-shell.admin-scroll-root {
+    @apply flex h-full min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden;
+  }
+
   .students-table-scroll {
     @apply w-full max-w-full overflow-x-auto rounded-2xl border border-border/60 bg-white shadow-sm;
+  }
+
+  .students-table-scroll.admin-scroll-panel {
+    @apply overflow-y-auto;
+    flex: 1 1 0;
+    min-height: 0;
   }
 
   body.student-photo-viewer-open .students-table-scroll,
@@ -429,6 +449,13 @@
 
   .students-data-table thead {
     @apply bg-content-bg text-left text-xs font-semibold uppercase tracking-wide text-text-muted;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .students-data-table thead th {
+    @apply bg-content-bg;
   }
 
   .students-data-table .col-sno {

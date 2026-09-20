@@ -180,6 +180,10 @@ export function AppLayout() {
   const isDashboard = location.pathname === "/";
   const isOrgListPage =
     location.pathname === "/schools" || location.pathname === "/institutes";
+  const isOrgDetailListPage =
+    (location.pathname === "/students" && Boolean(studentsSchoolId)) ||
+    (location.pathname === "/institute-members" && Boolean(instituteId));
+  const useLockedPageScroll = isOrgListPage || isOrgDetailListPage;
   const showCenteredHeading = true;
 
   const sidebarContent = (
@@ -235,7 +239,7 @@ export function AppLayout() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header
           className={`z-20 flex shrink-0 items-center gap-3 border-b border-border bg-white px-4 py-3 sm:px-6 ${
-            isOrgListPage ? "" : "sticky top-0"
+            useLockedPageScroll ? "" : "sticky top-0"
           }`}
         >
           {hideSidebar && (isSchoolDetail || isInstituteDetail) ? (
@@ -340,12 +344,12 @@ export function AppLayout() {
 
         <main
           className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden ${
-            isOrgListPage ? "overflow-hidden" : "overflow-y-auto"
+            useLockedPageScroll ? "overflow-hidden" : "overflow-y-auto"
           }`}
         >
           <div
             className={`min-h-0 min-w-0 max-w-full ${
-              isOrgListPage
+              useLockedPageScroll
                 ? "flex min-h-0 flex-1 flex-col overflow-hidden px-[clamp(1rem,2.5vw,1.5rem)] pb-4 pt-4"
                 : isDashboard
                   ? "px-[clamp(1rem,2.5vw,1.5rem)] py-4"
