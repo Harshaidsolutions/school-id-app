@@ -7,8 +7,6 @@ import {
 
   Image,
 
-  KeyboardAvoidingView,
-
   Platform,
 
   Pressable,
@@ -288,11 +286,6 @@ export function EditStudentScreen({ navigation, route }: Props) {
 
 
 
-      <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 56 : 0}
-        >
           <ScrollView
             ref={scrollRef}
             style={styles.flex}
@@ -303,7 +296,7 @@ export function EditStudentScreen({ navigation, route }: Props) {
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
-            automaticallyAdjustKeyboardInsets
+            automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
           >
 
             <View style={styles.photoRow}>
@@ -445,8 +438,6 @@ export function EditStudentScreen({ navigation, route }: Props) {
             </View>
 
           </ScrollView>
-
-        </KeyboardAvoidingView>
 
 
 

@@ -240,6 +240,19 @@ export function StudentFlowModal({
             },
           ]}
         >
+          {canPrev ? (
+            <Pressable
+              style={[
+                styles.navBtn,
+                { borderColor: colors.border, backgroundColor: colors.surface },
+              ]}
+              onPress={goPrev}
+            >
+              <Ionicons name="arrow-back" size={20} color={colors.text} />
+              <Text style={[styles.navBtnText, { color: colors.text }]}>Back</Text>
+            </Pressable>
+          ) : null}
+
           <Pressable
             style={[
               styles.editBtn,
@@ -395,6 +408,20 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: spacing.sm,
+  },
+  navBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xxs,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+  },
+  navBtnText: {
+    fontFamily: fonts.semiBold,
+    fontSize: typeScale.md,
   },
   editBtn: {
     flex: 1,

@@ -79,7 +79,7 @@ export async function getInstituteOrganizationInfo(
       }
     >(
       `SELECT i.id, i.name, i.year, i.phone, i.institute_code, i.address, i.instructions,
-              i.logo_url, i.signature_url, i.created_at,
+              i.logo_url, i.signature_url, i.organization_photo_url, i.created_at,
               i.model, i.tags, i.template_id, i.owner_admin_id,
               t.name AS template_name,
               t.image_url AS template_image_url

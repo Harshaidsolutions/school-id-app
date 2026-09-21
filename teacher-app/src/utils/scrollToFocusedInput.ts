@@ -1,7 +1,10 @@
 import type { RefObject } from "react";
 import type { ScrollView } from "react-native";
 
-/** Scroll parent so a focused field sits above the keyboard. */
+let lastScrollTarget: number | null = null;
+let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Scroll parent so a focused field sits above the keyboard (once per focus). */
 export function scrollToFocusedInput(
   scrollRef: RefObject<ScrollView | null>,
   nativeTarget: number,
@@ -9,11 +12,19 @@ export function scrollToFocusedInput(
 ): void {
   const scroll = scrollRef.current;
   if (!scroll || !nativeTarget) return;
-  setTimeout(() => {
+  if (lastScrollTarget === nativeTarget) return;
+  lastScrollTarget = nativeTarget;
+  if (scrollTimer) clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => {
     scroll.scrollResponderScrollNativeHandleToKeyboard(
       nativeTarget,
       extraOffset,
       true
     );
-  }, 80);
+    scrollTimer = null;
+  }, 100);
+}
+
+export function resetFocusedInputScrollLock(): void {
+  lastScrollTarget = null;
 }

@@ -1,12 +1,7 @@
 import { useRef } from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-} from "react-native";
+import { Platform, ScrollView, StyleSheet } from "react-native";
 import { AddStudentForm } from "../components/AddStudentForm";
 import { KeyboardDismissView } from "../components/KeyboardDismissView";
 import type { RootStackParamList } from "../navigation/types";
@@ -27,28 +22,23 @@ export function AddStudentScreen({ navigation, route }: Props) {
       edges={["bottom"]}
     >
       <KeyboardDismissView style={styles.flex}>
-        <KeyboardAvoidingView
+        <ScrollView
+          ref={scrollRef}
           style={styles.flex}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
         >
-          <ScrollView
-            ref={scrollRef}
-            contentContainerStyle={styles.scroll}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            showsVerticalScrollIndicator={false}
-            automaticallyAdjustKeyboardInsets
-          >
-            <AddStudentForm
-              classSection={classSection}
-              onSuccess={() => navigation.goBack()}
-              onInputFocus={(target) =>
-                scrollToFocusedInput(scrollRef, target)
-              }
-            />
-          </ScrollView>
-        </KeyboardAvoidingView>
+          <AddStudentForm
+            classSection={classSection}
+            onSuccess={() => navigation.goBack()}
+            onInputFocus={(target) =>
+              scrollToFocusedInput(scrollRef, target)
+            }
+          />
+        </ScrollView>
       </KeyboardDismissView>
     </SafeAreaView>
   );

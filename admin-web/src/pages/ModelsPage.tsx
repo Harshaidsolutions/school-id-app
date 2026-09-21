@@ -35,6 +35,7 @@ export function ModelsPage() {
   const [nameFromFile, setNameFromFile] = useState(false);
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [tagFiles, setTagFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<CatalogItem | null>(null);
   const [previewItem, setPreviewItem] = useState<CatalogItem | null>(null);
@@ -91,6 +92,20 @@ export function ModelsPage() {
     setNameFromFile(false);
     setDescription("");
     setFile(null);
+    setTagFiles([]);
+  }
+
+  function handleTagFilesSelect(list: FileList | null) {
+    if (!list?.length) {
+      setTagFiles([]);
+      return;
+    }
+    const picked = Array.from(list);
+    setTagFiles(picked);
+    if (!editing && picked[0]) {
+      setName(nameFromFilename(picked[0].name));
+      setNameFromFile(true);
+    }
   }
 
   function handleFileSelect(selected: File | null) {
@@ -122,20 +137,57 @@ export function ModelsPage() {
     setSaving(true);
     setError(null);
     try {
-      const form = new FormData();
-      form.append("kind", tab);
-      form.append("name", name.trim());
-      form.append("description", isTagsTab ? "" : description.trim());
-      if (file) form.append("file", file);
-      if (editing) {
-        await api.put(`/admin/catalog/${editing.id}`, form, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+      if (isTagsTab && tagFiles.length > 0) {
+        const primary = tagFiles[0]!;
+        const createForm = new FormData();
+        createForm.append("kind", tab);
+        createForm.append("name", name.trim());
+        createForm.append("description", "");
+        createForm.append("file", primary);
+        if (editing) {
+          await api.put(`/admin/catalog/${editing.id}`, createForm, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          for (let i = 1; i < tagFiles.length; i += 1) {
+            const extraForm = new FormData();
+            extraForm.append("file", tagFiles[i]!);
+            await api.post(`/admin/catalog/${editing.id}/extra-images`, extraForm, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
+          }
+        } else {
+          const { data } = await api.post<{ item: CatalogItem }>(
+            `/admin/catalog?kind=${encodeURIComponent(tab)}`,
+            createForm,
+            { headers: { "Content-Type": "multipart/form-data" } }
+          );
+          const itemId = data.item?.id;
+          if (itemId) {
+            for (let i = 1; i < tagFiles.length; i += 1) {
+              const extraForm = new FormData();
+              extraForm.append("file", tagFiles[i]!);
+              await api.post(`/admin/catalog/${itemId}/extra-images`, extraForm, {
+                headers: { "Content-Type": "multipart/form-data" },
+              });
+            }
+          }
+        }
       } else {
-        if (!file) throw new Error("Image is required");
-        await api.post(`/admin/catalog?kind=${encodeURIComponent(tab)}`, form, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        const form = new FormData();
+        form.append("kind", tab);
+        form.append("name", name.trim());
+        form.append("description", isTagsTab ? "" : description.trim());
+        if (file) form.append("file", file);
+        if (editing) {
+          await api.put(`/admin/catalog/${editing.id}`, form, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+        } else {
+          if (!file) throw new Error("Image is required");
+          await api.post(`/admin/catalog?kind=${encodeURIComponent(tab)}`, form, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+        }
       }
       resetForm();
       await load();
@@ -316,16 +368,29 @@ export function ModelsPage() {
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium">
-              Upload {itemLabel} Image (one at a time)
+              {isTagsTab
+                ? `Upload ${itemLabel} Image(s)`
+                : `Upload ${itemLabel} Image (one at a time)`}
             </span>
             <div className="group relative cursor-pointer rounded-lg border border-dashed border-border bg-white px-3 py-3 text-center transition-colors hover:border-button-blue/40 hover:bg-blue-soft/30">
               <div className="text-sm text-text-muted group-hover:text-button-blue">
-                {file ? file.name : "Choose a single image file"}
+                {isTagsTab
+                  ? tagFiles.length > 0
+                    ? `${tagFiles.length} file(s) selected`
+                    : "Choose one or more image files"
+                  : file
+                    ? file.name
+                    : "Choose a single image file"}
               </div>
               <input
                 type="file"
+                multiple={isTagsTab}
                 accept="image/jpeg,image/png,application/pdf"
-                onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
+                onChange={(e) =>
+                  isTagsTab
+                    ? handleTagFilesSelect(e.target.files)
+                    : handleFileSelect(e.target.files?.[0] ?? null)
+                }
                 className="absolute inset-0 cursor-pointer opacity-0"
               />
             </div>

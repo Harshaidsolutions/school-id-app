@@ -89,6 +89,33 @@ export async function getDashboardSummary(
       studentValues
     );
 
+    const instituteMemberValues: unknown[] = [];
+    const instituteMemberFilters: string[] = ["s.institute_id IS NOT NULL"];
+    if (!seeAll) {
+      instituteMemberValues.push(scope.adminUserId);
+      instituteMemberFilters.push(`i.owner_admin_id = $${instituteMemberValues.length}`);
+    }
+    if (year) {
+      instituteMemberValues.push(year);
+      instituteMemberFilters.push(`i.year = $${instituteMemberValues.length}`);
+    }
+    const instituteMemberWhere = `WHERE ${instituteMemberFilters.join(" AND ")}`;
+
+    const instituteMemberStats = await pool.query<{
+      total: string;
+      captured: string;
+      uncaptured: string;
+    }>(
+      `SELECT
+         COUNT(*)::text AS total,
+         COUNT(*) FILTER (WHERE s.status IN ('captured', 'printed'))::text AS captured,
+         COUNT(*) FILTER (WHERE s.status IS DISTINCT FROM 'captured' AND s.status IS DISTINCT FROM 'printed')::text AS uncaptured
+       FROM students s
+       INNER JOIN institutes i ON i.id = s.institute_id
+       ${instituteMemberWhere}`,
+      instituteMemberValues
+    );
+
     const templateCount = await pool.query<{ count: string }>(
       `SELECT COUNT(*)::text AS count FROM templates WHERE owner_admin_id = $1`,
       [scope.adminUserId]
@@ -168,9 +195,10 @@ export async function getDashboardSummary(
     const schoolCaptured = Number(stats?.captured ?? 0);
     const schoolPending = Number(stats?.uncaptured ?? 0);
 
-    const institutePhotos = 0;
-    const instituteCaptured = 0;
-    const institutePending = 0;
+    const instStats = instituteMemberStats.rows[0];
+    const institutePhotos = Number(instStats?.total ?? 0);
+    const instituteCaptured = Number(instStats?.captured ?? 0);
+    const institutePending = Number(instStats?.uncaptured ?? 0);
 
     res.status(200).json({
       status: "ok",

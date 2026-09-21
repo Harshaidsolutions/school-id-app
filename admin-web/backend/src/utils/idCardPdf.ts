@@ -175,7 +175,7 @@ function drawCard(
   let textY = y + CARD_HEIGHT - padding - 14;
 
   const name = truncateToWidth(
-    sanitizeText(student.name) || "Unknown",
+    sanitizeText(student.name) || "-",
     boldFont,
     12,
     textMaxWidth

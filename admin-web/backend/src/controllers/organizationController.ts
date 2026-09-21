@@ -40,7 +40,8 @@ export async function getTeacherOrganization(
       ? (
           await pool.query<InstituteRow>(
             `SELECT id, name, year, phone, institute_code, address, instructions,
-                    logo_url, signature_url, model, tags, template_id, created_at
+                    logo_url, signature_url, organization_photo_url, model, tags,
+                    template_id, created_at
              FROM institutes
              WHERE id = $1
              LIMIT 1`,
@@ -163,15 +164,24 @@ export async function updateTeacherOrganization(
         }
       }
 
-      const { logo, signature } = orgFiles(req);
+      const { logo, signature, organization } = orgFiles(req);
       let logoUrl = institute.logo_url;
       let signatureUrl = institute.signature_url;
+      let organizationPhotoUrl =
+        institute.organization_photo_url ?? null;
 
       if (logo) {
         logoUrl = await uploadSchoolAsset(orgId, "logo", logo);
       }
       if (signature) {
         signatureUrl = await uploadSchoolAsset(orgId, "signature", signature);
+      }
+      if (organization) {
+        organizationPhotoUrl = await uploadSchoolAsset(
+          orgId,
+          "organization",
+          organization
+        );
       }
 
       const updated = await pool.query<InstituteRow>(
@@ -185,10 +195,12 @@ export async function updateTeacherOrganization(
              template_id = $7,
              logo_url = $8,
              signature_url = $9,
-             year = $10
-         WHERE id = $11
+             organization_photo_url = $10,
+             year = $11
+         WHERE id = $12
          RETURNING id, name, year, phone, institute_code, address, instructions,
-                   logo_url, signature_url, model, tags, template_id, created_at`,
+                   logo_url, signature_url, organization_photo_url, model, tags,
+                   template_id, created_at`,
         [
           phone,
           instituteCode,
@@ -199,6 +211,7 @@ export async function updateTeacherOrganization(
           templateId,
           logoUrl,
           signatureUrl,
+          organizationPhotoUrl,
           year,
           orgId,
         ]

@@ -14,6 +14,10 @@ export const PLAY_STORE_PACKAGE = "com.schoolid.teacher";
 export const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`;
 export const PLAY_STORE_MARKET_URL = `market://details?id=${PLAY_STORE_PACKAGE}`;
 
+/** Fixed catalog link for Refer Us (WhatsApp share sheet). */
+export const REFER_WHATSAPP_CATALOG_LINK =
+  "https://wa.me/message/HGMJJK7FOLRBB1";
+
 export function buildHelpSupportMessage(schoolName: string): string {
   const name = schoolName.trim() || "Your School";
   return `I need support @My School ID Card\n#${name}`;

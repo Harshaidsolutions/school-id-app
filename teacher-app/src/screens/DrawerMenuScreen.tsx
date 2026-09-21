@@ -41,9 +41,9 @@ import {
   SOCIAL_FACEBOOK,
   buildHelpSupportMessage,
   buildReferShareMessage,
+  REFER_WHATSAPP_CATALOG_LINK,
 } from "../constants/support";
 import { openWhatsApp, openWhatsAppShare } from "../utils/whatsappBusiness";
-import { fetchCatalogShareLink } from "../utils/catalogShareLink";
 
 type Props = NativeStackScreenProps<RootStackParamList, "DrawerMenu">;
 
@@ -111,8 +111,9 @@ export function DrawerMenuScreen({ navigation }: Props) {
 
   async function openReferUs() {
     try {
-      const catalogLink = await fetchCatalogShareLink();
-      await openWhatsAppShare(buildReferShareMessage(catalogLink));
+      await openWhatsAppShare(
+        buildReferShareMessage(REFER_WHATSAPP_CATALOG_LINK)
+      );
     } catch (err) {
       Alert.alert(
         "WhatsApp",

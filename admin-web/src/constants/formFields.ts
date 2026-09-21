@@ -97,6 +97,17 @@ export function withSequentialDisplayOrder(fields: FormFieldConfig[]): FormField
   return fields.map((field, index) => ({ ...field, displayOrder: index }));
 }
 
+/** Stable drag/edit identity — avoids collisions when multiple fields share a key. */
+export function formFieldRowId(field: FormFieldConfig, index: number): string {
+  if (typeof field.colIndex === "number") {
+    return `excel:${field.colIndex}:${field.key}`;
+  }
+  if (field.key.startsWith("dyn_")) {
+    return field.key;
+  }
+  return `field:${field.key}:order:${field.displayOrder ?? index}`;
+}
+
 
 
 type StudentFieldSource = {

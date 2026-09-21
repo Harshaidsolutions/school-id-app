@@ -17,10 +17,10 @@ const NAV: NavItem[] = [
   { label: "Institutes", icon: "institute", to: "/institutes" },
   { label: "Templates", icon: "templates", to: "/templates" },
   { label: "Models", icon: "model", to: "/models" },
-  { label: "Notifications", icon: "notification", to: "/notifications" },
   { label: "Brochures", icon: "brochure", to: "/brochures" },
+  { label: "Notifications", icon: "notification", to: "/notifications" },
   { label: "Admin Management", icon: "extra", to: "/extra-1", superOnly: true },
-  { label: "Extra Section 2", icon: "extra", to: "/extra-2" },
+  { label: "Extra Section 2", icon: "extra", to: "/extra-2", superOnly: true },
 ];
 
 const TITLES: Record<string, string> = {

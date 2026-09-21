@@ -66,19 +66,16 @@ export function PreviewScreen({ navigation, route }: Props) {
         }
 
         if (fromModal) {
-          navigation.reset({
-            index: 1,
-            routes: [
-              { name: "MainTabs", params: { screen: "IdCards" } },
-              {
-                name: "StudentList",
-                params: {
-                  classSection: student.class_section ?? "",
-                  openStudentId: student.id,
-                },
-              },
-            ],
+          navigation.navigate({
+            name: "StudentList",
+            params: {
+              classSection: student.class_section ?? "",
+              openStudentId: student.id,
+              patchStudent: updated,
+            },
+            merge: true,
           });
+          navigation.goBack();
         } else {
           returnToClassList(navigation, student.class_section);
         }

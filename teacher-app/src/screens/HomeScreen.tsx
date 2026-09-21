@@ -33,7 +33,8 @@ import { BrandLockup } from "../components/BrandLockup";
 import { AppIcon } from "../components/AppIcon";
 import { headerLogoSize } from "../constants/headerLogo";
 import { BRAND } from "../constants/brand";
-import { SUPPORT_PHONE } from "../constants/support";
+import { buildHelpSupportMessage, SUPPORT_PHONE } from "../constants/support";
+import { openWhatsApp } from "../utils/whatsappBusiness";
 import type { NotificationsResponse } from "../types";
 import {
   notificationIsRead,
@@ -72,6 +73,7 @@ export function HomeScreen() {
   const [unread, setUnread] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [supportOrgName, setSupportOrgName] = useState("Your School");
   const scrollRef = useRef<ScrollView>(null);
   const instructionsY = useRef(0);
   const copyright = "© All Rights Reserved to Harsha ID Solutions 💚";
@@ -88,6 +90,16 @@ export function HomeScreen() {
           : notifRes.data.notifications.filter((n) => !notificationIsRead(n))
               .length;
       setUnread(unreadFromApi);
+      try {
+        const { data: home } = await api.get<{ schoolName?: string }>(
+          "/teacher/home"
+        );
+        if (home.schoolName?.trim()) {
+          setSupportOrgName(home.schoolName.trim());
+        }
+      } catch {
+        /* ignore org name */
+      }
     } catch {
       /* ignore */
     } finally {
@@ -302,6 +314,17 @@ export function HomeScreen() {
       </ScrollView>
 
       <View style={[styles.fabStack, { bottom: spacing.xl + insets.bottom }]}>
+        <Pressable
+          style={[styles.fab, { backgroundColor: colors.whatsappGreen }]}
+          onPress={() =>
+            void openWhatsApp(buildHelpSupportMessage(supportOrgName)).catch(
+              () => undefined
+            )
+          }
+          accessibilityLabel="WhatsApp support"
+        >
+          <Ionicons name="logo-whatsapp" size={icons.lg} color="#FFFFFF" />
+        </Pressable>
         <Pressable
           style={[styles.fab, { backgroundColor: colors.primaryOrange }]}
           onPress={() => void Linking.openURL(`tel:${SUPPORT_PHONE}`)}

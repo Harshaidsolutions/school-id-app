@@ -53,6 +53,7 @@ export interface InstituteRow {
   instructions: string | null;
   logo_url: string | null;
   signature_url: string | null;
+  organization_photo_url?: string | null;
   model?: string | null;
   tags?: string | null;
   template_id?: string | null;

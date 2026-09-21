@@ -814,6 +814,64 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
     }
   }
 
+  async function uploadOrgImageImmediately(kind: UploadKind, file: LocalImage) {
+    setUploading(kind);
+    setError(null);
+    try {
+      const form = new FormData();
+      const fieldName =
+        kind === "organization" ? "organization" : kind;
+      form.append(fieldName, file as unknown as Blob);
+      const { data } = await api.put<{ school: OrgSchool }>(
+        "/teacher/organization",
+        form,
+        { transformRequest: (body) => body }
+      );
+      const row = data.school;
+      setSchool(row);
+      skipServerHydrateRef.current = true;
+      const savedSignatureUri = toImageUri(row.signature_url);
+      const savedLogoUri = toImageUri(row.logo_url);
+      const savedOrgPhotoUri = toImageUri(row.organization_photo_url);
+      if (kind === "signature" && savedSignatureUri) {
+        setSignatureUri(savedSignatureUri);
+        setPendingSignature(null);
+      }
+      if (kind === "logo" && savedLogoUri) {
+        setLogoUri(savedLogoUri);
+        setPendingLogo(null);
+      }
+      if (kind === "organization" && savedOrgPhotoUri) {
+        setOrgPhotoUri(savedOrgPhotoUri);
+        setPendingOrgPhoto(null);
+      }
+      setSavedBaseline((prev) =>
+        prev
+          ? {
+              ...prev,
+              signatureUri: savedSignatureUri ?? prev.signatureUri,
+              logoUri: savedLogoUri ?? prev.logoUri,
+              orgPhotoUri: savedOrgPhotoUri ?? prev.orgPhotoUri,
+            }
+          : baselineFromSchool(row)
+      );
+      if (userId) {
+        await mergeOrgDetailsDraft(userId, {
+          signatureUri: savedSignatureUri ?? signatureUri,
+          logoUri: savedLogoUri ?? logoUri,
+          orgPhotoUri: savedOrgPhotoUri ?? orgPhotoUri,
+          pendingSignature: kind === "signature" ? null : pendingSignature,
+          pendingLogo: kind === "logo" ? null : pendingLogo,
+          pendingOrgPhoto: kind === "organization" ? null : pendingOrgPhoto,
+        });
+      }
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to upload image."));
+    } finally {
+      setUploading(null);
+    }
+  }
+
   async function pickImage(kind: UploadKind) {
     pickerActiveRef.current = true;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -841,6 +899,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
           type: asset.mimeType ?? "image/jpeg",
         };
     const preview = toImageUri(file.uri);
+    skipServerHydrateRef.current = true;
     if (kind === "logo") {
       setLogoUri(preview);
       setPendingLogo(file);
@@ -851,6 +910,17 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
       setOrgPhotoUri(preview);
       setPendingOrgPhoto(file);
     }
+    if (userId) {
+      void mergeOrgDetailsDraft(userId, {
+        signatureUri: kind === "signature" ? preview : signatureUri,
+        logoUri: kind === "logo" ? preview : logoUri,
+        orgPhotoUri: kind === "organization" ? preview : orgPhotoUri,
+        pendingSignature: kind === "signature" ? file : pendingSignature,
+        pendingLogo: kind === "logo" ? file : pendingLogo,
+        pendingOrgPhoto: kind === "organization" ? file : pendingOrgPhoto,
+      });
+    }
+    await uploadOrgImageImmediately(kind, file);
   }
 
   if (loading && !school) return <LoadingBlock label="Loading…" />;

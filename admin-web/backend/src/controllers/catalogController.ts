@@ -28,8 +28,14 @@ interface CatalogRow {
   name: string;
   description: string | null;
   image_url: string | null;
+  extra_image_urls: string[] | null;
   file_size: number | null;
   created_at: string;
+}
+
+function parseExtraImageUrls(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((u): u is string => typeof u === "string" && u.trim().length > 0);
 }
 
 function parseKind(raw: unknown): CatalogKind {
@@ -59,7 +65,7 @@ export async function listCatalogItems(
     const kind = resolveCatalogKind(req);
     const owner = adminCatalogOwnerSql(scope, "catalog_items", 2);
     const result = await pool.query<CatalogRow>(
-      `SELECT id, kind, name, description, image_url, file_size, created_at
+      `SELECT id, kind, name, description, image_url, extra_image_urls, file_size, created_at
        FROM catalog_items
        WHERE kind = $1${owner.clause}
        ORDER BY created_at DESC`,
@@ -97,7 +103,7 @@ export async function createCatalogItem(
     const inserted = await pool.query<CatalogRow>(
       `INSERT INTO catalog_items (kind, name, description, file_size, owner_admin_id)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, kind, name, description, image_url, file_size, created_at`,
+       RETURNING id, kind, name, description, image_url, extra_image_urls, file_size, created_at`,
       [kind, name, description, req.file.size, scope.adminUserId]
     );
     const item = inserted.rows[0];
@@ -106,7 +112,7 @@ export async function createCatalogItem(
     const imageUrl = await uploadCatalogFile(kind, item.id, req.file);
     const updated = await pool.query<CatalogRow>(
       `UPDATE catalog_items SET image_url = $1 WHERE id = $2
-       RETURNING id, kind, name, description, image_url, file_size, created_at`,
+       RETURNING id, kind, name, description, image_url, extra_image_urls, file_size, created_at`,
       [imageUrl, item.id]
     );
 
@@ -129,7 +135,7 @@ export async function updateCatalogItem(
     await assertCatalogRowOwnedByAdmin(scope, "catalog_items", id);
 
     const existing = await pool.query<CatalogRow>(
-      `SELECT id, kind, name, description, image_url, file_size, created_at
+      `SELECT id, kind, name, description, image_url, extra_image_urls, file_size, created_at
        FROM catalog_items WHERE id = $1`,
       [id]
     );
@@ -156,8 +162,48 @@ export async function updateCatalogItem(
       `UPDATE catalog_items
        SET name = $1, description = $2, image_url = $3, file_size = $4
        WHERE id = $5
-       RETURNING id, kind, name, description, image_url, file_size, created_at`,
+       RETURNING id, kind, name, description, image_url, extra_image_urls, file_size, created_at`,
       [name, description, imageUrl, fileSize, id]
+    );
+
+    res.status(200).json({ status: "ok", item: updated.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function appendCatalogExtraImage(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const id = String(req.params.id ?? "").trim();
+    if (!id) throw new AppError("id is required", 400);
+    if (!req.file) throw new AppError("Image file is required", 400);
+
+    await assertCatalogRowOwnedByAdmin(scope, "catalog_items", id);
+
+    const existing = await pool.query<CatalogRow>(
+      `SELECT id, kind, extra_image_urls FROM catalog_items WHERE id = $1`,
+      [id]
+    );
+    const row = existing.rows[0];
+    if (!row) throw new AppError("Item not found", 404);
+
+    const imageUrl = await uploadCatalogFile(row.kind, `${row.id}-extra`, req.file);
+    const extras = parseExtraImageUrls(row.extra_image_urls);
+    if (!extras.includes(imageUrl)) {
+      extras.push(imageUrl);
+    }
+
+    const updated = await pool.query<CatalogRow>(
+      `UPDATE catalog_items
+       SET extra_image_urls = $1::jsonb
+       WHERE id = $2
+       RETURNING id, kind, name, description, image_url, extra_image_urls, file_size, created_at`,
+      [JSON.stringify(extras), id]
     );
 
     res.status(200).json({ status: "ok", item: updated.rows[0] });

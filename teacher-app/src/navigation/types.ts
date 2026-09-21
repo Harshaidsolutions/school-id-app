@@ -9,7 +9,11 @@ export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   DrawerMenu: undefined;
   Settings: undefined;
-  StudentList: { classSection: string; openStudentId?: string };
+  StudentList: {
+    classSection: string;
+    openStudentId?: string;
+    patchStudent?: TeacherStudent;
+  };
   StudentDetail: {
     student: TeacherStudent;
     classSection?: string;

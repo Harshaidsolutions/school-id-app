@@ -1,7 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -62,7 +61,7 @@ function isCaptured(student: TeacherStudent): boolean {
 
 export function StudentListScreen({ navigation, route }: Props) {
   const styles = useStudentListStyles();
-  const { classSection, openStudentId } = route.params;
+  const { classSection, openStudentId, patchStudent } = route.params;
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { colors } = useTheme();
@@ -120,6 +119,16 @@ export function StudentListScreen({ navigation, route }: Props) {
 
   useFocusEffect(
     useCallback(() => {
+      if (patchStudent) {
+        setStudents((prev) => {
+          const next = prev.map((s) =>
+            s.id === patchStudent.id ? patchStudent : s
+          );
+          setCachedStudents(classSection, next);
+          return next;
+        });
+        navigation.setParams({ patchStudent: undefined });
+      }
       void loadStudents().then((list) => {
         if (openStudentId && list) {
           const idx = list.findIndex((s) => s.id === openStudentId);
@@ -131,7 +140,7 @@ export function StudentListScreen({ navigation, route }: Props) {
           navigation.setParams({ openStudentId: undefined });
         }
       });
-    }, [loadStudents, navigation, openStudentId])
+    }, [classSection, loadStudents, navigation, openStudentId, patchStudent])
   );
 
   const capturedCount = useMemo(
@@ -182,10 +191,13 @@ export function StudentListScreen({ navigation, route }: Props) {
       if (source === "camera") {
         const photoUri = await pickStudentPhotoFromCamera();
         if (!photoUri) return;
-        await uploadStudentPhoto(student.id, photoUri);
+        const updated = await uploadStudentPhoto(student.id, photoUri);
+        setStudents((prev) => {
+          const next = prev.map((s) => (s.id === updated.id ? updated : s));
+          setCachedStudents(classSection, next);
+          return next;
+        });
         showToast("Submitted successfully.");
-        invalidateStudentsCache(classSection);
-        await loadStudents(true);
         return;
       }
       const photoUri = await pickStudentPhoto(source);
@@ -360,16 +372,13 @@ export function StudentListScreen({ navigation, route }: Props) {
             </Text>
             <View style={styles.addBtnPlaceholder} />
           </View>
-          <KeyboardAvoidingView
-            style={styles.flex}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-          >
             <ScrollView
               ref={addScrollRef}
+              style={styles.flex}
               contentContainerStyle={styles.addModalScroll}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
-              automaticallyAdjustKeyboardInsets
+              automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
             >
               {addModalVisible ? (
                 <AddStudentForm
@@ -389,7 +398,6 @@ export function StudentListScreen({ navigation, route }: Props) {
                 />
               ) : null}
             </ScrollView>
-          </KeyboardAvoidingView>
         </View>
       </Modal>
 

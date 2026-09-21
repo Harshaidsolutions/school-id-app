@@ -106,6 +106,8 @@ async function migrate() {
 
     -- Teacher Organization Details (Screen 12)
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS organization_photo_url TEXT;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS organization_photo_url TEXT;
+    ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS extra_image_urls JSONB NOT NULL DEFAULT '[]'::jsonb;
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS model TEXT;
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS tags TEXT;
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS template_id UUID REFERENCES templates(id);

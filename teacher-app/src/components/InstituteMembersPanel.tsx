@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   RefreshControl,
@@ -177,10 +176,13 @@ export function InstituteMembersPanel({
       if (source === "camera") {
         const photoUri = await pickStudentPhotoFromCamera();
         if (!photoUri) return;
-        await uploadStudentPhoto(student.id, photoUri);
+        const updated = await uploadStudentPhoto(student.id, photoUri);
+        setStudents((prev) => {
+          const next = prev.map((s) => (s.id === updated.id ? updated : s));
+          setCachedStudents(INSTITUTE_CACHE_KEY, next);
+          return next;
+        });
         showToast("Submitted successfully.");
-        invalidateStudentsCache(INSTITUTE_CACHE_KEY);
-        await loadMembers(true);
         return;
       }
       const photoUri = await pickStudentPhoto(source);
@@ -348,16 +350,13 @@ export function InstituteMembersPanel({
             </Text>
             <View style={styles.headerSide} />
           </View>
-          <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-          >
             <ScrollView
               ref={addScrollRef}
+              style={{ flex: 1 }}
               contentContainerStyle={styles.addModalScroll}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
-              automaticallyAdjustKeyboardInsets
+              automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
             >
               {addModalVisible ? (
                 <AddStudentForm
@@ -376,7 +375,6 @@ export function InstituteMembersPanel({
                 />
               ) : null}
             </ScrollView>
-          </KeyboardAvoidingView>
         </View>
       </Modal>
 

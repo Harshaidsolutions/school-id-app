@@ -147,21 +147,6 @@ export function AdminManagementPage() {
     }
   }
 
-  async function handlePhotoChange(adminId: string, file: File | null) {
-    if (!file) return;
-    const body = new FormData();
-    body.append("photo", file);
-    try {
-      await api.post(`/admin/managed-admins/${adminId}/photo`, body);
-      await load();
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const bodyErr = err.response?.data as ApiErrorBody | undefined;
-        setError(bodyErr?.message ?? "Failed to upload photo.");
-      } else setError("Failed to upload photo.");
-    }
-  }
-
   async function toggleActive(admin: ManagedAdmin) {
     const next = !admin.is_active;
     setTogglingId(admin.id);
@@ -369,19 +354,6 @@ export function AdminManagementPage() {
                 placeholder="Phone"
                 required
               />
-              <label className="block text-sm">
-                <span className="mb-1 block text-text-muted">Photo</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    void handlePhotoChange(
-                      editTarget.id,
-                      e.target.files?.[0] ?? null
-                    )
-                  }
-                />
-              </label>
               <input
                 className="input-field w-full"
                 type="text"

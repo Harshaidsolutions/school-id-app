@@ -107,6 +107,7 @@ export interface CatalogItem {
   name: string;
   description: string | null;
   image_url: string | null;
+  extra_image_urls?: string[] | null;
   file_size: number | null;
   created_at: string | null;
 }

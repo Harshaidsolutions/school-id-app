@@ -77,6 +77,7 @@ import {
   getSchoolOrganizationInfo,
 } from "../controllers/organizationInfoController";
 import {
+  appendCatalogExtraImage,
   createCatalogItem,
   deleteCatalogItem,
   listCatalogItems,
@@ -180,6 +181,11 @@ router.get("/print-batches/:schoolId", listPrintBatches);
 router.get("/catalog", listCatalogItems);
 router.post("/catalog", uploadCatalogFile.single("file"), createCatalogItem);
 router.put("/catalog/:id", uploadCatalogFile.single("file"), updateCatalogItem);
+router.post(
+  "/catalog/:id/extra-images",
+  uploadCatalogFile.single("file"),
+  appendCatalogExtraImage
+);
 router.delete("/catalog/:id", deleteCatalogItem);
 
 // Form setup (per school / institute)

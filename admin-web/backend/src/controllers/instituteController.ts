@@ -140,6 +140,7 @@ export async function createInstituteWithOwner(
 ): Promise<void> {
   const client = await pool.connect();
   try {
+    const scope = await requireAdminScope(req);
     const instituteName = String(
       req.body.instituteName ?? req.body.name ?? ""
     ).trim();
@@ -179,10 +180,17 @@ export async function createInstituteWithOwner(
     }
 
     const instituteResult = await client.query<InstituteRow>(
-      `INSERT INTO institutes (name, phone, year, owner_username_plain, owner_password_plain)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO institutes (name, phone, year, owner_username_plain, owner_password_plain, owner_admin_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [instituteName, phoneNumber, defaultAcademicYear(), username, password]
+      [
+        instituteName,
+        phoneNumber,
+        defaultAcademicYear(),
+        username,
+        password,
+        scope.adminUserId,
+      ]
     );
     const institute = instituteResult.rows[0];
     if (!institute) throw new AppError("Failed to create institute", 500);

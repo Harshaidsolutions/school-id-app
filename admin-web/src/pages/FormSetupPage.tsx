@@ -22,6 +22,7 @@ import api from "../api/client";
 import { ToggleSwitch } from "../components/ui/ToggleSwitch";
 import type { FormFieldConfig } from "../constants/formFields";
 import {
+  formFieldRowId,
   isManualFormField,
   sortFormFields,
   withSequentialDisplayOrder,
@@ -86,6 +87,7 @@ function DragHandleIcon() {
 
 function SortableFieldRow({
   field,
+  rowId,
   editingKey,
   editLabel,
   setEditLabel,
@@ -96,17 +98,18 @@ function SortableFieldRow({
   onToggle,
 }: {
   field: FormFieldConfig;
+  rowId: string;
   editingKey: string | null;
   editLabel: string;
   setEditLabel: (value: string) => void;
-  onStartEdit: (field: FormFieldConfig) => void;
-  onSaveEdit: (key: string) => void;
+  onStartEdit: (field: FormFieldConfig, rowId: string) => void;
+  onSaveEdit: (rowId: string) => void;
   onCancelEdit: () => void;
-  onRemove: (key: string) => void;
-  onToggle: (key: string) => void;
+  onRemove: (rowId: string) => void;
+  onToggle: (rowId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: field.key,
+    id: rowId,
   });
 
   const style = {
@@ -133,7 +136,7 @@ function SortableFieldRow({
           <DragHandleIcon />
         </button>
 
-        {editingKey === field.key ? (
+        {editingKey === rowId ? (
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <input
               value={editLabel}
@@ -144,7 +147,7 @@ function SortableFieldRow({
             <button
               type="button"
               className="btn-primary px-3 py-2 text-xs"
-              onClick={() => onSaveEdit(field.key)}
+              onClick={() => onSaveEdit(rowId)}
             >
               Save
             </button>
@@ -157,7 +160,7 @@ function SortableFieldRow({
             <span className="text-sm font-medium text-text-navy">{field.label}</span>
             <button
               type="button"
-              onClick={() => onStartEdit(field)}
+              onClick={() => onStartEdit(field, rowId)}
               className="ml-2 text-xs font-medium text-button-blue hover:underline"
             >
               Edit
@@ -165,7 +168,7 @@ function SortableFieldRow({
             {isManualFormField(field) && (
               <button
                 type="button"
-                onClick={() => onRemove(field.key)}
+                onClick={() => onRemove(rowId)}
                 className="ml-2 text-xs font-medium text-danger hover:underline"
               >
                 Delete
@@ -176,7 +179,7 @@ function SortableFieldRow({
       </div>
       <ToggleSwitch
         checked={field.enabled}
-        onChange={() => onToggle(field.key)}
+        onChange={() => onToggle(rowId)}
         label={`${field.label} enabled`}
       />
     </li>
@@ -245,43 +248,64 @@ export function FormSetupPage() {
     setSuccess(null);
   }
 
+  function indexForRowId(list: FormFieldConfig[], rowId: string): number {
+    return list.findIndex((f, i) => formFieldRowId(f, i) === rowId);
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = fields.findIndex((f) => f.key === active.id);
-    const newIndex = fields.findIndex((f) => f.key === over.id);
+    const oldIndex = indexForRowId(fields, String(active.id));
+    const newIndex = indexForRowId(fields, String(over.id));
     if (oldIndex < 0 || newIndex < 0) return;
     reorderFields(arrayMove(fields, oldIndex, newIndex));
   }
 
-  function toggleField(key: string) {
-    setFields((prev) => prev.map((f) => (f.key === key ? { ...f, enabled: !f.enabled } : f)));
+  function toggleField(rowId: string) {
+    const idx = indexForRowId(fields, rowId);
+    if (idx < 0) return;
+    setFields((prev) =>
+      prev.map((f, i) => (i === idx ? { ...f, enabled: !f.enabled } : f))
+    );
     setSuccess(null);
   }
 
-  function startEdit(field: FormFieldConfig) {
-    setEditingKey(field.key);
+  function startEdit(field: FormFieldConfig, rowId: string) {
+    setEditingKey(rowId);
     setEditLabel(field.label);
   }
 
-  function saveEdit(key: string) {
+  function saveEdit(rowId: string) {
     const label = editLabel.trim();
     if (!label) return;
-    setFields((prev) => prev.map((f) => (f.key === key ? { ...f, label } : f)));
+    const idx = indexForRowId(fields, rowId);
+    if (idx < 0) return;
+    setFields((prev) =>
+      prev.map((f, i) => (i === idx ? { ...f, label } : f))
+    );
     setEditingKey(null);
     setSuccess(null);
   }
 
-  function removeField(key: string) {
-    const target = fields.find((f) => f.key === key);
+  function removeField(rowId: string) {
+    const idx = indexForRowId(fields, rowId);
+    if (idx < 0) return;
+    const target = fields[idx];
     if (target && !isManualFormField(target)) return;
-    reorderFields(fields.filter((f) => f.key !== key));
-    setEditingKey((current) => (current === key ? null : current));
+    reorderFields(fields.filter((_, i) => i !== idx));
+    setEditingKey((current) => (current === rowId ? null : current));
   }
 
   function addCustomField() {
     const label = newFieldLabel.trim();
     if (!label) return;
+
+    const labelKey = label.toLowerCase();
+    if (fields.some((f) => f.label.trim().toLowerCase() === labelKey)) {
+      setError("This field already exists.");
+      setSuccess(null);
+      return;
+    }
 
     const used = new Set(fields.map((f) => f.key));
     const baseSlug = label
@@ -362,12 +386,18 @@ export function FormSetupPage() {
           </div>
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={fields.map((f) => f.key)} strategy={verticalListSortingStrategy}>
+            <SortableContext
+              items={fields.map((f, i) => formFieldRowId(f, i))}
+              strategy={verticalListSortingStrategy}
+            >
               <ul className="divide-y divide-border">
-                {fields.map((field) => (
+                {fields.map((field, index) => {
+                  const rowId = formFieldRowId(field, index);
+                  return (
                   <SortableFieldRow
-                    key={field.key}
+                    key={rowId}
                     field={field}
+                    rowId={rowId}
                     editingKey={editingKey}
                     editLabel={editLabel}
                     setEditLabel={setEditLabel}
@@ -377,7 +407,8 @@ export function FormSetupPage() {
                     onRemove={removeField}
                     onToggle={toggleField}
                   />
-                ))}
+                  );
+                })}
               </ul>
             </SortableContext>
           </DndContext>

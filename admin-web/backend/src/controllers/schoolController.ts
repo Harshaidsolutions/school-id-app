@@ -118,6 +118,7 @@ export async function createSchoolWithOwner(
 ): Promise<void> {
   const client = await pool.connect();
   try {
+    const scope = await requireAdminScope(req);
     const schoolName = String(
       req.body.schoolName ?? req.body.name ?? ""
     ).trim();
@@ -157,10 +158,17 @@ export async function createSchoolWithOwner(
     }
 
     const schoolResult = await client.query<SchoolRow>(
-      `INSERT INTO schools (name, phone, year, owner_username_plain, owner_password_plain)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO schools (name, phone, year, owner_username_plain, owner_password_plain, owner_admin_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [schoolName, phoneNumber, defaultAcademicYear(), username, password]
+      [
+        schoolName,
+        phoneNumber,
+        defaultAcademicYear(),
+        username,
+        password,
+        scope.adminUserId,
+      ]
     );
     const school = schoolResult.rows[0];
     if (!school) throw new AppError("Failed to create school", 500);

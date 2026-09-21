@@ -43,13 +43,14 @@ type InstituteOrganization = OrganizationSelections & {
   instructions: string | null;
   logo_url: string | null;
   signature_url: string | null;
+  organization_photo_url?: string | null;
 };
 
 function InfoRow({
   label,
   value,
   showWhenEmpty,
-  emptyLabel = "Not selected",
+  emptyLabel = "-",
 }: {
   label: string;
   value: string | null | undefined;
@@ -80,7 +81,14 @@ function ImageBlock({
   caption?: string | null;
   onPreview: (label: string, url: string) => void;
 }) {
-  if (!url) return null;
+  if (!url?.trim()) {
+    return (
+      <div className="border-b border-border px-5 py-3 last:border-b-0">
+        <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
+        <div className="mt-1 text-sm text-text-navy">-</div>
+      </div>
+    );
+  }
   return (
     <div className="border-b border-border px-5 py-4 last:border-b-0">
       <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
@@ -108,7 +116,7 @@ function SelectionImageBlock({
   label,
   imageUrl,
   caption,
-  emptyLabel = "Not selected",
+  emptyLabel = "-",
   onPreview,
 }: {
   label: string;
@@ -152,7 +160,7 @@ function TagSelectionsBlock({
     return (
       <div className="border-b border-border px-5 py-3 last:border-b-0">
         <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">Tags</div>
-        <div className="mt-1 text-sm text-text-navy">Not selected</div>
+        <div className="mt-1 text-sm text-text-navy">-</div>
       </div>
     );
   }
@@ -335,6 +343,11 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
               />
               <ImageBlock label="Logo" url={institute.logo_url} onPreview={(l, u) => setPreview({ label: l, url: u })} />
               <ImageBlock label="Signature" url={institute.signature_url} onPreview={(l, u) => setPreview({ label: l, url: u })} />
+              <ImageBlock
+                label="Building / Organization Photo"
+                url={institute.organization_photo_url}
+                onPreview={(l, u) => setPreview({ label: l, url: u })}
+              />
             </>
           ) : null}
           {!isInstitute && school ? (
