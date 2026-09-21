@@ -41,9 +41,14 @@ export function ForgotPasswordPage() {
     try {
       const { data } = await api.post<{
         message?: string;
+        codeSent?: boolean;
         emailDelivery?: string;
         devOtp?: string;
       }>("/auth/forgot-password", { email: email.trim() });
+      if (data.codeSent !== true) {
+        setError("Please contact admin for password.");
+        return;
+      }
       setSuccess(true);
       if (data.devOtp) {
         window.sessionStorage.setItem("dev_reset_otp", data.devOtp);

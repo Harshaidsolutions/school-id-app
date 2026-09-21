@@ -330,11 +330,13 @@ export async function register(
   }
 }
 
+const FORGOT_PASSWORD_CONTACT_ADMIN =
+  "Please contact admin for password.";
+
 /**
  * POST /auth/forgot-password
  * Body: { email }
- * Generates a 6-digit OTP (15 min), emails it (or logs when SMTP unset).
- * Always returns a generic success so emails cannot be enumerated.
+ * OTP is sent only for the primary Harsha ID Solutions super admin account.
  */
 export async function forgotPassword(
   req: Request,
@@ -357,17 +359,15 @@ export async function forgotPassword(
     );
     const user = userResult.rows[0];
 
-    // Generic response body (avoid user enumeration)
+    if (!user || !userMayUseAdminPasswordReset(user)) {
+      throw new AppError(FORGOT_PASSWORD_CONTACT_ADMIN, 403);
+    }
+
     const okBody: Record<string, unknown> = {
       status: "ok",
-      message:
-        "If an account exists for that email, a verification code has been sent.",
+      codeSent: true,
+      message: "A verification code has been sent to your email.",
     };
-
-    if (!user || !userMayUseAdminPasswordReset(user)) {
-      res.status(200).json(okBody);
-      return;
-    }
 
     // Invalidate previous unused OTPs for this user
     await pool.query(

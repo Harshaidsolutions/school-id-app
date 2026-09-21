@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
 import { LoginPageLayout } from "../components/LoginPageLayout";
@@ -71,13 +71,13 @@ export function LoginPage() {
   return (
     <LoginPageLayout
       title={
-        <Link
-          to="/forgot-password"
-          className="block text-center transition-colors hover:text-button-blue hover:underline"
-          title="Forgot password?"
+        <button
+          type="button"
+          onClick={() => navigate("/forgot-password")}
+          className="block w-full cursor-pointer border-0 bg-transparent p-0 text-inherit font-inherit text-text-navy no-underline hover:text-text-navy focus:outline-none"
         >
           Admin Login
-        </Link>
+        </button>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
