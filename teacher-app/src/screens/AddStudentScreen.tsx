@@ -1,8 +1,9 @@
 import { useRef } from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Platform, ScrollView, StyleSheet } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
 import { AddStudentForm } from "../components/AddStudentForm";
+import { KeyboardAwareFormScrollView } from "../components/KeyboardAwareFormScrollView";
 import { KeyboardDismissView } from "../components/KeyboardDismissView";
 import type { RootStackParamList } from "../navigation/types";
 import { spacing } from "../theme/colors";
@@ -22,14 +23,9 @@ export function AddStudentScreen({ navigation, route }: Props) {
       edges={["bottom"]}
     >
       <KeyboardDismissView style={styles.flex}>
-        <ScrollView
-          ref={scrollRef}
-          style={styles.flex}
+        <KeyboardAwareFormScrollView
+          scrollRef={scrollRef}
           contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
         >
           <AddStudentForm
             classSection={classSection}
@@ -38,7 +34,7 @@ export function AddStudentScreen({ navigation, route }: Props) {
               scrollToFocusedInput(scrollRef, target)
             }
           />
-        </ScrollView>
+        </KeyboardAwareFormScrollView>
       </KeyboardDismissView>
     </SafeAreaView>
   );

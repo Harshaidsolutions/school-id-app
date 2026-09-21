@@ -7,8 +7,6 @@ import {
 
   Image,
 
-  Platform,
-
   Pressable,
 
   ScrollView,
@@ -29,6 +27,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { Ionicons } from "@expo/vector-icons";
 
+import { KeyboardAwareFormScrollView } from "../components/KeyboardAwareFormScrollView";
 import { OrangeGradientHeader } from "../components/OrangeGradientHeader";
 import { useToast } from "../components/Toast";
 
@@ -54,8 +53,9 @@ import {
   buildTeacherStudentPayload,
   initialExtraValuesFromStudent,
 } from "../utils/studentFieldForm";
-import { pickStudentPhotoFromCamera } from "../utils/studentPhotoPicker";
+import { pickStudentPhotoForFormUpload } from "../utils/studentPhotoPicker";
 import { scrollToFocusedInput } from "../utils/scrollToFocusedInput";
+import { uploadStudentPhoto } from "../utils/uploadStudentPhoto";
 
 
 
@@ -140,6 +140,8 @@ export function EditStudentScreen({ navigation, route }: Props) {
 
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
   const [savedStudent, setSavedStudent] = useState<TeacherStudent | null>(null);
 
   useEffect(() => {
@@ -149,16 +151,23 @@ export function EditStudentScreen({ navigation, route }: Props) {
   }, [currentStudent, formFields]);
 
   async function handleRetakePhoto() {
-    const photoUri = await pickStudentPhotoFromCamera();
+    if (photoBusy || saving) return;
+    const photoUri = await pickStudentPhotoForFormUpload("camera");
     if (!photoUri) return;
-    navigation.navigate("Preview", {
-      student: currentStudent,
-      photoUri,
-      photoOnly: true,
-      photoSource: "camera",
-      returnToEdit: true,
-      returnToFlow,
-    });
+    setPendingPhotoUri(photoUri);
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      const updated = await uploadStudentPhoto(currentStudent.id, photoUri);
+      setCurrentStudent(updated);
+      setPendingPhotoUri(null);
+      showToast("Photo updated successfully.");
+    } catch (err) {
+      setPendingPhotoUri(null);
+      setError(getErrorMessage(err, "Failed to update photo."));
+    } finally {
+      setPhotoBusy(false);
+    }
   }
 
   async function handleSave() {
@@ -286,17 +295,12 @@ export function EditStudentScreen({ navigation, route }: Props) {
 
 
 
-          <ScrollView
-            ref={scrollRef}
-            style={styles.flex}
+          <KeyboardAwareFormScrollView
+            scrollRef={scrollRef}
             contentContainerStyle={[
               styles.scroll,
               { paddingBottom: insets.bottom + spacing.xxl + spacing.lg },
             ]}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            showsVerticalScrollIndicator={false}
-            automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
           >
 
             <View style={styles.photoRow}>
@@ -320,11 +324,13 @@ export function EditStudentScreen({ navigation, route }: Props) {
 
               >
 
-                {currentStudent.photo_url ? (
+                {pendingPhotoUri || currentStudent.photo_url ? (
 
                   <Image
 
-                    source={{ uri: currentStudent.photo_url }}
+                    source={{
+                      uri: pendingPhotoUri ?? currentStudent.photo_url ?? "",
+                    }}
 
                     style={styles.photoImg}
 
@@ -335,6 +341,12 @@ export function EditStudentScreen({ navigation, route }: Props) {
                   <Ionicons name="person" size={36} color={colors.textSubtle} />
 
                 )}
+
+                {photoBusy ? (
+                  <View style={styles.photoBusyOverlay}>
+                    <ActivityIndicator color={colors.brandGreen} />
+                  </View>
+                ) : null}
 
               </View>
 
@@ -402,7 +414,7 @@ export function EditStudentScreen({ navigation, route }: Props) {
                     },
                   ]}
                   onPress={() => void handleRetakePhoto()}
-                  disabled={saving}
+                  disabled={saving || photoBusy}
                 >
                   <Ionicons
                     name="camera-outline"
@@ -437,7 +449,7 @@ export function EditStudentScreen({ navigation, route }: Props) {
               </Pressable>
             </View>
 
-          </ScrollView>
+          </KeyboardAwareFormScrollView>
 
 
 
@@ -510,9 +522,18 @@ const styles = StyleSheet.create({
 
     borderWidth: 2,
 
+    position: "relative",
+
   },
 
   photoImg: { width: "100%", height: "100%" },
+
+  photoBusyOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
 
 
 

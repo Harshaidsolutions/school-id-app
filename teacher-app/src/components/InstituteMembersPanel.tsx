@@ -2,7 +2,6 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Modal,
-  Platform,
   RefreshControl,
   ScrollView,
   Text,
@@ -16,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { getErrorMessage } from "../api/client";
 import { AddStudentForm } from "./AddStudentForm";
+import { KeyboardAwareFormScrollView } from "./KeyboardAwareFormScrollView";
 import { ErrorRetry, LoadingBlock } from "./ErrorRetry";
 import { PendingPhotoSheet } from "./PendingPhotoSheet";
 import { StudentFlowModal } from "./StudentFlowModal";
@@ -350,13 +350,9 @@ export function InstituteMembersPanel({
             </Text>
             <View style={styles.headerSide} />
           </View>
-            <ScrollView
-              ref={addScrollRef}
-              style={{ flex: 1 }}
+            <KeyboardAwareFormScrollView
+              scrollRef={addScrollRef}
               contentContainerStyle={styles.addModalScroll}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
             >
               {addModalVisible ? (
                 <AddStudentForm
@@ -374,7 +370,7 @@ export function InstituteMembersPanel({
                   }}
                 />
               ) : null}
-            </ScrollView>
+            </KeyboardAwareFormScrollView>
         </View>
       </Modal>
 

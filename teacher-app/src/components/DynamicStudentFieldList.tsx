@@ -10,6 +10,7 @@ import {
 } from "./StudentDemographicFields";
 import type { AppColors } from "../theme/palettes";
 import { resolveFieldKind, resolveFieldLabelKind } from "../utils/formFieldKinds";
+import { resetFocusedInputScrollLock } from "../utils/scrollToFocusedInput";
 
 function Field({
   label,
@@ -85,6 +86,7 @@ function focusProps(onInputFocus?: (nativeTarget: number) => void) {
     ? {
         onFocus: (e: { nativeEvent: { target: number } }) =>
           onInputFocus(e.nativeEvent.target),
+        onBlur: resetFocusedInputScrollLock,
       }
     : {};
 }

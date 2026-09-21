@@ -25,7 +25,10 @@ import { fonts, type as typeScale } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
 import { getAssignedClassSection } from "../utils/teacherScope";
 import { sortClassSections } from "../utils/classSort";
-import { pickStudentPhoto, type PhotoSource } from "../utils/studentPhotoPicker";
+import {
+  pickStudentPhotoForFormUpload,
+  type PhotoSource,
+} from "../utils/studentPhotoPicker";
 import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import { useFormConfig } from "../hooks/useFormConfig";
 import { buildTeacherStudentPayload } from "../utils/studentFieldForm";
@@ -130,7 +133,7 @@ export function AddStudentForm({
   async function handlePhotoPick(source: PhotoSource) {
     setPhotoBusy(true);
     try {
-      const uri = await pickStudentPhoto(source);
+      const uri = await pickStudentPhotoForFormUpload(source);
       if (uri) setPhotoUri(uri);
     } finally {
       setPhotoBusy(false);

@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
 import { LoginPageLayout } from "../components/LoginPageLayout";
@@ -71,7 +71,13 @@ export function LoginPage() {
   return (
     <LoginPageLayout
       title={
-        <span className="block text-center">Admin Login</span>
+        <Link
+          to="/forgot-password"
+          className="block text-center transition-colors hover:text-button-blue hover:underline"
+          title="Forgot password?"
+        >
+          Admin Login
+        </Link>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">

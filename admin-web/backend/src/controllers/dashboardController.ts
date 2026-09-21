@@ -61,18 +61,14 @@ export async function getDashboardSummary(
     );
 
     const studentValues: unknown[] = [];
-    const studentFilters: string[] = [];
+    const studentFilters: string[] = ["s.school_id IS NOT NULL"];
     if (!seeAll) {
       studentValues.push(scope.adminUserId);
       studentFilters.push(`sc.owner_admin_id = $${studentValues.length}`);
     }
-    if (year) {
-      studentValues.push(year);
-      studentFilters.push(`sc.year = $${studentValues.length}`);
-    }
-    const studentWhere = studentFilters.length
-      ? `WHERE ${studentFilters.join(" AND ")}`
-      : "";
+    const studentWhere = `WHERE ${studentFilters.join(" AND ")}`;
+
+    const capturedExpr = `(s.status IN ('captured', 'printed') OR NULLIF(TRIM(s.photo_url), '') IS NOT NULL)`;
 
     const studentStats = await pool.query<{
       total: string;
@@ -81,8 +77,8 @@ export async function getDashboardSummary(
     }>(
       `SELECT
          COUNT(*)::text AS total,
-         COUNT(*) FILTER (WHERE s.status IN ('captured', 'printed'))::text AS captured,
-         COUNT(*) FILTER (WHERE s.status IS DISTINCT FROM 'captured' AND s.status IS DISTINCT FROM 'printed')::text AS uncaptured
+         COUNT(*) FILTER (WHERE ${capturedExpr})::text AS captured,
+         COUNT(*) FILTER (WHERE NOT (${capturedExpr}))::text AS uncaptured
        FROM students s
        INNER JOIN schools sc ON sc.id = s.school_id
        ${studentWhere}`,
@@ -95,10 +91,6 @@ export async function getDashboardSummary(
       instituteMemberValues.push(scope.adminUserId);
       instituteMemberFilters.push(`i.owner_admin_id = $${instituteMemberValues.length}`);
     }
-    if (year) {
-      instituteMemberValues.push(year);
-      instituteMemberFilters.push(`i.year = $${instituteMemberValues.length}`);
-    }
     const instituteMemberWhere = `WHERE ${instituteMemberFilters.join(" AND ")}`;
 
     const instituteMemberStats = await pool.query<{
@@ -108,8 +100,8 @@ export async function getDashboardSummary(
     }>(
       `SELECT
          COUNT(*)::text AS total,
-         COUNT(*) FILTER (WHERE s.status IN ('captured', 'printed'))::text AS captured,
-         COUNT(*) FILTER (WHERE s.status IS DISTINCT FROM 'captured' AND s.status IS DISTINCT FROM 'printed')::text AS uncaptured
+         COUNT(*) FILTER (WHERE ${capturedExpr})::text AS captured,
+         COUNT(*) FILTER (WHERE NOT (${capturedExpr}))::text AS uncaptured
        FROM students s
        INNER JOIN institutes i ON i.id = s.institute_id
        ${instituteMemberWhere}`,

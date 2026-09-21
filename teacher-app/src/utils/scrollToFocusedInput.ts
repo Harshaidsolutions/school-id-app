@@ -1,8 +1,14 @@
 import type { RefObject } from "react";
-import type { ScrollView } from "react-native";
+import { Keyboard, Platform, type ScrollView } from "react-native";
 
 let lastScrollTarget: number | null = null;
 let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+let keyboardShowSub: { remove: () => void } | null = null;
+
+function clearKeyboardShowSub(): void {
+  keyboardShowSub?.remove();
+  keyboardShowSub = null;
+}
 
 /** Scroll parent so a focused field sits above the keyboard (once per focus). */
 export function scrollToFocusedInput(
@@ -14,17 +20,43 @@ export function scrollToFocusedInput(
   if (!scroll || !nativeTarget) return;
   if (lastScrollTarget === nativeTarget) return;
   lastScrollTarget = nativeTarget;
+
   if (scrollTimer) clearTimeout(scrollTimer);
-  scrollTimer = setTimeout(() => {
-    scroll.scrollResponderScrollNativeHandleToKeyboard(
+  clearKeyboardShowSub();
+
+  const runScroll = (): void => {
+    const active = scrollRef.current;
+    if (!active || lastScrollTarget !== nativeTarget) return;
+    active.scrollResponderScrollNativeHandleToKeyboard(
       nativeTarget,
       extraOffset,
       true
     );
+  };
+
+  if (Platform.OS === "android") {
+    keyboardShowSub = Keyboard.addListener("keyboardDidShow", () => {
+      clearKeyboardShowSub();
+      runScroll();
+    });
+    scrollTimer = setTimeout(() => {
+      runScroll();
+      scrollTimer = null;
+    }, 50);
+    return;
+  }
+
+  scrollTimer = setTimeout(() => {
+    runScroll();
     scrollTimer = null;
   }, 100);
 }
 
 export function resetFocusedInputScrollLock(): void {
   lastScrollTarget = null;
+  if (scrollTimer) {
+    clearTimeout(scrollTimer);
+    scrollTimer = null;
+  }
+  clearKeyboardShowSub();
 }

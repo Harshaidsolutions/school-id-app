@@ -2,7 +2,7 @@
   "expo": {
     "name": "My School ID Card",
     "slug": "teacher-app",
-    "version": "1.0.120",
+    "version": "1.0.121",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
@@ -31,7 +31,7 @@
       }
     },
     "android": {
-      "versionCode": 120,
+      "versionCode": 121,
       "package": "com.schoolid.teacher",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
@@ -46,7 +46,8 @@
       ],
       "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -5,6 +5,7 @@ import { CatalogPreviewThumb, ImagePreviewModal } from "../components/ImagePrevi
 import { SearchInput } from "../components/ui/SearchInput";
 import { UploadDropzone } from "../components/ui/UploadDropzone";
 import type { ApiErrorBody, CatalogItem } from "../types";
+import { sequentialUploadProgressLabel } from "../utils/sequentialUploadProgress";
 
 export function formatFileSize(bytes: number | null | undefined): string {
   if (!bytes || bytes <= 0) return "—";
@@ -26,6 +27,7 @@ export function CatalogGridPage({
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<CatalogItem | null>(null);
 
@@ -66,8 +68,11 @@ export function CatalogGridPage({
     if (files.length === 0) return;
     setUploading(true);
     setError(null);
+    setUploadProgress(null);
     try {
-      for (const file of files) {
+      for (let i = 0; i < files.length; i += 1) {
+        const file = files[i]!;
+        setUploadProgress(sequentialUploadProgressLabel(i + 1, files.length, file.name));
         const form = new FormData();
         form.append("kind", kind);
         form.append("name", file.name);
@@ -84,6 +89,7 @@ export function CatalogGridPage({
       } else setError("Upload failed.");
     } finally {
       setUploading(false);
+      setUploadProgress(null);
     }
   }
 
@@ -110,6 +116,7 @@ export function CatalogGridPage({
           className="mb-4"
         />
         {error && <div className="mb-4 alert-error">{error}</div>}
+        {uploadProgress && <div className="mb-4 alert-success">{uploadProgress}</div>}
         {loading ? (
           <div className="text-sm text-text-muted">Loading {title.toLowerCase()}…</div>
         ) : (

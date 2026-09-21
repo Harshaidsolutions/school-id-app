@@ -2,7 +2,6 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Modal,
-  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -26,6 +25,7 @@ import {
 import { uploadStudentPhoto } from "../utils/uploadStudentPhoto";
 import { scrollToFocusedInput } from "../utils/scrollToFocusedInput";
 import { AddStudentForm } from "../components/AddStudentForm";
+import { KeyboardAwareFormScrollView } from "../components/KeyboardAwareFormScrollView";
 import {
   getCachedStudents,
   invalidateStudentsCache,
@@ -372,13 +372,9 @@ export function StudentListScreen({ navigation, route }: Props) {
             </Text>
             <View style={styles.addBtnPlaceholder} />
           </View>
-            <ScrollView
-              ref={addScrollRef}
-              style={styles.flex}
+            <KeyboardAwareFormScrollView
+              scrollRef={addScrollRef}
               contentContainerStyle={styles.addModalScroll}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
             >
               {addModalVisible ? (
                 <AddStudentForm
@@ -397,7 +393,7 @@ export function StudentListScreen({ navigation, route }: Props) {
                   }}
                 />
               ) : null}
-            </ScrollView>
+            </KeyboardAwareFormScrollView>
         </View>
       </Modal>
 

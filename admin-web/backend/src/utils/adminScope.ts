@@ -21,6 +21,22 @@ function isDbTrue(value: unknown): boolean {
   return value === true || value === 1 || value === "t" || value === "true";
 }
 
+export function isPrimarySuperAdminEmail(email: string): boolean {
+  return email.trim().toLowerCase() === SUPER_ADMIN_EMAIL;
+}
+
+/** Harsha ID Solutions primary super admin — sole account allowed to use forgot-password. */
+export function userMayUseAdminPasswordReset(user: {
+  role?: string | null;
+  email?: string | null;
+  username?: string | null;
+  is_super_admin?: boolean | null;
+}): boolean {
+  if (user.role !== "admin") return false;
+  if (!isPrimarySuperAdminEmail(String(user.email ?? ""))) return false;
+  return resolveIsSuperAdmin(user);
+}
+
 export function resolveIsSuperAdmin(user: {
   role?: string | null;
   email?: string | null;

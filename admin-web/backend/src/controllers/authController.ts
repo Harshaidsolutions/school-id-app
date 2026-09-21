@@ -13,8 +13,10 @@ import {
 } from "../types/auth";
 import { assertTeacherOrgActive } from "../middleware/orgAccess";
 import {
+  isPrimarySuperAdminEmail,
   queryAdminSeesAllOrganizations,
   resolveIsSuperAdmin,
+  userMayUseAdminPasswordReset,
 } from "../utils/adminScope";
 
 const SALT_ROUNDS = 10;
@@ -345,8 +347,11 @@ export async function forgotPassword(
       throw new AppError("A valid email is required", 400);
     }
 
-    const userResult = await pool.query<User>(
-      `SELECT id, email, password_hash, role, school_id, assigned_class, assigned_section, created_at
+    const userResult = await pool.query<
+      User & { is_super_admin?: boolean | null; username?: string | null }
+    >(
+      `SELECT id, email, password_hash, role, school_id, assigned_class, assigned_section, created_at,
+              is_super_admin, username
        FROM users WHERE lower(email) = $1 LIMIT 1`,
       [email]
     );
@@ -359,7 +364,7 @@ export async function forgotPassword(
         "If an account exists for that email, a verification code has been sent.",
     };
 
-    if (!user) {
+    if (!user || !userMayUseAdminPasswordReset(user)) {
       res.status(200).json(okBody);
       return;
     }
@@ -437,6 +442,9 @@ export async function verifyResetOtp(
     if (!isNonEmptyString(otp) || !/^\d{6}$/.test(otp)) {
       throw new AppError("A valid 6-digit code is required", 400);
     }
+    if (!isPrimarySuperAdminEmail(email)) {
+      throw new AppError("Invalid or expired code", 400);
+    }
 
     const otpRow = await pool.query<{
       id: string;
@@ -462,6 +470,19 @@ export async function verifyResetOtp(
 
     const matches = await bcrypt.compare(otp, row.otp_hash);
     if (!matches) {
+      throw new AppError("Invalid or expired code", 400);
+    }
+
+    const resetUserResult = await pool.query<
+      User & { is_super_admin?: boolean | null; username?: string | null }
+    >(
+      `SELECT id, email, password_hash, role, school_id, assigned_class, assigned_section, created_at,
+              is_super_admin, username
+       FROM users WHERE id = $1 LIMIT 1`,
+      [row.user_id]
+    );
+    const resetUser = resetUserResult.rows[0];
+    if (!resetUser || !userMayUseAdminPasswordReset(resetUser)) {
       throw new AppError("Invalid or expired code", 400);
     }
 
@@ -521,6 +542,9 @@ export async function resetPassword(
     if (newPassword.length < 8) {
       throw new AppError("Password must be at least 8 characters", 400);
     }
+    if (!isPrimarySuperAdminEmail(email)) {
+      throw new AppError("Invalid or expired reset token", 400);
+    }
 
     const tokenHash = hashToken(resetToken);
     const tokenRow = await pool.query<{
@@ -540,6 +564,19 @@ export async function resetPassword(
       throw new AppError("Invalid or expired reset token", 400);
     }
     if (new Date(row.expires_at).getTime() < Date.now()) {
+      throw new AppError("Invalid or expired reset token", 400);
+    }
+
+    const resetUserResult = await pool.query<
+      User & { is_super_admin?: boolean | null; username?: string | null }
+    >(
+      `SELECT id, email, password_hash, role, school_id, assigned_class, assigned_section, created_at,
+              is_super_admin, username
+       FROM users WHERE id = $1 LIMIT 1`,
+      [row.user_id]
+    );
+    const resetUser = resetUserResult.rows[0];
+    if (!resetUser || !userMayUseAdminPasswordReset(resetUser)) {
       throw new AppError("Invalid or expired reset token", 400);
     }
 

@@ -5,6 +5,7 @@ import { ImagePreviewModal } from "../components/ImagePreviewModal";
 import { SearchInput } from "../components/ui/SearchInput";
 import { formatFileSize } from "./CatalogPages";
 import type { ApiErrorBody, CatalogItem } from "../types";
+import { sequentialUploadProgressLabel } from "../utils/sequentialUploadProgress";
 
 const MAX_DESCRIPTION_WORDS = 500;
 
@@ -37,6 +38,7 @@ export function ModelsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [tagFiles, setTagFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [editing, setEditing] = useState<CatalogItem | null>(null);
   const [previewItem, setPreviewItem] = useState<CatalogItem | null>(null);
   const [descriptionPreview, setDescriptionPreview] = useState<{
@@ -136,8 +138,10 @@ export function ModelsPage() {
     }
     setSaving(true);
     setError(null);
+    setUploadProgress(null);
     try {
       if (isTagsTab && tagFiles.length > 0) {
+        const total = tagFiles.length;
         const primary = tagFiles[0]!;
         const createForm = new FormData();
         createForm.append("kind", tab);
@@ -145,17 +149,25 @@ export function ModelsPage() {
         createForm.append("description", "");
         createForm.append("file", primary);
         if (editing) {
+          setUploadProgress(
+            sequentialUploadProgressLabel(1, total, primary.name)
+          );
           await api.put(`/admin/catalog/${editing.id}`, createForm, {
             headers: { "Content-Type": "multipart/form-data" },
           });
           for (let i = 1; i < tagFiles.length; i += 1) {
+            const file = tagFiles[i]!;
+            setUploadProgress(sequentialUploadProgressLabel(i + 1, total, file.name));
             const extraForm = new FormData();
-            extraForm.append("file", tagFiles[i]!);
+            extraForm.append("file", file);
             await api.post(`/admin/catalog/${editing.id}/extra-images`, extraForm, {
               headers: { "Content-Type": "multipart/form-data" },
             });
           }
         } else {
+          setUploadProgress(
+            sequentialUploadProgressLabel(1, total, primary.name)
+          );
           const { data } = await api.post<{ item: CatalogItem }>(
             `/admin/catalog?kind=${encodeURIComponent(tab)}`,
             createForm,
@@ -164,8 +176,10 @@ export function ModelsPage() {
           const itemId = data.item?.id;
           if (itemId) {
             for (let i = 1; i < tagFiles.length; i += 1) {
+              const file = tagFiles[i]!;
+              setUploadProgress(sequentialUploadProgressLabel(i + 1, total, file.name));
               const extraForm = new FormData();
-              extraForm.append("file", tagFiles[i]!);
+              extraForm.append("file", file);
               await api.post(`/admin/catalog/${itemId}/extra-images`, extraForm, {
                 headers: { "Content-Type": "multipart/form-data" },
               });
@@ -198,6 +212,7 @@ export function ModelsPage() {
       } else setError(err instanceof Error ? err.message : "Save failed.");
     } finally {
       setSaving(false);
+      setUploadProgress(null);
     }
   }
 
@@ -243,6 +258,7 @@ export function ModelsPage() {
           className="mb-4"
         />
         {error && <div className="mb-4 alert-error">{error}</div>}
+        {uploadProgress && <div className="mb-4 alert-success">{uploadProgress}</div>}
         <div className="models-table-scroll card">
           <table className="models-table">
             <thead>
