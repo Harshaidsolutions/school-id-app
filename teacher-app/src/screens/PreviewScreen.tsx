@@ -70,7 +70,6 @@ export function PreviewScreen({ navigation, route }: Props) {
             name: "StudentList",
             params: {
               classSection: student.class_section ?? "",
-              openStudentId: student.id,
               patchStudent: updated,
             },
             merge: true,

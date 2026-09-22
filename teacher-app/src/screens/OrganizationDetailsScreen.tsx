@@ -35,23 +35,12 @@ import {
 import { resolveMediaUrl } from "../utils/mediaUrl";
 import { toImageUri } from "../utils/imageSource";
 import { clearOrgFormCleared } from "../utils/orgDetailsStorage";
-import {
-  applyFullOrgDetailsDraft,
-  applyOrgDetailsDraftSelections,
-  applyOrgSchoolFromServer,
-} from "../utils/applyOrgDetailsDraft";
+import { applyOrgSchoolFromServer } from "../utils/applyOrgDetailsDraft";
 import {
   persistOrgDetailsImage,
   resolveUploadFile,
 } from "../utils/orgDetailsLocalImage";
-import {
-  loadOrgDetailsDraft,
-  loadOrgDetailsSubmitted,
-  mergeOrgDetailsDraft,
-  saveOrgDetailsSubmitted,
-  setOrgDetailsDraft,
-  type OrgDetailsDraft,
-} from "../utils/orgDetailsDraft";
+import { clearOrgDetailsDraft } from "../utils/orgDetailsDraft";
 import { cardShadow, radius, spacing } from "../theme/colors";
 import { fonts, textStyles, type as typeScale } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
@@ -173,9 +162,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
   const templateImagesRef = useRef<Record<string, string>>({});
   const hasLoadedRef = useRef(false);
   const pickerActiveRef = useRef(false);
-  const draftRestoredRef = useRef(false);
   const skipServerHydrateRef = useRef(false);
-  const canPersistDraftRef = useRef(false);
   const [savedBaseline, setSavedBaseline] = useState<OrgFormSnapshot | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [pendingSignature, setPendingSignature] = useState<LocalImage | null>(null);
@@ -252,66 +239,6 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
     if (!savedBaseline) return false;
     return !snapshotsEqual(currentSnapshot, savedBaseline);
   }, [currentSnapshot, pendingSignature, pendingLogo, pendingOrgPhoto, savedBaseline]);
-
-  const mergeSubmittedPreviewUrls = useCallback((snapshot: OrgDetailsDraft) => {
-    if (snapshot.templateId) {
-      setTemplateId((prev) => prev ?? snapshot.templateId);
-    }
-    if (snapshot.templatePreviewUrlState) {
-      setTemplatePreviewUrlState(
-        (prev) => prev ?? snapshot.templatePreviewUrlState
-      );
-    }
-    if (snapshot.model) setModel((prev) => prev || snapshot.model);
-    if (snapshot.tags) setTags((prev) => prev || snapshot.tags);
-    if (snapshot.modelPreviewUrl) {
-      setModelPreviewUrl((prev) => prev ?? snapshot.modelPreviewUrl);
-    }
-    if (snapshot.tagsPreviewUrl) {
-      setTagsPreviewUrl((prev) => prev ?? snapshot.tagsPreviewUrl);
-    }
-    if (snapshot.signatureUri) {
-      setSignatureUri((prev) => prev ?? snapshot.signatureUri);
-    }
-    if (snapshot.logoUri) setLogoUri((prev) => prev ?? snapshot.logoUri);
-    if (snapshot.orgPhotoUri) {
-      setOrgPhotoUri((prev) => prev ?? snapshot.orgPhotoUri);
-    }
-  }, []);
-
-  const hydrateSavedSelections = useCallback(
-    (row: OrgSchool, catalog: TeacherModel[], imgs: Record<string, string>) => {
-      if (row.template_id && imgs[row.template_id]) {
-        setTemplateId(row.template_id);
-        setTemplatePreviewUrlState(imgs[row.template_id]);
-      }
-      if (row.model?.trim()) {
-        setModel(row.model);
-        const url = modelImageUrlByName(row.model, catalog);
-        if (url) setModelPreviewUrl(url);
-      }
-      if (row.tags?.trim()) {
-        setTags(row.tags);
-        const firstTag = row.tags.split(",")[0]?.trim() ?? "";
-        const url = modelImageUrlByName(firstTag, catalog);
-        if (url) setTagsPreviewUrl(url);
-      }
-      if (row.phone) setPhone(row.phone);
-      if (row.phone2) setPhone2(row.phone2);
-      if (row.school_code) setSchoolCode(row.school_code);
-      if (row.establish_year || row.year) {
-        setEstablishYear(row.establish_year ?? row.year ?? "");
-      }
-      if (row.address) setAddress(row.address);
-      if (row.instructions) setInstructions(row.instructions);
-      if (row.logo_url) setLogoUri(toImageUri(row.logo_url));
-      if (row.signature_url) setSignatureUri(toImageUri(row.signature_url));
-      if (row.organization_photo_url) {
-        setOrgPhotoUri(toImageUri(row.organization_photo_url));
-      }
-    },
-    []
-  );
 
   const refreshCatalogImages = useCallback(async () => {
     try {
@@ -394,6 +321,10 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
         }
 
         if (userId) {
+          await clearOrgDetailsDraft(userId);
+        }
+
+        if (userId) {
           await clearOrgFormCleared(userId);
         }
       } catch (err) {
@@ -408,12 +339,6 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
     },
     [refreshCatalogImages, userId]
   );
-
-  useEffect(() => {
-    if (!userId) return;
-    draftRestoredRef.current = true;
-    canPersistDraftRef.current = true;
-  }, [userId]);
 
   useEffect(() => {
     if (templateId && templateImages[templateId]) {
@@ -436,69 +361,10 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
   }, [catalogModels, model, tags, templateId, templateImages]);
 
   useEffect(() => {
-    if (!userId || !canPersistDraftRef.current) return;
-    setOrgDetailsDraft(userId, {
-      signatureUri,
-      logoUri,
-      orgPhotoUri,
-      pendingSignature,
-      pendingLogo,
-      pendingOrgPhoto,
-      templateId,
-      templatePreviewUrlState,
-      model,
-      tags,
-      modelPreviewUrl,
-      tagsPreviewUrl,
-      phone,
-      phone2,
-      schoolCode,
-      establishYear,
-      address,
-      instructions,
-    });
-  }, [
-    userId,
-    signatureUri,
-    logoUri,
-    orgPhotoUri,
-    pendingSignature,
-    pendingLogo,
-    pendingOrgPhoto,
-    templateId,
-    templatePreviewUrlState,
-    model,
-    tags,
-    modelPreviewUrl,
-    tagsPreviewUrl,
-    phone,
-    phone2,
-    schoolCode,
-    establishYear,
-    address,
-    instructions,
-  ]);
-
-  useEffect(() => {
     if (hasSavedSchoolInfo && phone.trim() && address.trim() && establishYear.trim()) {
       setSchoolInfoEditing(false);
     }
   }, [hasSavedSchoolInfo]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const applyDraftSelections = useCallback((draft: OrgDetailsDraft) => {
-    applyOrgDetailsDraftSelections(draft, {
-      setTemplateId,
-      setTemplatePreviewUrlState,
-      setModel,
-      setTags,
-      setModelPreviewUrl,
-      setTagsPreviewUrl,
-    });
-  }, []);
 
   const applyPendingRouteParams = useCallback(() => {
     if (pickerActiveRef.current) {
@@ -522,62 +388,35 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
 
     if (!hasPending) return;
 
-    let nextTemplateId = templateId;
-    let nextTemplatePreview = templatePreviewUrlState;
-    let nextModel = model;
-    let nextTags = tags;
-    let nextModelPreview = modelPreviewUrl;
-    let nextTagsPreview = tagsPreviewUrl;
-
     if (pendingTemplateId) {
-      nextTemplateId = pendingTemplateId;
       setTemplateId(pendingTemplateId);
       const catalogUrl = templateImagesRef.current[pendingTemplateId];
       if (catalogUrl) {
-        nextTemplatePreview = catalogUrl;
         setTemplatePreviewUrlState(catalogUrl);
       }
     }
     if (pendingTemplate) {
-      nextTemplatePreview = toImageUri(pendingTemplate) ?? pendingTemplate;
-      setTemplatePreviewUrlState(nextTemplatePreview);
+      setTemplatePreviewUrlState(toImageUri(pendingTemplate) ?? pendingTemplate);
     }
     if (pendingModelName) {
-      nextModel = pendingModelName;
       setModel(pendingModelName);
       const url = modelImageUrlByName(pendingModelName, catalogModels);
       if (url) {
-        nextModelPreview = url;
         setModelPreviewUrl(url);
       }
     }
     if (pendingTagsName) {
-      nextTags = pendingTagsName;
       setTags(pendingTagsName);
       const url = modelImageUrlByName(pendingTagsName, catalogModels);
       if (url) {
-        nextTagsPreview = url;
         setTagsPreviewUrl(url);
       }
     }
     if (pendingModel) {
-      nextModelPreview = toImageUri(pendingModel) ?? pendingModel;
-      setModelPreviewUrl(nextModelPreview);
+      setModelPreviewUrl(toImageUri(pendingModel) ?? pendingModel);
     }
     if (pendingTags) {
-      nextTagsPreview = toImageUri(pendingTags) ?? pendingTags;
-      setTagsPreviewUrl(nextTagsPreview);
-    }
-
-    if (userId) {
-      void mergeOrgDetailsDraft(userId, {
-        templateId: nextTemplateId,
-        templatePreviewUrlState: nextTemplatePreview,
-        model: nextModel,
-        tags: nextTags,
-        modelPreviewUrl: nextModelPreview,
-        tagsPreviewUrl: nextTagsPreview,
-      });
+      setTagsPreviewUrl(toImageUri(pendingTags) ?? pendingTags);
     }
 
     navigation.setParams({
@@ -610,10 +449,10 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
     useCallback(() => {
       applyPendingRouteParams();
       if (!userId) return;
-      if (skipServerHydrateRef.current && isDirty) return;
+      if (pickerActiveRef.current) return;
       skipServerHydrateRef.current = false;
       void load();
-    }, [applyPendingRouteParams, isDirty, load, userId])
+    }, [applyPendingRouteParams, load, userId])
   );
 
   useEffect(() => {
@@ -691,6 +530,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
       );
       const hasFiles = Boolean(signatureFile || logoFile || orgFile);
 
+      let savedSchool: OrgSchool;
       if (hasFiles) {
         const form = new FormData();
         for (const [key, value] of Object.entries(payload)) {
@@ -705,29 +545,25 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
         if (orgFile) {
           form.append("organization", orgFile as unknown as Blob);
         }
-        await api.put("/teacher/organization", form, {
-          transformRequest: (body) => body,
-        });
+        const { data } = await api.put<{ school: OrgSchool }>(
+          "/teacher/organization",
+          form,
+          { transformRequest: (body) => body }
+        );
+        savedSchool = data.school;
       } else {
-        await api.put("/teacher/organization", payload);
+        const { data } = await api.put<{ school: OrgSchool }>(
+          "/teacher/organization",
+          payload
+        );
+        savedSchool = data.school;
       }
 
-      const { data: refreshed } = await api.get<{
-        school: OrgSchool;
-        templates: OrgTemplate[];
-      }>("/teacher/organization");
       const { imgs, models } = await refreshCatalogImages();
-      setSchool(refreshed.school);
-      const row = refreshed.school;
-      const savedSignatureUri = toImageUri(row.signature_url);
-      const savedLogoUri = toImageUri(row.logo_url);
-      const savedOrgPhotoUri = toImageUri(row.organization_photo_url);
-      if (savedSignatureUri) setSignatureUri(savedSignatureUri);
-      if (savedLogoUri) setLogoUri(savedLogoUri);
-      if (savedOrgPhotoUri) setOrgPhotoUri(savedOrgPhotoUri);
+      setSchool(savedSchool);
       skipServerHydrateRef.current = false;
       applyOrgSchoolFromServer(
-        refreshed.school,
+        savedSchool,
         imgs,
         models,
         {
@@ -752,22 +588,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
         },
         toImageUri
       );
-      const savedTemplateId = row.template_id ?? submitTemplateId;
-      const savedModel = row.model?.trim() || submitModel;
-      const savedTags = row.tags?.trim() || submitTags;
-      const firstTag = savedTags.split(",")[0]?.trim() ?? "";
-      if (savedTemplateId && imgs[savedTemplateId]) {
-        setTemplatePreviewUrlState(imgs[savedTemplateId]);
-      }
-      if (savedModel) {
-        const modelUrl = modelImageUrlByName(savedModel, models);
-        if (modelUrl) setModelPreviewUrl(modelUrl);
-      }
-      if (firstTag) {
-        const tagUrl = modelImageUrlByName(firstTag, models);
-        if (tagUrl) setTagsPreviewUrl(tagUrl);
-      }
-      setSavedBaseline(baselineFromSchool(refreshed.school));
+      setSavedBaseline(baselineFromSchool(savedSchool));
       setPendingSignature(null);
       setPendingLogo(null);
       setPendingOrgPhoto(null);
@@ -775,30 +596,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
 
       if (userId) {
         await clearOrgFormCleared(userId);
-        await saveOrgDetailsSubmitted(userId, {
-          signatureUri: savedSignatureUri ?? signatureUri,
-          logoUri: savedLogoUri ?? logoUri,
-          orgPhotoUri: savedOrgPhotoUri ?? orgPhotoUri,
-          pendingSignature: null,
-          pendingLogo: null,
-          pendingOrgPhoto: null,
-          templateId: savedTemplateId,
-          templatePreviewUrlState:
-            (savedTemplateId && imgs[savedTemplateId]) ||
-            templatePreviewUrlState,
-          model: savedModel,
-          tags: savedTags,
-          modelPreviewUrl:
-            modelImageUrlByName(savedModel, models) ?? modelPreviewUrl,
-          tagsPreviewUrl:
-            modelImageUrlByName(firstTag, models) ?? tagsPreviewUrl,
-          phone: row.phone?.trim() ?? phone.trim(),
-          phone2: row.phone2?.trim() ?? phone2.trim(),
-          schoolCode: row.school_code?.trim() ?? schoolCode.trim(),
-          establishYear: (row.establish_year ?? row.year ?? establishYear).trim(),
-          address: row.address?.trim() ?? address.trim(),
-          instructions: row.instructions?.trim() ?? instructions.trim(),
-        });
+        clearOrgDetailsDraft(userId);
       }
 
       showToast(wasSaved ? "Updated successfully." : "Submitted successfully.");
@@ -823,42 +621,38 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
         { transformRequest: (body) => body }
       );
       const row = data.school;
+      const { imgs, models } = await refreshCatalogImages();
       setSchool(row);
-      skipServerHydrateRef.current = true;
-      const savedSignatureUri = toImageUri(row.signature_url);
-      const savedLogoUri = toImageUri(row.logo_url);
-      const savedOrgPhotoUri = toImageUri(row.organization_photo_url);
-      if (kind === "signature" && savedSignatureUri) {
-        setSignatureUri(savedSignatureUri);
-        setPendingSignature(null);
-      }
-      if (kind === "logo" && savedLogoUri) {
-        setLogoUri(savedLogoUri);
-        setPendingLogo(null);
-      }
-      if (kind === "organization" && savedOrgPhotoUri) {
-        setOrgPhotoUri(savedOrgPhotoUri);
-        setPendingOrgPhoto(null);
-      }
-      setSavedBaseline((prev) =>
-        prev
-          ? {
-              ...prev,
-              signatureUri: savedSignatureUri ?? prev.signatureUri,
-              logoUri: savedLogoUri ?? prev.logoUri,
-              orgPhotoUri: savedOrgPhotoUri ?? prev.orgPhotoUri,
-            }
-          : baselineFromSchool(row)
+      skipServerHydrateRef.current = false;
+      applyOrgSchoolFromServer(
+        row,
+        imgs,
+        models,
+        {
+          setSignatureUri,
+          setLogoUri,
+          setOrgPhotoUri,
+          setPendingSignature,
+          setPendingLogo,
+          setPendingOrgPhoto,
+          setTemplateId,
+          setTemplatePreviewUrlState,
+          setModel,
+          setTags,
+          setModelPreviewUrl,
+          setTagsPreviewUrl,
+          setPhone,
+          setPhone2,
+          setSchoolCode,
+          setEstablishYear,
+          setAddress,
+          setInstructions,
+        },
+        toImageUri
       );
+      setSavedBaseline(baselineFromSchool(row));
       if (userId) {
-        await mergeOrgDetailsDraft(userId, {
-          signatureUri: savedSignatureUri ?? signatureUri,
-          logoUri: savedLogoUri ?? logoUri,
-          orgPhotoUri: savedOrgPhotoUri ?? orgPhotoUri,
-          pendingSignature: kind === "signature" ? null : pendingSignature,
-          pendingLogo: kind === "logo" ? null : pendingLogo,
-          pendingOrgPhoto: kind === "organization" ? null : pendingOrgPhoto,
-        });
+        clearOrgDetailsDraft(userId);
       }
     } catch (err) {
       setError(getErrorMessage(err, "Failed to upload image."));
@@ -904,16 +698,6 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
     } else {
       setOrgPhotoUri(preview);
       setPendingOrgPhoto(file);
-    }
-    if (userId) {
-      void mergeOrgDetailsDraft(userId, {
-        signatureUri: kind === "signature" ? preview : signatureUri,
-        logoUri: kind === "logo" ? preview : logoUri,
-        orgPhotoUri: kind === "organization" ? preview : orgPhotoUri,
-        pendingSignature: kind === "signature" ? file : pendingSignature,
-        pendingLogo: kind === "logo" ? file : pendingLogo,
-        pendingOrgPhoto: kind === "organization" ? file : pendingOrgPhoto,
-      });
     }
     await uploadOrgImageImmediately(kind, file);
   }

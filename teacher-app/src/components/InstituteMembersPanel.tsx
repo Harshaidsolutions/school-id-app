@@ -84,6 +84,7 @@ export function InstituteMembersPanel({
   const [pendingPhotoStudent, setPendingPhotoStudent] =
     useState<TeacherStudent | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const skipFocusReloadRef = useRef(false);
 
   const loadMembers = useCallback(async (isRefresh = false) => {
     if (!isRefresh) {
@@ -113,8 +114,13 @@ export function InstituteMembersPanel({
 
   useFocusEffect(
     useCallback(() => {
+      if (skipFocusReloadRef.current) {
+        skipFocusReloadRef.current = false;
+        return;
+      }
+      if (photoBusy) return;
       void loadMembers();
-    }, [loadMembers])
+    }, [loadMembers, photoBusy])
   );
 
   const capturedCount = useMemo(
@@ -172,6 +178,7 @@ export function InstituteMembersPanel({
     const student = pendingPhotoStudent;
     setPendingPhotoStudent(null);
     setPhotoBusy(true);
+    skipFocusReloadRef.current = true;
     try {
       if (source === "camera") {
         const photoUri = await pickStudentPhotoFromCamera();

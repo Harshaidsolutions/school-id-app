@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -354,9 +354,26 @@ export function TemplateScreen() {
     }
   }
 
-  const previewImages = templates
-    .map((item) => templatePreviewUrl(item))
-    .filter((uri): uri is string => Boolean(uri));
+  const templateViewerItems = useMemo(
+    () =>
+      templates
+        .map((item) => ({
+          item,
+          name: item.name,
+          uri: templatePreviewUrl(item),
+        }))
+        .filter(
+          (
+            entry
+          ): entry is {
+            item: TemplateItem;
+            name: string;
+            uri: string;
+          } => Boolean(entry.uri)
+        ),
+    [templates]
+  );
+  const previewImages = templateViewerItems.map((entry) => entry.uri);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surfaceMuted }]}>
@@ -478,7 +495,14 @@ export function TemplateScreen() {
                   },
                   pressed && { opacity: 0.94 },
                 ]}
-                onPress={() => setPreviewIndex(index)}
+                onPress={() => {
+                  const uri = templatePreviewUrl(item);
+                  if (!uri) return;
+                  const vi = templateViewerItems.findIndex(
+                    (entry) => entry.item.id === item.id
+                  );
+                  if (vi >= 0) setPreviewIndex(vi);
+                }}
                 onLongPress={() => {
                   if (!returnToOrgDetails) {
                     saveSelection(item);
@@ -523,13 +547,13 @@ export function TemplateScreen() {
         initialIndex={previewIndex ?? 0}
         onClose={() => setPreviewIndex(null)}
         onIndexChange={setViewerIndex}
-        title={(idx) => templates[idx]?.name ?? null}
+        title={(idx) => templateViewerItems[idx]?.name ?? null}
         colors={colors}
         showSubmit
         submitLabel="Select"
         submitLoading={selecting}
         onSubmit={() => {
-          const item = templates[viewerIndex];
+          const item = templateViewerItems[viewerIndex]?.item;
           if (item) {
             setPendingSelectItem(item);
             setSelectConfirmOpen(true);
@@ -537,7 +561,7 @@ export function TemplateScreen() {
         }}
         imageLayout={(_, idx) => {
           if (tab !== "staff_id") return "default";
-          const item = templates[idx];
+          const item = templateViewerItems[idx]?.item;
           if (!item) return "default";
           const { front } = templateSides(item);
           if (!front) return "default";

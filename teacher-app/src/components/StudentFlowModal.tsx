@@ -255,27 +255,30 @@ export function StudentFlowModal({
 
           <Pressable
             style={[
-              styles.editBtn,
+              styles.navBtn,
               { borderColor: colors.brandGreen, backgroundColor: colors.surface },
             ]}
             onPress={handleEdit}
           >
             <Ionicons name="create-outline" size={20} color={colors.brandGreen} />
-            <Text style={[styles.editBtnText, { color: colors.brandGreen }]}>
+            <Text style={[styles.navBtnText, { color: colors.brandGreen }]}>
               Edit
             </Text>
           </Pressable>
 
           <Pressable
             style={[
-              styles.nextBtn,
-              { backgroundColor: colors.brandGreen },
-              !canNext && styles.nextBtnDisabled,
+              styles.navBtn,
+              {
+                backgroundColor: colors.brandGreen,
+                borderColor: colors.brandGreen,
+              },
+              !canNext && styles.navBtnDisabled,
             ]}
             onPress={goNext}
             disabled={!canNext}
           >
-            <Text style={styles.nextBtnText}>Next</Text>
+            <Text style={[styles.navBtnText, { color: "#FFFFFF" }]}>Next</Text>
             <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
           </Pressable>
         </View>
@@ -427,44 +430,6 @@ const styles = StyleSheet.create({
   navBtnText: {
     fontFamily: fonts.semiBold,
     fontSize: typeScale.md,
-  },
-  editBtn: {
-    flex: 1,
-    flexBasis: 0,
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xxs,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-  },
-  editBtnText: {
-    fontFamily: fonts.semiBold,
-    fontSize: typeScale.md,
-  },
-  nextBtn: {
-    flex: 1,
-    flexBasis: 0,
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xxs,
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: "transparent",
-  },
-  nextBtnDisabled: {
-    opacity: 0.45,
-  },
-  nextBtnText: {
-    fontFamily: fonts.semiBold,
-    fontSize: typeScale.md,
-    color: "#FFFFFF",
   },
   fullscreenBackdrop: {
     flex: 1,

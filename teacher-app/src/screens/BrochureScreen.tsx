@@ -152,10 +152,6 @@ export function BrochureScreen() {
     }, [load])
   );
 
-  const previewItem =
-    previewIndex !== null ? brochures[previewIndex] ?? null : null;
-  const previewUri = previewItem ? resolveMediaUrl(previewItem.fileUrl) : null;
-
   const previewImages = brochures
     .map((b) => resolveMediaUrl(b.fileUrl))
     .filter((uri): uri is string => Boolean(uri));

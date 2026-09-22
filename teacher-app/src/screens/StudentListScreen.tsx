@@ -80,6 +80,7 @@ export function StudentListScreen({ navigation, route }: Props) {
   const addScrollRef = useRef<ScrollView>(null);
   const [pendingPhotoStudent, setPendingPhotoStudent] = useState<TeacherStudent | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const skipFocusReloadRef = useRef(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -129,6 +130,11 @@ export function StudentListScreen({ navigation, route }: Props) {
         });
         navigation.setParams({ patchStudent: undefined });
       }
+      if (skipFocusReloadRef.current) {
+        skipFocusReloadRef.current = false;
+        return;
+      }
+      if (photoBusy) return;
       void loadStudents().then((list) => {
         if (openStudentId && list) {
           const idx = list.findIndex((s) => s.id === openStudentId);
@@ -140,7 +146,7 @@ export function StudentListScreen({ navigation, route }: Props) {
           navigation.setParams({ openStudentId: undefined });
         }
       });
-    }, [classSection, loadStudents, navigation, openStudentId, patchStudent])
+    }, [classSection, loadStudents, navigation, openStudentId, patchStudent, photoBusy])
   );
 
   const capturedCount = useMemo(
@@ -187,6 +193,7 @@ export function StudentListScreen({ navigation, route }: Props) {
     const student = pendingPhotoStudent;
     setPendingPhotoStudent(null);
     setPhotoBusy(true);
+    skipFocusReloadRef.current = true;
     try {
       if (source === "camera") {
         const photoUri = await pickStudentPhotoFromCamera();

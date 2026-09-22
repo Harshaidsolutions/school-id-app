@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -232,9 +232,23 @@ export function ModelsScreen() {
     return modelImageUrl(match ?? null);
   }
 
-  const previewImages = modelNames
-    .map((name) => imageFor(name))
-    .filter((uri): uri is string => Boolean(uri));
+  const modelViewerItems = useMemo(
+    () =>
+      modelNames
+        .map((name) => ({
+          name,
+          uri: imageFor(name),
+          description: descriptionFor(name),
+        }))
+        .filter(
+          (
+            entry
+          ): entry is { name: string; uri: string; description: string } =>
+            Boolean(entry.uri)
+        ),
+    [modelNames, tabCatalog, modelTab]
+  );
+  const previewImages = modelViewerItems.map((entry) => entry.uri);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -329,7 +343,12 @@ export function ModelsScreen() {
                     borderWidth: isSelected ? 2 : 1,
                   },
                 ]}
-                onPress={() => setPreviewIndex(index)}
+                onPress={() => {
+                  const uri = imageFor(item);
+                  if (!uri) return;
+                  const vi = modelViewerItems.findIndex((e) => e.name === item);
+                  if (vi >= 0) setPreviewIndex(vi);
+                }}
                 onLongPress={() => {
                   if (!route.params?.returnToOrgDetails) {
                     void saveSelection(item);
@@ -395,7 +414,12 @@ export function ModelsScreen() {
                   borderWidth: isSelected ? 2 : 1,
                 },
               ]}
-              onPress={() => setPreviewIndex(index)}
+              onPress={() => {
+                const uri = imageFor(item);
+                if (!uri) return;
+                const vi = modelViewerItems.findIndex((e) => e.name === item);
+                if (vi >= 0) setPreviewIndex(vi);
+              }}
               onLongPress={() => {
                 if (!route.params?.returnToOrgDetails) {
                   void saveSelection(item);
@@ -450,16 +474,18 @@ export function ModelsScreen() {
         initialIndex={previewIndex ?? 0}
         onClose={() => setPreviewIndex(null)}
         onIndexChange={setViewerIndex}
-        title={(idx) => modelNames[idx] ?? null}
+        title={(idx) => modelViewerItems[idx]?.name ?? null}
         subtitle={(idx) =>
-          modelTab === "tags" ? null : descriptionFor(modelNames[idx] ?? "") || null
+          modelTab === "tags"
+            ? null
+            : modelViewerItems[idx]?.description?.trim() || null
         }
         colors={colors}
         showSubmit
         submitLabel="Select"
         submitLoading={saving}
         onSubmit={() => {
-          const name = modelNames[viewerIndex];
+          const name = modelViewerItems[viewerIndex]?.name;
           if (name) {
             setPendingSelectName(name);
             setSelectConfirmOpen(true);
