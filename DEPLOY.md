@@ -36,8 +36,9 @@ $dst = "C:\sid\teacher-app"
 
 Copy-Item "$src\app.json" "$dst\app.json" -Force
 Copy-Item "$src\android\app\build.gradle" "$dst\android\app\build.gradle" -Force
-Copy-Item "$src\src" "$dst\src" -Recurse -Force
-Copy-Item "$src\scripts" "$dst\scripts" -Recurse -Force
+# Merge contents into existing src (Copy-Item folder→folder creates dst\src\src on Windows)
+Copy-Item "$src\src\*" "$dst\src\" -Recurse -Force
+Copy-Item "$src\scripts\*" "$dst\scripts\" -Recurse -Force
 
 Copy-Item "$src\assets\*.png" "$dst\assets\" -Force
 Copy-Item "$src\android\app\src\main\res\mipmap-anydpi-v26\*.xml" "$dst\android\app\src\main\res\mipmap-anydpi-v26\" -Force
