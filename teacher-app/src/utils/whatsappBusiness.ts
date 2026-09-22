@@ -7,12 +7,17 @@ const WHATSAPP_ANDROID = "com.whatsapp";
  * Open the teacher's normal WhatsApp app to message the company's WhatsApp Business number.
  */
 export async function openWhatsApp(message: string): Promise<void> {
-  const text = encodeURIComponent(message);
+  const trimmed = message.trim();
+  const text = trimmed ? encodeURIComponent(trimmed) : "";
   const phone = SUPPORT_PHONE_E164;
-  const waMeUrl = `https://wa.me/${phone}?text=${text}`;
+  const waMeUrl = text
+    ? `https://wa.me/${phone}?text=${text}`
+    : `https://wa.me/${phone}`;
 
   if (Platform.OS === "android") {
-    const intentUrl = `intent://send/?phone=${phone}&text=${text}#Intent;scheme=whatsapp;package=${WHATSAPP_ANDROID};end`;
+    const intentUrl = text
+      ? `intent://send/?phone=${phone}&text=${text}#Intent;scheme=whatsapp;package=${WHATSAPP_ANDROID};end`
+      : `intent://send/?phone=${phone}#Intent;scheme=whatsapp;package=${WHATSAPP_ANDROID};end`;
     try {
       await Linking.openURL(intentUrl);
       return;
@@ -22,7 +27,9 @@ export async function openWhatsApp(message: string): Promise<void> {
   }
 
   if (Platform.OS === "ios") {
-    const iosUrl = `whatsapp://send?phone=${phone}&text=${text}`;
+    const iosUrl = text
+      ? `whatsapp://send?phone=${phone}&text=${text}`
+      : `whatsapp://send?phone=${phone}`;
     try {
       const canOpen = await Linking.canOpenURL(iosUrl);
       if (canOpen) {
@@ -48,7 +55,11 @@ export async function openWhatsApp(message: string): Promise<void> {
 
 /** Open WhatsApp share sheet so the user picks a contact (no pre-filled admin number). */
 export async function openWhatsAppShare(message: string): Promise<void> {
-  const text = encodeURIComponent(message);
+  const trimmed = message.trim();
+  if (!trimmed) {
+    throw new Error("Share message is empty.");
+  }
+  const text = encodeURIComponent(trimmed);
 
   if (Platform.OS === "android") {
     const intentUrl = `intent://send?text=${text}#Intent;scheme=whatsapp;package=${WHATSAPP_ANDROID};end`;

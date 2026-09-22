@@ -240,18 +240,18 @@ export function StudentFlowModal({
             },
           ]}
         >
-          {canPrev ? (
-            <Pressable
-              style={[
-                styles.navBtn,
-                { borderColor: colors.border, backgroundColor: colors.surface },
-              ]}
-              onPress={goPrev}
-            >
-              <Ionicons name="arrow-back" size={20} color={colors.text} />
-              <Text style={[styles.navBtnText, { color: colors.text }]}>Back</Text>
-            </Pressable>
-          ) : null}
+          <Pressable
+            style={[
+              styles.navBtn,
+              { borderColor: colors.border, backgroundColor: colors.surface },
+              !canPrev && styles.navBtnDisabled,
+            ]}
+            onPress={goPrev}
+            disabled={!canPrev}
+          >
+            <Ionicons name="arrow-back" size={20} color={colors.text} />
+            <Text style={[styles.navBtnText, { color: colors.text }]}>Back</Text>
+          </Pressable>
 
           <Pressable
             style={[
@@ -411,6 +411,8 @@ const styles = StyleSheet.create({
   },
   navBtn: {
     flex: 1,
+    flexBasis: 0,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -419,12 +421,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1.5,
   },
+  navBtnDisabled: {
+    opacity: 0.45,
+  },
   navBtnText: {
     fontFamily: fonts.semiBold,
     fontSize: typeScale.md,
   },
   editBtn: {
     flex: 1,
+    flexBasis: 0,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -439,13 +446,17 @@ const styles = StyleSheet.create({
   },
   nextBtn: {
     flex: 1,
+    flexBasis: 0,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing.xs,
+    gap: spacing.xxs,
     paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: "transparent",
   },
   nextBtnDisabled: {
     opacity: 0.45,

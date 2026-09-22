@@ -187,12 +187,13 @@ export function InstituteMembersPanel({
       }
       const photoUri = await pickStudentPhoto(source);
       if (!photoUri) return;
-      navigation.navigate("Preview", {
-        student,
-        photoUri,
-        photoOnly: true,
-        photoSource: source,
+      const updated = await uploadStudentPhoto(student.id, photoUri);
+      setStudents((prev) => {
+        const next = prev.map((s) => (s.id === updated.id ? updated : s));
+        setCachedStudents(INSTITUTE_CACHE_KEY, next);
+        return next;
       });
+      showToast("Submitted successfully.");
     } catch (err) {
       showToast(getErrorMessage(err, "Failed to capture photo."));
     } finally {

@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -37,6 +38,7 @@ import { clearOrgFormCleared } from "../utils/orgDetailsStorage";
 import {
   applyFullOrgDetailsDraft,
   applyOrgDetailsDraftSelections,
+  applyOrgSchoolFromServer,
 } from "../utils/applyOrgDetailsDraft";
 import {
   persistOrgDetailsImage,
@@ -175,6 +177,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
   const skipServerHydrateRef = useRef(false);
   const canPersistDraftRef = useRef(false);
   const [savedBaseline, setSavedBaseline] = useState<OrgFormSnapshot | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [pendingSignature, setPendingSignature] = useState<LocalImage | null>(null);
   const [pendingLogo, setPendingLogo] = useState<LocalImage | null>(null);
   const [pendingOrgPhoto, setPendingOrgPhoto] = useState<LocalImage | null>(null);
@@ -337,105 +340,79 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
     }
   }, []);
 
-  const load = useCallback(async () => {
-    if (!userId) return;
-    const blocking = !hasLoadedRef.current;
-    if (blocking) {
-      setLoading(true);
-      setError(null);
-    }
-
-    try {
-      const { data } = await api.get<{
-        school: OrgSchool;
-        templates: OrgTemplate[];
-      }>("/teacher/organization");
-      setTemplates(data.templates ?? []);
-      const { imgs, models } = await refreshCatalogImages();
-
-      setSchool(data.school);
-
-      setSavedBaseline(baselineFromSchool(data.school));
-
-      const draft = await loadOrgDetailsDraft(userId);
-      const submitted = await loadOrgDetailsSubmitted(userId);
-
-      if (!skipServerHydrateRef.current) {
-        hydrateSavedSelections(data.school, models, imgs);
-      }
-
-      const persisted = draft ?? submitted;
-      if (persisted) {
-        applyFullOrgDetailsDraft(persisted, {
-          setSignatureUri,
-          setLogoUri,
-          setOrgPhotoUri,
-          setPendingSignature,
-          setPendingLogo,
-          setPendingOrgPhoto,
-          setTemplateId,
-          setTemplatePreviewUrlState,
-          setModel,
-          setTags,
-          setModelPreviewUrl,
-          setTagsPreviewUrl,
-          setPhone,
-          setPhone2,
-          setSchoolCode,
-          setEstablishYear,
-          setAddress,
-          setInstructions,
-        });
-        skipServerHydrateRef.current = true;
-      }
-
-      if (userId) {
-        await clearOrgFormCleared(userId);
-      }
-    } catch (err) {
+  const load = useCallback(
+    async (options?: { pullRefresh?: boolean }) => {
+      if (!userId) return;
+      const blocking = !hasLoadedRef.current;
       if (blocking) {
-        setError(getErrorMessage(err, "Failed to load organization details."));
+        setLoading(true);
+        setError(null);
       }
-    } finally {
-      hasLoadedRef.current = true;
-      if (blocking) setLoading(false);
-    }
-  }, [mergeSubmittedPreviewUrls, hydrateSavedSelections, refreshCatalogImages, userId]);
+      if (options?.pullRefresh) {
+        setRefreshing(true);
+        skipServerHydrateRef.current = false;
+      }
+
+      try {
+        const { data } = await api.get<{
+          school: OrgSchool;
+          templates: OrgTemplate[];
+        }>("/teacher/organization");
+        setTemplates(data.templates ?? []);
+        const { imgs, models } = await refreshCatalogImages();
+
+        setSchool(data.school);
+        setSavedBaseline(baselineFromSchool(data.school));
+
+        if (!skipServerHydrateRef.current) {
+          applyOrgSchoolFromServer(
+            data.school,
+            imgs,
+            models,
+            {
+              setSignatureUri,
+              setLogoUri,
+              setOrgPhotoUri,
+              setPendingSignature,
+              setPendingLogo,
+              setPendingOrgPhoto,
+              setTemplateId,
+              setTemplatePreviewUrlState,
+              setModel,
+              setTags,
+              setModelPreviewUrl,
+              setTagsPreviewUrl,
+              setPhone,
+              setPhone2,
+              setSchoolCode,
+              setEstablishYear,
+              setAddress,
+              setInstructions,
+            },
+            toImageUri
+          );
+        }
+
+        if (userId) {
+          await clearOrgFormCleared(userId);
+        }
+      } catch (err) {
+        if (blocking) {
+          setError(getErrorMessage(err, "Failed to load organization details."));
+        }
+      } finally {
+        hasLoadedRef.current = true;
+        if (blocking) setLoading(false);
+        if (options?.pullRefresh) setRefreshing(false);
+      }
+    },
+    [refreshCatalogImages, userId]
+  );
 
   useEffect(() => {
-    if (!userId || draftRestoredRef.current) return;
-    let cancelled = false;
-    void loadOrgDetailsDraft(userId).then((draft) => {
-      if (cancelled) return;
-      if (draft) {
-        applyFullOrgDetailsDraft(draft, {
-          setSignatureUri,
-          setLogoUri,
-          setOrgPhotoUri,
-          setPendingSignature,
-          setPendingLogo,
-          setPendingOrgPhoto,
-          setTemplateId,
-          setTemplatePreviewUrlState,
-          setModel,
-          setTags,
-          setModelPreviewUrl,
-          setTagsPreviewUrl,
-          setPhone,
-          setPhone2,
-          setSchoolCode,
-          setEstablishYear,
-          setAddress,
-          setInstructions,
-        });
-        skipServerHydrateRef.current = true;
-      }
-      draftRestoredRef.current = true;
-      canPersistDraftRef.current = true;
-    });
-    return () => {
-      cancelled = true;
-    };
+    if (!userId) return;
+    draftRestoredRef.current = true;
+    canPersistDraftRef.current = true;
   }, [userId]);
 
   useEffect(() => {
@@ -633,17 +610,10 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
     useCallback(() => {
       applyPendingRouteParams();
       if (!userId) return;
-      void loadOrgDetailsDraft(userId).then((draft) => {
-        if (!draft) return;
-        if (draft.signatureUri != null) setSignatureUri(draft.signatureUri);
-        if (draft.logoUri != null) setLogoUri(draft.logoUri);
-        if (draft.orgPhotoUri != null) setOrgPhotoUri(draft.orgPhotoUri);
-        if (draft.pendingSignature) setPendingSignature(draft.pendingSignature);
-        if (draft.pendingLogo) setPendingLogo(draft.pendingLogo);
-        if (draft.pendingOrgPhoto) setPendingOrgPhoto(draft.pendingOrgPhoto);
-        applyDraftSelections(draft);
-      });
-    }, [applyDraftSelections, applyPendingRouteParams, userId])
+      if (skipServerHydrateRef.current && isDirty) return;
+      skipServerHydrateRef.current = false;
+      void load();
+    }, [applyPendingRouteParams, isDirty, load, userId])
   );
 
   useEffect(() => {
@@ -755,8 +725,33 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
       if (savedSignatureUri) setSignatureUri(savedSignatureUri);
       if (savedLogoUri) setLogoUri(savedLogoUri);
       if (savedOrgPhotoUri) setOrgPhotoUri(savedOrgPhotoUri);
-      skipServerHydrateRef.current = true;
-      hydrateSavedSelections(refreshed.school, models, imgs);
+      skipServerHydrateRef.current = false;
+      applyOrgSchoolFromServer(
+        refreshed.school,
+        imgs,
+        models,
+        {
+          setSignatureUri,
+          setLogoUri,
+          setOrgPhotoUri,
+          setPendingSignature,
+          setPendingLogo,
+          setPendingOrgPhoto,
+          setTemplateId,
+          setTemplatePreviewUrlState,
+          setModel,
+          setTags,
+          setModelPreviewUrl,
+          setTagsPreviewUrl,
+          setPhone,
+          setPhone2,
+          setSchoolCode,
+          setEstablishYear,
+          setAddress,
+          setInstructions,
+        },
+        toImageUri
+      );
       const savedTemplateId = row.template_id ?? submitTemplateId;
       const savedModel = row.model?.trim() || submitModel;
       const savedTags = row.tags?.trim() || submitTags;
@@ -943,6 +938,12 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
       nestedScrollEnabled={false}
       scrollEventThrottle={16}
       overScrollMode="never"
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => void load({ pullRefresh: true })}
+        />
+      }
     >
       <View
         style={[

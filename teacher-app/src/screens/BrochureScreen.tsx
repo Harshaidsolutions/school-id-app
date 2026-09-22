@@ -94,11 +94,15 @@ export function BrochureScreen() {
       } else {
         setBrochures(items);
         brochuresCache = { items, ts: Date.now() };
-        void Image.prefetch(
-          items
-            .map((b) => resolveMediaUrl(b.fileUrl))
-            .filter((uri): uri is string => Boolean(uri))
-        );
+        const uris = items
+          .map((b) => resolveMediaUrl(b.fileUrl))
+          .filter((uri): uri is string => Boolean(uri));
+        void Image.prefetch(uris.slice(0, 2));
+        if (uris.length > 2) {
+          setTimeout(() => {
+            void Image.prefetch(uris.slice(2));
+          }, 0);
+        }
       }
     } catch (err) {
       try {
@@ -186,8 +190,9 @@ export function BrochureScreen() {
                   contentFit="contain"
                   cachePolicy="memory-disk"
                   recyclingKey={item.id}
-                  priority={index === 0 ? "high" : "normal"}
-                  transition={0}
+                  priority={index < 2 ? "high" : "low"}
+                  placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
+                  transition={120}
                 />
                 <Text style={[styles.tapHint, { color: colors.textMuted }]}>
                   Tap to preview

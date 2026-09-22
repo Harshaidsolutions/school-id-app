@@ -18,9 +18,9 @@ export const PLAY_STORE_MARKET_URL = `market://details?id=${PLAY_STORE_PACKAGE}`
 export const REFER_WHATSAPP_CATALOG_LINK =
   "https://wa.me/message/HGMJJK7FOLRBB1";
 
-export function buildHelpSupportMessage(schoolName: string): string {
-  const name = schoolName.trim() || "Your School";
-  return `I need support @My School ID Card\n#${name}`;
+/** Opens WhatsApp chat without prefilled body text. */
+export function buildHelpSupportMessage(_schoolName?: string): string {
+  return "";
 }
 
 export function buildReferMessage(schoolName: string): string {
@@ -28,7 +28,7 @@ export function buildReferMessage(schoolName: string): string {
   return `I would like to refer a new school from My School ID Card.\n#${name}`;
 }
 
-export function buildReferShareMessage(catalogLink: string): string {
-  const link = catalogLink.trim() || SUPPORT_WEBSITE;
-  return `I would like to refer this School ID Card Application\n\n${link}`;
+/** Refer Us uses the catalog wa.me link directly — no prefilled share text. */
+export function buildReferShareMessage(_catalogLink?: string): string {
+  return "";
 }

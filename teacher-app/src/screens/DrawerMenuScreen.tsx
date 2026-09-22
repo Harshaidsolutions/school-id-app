@@ -111,9 +111,7 @@ export function DrawerMenuScreen({ navigation }: Props) {
 
   async function openReferUs() {
     try {
-      await openWhatsAppShare(
-        buildReferShareMessage(REFER_WHATSAPP_CATALOG_LINK)
-      );
+      await Linking.openURL(REFER_WHATSAPP_CATALOG_LINK);
     } catch (err) {
       Alert.alert(
         "WhatsApp",

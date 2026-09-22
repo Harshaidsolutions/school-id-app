@@ -523,6 +523,7 @@ export function TemplateScreen() {
         initialIndex={previewIndex ?? 0}
         onClose={() => setPreviewIndex(null)}
         onIndexChange={setViewerIndex}
+        title={(idx) => templates[idx]?.name ?? null}
         colors={colors}
         showSubmit
         submitLabel="Select"

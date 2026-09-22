@@ -64,3 +64,71 @@ export function applyFullOrgDetailsDraft(
   if (draft.instructions) setters.setInstructions(draft.instructions);
   applyOrgDetailsDraftSelections(draft, setters);
 }
+
+/** Authoritative organization row from GET /teacher/organization (overwrites local form state). */
+export function applyOrgSchoolFromServer(
+  row: {
+    phone?: string | null;
+    phone2?: string | null;
+    school_code?: string | null;
+    establish_year?: string | null;
+    year?: string | null;
+    address?: string | null;
+    instructions?: string | null;
+    signature_url?: string | null;
+    logo_url?: string | null;
+    organization_photo_url?: string | null;
+    template_id?: string | null;
+    model?: string | null;
+    tags?: string | null;
+  },
+  imgs: Record<string, string>,
+  catalog: Array<{ name: string; image_url?: string | null }>,
+  setters: OrgDetailsDraftSetters,
+  toImageUri: (url: string | null | undefined) => string | null
+): void {
+  setters.setPhone(row.phone?.trim() ?? "");
+  setters.setPhone2(row.phone2?.trim() ?? "");
+  setters.setSchoolCode(row.school_code?.trim() ?? "");
+  setters.setEstablishYear((row.establish_year ?? row.year ?? "").trim());
+  setters.setAddress(row.address?.trim() ?? "");
+  setters.setInstructions(row.instructions?.trim() ?? "");
+  setters.setPendingSignature(null);
+  setters.setPendingLogo(null);
+  setters.setPendingOrgPhoto(null);
+  setters.setSignatureUri(
+    row.signature_url ? toImageUri(row.signature_url) : null
+  );
+  setters.setLogoUri(row.logo_url ? toImageUri(row.logo_url) : null);
+  setters.setOrgPhotoUri(
+    row.organization_photo_url ? toImageUri(row.organization_photo_url) : null
+  );
+
+  const templateId = row.template_id ?? null;
+  if (templateId && imgs[templateId]) {
+    setters.setTemplateId(templateId);
+    setters.setTemplatePreviewUrlState(imgs[templateId]);
+  } else {
+    setters.setTemplateId(null);
+    setters.setTemplatePreviewUrlState(null);
+  }
+
+  const modelName = row.model?.trim() ?? "";
+  setters.setModel(modelName);
+  if (modelName) {
+    const url = catalog.find((m) => m.name === modelName)?.image_url ?? null;
+    setters.setModelPreviewUrl(url);
+  } else {
+    setters.setModelPreviewUrl(null);
+  }
+
+  const tagsCsv = row.tags?.trim() ?? "";
+  setters.setTags(tagsCsv);
+  const firstTag = tagsCsv.split(",")[0]?.trim() ?? "";
+  if (firstTag) {
+    const url = catalog.find((m) => m.name === firstTag)?.image_url ?? null;
+    setters.setTagsPreviewUrl(url);
+  } else {
+    setters.setTagsPreviewUrl(null);
+  }
+}

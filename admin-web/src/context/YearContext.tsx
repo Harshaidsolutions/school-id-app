@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { buildDashboardAcademicYearOptions } from "../utils/academicYear";
 
 interface AcademicYear {
   label: string;
@@ -16,17 +17,9 @@ interface YearContextValue {
 
 const YearContext = createContext<YearContextValue | null>(null);
 
-function buildYears(): AcademicYear[] {
-  const current = new Date().getFullYear();
-  return Array.from({ length: 6 }, (_, i) => {
-    const y = current - i;
-    return { label: `${y} - ${y + 1}`, value: String(y) };
-  });
-}
-
 export function YearProvider({ children }: { children: ReactNode }) {
-  const years = useMemo(buildYears, []);
-  const [year, setYear] = useState(years[0]?.value ?? String(new Date().getFullYear()));
+  const years = useMemo(() => buildDashboardAcademicYearOptions(), []);
+  const [year, setYear] = useState(years[0]?.value ?? "");
   const [yearFilterEnabled, setYearFilterEnabled] = useState(true);
   const yearLabel = years.find((item) => item.value === year)?.label ?? year;
 

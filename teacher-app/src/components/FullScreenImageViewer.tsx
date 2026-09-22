@@ -50,6 +50,8 @@ type Props = {
   submitLabel?: string;
   onIndexChange?: (index: number) => void;
   imageLayout?: ViewerImageLayout | ((uri: string, index: number) => ViewerImageLayout);
+  title?: string | ((index: number) => string | null | undefined);
+  subtitle?: string | ((index: number) => string | null | undefined);
 };
 
 function resolveLayout(
@@ -125,6 +127,8 @@ export function FullScreenImageViewer({
   submitLabel = "Select",
   onIndexChange,
   imageLayout = "default",
+  title,
+  subtitle,
 }: Props) {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -365,11 +369,31 @@ export function FullScreenImageViewer({
             </Pressable>
 
             <View style={styles.headerCenter} pointerEvents="box-none">
-              {showCounter && images.length > 1 ? (
-                <Text style={styles.counter}>
-                  {index + 1} / {images.length}
-                </Text>
-              ) : null}
+              {(() => {
+                const titleText =
+                  typeof title === "function" ? title(index) : title;
+                const subtitleText =
+                  typeof subtitle === "function" ? subtitle(index) : subtitle;
+                return (
+                  <>
+                    {titleText ? (
+                      <Text style={styles.viewerTitle} numberOfLines={2}>
+                        {titleText}
+                      </Text>
+                    ) : null}
+                    {subtitleText ? (
+                      <Text style={styles.viewerSubtitle} numberOfLines={3}>
+                        {subtitleText}
+                      </Text>
+                    ) : null}
+                    {showCounter && images.length > 1 ? (
+                      <Text style={styles.counter}>
+                        {index + 1} / {images.length}
+                      </Text>
+                    ) : null}
+                  </>
+                );
+              })()}
             </View>
 
             <View style={styles.headerSide} />
@@ -485,6 +509,20 @@ const styles = StyleSheet.create({
     height: 44,
   },
   counter: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
+  viewerTitle: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  viewerSubtitle: {
+    color: "rgba(255,255,255,0.88)",
+    fontSize: 12,
+    fontWeight: "500",
+    textAlign: "center",
+    marginBottom: 4,
+  },
   stage: {
     flex: 1,
     alignItems: "center",
