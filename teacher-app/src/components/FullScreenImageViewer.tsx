@@ -501,8 +501,9 @@ const styles = StyleSheet.create({
   headerCenter: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-end",
     paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   headerSide: {
     width: 44,
@@ -511,17 +512,19 @@ const styles = StyleSheet.create({
   counter: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
   viewerTitle: {
     color: "#FFFFFF",
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "700",
     textAlign: "center",
-    marginBottom: 2,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xxs,
   },
   viewerSubtitle: {
     color: "rgba(255,255,255,0.88)",
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "500",
     textAlign: "center",
-    marginBottom: 4,
+    marginTop: spacing.xxs,
+    marginBottom: spacing.sm,
   },
   stage: {
     flex: 1,

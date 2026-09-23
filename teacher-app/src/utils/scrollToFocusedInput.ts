@@ -35,14 +35,6 @@ export function scrollToFocusedInput(
   };
 
   if (Platform.OS === "android") {
-    keyboardShowSub = Keyboard.addListener("keyboardDidShow", () => {
-      clearKeyboardShowSub();
-      runScroll();
-    });
-    scrollTimer = setTimeout(() => {
-      runScroll();
-      scrollTimer = null;
-    }, 50);
     return;
   }
 

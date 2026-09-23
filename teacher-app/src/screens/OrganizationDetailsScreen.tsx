@@ -107,6 +107,19 @@ function baselineFromSchool(row: OrgSchool): OrgFormSnapshot {
   };
 }
 
+function orgUploadImageUri(
+  uri: string | null,
+  orgId: string,
+  field: string
+): string | null {
+  if (!uri) return null;
+  if (!orgId || uri.startsWith("file:") || uri.startsWith("content:")) {
+    return uri;
+  }
+  const sep = uri.includes("?") ? "&" : "?";
+  return `${uri}${sep}org=${encodeURIComponent(orgId)}&field=${field}&v=${encodeURIComponent(uri)}`;
+}
+
 function snapshotsEqual(a: OrgFormSnapshot, b: OrgFormSnapshot): boolean {
   return (
     a.phone === b.phone &&
@@ -170,15 +183,18 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
   const [pendingOrgPhoto, setPendingOrgPhoto] = useState<LocalImage | null>(null);
 
   const selectedTemplateUri = useMemo(() => {
-    if (templatePreviewUrlState) return toImageUri(templatePreviewUrlState);
     if (templateId && templateImages[templateId]) {
       return toImageUri(templateImages[templateId]);
     }
+    if (templatePreviewUrlState) return toImageUri(templatePreviewUrlState);
     return null;
   }, [templatePreviewUrlState, templateId, templateImages]);
   const selectedModelUri = useMemo(() => {
+    if (model.trim()) {
+      const fromCatalog = modelImageUrlByName(model, catalogModels);
+      if (fromCatalog) return toImageUri(fromCatalog);
+    }
     if (modelPreviewUrl) return toImageUri(modelPreviewUrl);
-    if (model.trim()) return toImageUri(modelImageUrlByName(model, catalogModels));
     return null;
   }, [modelPreviewUrl, model, catalogModels]);
   const selectedTagPreviews = useMemo(() => {
@@ -291,7 +307,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
         setSchool(data.school);
         setSavedBaseline(baselineFromSchool(data.school));
 
-        if (!skipServerHydrateRef.current) {
+        if (!skipServerHydrateRef.current || options?.pullRefresh) {
           applyOrgSchoolFromServer(
             data.school,
             imgs,
@@ -339,26 +355,6 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
     },
     [refreshCatalogImages, userId]
   );
-
-  useEffect(() => {
-    if (templateId && templateImages[templateId]) {
-      setTemplatePreviewUrlState((prev) => prev ?? templateImages[templateId]);
-    }
-    if (model.trim()) {
-      const url = modelImageUrlByName(model, catalogModels);
-      if (url) setModelPreviewUrl((prev) => prev ?? url);
-    }
-    if (tags.trim()) {
-      const names = tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
-      const firstUrl = names
-        .map((name) => modelImageUrlByName(name, catalogModels))
-        .find(Boolean);
-      if (firstUrl) setTagsPreviewUrl((prev) => prev ?? firstUrl);
-    }
-  }, [catalogModels, model, tags, templateId, templateImages]);
 
   useEffect(() => {
     if (hasSavedSchoolInfo && phone.trim() && address.trim() && establishYear.trim()) {
@@ -746,7 +742,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
               icon="create"
               label="Principal Signature"
               sublabel="Upload principal signature"
-              uri={signatureUri}
+              uri={orgUploadImageUri(signatureUri, school?.id ?? "", "signature")}
               onPress={() => void pickImage("signature")}
               busy={uploading === "signature"}
               selectionPreview
@@ -757,7 +753,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
               icon="shield-checkmark"
               label="School Logo"
               sublabel="Upload school logo"
-              uri={logoUri}
+              uri={orgUploadImageUri(logoUri, school?.id ?? "", "logo")}
               onPress={() => void pickImage("logo")}
               busy={uploading === "logo"}
               selectionPreview
@@ -768,7 +764,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
               icon="business"
               label="School Building Photo"
               sublabel="Upload school building photo"
-              uri={orgPhotoUri}
+              uri={orgUploadImageUri(orgPhotoUri, school?.id ?? "", "organization")}
               onPress={() => void pickImage("organization")}
               busy={uploading === "organization"}
               selectionPreview
@@ -1203,6 +1199,7 @@ const UploadRow = memo(function UploadRow({
             <ActivityIndicator size="small" color={colors.brandGreen} />
           ) : null}
           <Image
+            key={uri}
             source={{ uri }}
             style={[
               thumbSize === "large" ? styles.uploadThumbLarge : styles.uploadThumb,

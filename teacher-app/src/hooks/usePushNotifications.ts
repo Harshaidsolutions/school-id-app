@@ -148,7 +148,8 @@ function navigateToNotification(
 export function usePushNotifications(
   enabled: boolean,
   navigationRef: NavigationContainerRefWithCurrent<RootStackParamList>,
-  userId: string | null
+  userId: string | null,
+  syncPendingWhenAuthenticated = false
 ) {
   const registeredTokenRef = useRef<string | null>(null);
   const permissionDeniedRef = useRef(false);
@@ -178,8 +179,54 @@ export function usePushNotifications(
   }, [enabled, navigationRef]);
 
   useEffect(() => {
+    if (!syncPendingWhenAuthenticated || !userId) {
+      if (!syncPendingWhenAuthenticated) {
+        syncedPendingRef.current = null;
+        permissionDeniedRef.current = false;
+      }
+      return;
+    }
+
+    if (!Device.isDevice) {
+      return;
+    }
+
+    const activeUserId = userId;
+    let cancelled = false;
+
+    async function syncPendingAfterAuth(): Promise<void> {
+      await ensureAndroidChannel();
+      if (permissionDeniedRef.current) {
+        return;
+      }
+      const granted = await requestNotificationPermission();
+      if (!granted || cancelled) {
+        if (!granted) {
+          permissionDeniedRef.current = true;
+        }
+        return;
+      }
+      if (syncedPendingRef.current === activeUserId) {
+        return;
+      }
+      syncedPendingRef.current = activeUserId;
+      try {
+        await syncPendingNotificationsAfterLogin(activeUserId);
+      } catch (error) {
+        console.warn("[push] pending notification sync failed:", error);
+        syncedPendingRef.current = null;
+      }
+    }
+
+    void syncPendingAfterAuth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [syncPendingWhenAuthenticated, userId]);
+
+  useEffect(() => {
     if (!enabled) {
-      syncedPendingRef.current = null;
       const token = registeredTokenRef.current;
       registeredTokenRef.current = null;
       if (token) {
@@ -210,16 +257,6 @@ export function usePushNotifications(
       if (!granted) {
         permissionDeniedRef.current = true;
         return;
-      }
-
-      if (userId && syncedPendingRef.current !== userId && !cancelled) {
-        syncedPendingRef.current = userId;
-        try {
-          await syncPendingNotificationsAfterLogin(userId);
-        } catch (error) {
-          console.warn("[push] pending notification sync failed:", error);
-          syncedPendingRef.current = null;
-        }
       }
 
       const pushToken = await getNativePushToken();

@@ -4,6 +4,7 @@ import * as Notifications from "expo-notifications";
 import api from "../api/client";
 import type { NotificationsResponse } from "../types";
 import { ANDROID_NOTIFICATION_CHANNEL_ID } from "../constants/pushNotifications";
+import { notificationIsRead } from "./notificationReadState";
 
 const MAX_DELIVERED_IDS = 300;
 
@@ -69,6 +70,7 @@ async function presentSystemNotification(options: {
 }): Promise<void> {
   await ensureAndroidChannel();
   await Notifications.scheduleNotificationAsync({
+    identifier: `admin-notification-${options.notificationId}`,
     content: {
       title: options.title,
       body: options.body,
@@ -99,12 +101,12 @@ export async function syncPendingNotificationsAfterLogin(
   const hasLogoutMarker = !Number.isNaN(lastLogoutMs);
 
   const pending = data.notifications.filter((item) => {
-    if (item.is_read) return false;
+    if (notificationIsRead(item)) return false;
     if (delivered.has(item.id)) return false;
+    const createdMs = Date.parse(item.created_at ?? "");
     if (hasLogoutMarker) {
-      const createdMs = Date.parse(item.created_at ?? "");
       if (Number.isNaN(createdMs)) return false;
-      return createdMs > lastLogoutMs;
+      if (createdMs <= lastLogoutMs) return false;
     }
     return true;
   });

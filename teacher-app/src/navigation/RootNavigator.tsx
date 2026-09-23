@@ -46,7 +46,12 @@ export function RootNavigator() {
   const [authInitialRoute, setAuthInitialRoute] =
     useState<AuthInitialRoute>("Login");
   const [authRouteReady, setAuthRouteReady] = useState(false);
-  usePushNotifications(pushEnabled, navRef.current, user?.id ?? null);
+  usePushNotifications(
+    pushEnabled,
+    navRef.current,
+    user?.id ?? null,
+    isAuthenticated
+  );
 
   const navTheme = useMemo(
     () => ({
