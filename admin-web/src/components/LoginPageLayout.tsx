@@ -3,12 +3,12 @@ import type { ReactNode } from "react";
 function MySchoolIdCardLogo({ compact = false }: { compact?: boolean }) {
   return (
     <img
-      src="/myschoolidcard-logo.jpg"
+      src="/myschoolidcard-logo.png"
       alt="MySchoolIdCard"
       className={
         compact
-          ? "h-auto w-full max-w-[220px] object-contain"
-          : "h-auto w-full max-w-[min(100%,420px)] object-contain"
+          ? "h-auto w-full object-contain"
+          : "h-auto w-full max-w-[760px] object-contain"
       }
     />
   );
@@ -37,9 +37,9 @@ export function LoginPageLayout({
         <path d="M0 160 C350 110 600 170 850 130 C1100 90 1250 160 1440 140 L1440 220 L0 220 Z" fill="#2563EB" opacity="0.92" />
       </svg>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[1200px] flex-1 items-center justify-center px-[clamp(1rem,4vw,2.5rem)] py-[clamp(1.25rem,3vh,2.5rem)] pb-[clamp(8rem,16vh,11rem)]">
-        <div className="grid w-full grid-cols-1 items-center gap-[clamp(1.25rem,3vw,2.5rem)] md:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] md:items-center xl:grid-cols-[minmax(0,1.05fr)_minmax(0,26rem)]">
-          <div className="hidden md:flex md:max-w-md md:flex-col md:items-center md:justify-center">
+      <div className="relative z-10 mx-auto flex w-full max-w-[1400px] flex-1 items-center justify-center px-[clamp(1rem,4vw,2.5rem)] py-[clamp(1.25rem,3vh,2.5rem)] pb-[clamp(8rem,16vh,11rem)]">
+        <div className="grid w-full grid-cols-1 items-center gap-[clamp(1.25rem,3vw,2.5rem)] md:grid-cols-[minmax(0,1.35fr)_minmax(0,26rem)] md:items-center">
+          <div className="hidden md:flex md:w-full md:flex-col md:items-center md:justify-center">
             <MySchoolIdCardLogo />
           </div>
 
