@@ -60,24 +60,18 @@ export async function getDashboardSummary(
       instituteValues
     );
 
-    const yearOrgMatch = (column: string, param: number) =>
-      `(TRIM(COALESCE(${column}, '')) = $${param}
-        OR TRIM(${column}) LIKE $${param} || '-%'
-        OR TRIM(${column}) LIKE $${param} || ' - %')`;
-
     const studentValues: unknown[] = [];
-    const studentFilters: string[] = ["s.school_id IS NOT NULL"];
+    const studentFilters: string[] = [
+      "s.school_id IS NOT NULL",
+      "COALESCE(sc.is_active, true) = true",
+    ];
     if (!seeAll) {
       studentValues.push(scope.adminUserId);
       studentFilters.push(`sc.owner_admin_id = $${studentValues.length}`);
     }
-    if (year) {
-      studentValues.push(year);
-      studentFilters.push(yearOrgMatch("sc.year", studentValues.length));
-    }
     const studentWhere = `WHERE ${studentFilters.join(" AND ")}`;
 
-    const capturedExpr = `(s.status IN ('captured', 'printed') OR NULLIF(TRIM(s.photo_url), '') IS NOT NULL)`;
+    const capturedExpr = `LOWER(COALESCE(s.status, '')) IN ('captured', 'printed')`;
 
     const studentStats = await pool.query<{
       total: string;
@@ -95,14 +89,13 @@ export async function getDashboardSummary(
     );
 
     const instituteMemberValues: unknown[] = [];
-    const instituteMemberFilters: string[] = ["s.institute_id IS NOT NULL"];
+    const instituteMemberFilters: string[] = [
+      "s.institute_id IS NOT NULL",
+      "COALESCE(i.is_active, true) = true",
+    ];
     if (!seeAll) {
       instituteMemberValues.push(scope.adminUserId);
       instituteMemberFilters.push(`i.owner_admin_id = $${instituteMemberValues.length}`);
-    }
-    if (year) {
-      instituteMemberValues.push(year);
-      instituteMemberFilters.push(yearOrgMatch("i.year", instituteMemberValues.length));
     }
     const instituteMemberWhere = `WHERE ${instituteMemberFilters.join(" AND ")}`;
 
