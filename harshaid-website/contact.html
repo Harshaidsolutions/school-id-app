@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contact Us | ID Card Solutions</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body data-page="contact">
+  <div data-header></div>
+  <section class="page-hero">
+    <div class="wrap">
+      <h1>Contact Us</h1>
+      <p>Home → Contact Us</p>
+    </div>
+  </section>
+  <section class="section">
+    <div class="wrap split">
+      <div>
+        <h2>Get in Touch</h2>
+        <p class="lead">We would love to hear from you. Reach out to discuss your requirements.</p>
+        <div class="cards-2" style="margin-top:18px">
+          <article class="card"><h3>Office</h3><p data-bind="location"></p></article>
+          <article class="card"><h3>Phone</h3><p data-bind="phone"></p></article>
+          <article class="card"><h3>Email</h3><p data-bind="email"></p></article>
+          <article class="card"><h3>Working Hours</h3><p data-bind="hours"></p></article>
+        </div>
+      </div>
+      <form class="card form" id="contactForm">
+        <label>Full Name *<input name="name" required /></label>
+        <label>Email Address *<input name="email" type="email" required /></label>
+        <label>Phone Number<input name="phone" /></label>
+        <label>Organization<input name="organization" /></label>
+        <label>Message *<textarea name="message" rows="5" required></textarea></label>
+        <button class="btn btn-primary" type="submit">Send Message →</button>
+        <p class="toast" id="formToast">This form is a visual placeholder. Connect it to your email or backend before going live.</p>
+        <div class="map">Map placeholder — embed your location later</div>
+      </form>
+    </div>
+  </section>
+  <div data-footer></div>
+  <script src="assets/js/site-content.js"></script>
+  <script src="assets/js/site.js"></script>
+  <script>
+    document.getElementById("contactForm").addEventListener("submit", function (event) {
+      event.preventDefault();
+      document.getElementById("formToast").style.display = "block";
+    });
+  </script>
+</body>
+</html>
