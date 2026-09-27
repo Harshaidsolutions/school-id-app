@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Contact Us | ID Card Solutions</title>
+  <title>Contact Us | Harsha ID Solutions</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
@@ -19,12 +19,14 @@
     <div class="wrap split">
       <div>
         <h2>Get in Touch</h2>
-        <p class="lead">We would love to hear from you. Reach out to discuss your requirements.</p>
+        <p class="lead">Contact support for any assistance.</p>
         <div class="cards-2" style="margin-top:18px">
-          <article class="card"><h3>Office</h3><p data-bind="location"></p></article>
-          <article class="card"><h3>Phone</h3><p data-bind="phone"></p></article>
-          <article class="card"><h3>Email</h3><p data-bind="email"></p></article>
-          <article class="card"><h3>Working Hours</h3><p data-bind="hours"></p></article>
+          <article class="card"><h3>Phone</h3><p><a href="tel:7799881779">7799881779</a></p></article>
+          <article class="card"><h3>WhatsApp</h3><p><a href="https://wa.me/917799881779">7799881779</a></p></article>
+          <article class="card"><h3>Email</h3><p><a href="mailto:harshaidsolutions@gmail.com">harshaidsolutions@gmail.com</a></p></article>
+          <article class="card"><h3>Facebook</h3><p><a href="https://www.facebook.com/share/19YJGrEicU/">Facebook</a></p></article>
+          <article class="card"><h3>Instagram</h3><p><a href="https://www.instagram.com/harsha_ids_2016?stkn=eTZoZXo2Y2hkN2kw">Instagram</a></p></article>
+          <article class="card"><h3>YouTube</h3><p><a href="https://youtube.com/@harshaidsolutions?si=IQa77O7zsyIgh6AP">YouTube</a></p></article>
         </div>
       </div>
       <form class="card form" id="contactForm">
@@ -34,8 +36,7 @@
         <label>Organization<input name="organization" /></label>
         <label>Message *<textarea name="message" rows="5" required></textarea></label>
         <button class="btn btn-primary" type="submit">Send Message →</button>
-        <p class="toast" id="formToast">This form is a visual placeholder. Connect it to your email or backend before going live.</p>
-        <div class="map">Map placeholder — embed your location later</div>
+        <p class="toast" id="formToast">Your email app will open a message to harshaidsolutions@gmail.com.</p>
       </form>
     </div>
   </section>
@@ -45,6 +46,20 @@
   <script>
     document.getElementById("contactForm").addEventListener("submit", function (event) {
       event.preventDefault();
+      const data = new FormData(event.currentTarget);
+      const body = [
+        "Full Name: " + (data.get("name") || ""),
+        "Email: " + (data.get("email") || ""),
+        "Phone: " + (data.get("phone") || ""),
+        "Organization: " + (data.get("organization") || ""),
+        "",
+        String(data.get("message") || ""),
+      ].join("\n");
+      window.location.href =
+        "mailto:harshaidsolutions@gmail.com?subject=" +
+        encodeURIComponent("Harsha ID Solutions website") +
+        "&body=" +
+        encodeURIComponent(body);
       document.getElementById("formToast").style.display = "block";
     });
   </script>

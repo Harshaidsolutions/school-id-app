@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { healthCheck } from "../controllers/healthController";
+import { getPublicShowcase } from "../controllers/publicSiteController";
 import authRoutes from "./authRoutes";
 import adminRoutes from "./adminRoutes";
 import teacherRoutes from "./teacherRoutes";
@@ -11,6 +12,7 @@ import teacherRoutes from "./teacherRoutes";
 const router = Router();
 
 router.get("/health", healthCheck);
+router.get("/public/showcase", getPublicShowcase);
 router.use("/auth", authRoutes);
 router.use("/admin", adminRoutes);
 router.use("/teacher", teacherRoutes);

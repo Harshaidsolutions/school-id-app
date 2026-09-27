@@ -87,10 +87,12 @@ h2 { font-size: clamp(28px, 3.4vw, 42px); }
   gap: 16px;
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 220px; }
-.logo-mark {
-  width: 42px; height: 42px; border-radius: 10px;
-  background: linear-gradient(145deg, var(--blue), var(--navy-2));
-  display: grid; place-items: center; color: #fff; flex: none;
+.brand-logo {
+  height: 52px;
+  width: auto;
+  max-width: 240px;
+  object-fit: contain;
+  flex: none;
 }
 .brand strong { display: block; font-size: 16px; }
 .brand small { display: block; color: var(--muted); font-size: 11px; line-height: 1.3; }
@@ -119,15 +121,17 @@ h2 { font-size: clamp(28px, 3.4vw, 42px); }
 .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 40px; align-items: center; }
 .hero-actions { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
 .hero-visual {
-  position: relative; min-height: 420px;
+  position: relative;
   display: grid; place-items: center;
 }
-.hero-visual img {
+.hero-visual img,
+.split img,
+.org-card img {
   width: min(100%, 520px);
+  height: auto;
+  max-height: 280px;
+  object-fit: contain;
   border-radius: 18px;
-  box-shadow: var(--shadow);
-  object-fit: cover;
-  height: 420px;
 }
 .chip {
   position: absolute; background: #fff; border: 1px solid var(--border);
@@ -177,13 +181,15 @@ h2 { font-size: clamp(28px, 3.4vw, 42px); }
 .filters button.active { background: var(--blue); color: #fff; border-color: var(--blue); }
 .gallery-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
 .shot {
-  position: relative; overflow: hidden; border-radius: 14px; border: 0; padding: 0;
-  cursor: pointer; background: #dbe7f3; aspect-ratio: 4/3;
+  position: relative; overflow: hidden; border-radius: 14px; border: 1px solid var(--border); padding: 0;
+  cursor: pointer; background: #fff; display: flex; flex-direction: column; text-align: left;
 }
-.shot img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.35s ease; }
+.shot strong {
+  display: block; padding: 10px 12px 12px; color: var(--navy); font-size: 14px; font-weight: 600;
+}
 .shot:hover img { transform: scale(1.06); }
 .shot span {
-  position: absolute; inset: 0; display: grid; place-items: center;
+  position: absolute; top: 0; left: 0; right: 0; height: 180px; display: grid; place-items: center;
   background: rgba(11, 31, 51, 0.45); color: #fff; opacity: 0; transition: 0.2s;
 }
 .shot:hover span { opacity: 1; }
@@ -217,14 +223,13 @@ h2 { font-size: clamp(28px, 3.4vw, 42px); }
 }
 .page-hero {
   min-height: 240px; display: grid; align-items: end;
-  background:
-    linear-gradient(180deg, rgba(11,31,51,0.55), rgba(11,31,51,0.72)),
-    url("https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80") center/cover;
+  background: linear-gradient(180deg, var(--navy) 0%, var(--navy-2) 100%);
   color: #fff; padding: 48px 0 36px;
 }
 .page-hero p { margin: 0; color: rgba(255,255,255,0.85); }
 .split { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; }
-.split img { width: 100%; height: 360px; object-fit: cover; border-radius: 16px; }
+.org-card img { width: 100%; max-width: none; max-height: 120px; margin: 0 auto 12px; border-radius: 0; }
+.shot img { width: 100%; height: 180px; object-fit: contain; transition: transform 0.35s ease; background: #fff; }
 .form { display: grid; gap: 12px; }
 .form label { font-weight: 600; font-size: 14px; }
 .form input, .form textarea {
@@ -275,7 +280,7 @@ h2 { font-size: clamp(28px, 3.4vw, 42px); }
     background: #fff; border-bottom: 1px solid var(--border); padding: 12px 20px 18px; gap: 8px;
   }
   .cards-4, .cards-2, .gallery-grid, .steps, .footer-grid { grid-template-columns: 1fr; }
-  .hero-visual, .hero-visual img { min-height: 240px; height: 260px; }
+  .hero-visual img, .split img { max-height: 220px; }
   .section { padding: 52px 0; }
   .footer-bottom { flex-direction: column; }
   .btn { width: 100%; }

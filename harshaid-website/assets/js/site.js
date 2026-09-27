@@ -5,17 +5,7 @@
   function logo() {
     return `
       <a class="brand" href="index.html">
-        <span class="logo-mark" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8">
-            <rect x="4" y="3" width="16" height="18" rx="2"></rect>
-            <circle cx="12" cy="10" r="2.2"></circle>
-            <path d="M8 17h8"></path>
-          </svg>
-        </span>
-        <span>
-          <strong data-logo>${site.logoText}</strong>
-          <small>${site.tagline}</small>
-        </span>
+        <img class="brand-logo" src="${site.logo}" alt="Harsha ID Solutions" />
       </a>`;
   }
 
@@ -65,27 +55,29 @@
         </div>
         <div>
           <h3>Our Services</h3>
-          <a href="index.html#services">ID Card Design</a>
-          <a href="index.html#services">Card Printing</a>
-          <a href="index.html#services">Management Software</a>
-          <a href="index.html#services">Accessories</a>
+          <a href="index.html#services">ID CARDS</a>
+          <a href="index.html#services">TIES</a>
+          <a href="index.html#services">MULTI COLOUR BELTS</a>
+          <a href="index.html#services">REPORT CARDS</a>
+          <a href="index.html#services">DAIRIES</a>
+          <a href="index.html#services">T-SHIRT PRINTING</a>
+          <a href="index.html#services">LOGO BADGES</a>
+          <a href="index.html#services">SCREEN PRINTING</a>
         </div>
         <div>
           <h3>Contact Information</h3>
-          <p>Location<br>${site.location}</p>
-          <p>Phone<br>${site.phone}</p>
-          <p>Email<br>${site.email}</p>
-          <p>Working Hours<br>${site.hours}</p>
+          <p>Phone<br><a href="tel:${site.phone}">${site.phone}</a></p>
+          <p>WhatsApp<br><a href="${site.whatsapp}">${site.phone}</a></p>
+          <p>Email<br><a href="mailto:${site.email}">${site.email}</a></p>
           <div class="socials">
             <a href="${site.social.facebook}" aria-label="Facebook">f</a>
             <a href="${site.social.instagram}" aria-label="Instagram">ig</a>
-            <a href="${site.social.linkedin}" aria-label="LinkedIn">in</a>
             <a href="${site.social.youtube}" aria-label="YouTube">yt</a>
           </div>
         </div>
       </div>
       <div class="wrap footer-bottom">
-        <span>© 2026 ${site.businessName}. All Rights Reserved.</span>
+        <span>© All Rights Reserved to ${site.businessName}</span>
         <span>Privacy Policy | Terms & Conditions</span>
       </div>
     </footer>`;
