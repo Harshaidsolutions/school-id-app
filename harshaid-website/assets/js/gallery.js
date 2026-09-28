@@ -19,7 +19,7 @@ function isImage(url) {
 
 async function loadPublicShowcase() {
   const origin = window.SITE.apiOrigin.replace(/\/$/, "");
-  const response = await fetch(`${origin}/api/public/showcase`);
+  const response = await fetch(`${origin}/api/public/showcase`, { cache: "no-store" });
   if (!response.ok) throw new Error("showcase unavailable");
   return response.json();
 }

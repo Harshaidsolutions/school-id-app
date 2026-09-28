@@ -3,14 +3,14 @@
   const page = document.body.dataset.page || "home";
 
   const links = [
-    ["home", "index.html", "Home"],
-    ["contact", "contact.html", "Contact Us"],
-    ["about", "about.html", "About Us"],
-    ["gallery", "gallery.html", "Gallery"],
-    ["videos", "videos.html", "Videos"],
-    ["buy", "buy-now.html", "Buy Now"],
-    ["touch", "get-in-touch.html", "Get in Touch"],
-    ["app", "my-app.html", "My App"],
+    ["home", "/", "Home"],
+    ["contact", "/contact-us", "Contact Us"],
+    ["about", "/about-us", "About Us"],
+    ["gallery", "/gallery", "Gallery"],
+    ["videos", "/videos", "Videos"],
+    ["buy", "/buy-now", "Buy Now"],
+    ["touch", "/get-in-touch", "Get in Touch"],
+    ["app", "/my-app", "My App"],
   ];
 
   function escapeHtml(value) {
@@ -25,7 +25,7 @@
     <a class="skip" href="#main">Skip to content</a>
     <header class="header">
       <div class="wrap header-inner">
-        <a class="wordmark" href="index.html">
+        <a class="wordmark" href="/">
           <strong>HARSHA ID SOLUTIONS</strong>
           <span>A Complete ID World....</span>
         </a>

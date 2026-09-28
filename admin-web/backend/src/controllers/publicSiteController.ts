@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
+import { SUPER_ADMIN_EMAIL } from "../utils/adminScope";
 import { AppError } from "../middleware/errorHandler";
 import { sendEmail } from "../utils/email";
 
@@ -53,12 +54,27 @@ export async function getPublicShowcase(
        ORDER BY name ASC`
     );
     const brochures = await pool.query<{ name: string; image_url: string }>(
-      `SELECT name, image_url
-       FROM catalog_items
-       WHERE kind = 'brochure'
-         AND NULLIF(trim(image_url), '') IS NOT NULL
-         AND NULLIF(trim(name), '') IS NOT NULL
-       ORDER BY created_at DESC`
+      `SELECT c.name, c.image_url
+       FROM catalog_items c
+       WHERE c.kind = 'brochure'
+         AND NULLIF(trim(c.image_url), '') IS NOT NULL
+         AND NULLIF(trim(c.name), '') IS NOT NULL
+         AND c.owner_admin_id = COALESCE(
+           (
+             SELECT u.id FROM users u
+             WHERE u.role = 'admin'
+               AND lower(trim(u.email)) = lower(trim($1))
+             LIMIT 1
+           ),
+           (
+             SELECT u.id FROM users u
+             WHERE u.role = 'admin'
+             ORDER BY u.created_at ASC NULLS LAST
+             LIMIT 1
+           )
+         )
+       ORDER BY c.created_at DESC`,
+      [SUPER_ADMIN_EMAIL]
     );
 
     const organizations = [...schools.rows, ...institutes.rows]
@@ -68,6 +84,7 @@ export async function getPublicShowcase(
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
+    res.set("Cache-Control", "no-store");
     res.status(200).json({
       status: "ok",
       schools: organizations,
