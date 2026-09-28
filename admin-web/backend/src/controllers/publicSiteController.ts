@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { SUPER_ADMIN_EMAIL } from "../utils/adminScope";
 import { AppError } from "../middleware/errorHandler";
+import { buildEnquiryText, sendAdminWhatsApp } from "../utils/whatsappEnquiry";
 
 const enquiryHits = new Map<string, number[]>();
 
@@ -117,13 +118,15 @@ export async function submitPublicEnquiry(
       throw new AppError("Enter a shorter message.", 400);
     }
 
-    // The Teacher App only opens WhatsApp on the device. This backend has no
-    // WhatsApp Business Cloud API client, token, or phone-number id, so it
-    // cannot deliver this enquiry to the admin number.
-    throw new AppError(
-      "Message could not be sent right now. Please call or use the phone number on Contact Us.",
-      503
-    );
+    const sent = await sendAdminWhatsApp(buildEnquiryText({ name, phone, email, message }));
+    if (!sent.delivered) {
+      throw new AppError(
+        "Message could not be sent right now. Please call or use the phone number on Contact Us.",
+        503
+      );
+    }
+
+    res.status(200).json({ status: "ok" });
   } catch (error) {
     next(error);
   }

@@ -174,16 +174,28 @@ main h1 { margin: 0 0 clamp(12px, 1.8vh, 18px); font-size: clamp(24px, 2.6vw, 36
 }
 .empty { color: var(--muted); }
 
-.contact-card h2, .contact-card h3 { margin: 0 0 8px; font-size: clamp(15px, 1.3vw, 16px); }
+.contact-card h2, .contact-card h3 { margin: 0 0 8px; font-size: clamp(14px, 1.1vw, 16px); }
 .visually-hidden {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
-.contact-card { flex: 1 1 8.5rem; min-width: min(100%, 8.5rem); }
-.contact-card a { color: var(--blue-dark); font-weight: 600; overflow-wrap: anywhere; }
-.contact-card a.btn { color: #fff; overflow-wrap: normal; }
-.contact-card a[href^="mailto:"] { white-space: nowrap; overflow-wrap: normal; }
-.contact-card p { margin: 0; }
+.contact-card {
+  flex: 0 1 auto;
+  min-width: max-content;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.contact-card a { color: var(--blue-dark); font-weight: 600; white-space: nowrap; }
+.contact-card a.btn {
+  color: #fff;
+  width: auto;
+  padding: 5px 10px;
+  font-size: 13px;
+  line-height: 1.2;
+  border-radius: 8px;
+}
+.contact-card p { margin: 0; white-space: nowrap; }
 .form { display: grid; gap: 12px; width: min(100%, 640px); }
 .form label { font-weight: 700; font-size: clamp(14px, 1.2vw, 15px); color: var(--blue); display: grid; gap: 6px; }
 .form input, .form textarea {
@@ -271,5 +283,6 @@ main h1 { margin: 0 0 clamp(12px, 1.8vh, 18px); font-size: clamp(24px, 2.6vw, 36
 }
 @media (max-width: 640px) {
   .contact-grid { display: grid; grid-template-columns: 1fr; }
-  .contact-card a[href^="mailto:"] { white-space: normal; overflow-wrap: anywhere; }
+  .contact-card { min-width: 0; flex: none; }
+  .contact-card a, .contact-card p { white-space: normal; overflow-wrap: anywhere; }
 }
