@@ -2,7 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { SUPER_ADMIN_EMAIL } from "../utils/adminScope";
 import { AppError } from "../middleware/errorHandler";
-import { buildEnquiryText, sendAdminWhatsApp } from "../utils/whatsappEnquiry";
+import { sendEmail } from "../utils/email";
+
+const PUBLIC_ENQUIRY_TO = "harshaidsolutions@gmail.com";
 
 const enquiryHits = new Map<string, number[]>();
 
@@ -118,8 +120,26 @@ export async function submitPublicEnquiry(
       throw new AppError("Enter a shorter message.", 400);
     }
 
-    const sent = await sendAdminWhatsApp(buildEnquiryText({ name, phone, email, message }));
-    if (!sent.delivered) {
+    const lines = ["New website enquiry", `Name: ${name}`, `Phone: ${phone}`];
+    if (email) lines.push(`Email: ${email}`);
+    if (message) lines.push(`Message: ${message}`);
+
+    let delivered = false;
+    try {
+      const mail = await sendEmail({
+        to: PUBLIC_ENQUIRY_TO,
+        subject: `Website enquiry from ${name.replace(/[\r\n]+/g, " ")}`,
+        text: lines.join("\n"),
+      });
+      delivered = mail.delivered;
+    } catch (error) {
+      console.error("Public enquiry email failed");
+      throw new AppError(
+        "Message could not be sent right now. Please call or use the phone number on Contact Us.",
+        503
+      );
+    }
+    if (!delivered) {
       throw new AppError(
         "Message could not be sent right now. Please call or use the phone number on Contact Us.",
         503

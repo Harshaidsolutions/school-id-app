@@ -30,7 +30,7 @@ async function loadPublicShowcase() {
 
   loadPublicShowcase()
     .then((data) => {
-      const brochures = (data.brochures || []).filter((item) => item.fileUrl && item.name);
+      const brochures = (data.brochures || []).filter((item) => item.fileUrl);
       const images = brochures.filter((item) => isImage(item.fileUrl));
       brochureRoot.innerHTML = brochures.length
         ? brochures
@@ -40,12 +40,10 @@ async function loadPublicShowcase() {
               if (!isImage(item.fileUrl)) {
                 return `<a class="brochure-card" href="${escapeHtml(src)}" target="_blank" rel="noopener noreferrer">
                   <span class="file-mark">Brochure</span>
-                  <strong>${escapeHtml(item.name)}</strong>
                 </a>`;
               }
               return `<button class="brochure-card" type="button" data-i="${imageIndex}">
-                <img src="${escapeHtml(src)}" alt="${escapeHtml(item.name)}" loading="lazy" />
-                <strong>${escapeHtml(item.name)}</strong>
+                <img src="${escapeHtml(src)}" alt="" loading="lazy" />
               </button>`;
             })
             .join("")
@@ -60,8 +58,8 @@ async function loadPublicShowcase() {
         index = i;
         const item = images[index];
         img.src = resolvePublicFile(item.fileUrl);
-        img.alt = item.name;
-        title.textContent = item.name;
+        img.alt = "";
+        title.textContent = "";
         box.classList.add("open");
         box.querySelector(".lb-close").focus();
       }
