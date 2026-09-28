@@ -4,7 +4,8 @@
  * teacher-app/src/constants/brand.ts
  * teacher-app/src/constants/about.ts
  * teacher-app/src/constants/products.ts
- * Schools and brochures are loaded from GET /api/public/showcase.
+ * Brochures are loaded from GET /api/public/showcase.
+ * Best clients are a manual public list. They are not loaded from the app database.
  */
 window.SITE = {
   businessName: "HARSHA ID SOLUTIONS",
@@ -17,6 +18,24 @@ window.SITE = {
   appName: "My School ID Card",
   logo: "/assets/images/harsha-official-logo.png",
   appIcon: "/assets/images/my-school-id-card-icon.png",
+  clientImage: "/assets/images/best-client-school.png",
+  clients: [
+    "Little Flower School",
+    "Brilliant Star's School",
+    "Gnana Jyothi Vidyalayam",
+    "Inspira School",
+    "New Chaitanya School",
+    "Sri Saraswathi Vidyalayam",
+    "Sri Narayana School",
+    "Global Educational Institutions",
+    "SUN School",
+    "R.C.M. St. John's",
+    "St. Joseph's High School",
+    "R.C.M. Loyola E.M. School",
+    "Krishnaveni Talent Schools",
+    "Rising Stars School",
+    "Aditya Vidyanilayam",
+  ],
   apiOrigin: "https://myschoolidcard.in",
   social: {
     facebook: "https://www.facebook.com/share/19YJGrEicU/",

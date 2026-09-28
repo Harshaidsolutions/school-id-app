@@ -25,26 +25,11 @@ async function loadPublicShowcase() {
 }
 
 (function () {
-  const clientsRoot = document.querySelector("[data-clients]");
   const brochureRoot = document.querySelector("[data-brochures]");
-  if (!clientsRoot && !brochureRoot) return;
+  if (!brochureRoot) return;
 
   loadPublicShowcase()
     .then((data) => {
-      if (clientsRoot) {
-        const schools = data.schools || [];
-        clientsRoot.innerHTML = schools.length
-          ? schools
-              .map((school) => {
-                const logo = school.logoUrl
-                  ? `<img src="${escapeHtml(resolvePublicFile(school.logoUrl))}" alt="" loading="lazy" />`
-                  : "";
-                return `<article class="client-card">${logo}<h3>${escapeHtml(school.name)}</h3></article>`;
-              })
-              .join("")
-          : `<p class="empty">No schools are available from the application yet.</p>`;
-      }
-      if (!brochureRoot) return;
       const brochures = (data.brochures || []).filter((item) => item.fileUrl && item.name);
       const images = brochures.filter((item) => isImage(item.fileUrl));
       brochureRoot.innerHTML = brochures.length
@@ -94,11 +79,6 @@ async function loadPublicShowcase() {
       });
     })
     .catch(() => {
-      if (clientsRoot) {
-        clientsRoot.innerHTML = `<p class="empty">School list could not be loaded.</p>`;
-      }
-      if (brochureRoot) {
-        brochureRoot.innerHTML = `<p class="empty">Brochures could not be loaded.</p>`;
-      }
+      brochureRoot.innerHTML = `<p class="empty">Brochures could not be loaded.</p>`;
     });
 })();

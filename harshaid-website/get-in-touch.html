@@ -15,17 +15,17 @@
     <div class="wrap">
       <h1>Get in Touch</h1>
       <form class="form" id="enquiryForm">
-        <label>Name
+        <label>Name *
           <input name="name" required maxlength="80" autocomplete="name" />
         </label>
-        <label>Phone
+        <label>Phone Number *
           <input name="phone" required maxlength="20" autocomplete="tel" inputmode="tel" />
         </label>
         <label>Email
-          <input name="email" type="email" required maxlength="120" autocomplete="email" />
+          <input name="email" type="email" maxlength="120" autocomplete="email" />
         </label>
         <label>Message
-          <textarea name="message" rows="6" required maxlength="2000"></textarea>
+          <textarea name="message" rows="6" maxlength="2000"></textarea>
         </label>
         <button class="btn" type="submit">Send Message</button>
         <p class="toast" id="formToast" hidden></p>

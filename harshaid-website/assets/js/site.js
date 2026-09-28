@@ -6,7 +6,7 @@
     ["home", "/", "Home"],
     ["contact", "/contact-us", "Contact Us"],
     ["about", "/about-us", "About Us"],
-    ["gallery", "/gallery", "Gallery"],
+    ["brochures", "/brochures", "Brochures"],
     ["videos", "/videos", "Videos"],
     ["buy", "/buy-now", "Buy Now"],
     ["touch", "/get-in-touch", "Get in Touch"],
@@ -25,10 +25,6 @@
     <a class="skip" href="#main">Skip to content</a>
     <header class="header">
       <div class="wrap header-inner">
-        <a class="wordmark" href="/">
-          <strong>HARSHA ID SOLUTIONS</strong>
-          <span>A Complete ID World....</span>
-        </a>
         <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="nav">Menu</button>
         <nav class="nav" id="nav">
           ${links
@@ -44,10 +40,6 @@
   document.querySelector("[data-footer]").innerHTML = `
     <footer class="footer">
       <div class="wrap footer-grid">
-        <div>
-          <p class="footer-name">HARSHA ID SOLUTIONS</p>
-          <p>A Complete ID World....</p>
-        </div>
         <div>
           <h2>Contact</h2>
           <a href="tel:${site.phone}">${site.phone}</a>
@@ -84,7 +76,7 @@
     aboutRoot.innerHTML = site.about
       .map((block) =>
         block.kind === "heading"
-          ? `<h2>${escapeHtml(block.text)}</h2>`
+          ? `<h2 class="${block.text.includes("GET IDENTITY HERE") ? "identity-line" : ""}">${escapeHtml(block.text)}</h2>`
           : `<p>${escapeHtml(block.text)}</p>`
       )
       .join("");
@@ -103,10 +95,24 @@
       .join("");
   }
 
+  const clientsRoot = document.querySelector("[data-clients]");
+  if (clientsRoot) {
+    const image = site.clientImage;
+    clientsRoot.innerHTML = (site.clients || [])
+      .map(
+        (name) => `
+        <article class="client-card">
+          <img src="${escapeHtml(image)}" alt="" loading="lazy" />
+          <h3>${escapeHtml(name)}</h3>
+        </article>`
+      )
+      .join("");
+  }
+
   const form = document.getElementById("enquiryForm");
   if (form) {
     const toast = document.getElementById("formToast");
-    form.addEventListener("submit", async (event) => {
+    form.addEventListener("submit", (event) => {
       event.preventDefault();
       toast.hidden = true;
       toast.className = "toast";
@@ -130,41 +136,35 @@
         toast.textContent = "Enter a valid phone number.";
         return;
       }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+      if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
         toast.hidden = false;
         toast.classList.add("error");
         toast.textContent = "Enter a valid email address.";
         return;
       }
-      if (!payload.message || payload.message.length > 2000) {
+      if (payload.message.length > 2000) {
         toast.hidden = false;
         toast.classList.add("error");
-        toast.textContent = "Enter a message.";
+        toast.textContent = "Enter a shorter message.";
         return;
       }
-      const button = form.querySelector("button[type=submit]");
-      button.disabled = true;
-      try {
-        const response = await fetch(`${site.apiOrigin.replace(/\/$/, "")}/api/public/enquiry`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(body.message || "Message could not be sent.");
-        }
-        form.reset();
-        toast.hidden = false;
-        toast.classList.add("ok");
-        toast.textContent = "Your message has been sent.";
-      } catch (error) {
+      const lines = ["New Website Enquiry", "", `Name: ${payload.name}`, `Phone: ${payload.phone}`];
+      if (payload.email) lines.push(`Email: ${payload.email}`);
+      if (payload.message) lines.push(`Message: ${payload.message}`);
+      const destination = new URL(site.whatsapp);
+      destination.searchParams.set("text", lines.join("\n"));
+      const opened = window.open(destination.toString(), "_blank");
+      if (!opened) {
         toast.hidden = false;
         toast.classList.add("error");
-        toast.textContent = error.message || "Message could not be sent. Please call or use WhatsApp.";
-      } finally {
-        button.disabled = false;
+        toast.textContent = "WhatsApp could not be opened. Please allow pop-ups or use the WhatsApp number on Contact Us.";
+        return;
       }
+      opened.opener = null;
+      form.reset();
+      toast.hidden = false;
+      toast.classList.add("ok");
+      toast.textContent = "Your message has been sent.\nOur representative will contact you shortly.";
     });
   }
 })();
