@@ -52,6 +52,7 @@
             <a href="${site.social.facebook}">Facebook</a>
             <a href="${site.social.instagram}">Instagram</a>
             <a href="${site.social.youtube}">YouTube</a>
+            <a href="${site.whatsapp}">WhatsApp</a>
           </div>
         </div>
       </div>
