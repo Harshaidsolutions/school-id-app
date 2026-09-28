@@ -94,7 +94,7 @@ main h1 { margin: 0 0 clamp(16px, 2.4vh, 22px); font-size: clamp(26px, 3.4vw, 40
   padding: clamp(12px, 2vh, 28px) 0 clamp(8px, 1.5vh, 18px);
   overflow-x: clip;
 }
-.hanger { display: flex; flex-direction: column; align-items: center; max-width: 100%; }
+.hanger { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: none; }
 .pin {
   width: 16px; height: 16px; border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #fff, #9aa3ad 42%, #4b5563);
@@ -109,7 +109,7 @@ main h1 { margin: 0 0 clamp(16px, 2.4vh, 22px); font-size: clamp(26px, 3.4vw, 40
 }
 .rope { width: 2px; height: clamp(20px, 4vh, 42px); background: linear-gradient(#6b7280, #c5cdd6); }
 .swing img {
-  width: min(88vw, 46vh, 560px);
+  width: min(94vw, 1600px);
   height: auto;
   filter: drop-shadow(0 16px 18px rgba(11, 31, 51, 0.16));
 }
@@ -130,7 +130,7 @@ main h1 { margin: 0 0 clamp(16px, 2.4vh, 22px); font-size: clamp(26px, 3.4vw, 40
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
 }
 .stat-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
-.contact-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.contact-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .product-card, .client-card, .brochure-card, .feature-card, .stat-card, .contact-card {
   background: var(--card);
   border: 1px solid var(--line);
@@ -201,6 +201,7 @@ main h1 { margin: 0 0 clamp(16px, 2.4vh, 22px); font-size: clamp(26px, 3.4vw, 40
   gap: clamp(16px, 3vw, 28px);
   align-items: center;
 }
+.app-hero p:last-child { margin-top: 12px; padding-top: 18px; }
 .app-hero img {
   width: min(100%, 220px);
   height: auto;
@@ -263,4 +264,5 @@ main h1 { margin: 0 0 clamp(16px, 2.4vh, 22px); font-size: clamp(26px, 3.4vw, 40
   .app-hero { grid-template-columns: 1fr; }
   .app-hero img { width: min(56vw, 200px); }
   .btn { width: 100%; text-align: center; }
+  .contact-grid { grid-template-columns: 1fr; }
 }

@@ -53,6 +53,7 @@
             <a href="${site.social.instagram}">Instagram</a>
             <a href="${site.social.youtube}">YouTube</a>
             <a href="${site.whatsapp}">WhatsApp</a>
+            <a href="mailto:${site.email}">Email</a>
           </div>
         </div>
       </div>
@@ -156,9 +157,7 @@
       destination.searchParams.set("text", lines.join("\n"));
       const opened = window.open(destination.toString(), "_blank");
       if (!opened) {
-        toast.hidden = false;
-        toast.classList.add("error");
-        toast.textContent = "WhatsApp could not be opened. Please allow pop-ups or use the WhatsApp number on Contact Us.";
+        window.location.href = destination.toString();
         return;
       }
       opened.opener = null;
