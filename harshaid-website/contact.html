@@ -4,64 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Contact Us | Harsha ID Solutions</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
 <body data-page="contact">
   <div data-header></div>
-  <section class="page-hero">
+  <main id="main" class="section">
     <div class="wrap">
       <h1>Contact Us</h1>
-      <p>Home → Contact Us</p>
-    </div>
-  </section>
-  <section class="section">
-    <div class="wrap split">
-      <div>
-        <h2>Get in Touch</h2>
-        <p class="lead">Contact support for any assistance.</p>
-        <div class="cards-2" style="margin-top:18px">
-          <article class="card"><h3>Phone</h3><p><a href="tel:7799881779">7799881779</a></p></article>
-          <article class="card"><h3>WhatsApp</h3><p><a href="https://wa.me/917799881779">7799881779</a></p></article>
-          <article class="card"><h3>Email</h3><p><a href="mailto:harshaidsolutions@gmail.com">harshaidsolutions@gmail.com</a></p></article>
-          <article class="card"><h3>Facebook</h3><p><a href="https://www.facebook.com/share/19YJGrEicU/">Facebook</a></p></article>
-          <article class="card"><h3>Instagram</h3><p><a href="https://www.instagram.com/harsha_ids_2016?stkn=eTZoZXo2Y2hkN2kw">Instagram</a></p></article>
-          <article class="card"><h3>YouTube</h3><p><a href="https://youtube.com/@harshaidsolutions?si=IQa77O7zsyIgh6AP">YouTube</a></p></article>
-        </div>
+      <div class="contact-grid">
+        <article class="contact-card"><h2>Phone</h2><p><a href="tel:7799881779">7799881779</a></p></article>
+        <article class="contact-card"><h2>WhatsApp</h2><p><a href="https://wa.me/917799881779">7799881779</a></p></article>
+        <article class="contact-card"><h2>Email</h2><p><a href="mailto:harshaidsolutions@gmail.com">harshaidsolutions@gmail.com</a></p></article>
+        <article class="contact-card"><h2>Facebook</h2><p><a href="https://www.facebook.com/share/19YJGrEicU/">Facebook</a></p></article>
+        <article class="contact-card"><h2>Instagram</h2><p><a href="https://www.instagram.com/harsha_ids_2016?stkn=eTZoZXo2Y2hkN2kw">Instagram</a></p></article>
+        <article class="contact-card"><h2>YouTube</h2><p><a href="https://youtube.com/@harshaidsolutions?si=IQa77O7zsyIgh6AP">YouTube</a></p></article>
       </div>
-      <form class="card form" id="contactForm">
-        <label>Full Name *<input name="name" required /></label>
-        <label>Email Address *<input name="email" type="email" required /></label>
-        <label>Phone Number<input name="phone" /></label>
-        <label>Organization<input name="organization" /></label>
-        <label>Message *<textarea name="message" rows="5" required></textarea></label>
-        <button class="btn btn-primary" type="submit">Send Message →</button>
-        <p class="toast" id="formToast">Your email app will open a message to harshaidsolutions@gmail.com.</p>
-      </form>
     </div>
-  </section>
+  </main>
   <div data-footer></div>
   <script src="assets/js/site-content.js"></script>
   <script src="assets/js/site.js"></script>
-  <script>
-    document.getElementById("contactForm").addEventListener("submit", function (event) {
-      event.preventDefault();
-      const data = new FormData(event.currentTarget);
-      const body = [
-        "Full Name: " + (data.get("name") || ""),
-        "Email: " + (data.get("email") || ""),
-        "Phone: " + (data.get("phone") || ""),
-        "Organization: " + (data.get("organization") || ""),
-        "",
-        String(data.get("message") || ""),
-      ].join("\n");
-      window.location.href =
-        "mailto:harshaidsolutions@gmail.com?subject=" +
-        encodeURIComponent("Harsha ID Solutions website") +
-        "&body=" +
-        encodeURIComponent(body);
-      document.getElementById("formToast").style.display = "block";
-    });
-  </script>
 </body>
 </html>

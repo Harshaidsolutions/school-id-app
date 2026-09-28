@@ -2,40 +2,42 @@
   const site = window.SITE;
   const page = document.body.dataset.page || "home";
 
-  function logo() {
-    return `
-      <a class="brand" href="index.html">
-        <img class="brand-logo" src="${site.logo}" alt="Harsha ID Solutions" />
-      </a>`;
-  }
-
   const links = [
     ["home", "index.html", "Home"],
+    ["contact", "contact.html", "Contact Us"],
     ["about", "about.html", "About Us"],
     ["gallery", "gallery.html", "Gallery"],
-    ["contact", "contact.html", "Contact Us"],
+    ["videos", "videos.html", "Videos"],
+    ["buy", "buy-now.html", "Buy Now"],
+    ["touch", "get-in-touch.html", "Get in Touch"],
+    ["app", "my-app.html", "My App"],
   ];
 
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
   document.querySelector("[data-header]").innerHTML = `
+    <a class="skip" href="#main">Skip to content</a>
     <header class="header">
       <div class="wrap header-inner">
-        ${logo()}
+        <a class="wordmark" href="index.html">
+          <strong>HARSHA ID SOLUTIONS</strong>
+          <span>A Complete ID World....</span>
+        </a>
+        <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="nav">Menu</button>
         <nav class="nav" id="nav">
-          ${links.map(([id, href, label]) => `<a href="${href}" class="${page === id ? "active" : ""}">${label}</a>`).join("")}
+          ${links
+            .map(
+              ([id, href, label]) =>
+                `<a href="${href}" class="${page === id ? "active" : ""}">${label}</a>`
+            )
+            .join("")}
         </nav>
-        <div class="header-actions">
-          <button class="icon-btn" id="searchBtn" aria-label="Search" type="button">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
-          </button>
-          <a class="btn btn-primary" href="contact.html">Get in Touch</a>
-          <button class="icon-btn menu-btn" id="menuBtn" aria-label="Menu" type="button">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="search-panel" id="searchPanel">
-        <input id="searchInput" placeholder="Search pages" aria-label="Search pages" />
-        <div id="searchResults"></div>
       </div>
     </header>`;
 
@@ -43,67 +45,126 @@
     <footer class="footer">
       <div class="wrap footer-grid">
         <div>
-          ${logo()}
-          <p>${site.description}</p>
+          <p class="footer-name">HARSHA ID SOLUTIONS</p>
+          <p>A Complete ID World....</p>
         </div>
         <div>
-          <h3>Quick Links</h3>
-          <a href="index.html">Home</a>
-          <a href="about.html">About Us</a>
-          <a href="gallery.html">Gallery</a>
-          <a href="contact.html">Contact Us</a>
+          <h2>Contact</h2>
+          <a href="tel:${site.phone}">${site.phone}</a>
+          <a href="${site.whatsapp}">WhatsApp</a>
+          <a href="mailto:${site.email}">${site.email}</a>
         </div>
         <div>
-          <h3>Our Services</h3>
-          <a href="index.html#services">ID CARDS</a>
-          <a href="index.html#services">TIES</a>
-          <a href="index.html#services">MULTI COLOUR BELTS</a>
-          <a href="index.html#services">REPORT CARDS</a>
-          <a href="index.html#services">DAIRIES</a>
-          <a href="index.html#services">T-SHIRT PRINTING</a>
-          <a href="index.html#services">LOGO BADGES</a>
-          <a href="index.html#services">SCREEN PRINTING</a>
-        </div>
-        <div>
-          <h3>Contact Information</h3>
-          <p>Phone<br><a href="tel:${site.phone}">${site.phone}</a></p>
-          <p>WhatsApp<br><a href="${site.whatsapp}">${site.phone}</a></p>
-          <p>Email<br><a href="mailto:${site.email}">${site.email}</a></p>
+          <h2>Social</h2>
           <div class="socials">
-            <a href="${site.social.facebook}" aria-label="Facebook">f</a>
-            <a href="${site.social.instagram}" aria-label="Instagram">ig</a>
-            <a href="${site.social.youtube}" aria-label="YouTube">yt</a>
+            <a href="${site.social.facebook}">Facebook</a>
+            <a href="${site.social.instagram}">Instagram</a>
+            <a href="${site.social.youtube}">YouTube</a>
           </div>
         </div>
       </div>
-      <div class="wrap footer-bottom">
-        <span>© All Rights Reserved to ${site.businessName}</span>
-        <span>Privacy Policy | Terms & Conditions</span>
-      </div>
+      <div class="wrap footer-bottom">© All Rights Reserved to Harsha ID Solutions</div>
     </footer>`;
 
-  const header = document.querySelector(".header");
-  window.addEventListener("scroll", () => header.classList.toggle("scrolled", window.scrollY > 8));
-  document.getElementById("menuBtn").addEventListener("click", () => document.getElementById("nav").classList.toggle("open"));
-
-  const panel = document.getElementById("searchPanel");
-  const input = document.getElementById("searchInput");
-  const results = document.getElementById("searchResults");
-  document.getElementById("searchBtn").addEventListener("click", () => {
-    panel.classList.toggle("open");
-    if (panel.classList.contains("open")) input.focus();
+  const nav = document.getElementById("nav");
+  const menuBtn = document.getElementById("menuBtn");
+  menuBtn.addEventListener("click", () => {
+    const open = nav.classList.toggle("open");
+    menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
   });
-  input.addEventListener("input", () => {
-    const q = input.value.trim().toLowerCase();
-    results.innerHTML = links
-      .filter(([, , label]) => !q || label.toLowerCase().includes(q))
-      .map(([, href, label]) => `<a href="${href}">${label}</a>`)
+  nav.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      nav.classList.remove("open");
+      menuBtn.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  const aboutRoot = document.querySelector("[data-about]");
+  if (aboutRoot) {
+    aboutRoot.innerHTML = site.about
+      .map((block) =>
+        block.kind === "heading"
+          ? `<h2>${escapeHtml(block.text)}</h2>`
+          : `<p>${escapeHtml(block.text)}</p>`
+      )
       .join("");
-  });
-  input.dispatchEvent(new Event("input"));
+  }
 
-  document.querySelectorAll("[data-bind]").forEach((el) => {
-    const key = el.dataset.bind;
-    if (site[key]) el.textContent = site[key];
-  });
+  const productsRoot = document.querySelector("[data-products]");
+  if (productsRoot) {
+    productsRoot.innerHTML = site.products
+      .map(
+        (product) => `
+        <article class="product-card">
+          <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy" />
+          <h3>${escapeHtml(product.name)}</h3>
+        </article>`
+      )
+      .join("");
+  }
+
+  const form = document.getElementById("enquiryForm");
+  if (form) {
+    const toast = document.getElementById("formToast");
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      toast.hidden = true;
+      toast.className = "toast";
+      const data = new FormData(form);
+      const payload = {
+        name: String(data.get("name") || "").trim(),
+        phone: String(data.get("phone") || "").trim(),
+        email: String(data.get("email") || "").trim(),
+        message: String(data.get("message") || "").trim(),
+      };
+      const phoneDigits = payload.phone.replace(/\D/g, "");
+      if (payload.name.length < 2 || payload.name.length > 80) {
+        toast.hidden = false;
+        toast.classList.add("error");
+        toast.textContent = "Enter your name.";
+        return;
+      }
+      if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+        toast.hidden = false;
+        toast.classList.add("error");
+        toast.textContent = "Enter a valid phone number.";
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+        toast.hidden = false;
+        toast.classList.add("error");
+        toast.textContent = "Enter a valid email address.";
+        return;
+      }
+      if (!payload.message || payload.message.length > 2000) {
+        toast.hidden = false;
+        toast.classList.add("error");
+        toast.textContent = "Enter a message.";
+        return;
+      }
+      const button = form.querySelector("button[type=submit]");
+      button.disabled = true;
+      try {
+        const response = await fetch(`${site.apiOrigin.replace(/\/$/, "")}/api/public/enquiry`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(body.message || "Message could not be sent.");
+        }
+        form.reset();
+        toast.hidden = false;
+        toast.classList.add("ok");
+        toast.textContent = "Your message has been sent.";
+      } catch (error) {
+        toast.hidden = false;
+        toast.classList.add("error");
+        toast.textContent = error.message || "Message could not be sent. Please call or use WhatsApp.";
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
 })();

@@ -5,102 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Home | Harsha ID Solutions</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
 <body data-page="home">
   <div data-header></div>
-  <main>
-    <section class="hero">
-      <div class="wrap hero-grid reveal">
-        <div>
-          <p class="kicker">HARSHA ID SOLUTIONS</p>
-          <h1>Harsha ID Solutions<br><span style="color:#0878D1">-A Complete ID World...</span></h1>
-          <p class="lead">HARSHA ID SOLUTIONS MOTO IS PROVIDING TRUSTED SERVICES TO OUR CUSTOMERS.</p>
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="#services">Explore Our Services →</a>
-            <a class="btn btn-secondary" href="contact.html">Contact Us</a>
-          </div>
-        </div>
-        <div class="hero-visual">
-          <img src="assets/images/harsha-id-solutions-logo.png" alt="Harsha ID Solutions" />
-        </div>
-      </div>
-    </section>
-
-    <section class="feature-strip">
-      <div class="wrap cards-4">
-        <article class="card"><h3>STUDENT ID CARDS</h3></article>
-        <article class="card"><h3>TIES</h3></article>
-        <article class="card"><h3>BELTS</h3></article>
-        <article class="card"><h3>Get Your Identity Here...</h3></article>
-      </div>
-    </section>
-
-    <section class="section" id="services">
-      <div class="wrap">
-        <p class="kicker">WHAT WE DO</p>
-        <h2>Our Services</h2>
-        <p class="lead">We have been in the business of ID CARDS, TIES, MULTI COLOUR BELTS, REPORT CARDS, DAIRIES, T-SHIRT PRINTING, LOGO BADGES and SCREEN PRINTING for the past 10 Years catering various sectors i.e., Corporate, Industrial, Banks, Educational Institutions etc. Taking on the challenges and fulfilling the customer expectations. The company has been providing solutions on technology, machinery, Raw materials to ID sellers across the state.</p>
-        <div class="cards-4" style="margin-top:28px">
-          <article class="card"><h3>ID CARDS</h3></article>
-          <article class="card"><h3>TIES</h3></article>
-          <article class="card"><h3>MULTI COLOUR BELTS</h3></article>
-          <article class="card"><h3>REPORT CARDS</h3></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section soft">
-      <div class="wrap why">
-        <div>
-          <p class="kicker">OUR STRENGTH</p>
-          <h2>Harsha ID Solutions</h2>
-          <p class="lead">Maintaining good quality, providing latest models with in-time delivery, Commited and skilled manpower, fully automated advanced machinery, assured raw material support, resulting in excelling customer expectations.</p>
-        </div>
-        <div class="cards-2">
-          <article class="card"><h3>DAIRIES</h3></article>
-          <article class="card"><h3>T-SHIRT PRINTING</h3></article>
-          <article class="card"><h3>LOGO BADGES</h3></article>
-          <article class="card"><h3>SCREEN PRINTING</h3></article>
+  <main id="main">
+    <section class="hero" aria-label="Harsha ID Solutions">
+      <div class="wrap hanger">
+        <div class="pin" aria-hidden="true"></div>
+        <div class="swing">
+          <div class="rope" aria-hidden="true"></div>
+          <img src="assets/images/harsha-official-logo.png" alt="Harsha ID Solutions, A Complete ID World" />
         </div>
       </div>
     </section>
 
     <section class="section">
-      <div class="wrap center">
-        <h2>How It Works</h2>
-        <div class="steps" style="margin-top:28px">
-          <div class="step"><b>01</b><h3>Take clear and proper photos in good lighting.</h3></div>
-          <div class="step"><b>02</b><h3>Upload correct student data.</h3></div>
-          <div class="step"><b>03</b><h3>Choose the right template and model.</h3></div>
-          <div class="step"><b>04</b><h3>Upload logo, signature and other requirements.</h3></div>
-          <div class="step"><b>05</b><h3>Check all details before submitting.</h3></div>
-          <div class="step"><b>06</b><h3>ID cards will be printed as per the provided data.</h3></div>
-          <div class="step"><b>07</b><h3>No changes allowed after final submission.</h3></div>
-          <div class="step"><b>08</b><h3>Contact support for any assistance.</h3></div>
-          <div class="step"><b>09</b><h3>Use this app only for authorized purpose.</h3></div>
-          <div class="step"><b>10</b><h3>Follow all the above steps for best results.</h3></div>
-        </div>
+      <div class="wrap">
+        <h2 class="center">OUR PRODUCTS</h2>
+        <div class="product-grid" data-products></div>
       </div>
     </section>
 
     <section class="section soft">
-      <div class="wrap center">
-        <h2>Our Best Schools</h2>
-        <div class="cards-4" data-schools style="margin-top:22px"></div>
-        <p style="margin-top:22px"><a class="btn btn-primary" href="gallery.html">View Full Gallery →</a></p>
+      <div class="wrap">
+        <h2 class="center">OUR BEST CLIENTS</h2>
+        <div class="client-grid" data-clients></div>
       </div>
     </section>
 
     <section class="section">
       <div class="wrap">
-        <div class="cta">
-          <h2>*** GET IDENTITY HERE ***</h2>
-          <p class="lead">Get Your Identity Here...</p>
-          <a class="btn btn-light" href="contact.html">Get in Touch →</a>
+        <h2 class="center">OUR EXPERIENCE</h2>
+        <div class="stat-grid">
+          <article class="stat-card"><b>2016</b><span>EST.</span></article>
+          <article class="stat-card"><b>500+</b><span>Schools Served</span></article>
+          <article class="stat-card"><b>5L+</b><span>IDs Created</span></article>
+          <article class="stat-card"><b>3</b><span>Districts Covered</span></article>
         </div>
       </div>
+    </section>
+
+    <section class="section soft">
+      <div class="wrap about-copy" data-about></div>
     </section>
   </main>
   <div data-footer></div>
