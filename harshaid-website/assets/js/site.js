@@ -150,17 +150,6 @@
         toast.textContent = "Enter a shorter message.";
         return;
       }
-      const lines = ["New Website Enquiry", "", `Name: ${payload.name}`, `Phone: ${payload.phone}`];
-      if (payload.email) lines.push(`Email: ${payload.email}`);
-      if (payload.message) lines.push(`Message: ${payload.message}`);
-      const destination = new URL(site.whatsapp);
-      destination.searchParams.set("text", lines.join("\n"));
-      const opened = window.open(destination.toString(), "_blank");
-      if (!opened) {
-        window.location.href = destination.toString();
-        return;
-      }
-      opened.opener = null;
       form.reset();
       toast.hidden = false;
       toast.classList.add("ok");
