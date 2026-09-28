@@ -18,17 +18,13 @@ html { scroll-behavior: smooth; overflow-x: clip; }
 body {
   margin: 0;
   min-width: 0;
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
   font-family: var(--font);
+  font-size: clamp(15px, 1vw, 17px);
   color: var(--ink);
   background: #fff;
   line-height: 1.6;
   overflow-x: clip;
 }
-main { flex: 1 0 auto; }
 img { max-width: 100%; height: auto; display: block; }
 a { color: inherit; text-decoration: none; }
 button, input, textarea { font-family: inherit; color: var(--ink); }
@@ -43,16 +39,16 @@ h1, h2, h3, h4 { color: var(--blue); overflow-wrap: anywhere; }
 }
 .skip:focus { top: 8px; }
 .wrap { width: min(var(--max), calc(100% - clamp(20px, 4vw, 40px))); margin: 0 auto; }
-.section { padding: clamp(40px, 5vh, 68px) 0; }
+.section { padding: clamp(28px, 3vh, 44px) 0; }
 .section.soft { background: var(--soft); }
 .section h2, .page-intro h1, .about-copy h2 {
-  margin: 0 0 clamp(14px, 2vh, 20px);
+  margin: 0 0 clamp(12px, 1.5vh, 16px);
   line-height: 1.25;
   letter-spacing: 0.02em;
-  font-size: clamp(22px, 2.4vw, 32px);
+  font-size: clamp(22px, 2.2vw, 30px);
 }
 .center { text-align: center; }
-main h1 { margin: 0 0 clamp(16px, 2.4vh, 22px); font-size: clamp(26px, 3.4vw, 40px); line-height: 1.2; }
+main h1 { margin: 0 0 clamp(12px, 1.8vh, 18px); font-size: clamp(24px, 2.6vw, 36px); line-height: 1.2; }
 
 .header {
   position: sticky; top: 0; z-index: 40;
@@ -91,7 +87,7 @@ main h1 { margin: 0 0 clamp(16px, 2.4vh, 22px); font-size: clamp(26px, 3.4vw, 40
   background:
     radial-gradient(circle at 50% 0, #e7f3ff 0, transparent 42%),
     linear-gradient(180deg, #f8fbfe, #fff);
-  padding: clamp(12px, 2vh, 28px) 0 clamp(8px, 1.5vh, 18px);
+  padding: clamp(8px, 1.4vh, 18px) 0 clamp(4px, 1vh, 12px);
   overflow-x: clip;
 }
 .hanger { display: flex; flex-direction: column; align-items: center; max-width: 100%; }
@@ -124,18 +120,23 @@ main h1 { margin: 0 0 clamp(16px, 2.4vh, 22px); font-size: clamp(26px, 3.4vw, 40
 
 .product-grid, .client-grid, .brochure-grid, .feature-grid, .stat-grid, .contact-grid {
   display: grid;
-  gap: clamp(12px, 1.6vw, 18px);
+  gap: clamp(10px, 1.2vw, 14px);
 }
+.product-grid { gap: 14px; }
 .product-grid, .client-grid, .brochure-grid, .feature-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 }
-.stat-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
-.contact-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.stat-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); }
+.contact-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
 .product-card, .client-card, .brochure-card, .feature-card, .stat-card, .contact-card {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 16px;
-  padding: clamp(12px, 1.4vw, 16px);
+  padding: clamp(10px, 1.1vw, 14px);
   min-width: 0;
 }
 .product-card img, .client-card img, .brochure-card img {
@@ -159,17 +160,17 @@ main h1 { margin: 0 0 clamp(16px, 2.4vh, 22px); font-size: clamp(26px, 3.4vw, 40
   color: var(--blue); font-weight: 700;
 }
 .stat-card { text-align: center; padding: clamp(16px, 2vh, 22px) 12px; }
-.stat-card b { display: block; font-size: clamp(26px, 3.2vw, 40px); color: var(--blue); line-height: 1; }
+.stat-card b { display: block; font-size: clamp(24px, 2.6vw, 34px); color: var(--blue); line-height: 1; }
 .stat-card span { display: block; margin-top: 8px; font-weight: 600; color: var(--ink); }
 .about-copy { max-width: 760px; }
-.about-copy h2 { font-size: clamp(18px, 2vw, 22px); margin-top: clamp(22px, 3vh, 28px); }
+.about-copy h2 { font-size: clamp(18px, 1.8vw, 22px); margin-top: clamp(16px, 2.2vh, 22px); }
 .about-copy h2:first-child { margin-top: 0; }
 .about-copy p { margin: 0 0 16px; font-size: clamp(16px, 1.3vw, 17px); line-height: 1.75; }
 .identity-line {
   text-align: center;
   color: var(--orange);
   font-size: clamp(22px, 3vw, 34px);
-  margin: clamp(28px, 5vh, 48px) auto clamp(8px, 2vh, 16px);
+  margin: clamp(18px, 3vh, 28px) auto clamp(6px, 1.5vh, 12px);
 }
 .empty { color: var(--muted); }
 
@@ -178,7 +179,10 @@ main h1 { margin: 0 0 clamp(16px, 2.4vh, 22px); font-size: clamp(26px, 3.4vw, 40
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
-.contact-card a { color: var(--blue-dark); font-weight: 600; word-break: break-word; }
+.contact-card { flex: 1 1 8.5rem; min-width: min(100%, 8.5rem); }
+.contact-card a { color: var(--blue-dark); font-weight: 600; overflow-wrap: anywhere; }
+.contact-card a.btn { color: #fff; overflow-wrap: normal; }
+.contact-card a[href^="mailto:"] { white-space: nowrap; overflow-wrap: normal; }
 .contact-card p { margin: 0; }
 .form { display: grid; gap: 12px; width: min(100%, 640px); }
 .form label { font-weight: 700; font-size: clamp(14px, 1.2vw, 15px); color: var(--blue); display: grid; gap: 6px; }
@@ -210,10 +214,10 @@ main h1 { margin: 0 0 clamp(16px, 2.4vh, 22px); font-size: clamp(26px, 3.4vw, 40
   border-radius: clamp(18px, 2vw, 28px);
   justify-self: center;
 }
-.soon { min-height: clamp(280px, 46vh, 520px); display: grid; place-items: center; text-align: center; padding: 24px; }
-.soon h1 { font-size: clamp(32px, 6vw, 56px); margin: 0; }
+.soon { min-height: clamp(180px, 28vh, 280px); display: grid; place-items: center; text-align: center; padding: 24px; }
+.soon h1 { font-size: clamp(28px, 4vw, 44px); margin: 0; }
 
-.footer { background: linear-gradient(180deg, #0d3f73, var(--footer)); color: #d5e4f2; padding: clamp(32px, 5vh, 48px) 0 0; }
+.footer { background: linear-gradient(180deg, #0d3f73, var(--footer)); color: #d5e4f2; padding: clamp(22px, 3vh, 32px) 0 0; }
 .footer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: clamp(16px, 2vw, 28px); }
 .footer h2 { margin: 0 0 8px; font-size: 16px; color: #fff; }
 .footer a { display: block; margin: 6px 0; color: #d5e4f2; }
@@ -264,5 +268,8 @@ main h1 { margin: 0 0 clamp(16px, 2.4vh, 22px); font-size: clamp(26px, 3.4vw, 40
   .app-hero { grid-template-columns: 1fr; }
   .app-hero img { width: min(56vw, 200px); }
   .btn { width: 100%; text-align: center; }
-  .contact-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .contact-grid { display: grid; grid-template-columns: 1fr; }
+  .contact-card a[href^="mailto:"] { white-space: normal; overflow-wrap: anywhere; }
 }

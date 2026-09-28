@@ -2,10 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { SUPER_ADMIN_EMAIL } from "../utils/adminScope";
 import { AppError } from "../middleware/errorHandler";
-import { sendEmail } from "../utils/email";
-
-/** Same address as teacher-app/src/constants/support.ts SUPPORT_EMAIL. */
-const PUBLIC_ENQUIRY_TO = "harshaidsolutions@gmail.com";
 
 const enquiryHits = new Map<string, number[]>();
 
@@ -20,13 +16,6 @@ function allowEnquiry(ip: string): boolean {
   recent.push(now);
   enquiryHits.set(ip, recent);
   return true;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }
 
 /**
@@ -118,42 +107,23 @@ export async function submitPublicEnquiry(
     if (name.length < 2 || name.length > 80) {
       throw new AppError("Enter your name.", 400);
     }
-    if (phoneDigits.length < 7 || phoneDigits.length > 15 || phone.length > 20) {
+    if (phone.length > 20 || phoneDigits.length < 10 || phoneDigits.length > 15) {
       throw new AppError("Enter a valid phone number.", 400);
     }
-    if (email.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (email && (email.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
       throw new AppError("Enter a valid email address.", 400);
     }
-    if (message.length < 1 || message.length > 2000) {
-      throw new AppError("Enter a message.", 400);
+    if (message.length > 2000) {
+      throw new AppError("Enter a shorter message.", 400);
     }
 
-    const text = [
-      "New message from the Harsha ID Solutions website",
-      "",
-      `Name: ${name}`,
-      `Phone: ${phone}`,
-      `Email: ${email}`,
-      "",
-      message,
-    ].join("\n");
-
-    const mail = await sendEmail({
-      to: PUBLIC_ENQUIRY_TO,
-      subject: "Website enquiry",
-      text,
-      html: `<p>New message from the Harsha ID Solutions website</p>
-        <p><strong>Name:</strong> ${escapeHtml(name)}<br>
-        <strong>Phone:</strong> ${escapeHtml(phone)}<br>
-        <strong>Email:</strong> ${escapeHtml(email)}</p>
-        <p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>`,
-    });
-
-    if (!mail.delivered) {
-      throw new AppError("Message could not be sent right now. Please call or use WhatsApp.", 503);
-    }
-
-    res.status(200).json({ status: "ok" });
+    // The Teacher App only opens WhatsApp on the device. This backend has no
+    // WhatsApp Business Cloud API client, token, or phone-number id, so it
+    // cannot deliver this enquiry to the admin number.
+    throw new AppError(
+      "Message could not be sent right now. Please call or use the phone number on Contact Us.",
+      503
+    );
   } catch (error) {
     next(error);
   }

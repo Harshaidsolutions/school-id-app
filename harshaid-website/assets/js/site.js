@@ -114,7 +114,7 @@
   const form = document.getElementById("enquiryForm");
   if (form) {
     const toast = document.getElementById("formToast");
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       toast.hidden = true;
       toast.className = "toast";
@@ -132,7 +132,7 @@
         toast.textContent = "Enter your name.";
         return;
       }
-      if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+      if (phoneDigits.length < 10 || phoneDigits.length > 15) {
         toast.hidden = false;
         toast.classList.add("error");
         toast.textContent = "Enter a valid phone number.";
@@ -150,10 +150,29 @@
         toast.textContent = "Enter a shorter message.";
         return;
       }
-      form.reset();
-      toast.hidden = false;
-      toast.classList.add("ok");
-      toast.textContent = "Your message has been sent.\nOur representative will contact you shortly.";
+      const button = form.querySelector("button[type=submit]");
+      button.disabled = true;
+      try {
+        const response = await fetch(`${site.apiOrigin.replace(/\/$/, "")}/api/public/enquiry`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || body.status !== "ok") {
+          throw new Error(body.message || "Message could not be sent right now. Please call or use the phone number on Contact Us.");
+        }
+        form.reset();
+        toast.hidden = false;
+        toast.classList.add("ok");
+        toast.textContent = "Your message sent\nOur representative will contact you shortly.";
+      } catch (error) {
+        toast.hidden = false;
+        toast.classList.add("error");
+        toast.textContent = error.message || "Message could not be sent right now. Please call or use the phone number on Contact Us.";
+      } finally {
+        button.disabled = false;
+      }
     });
   }
 })();
