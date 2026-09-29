@@ -26,7 +26,9 @@ import { cardShadow, radius, spacing } from "../theme/colors";
 import { fonts, textStyles, type as typeScale } from "../theme/typography";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
 import {
+  SUPPORT_EMAIL,
   SUPPORT_PHONE,
+  SUPPORT_WEBSITE,
   buildHelpSupportMessage,
 } from "../constants/support";
 import { openWhatsApp } from "../utils/whatsappBusiness";
@@ -104,6 +106,14 @@ export function LoginScreen(_props: Props) {
     void Linking.openURL(`tel:${SUPPORT_PHONE}`);
   }
 
+  function openMail() {
+    void Linking.openURL(`mailto:${SUPPORT_EMAIL}`);
+  }
+
+  function openWebsite() {
+    void Linking.openURL(SUPPORT_WEBSITE);
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <KeyboardDismissView style={styles.flex}>
@@ -117,12 +127,7 @@ export function LoginScreen(_props: Props) {
             showsVerticalScrollIndicator={false}
           >
             <AppIcon size={logoSize} />
-            <BrandLockup
-              variant="hero"
-              title="My School ID Card"
-              showTagline={false}
-              style={{ marginTop: spacing.sm }}
-            />
+            <BrandLockup variant="hero" showTagline={false} style={{ marginTop: spacing.sm }} />
 
             <Text style={styles.title}>Welcome Back!</Text>
             <Text style={styles.subtitle}>Login to continue</Text>
@@ -189,6 +194,15 @@ export function LoginScreen(_props: Props) {
               </Pressable>
             </View>
 
+            <Pressable style={styles.contactRow} onPress={openWebsite}>
+              <Ionicons name="globe-outline" size={18} color="#F5811F" />
+              <Text style={styles.contactText}>www.harshaidsolutions.in</Text>
+            </Pressable>
+
+            <Pressable style={styles.contactRow} onPress={openMail}>
+              <Ionicons name="mail" size={18} color="#F5811F" />
+              <Text style={styles.contactText}>{SUPPORT_EMAIL}</Text>
+            </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
       </KeyboardDismissView>

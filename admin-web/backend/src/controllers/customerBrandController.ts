@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
+import { resolveIsSuperAdmin } from "../utils/adminScope";
 
-const APP_BRAND_NAME = "My School ID Card";
+const CHILD_NAME_FALLBACK = "My School ID Card";
 
 /**
  * Branding for the logged-in school or institute account.
@@ -18,18 +19,22 @@ export async function getTeacherBranding(
     if (!userId) throw new AppError("Unauthorized", 401);
 
     const result = await pool.query<{
+      owner_id: string | null;
       display_name: string | null;
       phone: string | null;
       whatsapp: string | null;
       facebook_url: string | null;
       instagram_url: string | null;
       youtube_url: string | null;
-      about_us: string | null;
       email: string | null;
+      username: string | null;
+      is_super_admin: boolean | null;
     }>(
-      `SELECT owner.display_name, owner.phone, owner.whatsapp,
+      `SELECT owner.id AS owner_id,
+              owner.display_name, owner.phone, owner.whatsapp,
               owner.facebook_url, owner.instagram_url, owner.youtube_url,
-              owner.about_us, owner.email
+              owner.email, owner.username,
+              COALESCE(owner.is_super_admin, false) AS is_super_admin
        FROM users me
        LEFT JOIN schools s ON s.id = me.school_id
        LEFT JOIN institutes i ON i.id = me.institute_id
@@ -41,18 +46,31 @@ export async function getTeacherBranding(
     );
 
     const row = result.rows[0];
-    const adminName = row?.display_name?.trim() || APP_BRAND_NAME;
+    const childOwned =
+      Boolean(row?.owner_id) &&
+      !resolveIsSuperAdmin({
+        role: "admin",
+        email: row?.email,
+        username: row?.username,
+        is_super_admin: row?.is_super_admin,
+      });
+
     res.set("Cache-Control", "no-store");
+    if (!childOwned) {
+      res.status(200).json({ status: "ok", branding: { source: "platform" } });
+      return;
+    }
+
     res.status(200).json({
       status: "ok",
       branding: {
-        adminName,
+        source: "child",
+        adminName: row?.display_name?.trim() || CHILD_NAME_FALLBACK,
         phone: row?.phone?.trim() || null,
         whatsapp: row?.whatsapp?.trim() || null,
         facebook: row?.facebook_url?.trim() || null,
         instagram: row?.instagram_url?.trim() || null,
         youtube: row?.youtube_url?.trim() || null,
-        aboutUs: row?.about_us?.trim() || null,
         email: row?.email?.trim() || null,
       },
     });

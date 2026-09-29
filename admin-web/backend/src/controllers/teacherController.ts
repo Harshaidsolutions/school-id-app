@@ -579,14 +579,7 @@ export async function updateTeacherStudent(
       });
     }
 
-    const studentName =
-      req.body.student_name !== undefined ||
-      req.body.studentName !== undefined ||
-      req.body.name !== undefined
-        ? String(
-            req.body.student_name ?? req.body.studentName ?? req.body.name
-          ).trim()
-        : student.student_name;
+    const studentName = student.student_name;
     if (!studentName) {
       throw new AppError("Name is required", 400);
     }
@@ -694,6 +687,10 @@ export async function updateTeacherStudent(
       Object.keys(incomingExtra).length > 0
         ? { ...existingExtra, ...incomingExtra }
         : existingExtra;
+    delete mergedExtra.photo_id;
+    delete mergedExtra.photoId;
+    delete mergedExtra.student_name;
+    delete mergedExtra.studentName;
 
     const updated = await pool.query<TeacherStudentRow>(
       `UPDATE students

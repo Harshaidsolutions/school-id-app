@@ -31,7 +31,7 @@ async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS !== "android") return;
   await Notifications.setNotificationChannelAsync(ANDROID_NOTIFICATION_CHANNEL_ID, {
     name: "School notifications",
-    description: "Admin announcements and updates from My School ID Card",
+    description: "Admin announcements and updates from Harsha ID Solutions",
     importance: Notifications.AndroidImportance.MAX,
     sound: "default",
     vibrationPattern: [0, 250, 250, 250],

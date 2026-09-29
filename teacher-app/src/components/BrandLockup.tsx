@@ -141,7 +141,7 @@ export function BrandLockup({
             marginBottom: scale(6, screenW),
           }}
           resizeMode="contain"
-          accessibilityLabel="My School ID Card logo"
+          accessibilityLabel="Harsha ID Solutions logo"
         />
       ) : null}
       {title ? (

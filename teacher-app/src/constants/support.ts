@@ -9,7 +9,7 @@ export const SOCIAL_FACEBOOK =
   "https://www.facebook.com/share/19YJGrEicU/";
 
 export const SUPPORT_EMAIL = "harshaidsolutions@gmail.com";
-export const SUPPORT_WEBSITE = "https://harshaid.com";
+export const SUPPORT_WEBSITE = "https://harshaidsolutions.in";
 export const PLAY_STORE_PACKAGE = "com.schoolid.teacher";
 export const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`;
 export const PLAY_STORE_MARKET_URL = `market://details?id=${PLAY_STORE_PACKAGE}`;

@@ -23,6 +23,8 @@ import {
   PLAY_STORE_URL,
 } from "../constants/support";
 import { openBrandWhatsApp, useCustomerBrand } from "../hooks/useCustomerBrand";
+import { buildHelpSupportMessage } from "../constants/support";
+import { openWhatsApp } from "../utils/whatsappBusiness";
 import { TERMS_AND_CONDITIONS } from "../constants/terms";
 import { InfoModal, InfoParagraph } from "../components/InfoModal";
 
@@ -42,7 +44,7 @@ export function SettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const version = appVersion();
   const [termsOpen, setTermsOpen] = useState(false);
-  const { brand } = useCustomerBrand();
+  const { brand, ready } = useCustomerBrand();
 
   function confirmLogout() {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -154,14 +156,18 @@ export function SettingsScreen({ navigation }: Props) {
           colors={colors}
           icon="logo-whatsapp"
           label="Help & Support"
-          onPress={() =>
-            void openBrandWhatsApp(brand).catch((err) =>
+          onPress={() => {
+            if (!ready) return;
+            void (brand.source === "child"
+              ? openBrandWhatsApp(brand)
+              : openWhatsApp(buildHelpSupportMessage("Your School"))
+            ).catch((err) =>
               Alert.alert(
                 "WhatsApp",
                 err instanceof Error ? err.message : "Could not open WhatsApp."
               )
-            )
-          }
+            );
+          }}
         />
         <SettingRow
           colors={colors}

@@ -24,6 +24,7 @@ import type { RootStackParamList } from "../navigation/types";
 import { cardShadow, radius, spacing } from "../theme/colors";
 import { fonts, textStyles, type as typeScale } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
+import { ABOUT_US_PARAS } from "../constants/about";
 import { APP_INSTRUCTIONS } from "../constants/instructions";
 import { TERMS_AND_CONDITIONS } from "../constants/terms";
 import {
@@ -38,6 +39,16 @@ import {
   openBrandWhatsApp,
   useCustomerBrand,
 } from "../hooks/useCustomerBrand";
+import {
+  REFER_WHATSAPP_CATALOG_LINK,
+  SOCIAL_FACEBOOK,
+  SOCIAL_INSTAGRAM,
+  SOCIAL_YOUTUBE,
+  SUPPORT_EMAIL,
+  SUPPORT_WEBSITE,
+  buildHelpSupportMessage,
+} from "../constants/support";
+import { openWhatsApp } from "../utils/whatsappBusiness";
 
 type Props = NativeStackScreenProps<RootStackParamList, "DrawerMenu">;
 
@@ -61,7 +72,8 @@ export function DrawerMenuScreen({ navigation }: Props) {
   const [termsOpen, setTermsOpen] = useState(false);
   const [rateOpen, setRateOpen] = useState(false);
   const [schoolName, setSchoolName] = useState("Your School");
-  const { brand } = useCustomerBrand();
+  const { brand, ready } = useCustomerBrand();
+  const childBrand = ready && brand.source === "child";
 
   useEffect(() => {
     let cancelled = false;
@@ -93,7 +105,7 @@ export function DrawerMenuScreen({ navigation }: Props) {
     void Linking.openURL(url);
   }
 
-  function openConfigured(url: string | null) {
+  function openChildLink(url: string | null) {
     if (!url) {
       missingContact();
       return;
@@ -102,8 +114,10 @@ export function DrawerMenuScreen({ navigation }: Props) {
   }
 
   async function openHelpSupport() {
+    if (!ready) return;
     try {
-      await openBrandWhatsApp(brand);
+      if (childBrand) await openBrandWhatsApp(brand);
+      else await openWhatsApp(buildHelpSupportMessage(schoolName));
     } catch (err) {
       Alert.alert(
         "WhatsApp",
@@ -113,8 +127,10 @@ export function DrawerMenuScreen({ navigation }: Props) {
   }
 
   async function openReferUs() {
+    if (!ready) return;
     try {
-      await openBrandRefer(brand, schoolName);
+      if (childBrand) await openBrandRefer(brand, schoolName);
+      else await Linking.openURL(REFER_WHATSAPP_CATALOG_LINK);
     } catch (err) {
       Alert.alert(
         "WhatsApp",
@@ -137,7 +153,7 @@ export function DrawerMenuScreen({ navigation }: Props) {
     ]);
   }
 
-  const menuItems: MenuItem[] = [
+  const menuItems: MenuItem[] = ([
     {
       icon: "logo-google-playstore",
       label: "Rate Us",
@@ -151,22 +167,38 @@ export function DrawerMenuScreen({ navigation }: Props) {
     {
       icon: "logo-youtube",
       label: "YouTube",
-      onPress: () => openConfigured(brand.youtube),
+      onPress: () => {
+        if (!ready) return;
+        if (childBrand) openChildLink(brand.youtube);
+        else openUrl(SOCIAL_YOUTUBE);
+      },
     },
     {
       icon: "logo-instagram",
       label: "Instagram",
-      onPress: () => openConfigured(brand.instagram),
+      onPress: () => {
+        if (!ready) return;
+        if (childBrand) openChildLink(brand.instagram);
+        else openUrl(SOCIAL_INSTAGRAM);
+      },
     },
     {
       icon: "logo-facebook",
       label: "Facebook",
-      onPress: () => openConfigured(brand.facebook),
+      onPress: () => {
+        if (!ready) return;
+        if (childBrand) openChildLink(brand.facebook);
+        else openUrl(SOCIAL_FACEBOOK);
+      },
     },
     {
       icon: "mail",
       label: "Email",
-      onPress: () => openConfigured(brand.email ? `mailto:${brand.email}` : null),
+      onPress: () => {
+        if (!ready) return;
+        if (childBrand) openChildLink(brand.email ? `mailto:${brand.email}` : null);
+        else openUrl(`mailto:${SUPPORT_EMAIL}`);
+      },
     },
     {
       icon: "help-circle",
@@ -175,8 +207,13 @@ export function DrawerMenuScreen({ navigation }: Props) {
     },
     {
       icon: "globe",
-      label: "Call",
+      label: childBrand ? "Call" : "Website",
       onPress: () => {
+        if (!ready) return;
+        if (!childBrand) {
+          openUrl(SUPPORT_WEBSITE);
+          return;
+        }
         if (!brand.phone) {
           missingContact();
           return;
@@ -212,7 +249,9 @@ export function DrawerMenuScreen({ navigation }: Props) {
         navigation.navigate("Settings" as never);
       },
     },
-  ];
+  ] as MenuItem[]).filter(
+    (item) => item.label !== "About Us" || (ready && !childBrand)
+  );
 
   return (
     <View style={styles.root}>
@@ -320,9 +359,8 @@ export function DrawerMenuScreen({ navigation }: Props) {
           compact
           prominentTitle
         >
-          {(brand.aboutUs
-            ? brand.aboutUs.split(/\n+/).filter((line) => line.trim())
-            : ["About us has not been added yet."]
+          {ABOUT_US_PARAS.filter(
+            (p) => p.trim().toUpperCase() !== "ABOUT US"
           ).map((p) => (
             <InfoParagraph key={p.slice(0, 24)} text={p} colors={colors} />
           ))}

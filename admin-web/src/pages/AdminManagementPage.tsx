@@ -52,14 +52,6 @@ export function AdminManagementPage() {
   const [newPassword, setNewPassword] = useState("");
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  if (!user?.isSuperAdmin) {
-    return (
-      <div className="app-page">
-        <p className="text-text-muted">Super admin access is required.</p>
-      </div>
-    );
-  }
-
   async function load() {
     setLoading(true);
     setError(null);
@@ -181,6 +173,14 @@ export function AdminManagementPage() {
     } finally {
       setTogglingId(null);
     }
+  }
+
+  if (!user?.isSuperAdmin) {
+    return (
+      <div className="app-page">
+        <p className="text-text-muted">Super admin access is required.</p>
+      </div>
+    );
   }
 
   return (

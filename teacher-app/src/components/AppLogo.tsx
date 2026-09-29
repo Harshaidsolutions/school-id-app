@@ -24,7 +24,7 @@ export function AppLogo({ size, style }: Props) {
         source={brandLogoSource()}
         style={{ width, height }}
         resizeMode="contain"
-        accessibilityLabel="My School ID Card logo"
+        accessibilityLabel="Harsha ID Solutions logo"
       />
     </View>
   );

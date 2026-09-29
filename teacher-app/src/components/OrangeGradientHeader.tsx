@@ -11,6 +11,8 @@ import { moderateScale, icons, scaledHitSlop } from "../theme/responsive";
 type Props = {
   title: string;
   subtitle?: string;
+  /** Lines allowed for the subtitle. Default keeps existing single-line behavior. */
+  subtitleLines?: number;
   onBack?: () => void;
   rightIcon?: keyof typeof Ionicons.glyphMap;
   onRightPress?: () => void;
@@ -23,6 +25,7 @@ type Props = {
 export function OrangeGradientHeader({
   title,
   subtitle,
+  subtitleLines = 1,
   onBack,
   rightIcon,
   onRightPress,
@@ -71,7 +74,7 @@ export function OrangeGradientHeader({
             {title}
           </Text>
           {subtitle ? (
-            <Text style={styles.subtitle} numberOfLines={1}>
+            <Text style={styles.subtitle} numberOfLines={subtitleLines}>
               {subtitle}
             </Text>
           ) : null}

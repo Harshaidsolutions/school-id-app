@@ -358,6 +358,8 @@ export function EditStudentScreen({ navigation, route }: Props) {
               formFields={formFields}
               colors={colors}
               inputStyle={inputStyle}
+              lockIdentityFields
+              photoId={currentStudent.photo_id ?? ""}
               firstName={firstName}
               lastName={lastName}
               onFirstNameChange={setFirstName}

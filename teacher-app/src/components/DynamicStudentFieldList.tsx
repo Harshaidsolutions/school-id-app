@@ -78,6 +78,9 @@ export type DynamicStudentFieldListProps = {
   classSectionReadOnly?: boolean;
   /** Edit flow: parent phone required, numeric, max 10 digits. */
   parentPhoneTenDigits?: boolean;
+  /** Edit flow: Photo ID and student name stay visible but cannot be changed. */
+  lockIdentityFields?: boolean;
+  photoId?: string;
   onInputFocus?: (nativeTarget: number) => void;
 };
 
@@ -131,6 +134,8 @@ export function DynamicStudentFieldList({
   lockedClassSection,
   classSectionReadOnly = false,
   parentPhoneTenDigits = false,
+  lockIdentityFields = false,
+  photoId = "",
   onInputFocus,
 }: DynamicStudentFieldListProps) {
   const focus = focusProps(onInputFocus);
@@ -138,32 +143,46 @@ export function DynamicStudentFieldList({
 
   return (
     <>
+      {lockIdentityFields ? (
+        <Field label="Photo ID" colors={colors}>
+          <TextInput
+            style={inputStyle}
+            value={photoId}
+            editable={false}
+            placeholderTextColor={colors.textSubtle}
+          />
+        </Field>
+      ) : null}
       {ordered.map((field) => {
         const kind = resolveFieldKind(field);
         const labelKind = resolveFieldLabelKind(field);
-        if (kind === "photo" || labelKind === "photo") return null;
+        if (kind === "photo" || labelKind === "photo") {
+          return null;
+        }
 
         if (kind === "student_name") {
           return (
             <View key={field.key}>
-              <Field label="First Name" colors={colors} required={nameRequired}>
+              <Field label="First Name" colors={colors} required={nameRequired && !lockIdentityFields}>
                 <TextInput
                   style={inputStyle}
                   value={firstName}
-                  onChangeText={onFirstNameChange}
+                  onChangeText={lockIdentityFields ? undefined : onFirstNameChange}
+                  editable={!lockIdentityFields}
                   placeholderTextColor={colors.textSubtle}
                   autoCapitalize="words"
-                  {...focus}
+                  {...(lockIdentityFields ? {} : focus)}
                 />
               </Field>
               <Field label="Last Name" colors={colors}>
                 <TextInput
                   style={inputStyle}
                   value={lastName}
-                  onChangeText={onLastNameChange}
+                  onChangeText={lockIdentityFields ? undefined : onLastNameChange}
+                  editable={!lockIdentityFields}
                   placeholderTextColor={colors.textSubtle}
                   autoCapitalize="words"
-                  {...focus}
+                  {...(lockIdentityFields ? {} : focus)}
                 />
               </Field>
             </View>

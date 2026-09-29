@@ -975,6 +975,8 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <OrangeGradientHeader
         title="REQUIRED DETAILS"
+        subtitle="Only Principal can Upload this form"
+        subtitleLines={2}
         onBack={() => navigation.goBack()}
       />
 
