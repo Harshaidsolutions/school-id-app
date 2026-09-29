@@ -213,7 +213,7 @@ export function AddStudentForm({
         });
       }
 
-      if (instituteMode && signatureUri) {
+      if (signatureUri) {
         const formData = new FormData();
         formData.append("signature", {
           uri: signatureUri,
@@ -289,8 +289,7 @@ export function AddStudentForm({
         </View>
       ) : null}
 
-      {instituteMode ? (
-        <View style={styles.photoSection}>
+      <View style={styles.photoSection}>
           <Text style={[styles.label, { color: colors.text }]}>Signature</Text>
           <Pressable
             style={[
@@ -328,7 +327,6 @@ export function AddStudentForm({
             </Pressable>
           ) : null}
         </View>
-      ) : null}
 
       <DynamicStudentFieldList
         formFields={displayFields}

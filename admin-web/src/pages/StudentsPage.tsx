@@ -76,6 +76,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [showDownloadPhotosModal, setShowDownloadPhotosModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [excelMenuOpen, setExcelMenuOpen] = useState(false);
   const [exportingPhotos, setExportingPhotos] = useState(false);
   const [downloadingPhotoId, setDownloadingPhotoId] = useState<string | null>(
     null
@@ -533,30 +534,39 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               Upload Excel
             </button>
 
-            <button
-              type="button"
-              disabled={!orgId || exportingExcel}
-              onClick={() => void handleDownloadExcel("all")}
-              className="detail-toolbar-btn"
-            >
-              {exportingExcel ? "Exporting…" : "All Excel"}
-            </button>
-            <button
-              type="button"
-              disabled={!orgId || exportingExcel}
-              onClick={() => void handleDownloadExcel("pending")}
-              className="detail-toolbar-btn"
-            >
-              Pending Excel
-            </button>
-            <button
-              type="button"
-              disabled={!orgId || exportingExcel}
-              onClick={() => void handleDownloadExcel("captured")}
-              className="detail-toolbar-btn"
-            >
-              Captured Excel
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                disabled={!orgId || exportingExcel}
+                onClick={() => setExcelMenuOpen((open) => !open)}
+                className="detail-toolbar-btn"
+              >
+                {exportingExcel ? "Exporting…" : "Download Excel"}
+              </button>
+              {excelMenuOpen ? (
+                <div className="absolute left-0 top-full z-30 mt-1 w-full min-w-[9.5rem] rounded-lg border border-border bg-white p-1.5 shadow-lg">
+                  {(
+                    [
+                      ["all", "All Excel"],
+                      ["pending", "Pending Excel"],
+                      ["captured", "Captured Excel"],
+                    ] as const
+                  ).map(([scope, label]) => (
+                    <button
+                      key={scope}
+                      type="button"
+                      className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-navy hover:bg-content-bg"
+                      onClick={() => {
+                        setExcelMenuOpen(false);
+                        void handleDownloadExcel(scope);
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
 
             <button
               type="button"
@@ -604,7 +614,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               Delete Options
             </button>
 
-            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder">Empty</div>
             <div className="detail-toolbar-btn detail-toolbar-btn-placeholder">Empty</div>
             <div className="detail-toolbar-btn detail-toolbar-btn-placeholder">Empty</div>
           </div>

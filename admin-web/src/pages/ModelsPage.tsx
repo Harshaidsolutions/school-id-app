@@ -275,7 +275,7 @@ export function ModelsPage() {
           className="mb-4"
         />
         {error && <div className="mb-4 alert-error">{error}</div>}
-        {!isTagsTab && !loading && filtered.length > 0 ? (
+        {!loading && filtered.length > 0 ? (
           <BulkActionBar
             selectedCount={filtered.filter((item) => selectedIds.has(item.id)).length}
             allSelected={filtered.every((item) => selectedIds.has(item.id))}
@@ -346,21 +346,19 @@ export function ModelsPage() {
                   <tr key={item.id}>
                     <td className="col-sno">{index + 1}</td>
                     <td className="col-image">
-                      {!isTagsTab ? (
-                        <input
-                          type="checkbox"
-                          className="mr-2"
-                          checked={selectedIds.has(item.id)}
-                          onChange={() => {
-                            setSelectedIds((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(item.id)) next.delete(item.id);
-                              else next.add(item.id);
-                              return next;
-                            });
-                          }}
-                        />
-                      ) : null}
+                      <input
+                        type="checkbox"
+                        className="mr-2"
+                        checked={selectedIds.has(item.id)}
+                        onChange={() => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(item.id)) next.delete(item.id);
+                            else next.add(item.id);
+                            return next;
+                          });
+                        }}
+                      />
                       {item.image_url ? (
                         <button
                           type="button"
@@ -474,7 +472,7 @@ export function ModelsPage() {
                     : "Choose one or more image files"
                   : file
                     ? file.name
-                    : "Choose a single image file"}
+                    : "Choose Image"}
               </div>
               <input
                 type="file"
@@ -492,12 +490,17 @@ export function ModelsPage() {
           {!isTagsTab ? (
             <label className="block text-sm">
               <span className="mb-1.5 block font-medium">Upload model video</span>
-              <input
-                type="file"
-                accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
-                onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
-                className="block w-full text-sm"
-              />
+              <div className="group relative cursor-pointer rounded-lg border border-dashed border-border bg-white px-3 py-3 text-center transition-colors hover:border-button-blue/40 hover:bg-blue-soft/30">
+                <div className="text-sm text-text-muted group-hover:text-button-blue">
+                  {videoFile ? videoFile.name : "Choose Video"}
+                </div>
+                <input
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+                  onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                />
+              </div>
               {videoPreview ? (
                 <video src={videoPreview} controls className="mt-2 h-28 w-full rounded bg-black" />
               ) : null}

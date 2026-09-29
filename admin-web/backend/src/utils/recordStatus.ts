@@ -72,6 +72,46 @@ export async function orgAllowsNumberEdit(
   return true;
 }
 
+export async function orgAllowsRecordEdit(
+  schoolId: string | null | undefined,
+  instituteId: string | null | undefined
+): Promise<boolean> {
+  if (instituteId) {
+    const row = await pool.query<{ allow: boolean }>(
+      `SELECT COALESCE(allow_record_edit, true) AS allow
+       FROM institutes WHERE id = $1 LIMIT 1`,
+      [instituteId]
+    );
+    return row.rows[0]?.allow !== false;
+  }
+  if (schoolId) {
+    const row = await pool.query<{ allow: boolean }>(
+      `SELECT COALESCE(allow_record_edit, true) AS allow
+       FROM schools WHERE id = $1 LIMIT 1`,
+      [schoolId]
+    );
+    return row.rows[0]?.allow !== false;
+  }
+  return true;
+}
+
+/** Block edits of records that already have the required data. Incomplete records stay editable. */
+export async function assertRecordEditAllowed(
+  schoolId: string | null | undefined,
+  instituteId: string | null | undefined,
+  current: {
+    studentName: string | null | undefined;
+    classSection: string | null | undefined;
+    institute: boolean;
+  }
+): Promise<void> {
+  if (!hasCompleteRequiredData(current)) return;
+  const allowed = await orgAllowsRecordEdit(schoolId, instituteId);
+  if (!allowed) {
+    throw new AppError("Editing is turned off for this organization", 403);
+  }
+}
+
 export async function assertNumberEditAllowed(
   schoolId: string | null | undefined,
   instituteId: string | null | undefined,

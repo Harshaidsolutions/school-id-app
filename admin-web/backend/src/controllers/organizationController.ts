@@ -46,6 +46,7 @@ export async function getTeacherOrganization(
                     COALESCE(allow_screen_recording, true) AS allow_screen_recording,
                     COALESCE(field_visibility, '{}'::jsonb) AS field_visibility,
                     COALESCE(allow_number_edit, true) AS allow_number_edit,
+                    COALESCE(allow_record_edit, true) AS allow_record_edit,
                     COALESCE(show_captured_section, true) AS show_captured_section
              FROM institutes
              WHERE id = $1
@@ -62,6 +63,7 @@ export async function getTeacherOrganization(
                     COALESCE(allow_screen_recording, true) AS allow_screen_recording,
                     COALESCE(field_visibility, '{}'::jsonb) AS field_visibility,
                     COALESCE(allow_number_edit, true) AS allow_number_edit,
+                    COALESCE(allow_record_edit, true) AS allow_record_edit,
                     COALESCE(show_captured_section, true) AS show_captured_section
              FROM schools
              WHERE id = $1

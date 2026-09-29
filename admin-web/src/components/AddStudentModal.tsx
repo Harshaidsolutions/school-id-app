@@ -277,12 +277,15 @@ export function AddStudentModal({
                   className="mb-2 h-28 w-24 rounded-lg object-cover"
                 />
               ) : null}
-              <input
-                type="file"
-                accept="image/jpeg,image/png"
-                onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
-                className="block w-full text-sm"
-              />
+              <label className="group relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy hover:border-button-blue/40 hover:bg-blue-soft/30">
+                {photoFile ? photoFile.name : "Choose File"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                />
+              </label>
               {photoFile ? (
                 <button
                   type="button"

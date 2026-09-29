@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
+  Image,
   Modal,
   RefreshControl,
   ScrollView,
@@ -18,7 +19,8 @@ import { IdCardsProgressSection } from "../components/IdCardsProgressSection";
 import { IdCardsGreenHeader } from "../components/IdCardsGreenHeader";
 import type { RootStackParamList } from "../navigation/types";
 import { setLastClassSection } from "../navigation/captureContext";
-import type { TeacherHomeResponse } from "../types";
+import type { TeacherHomeResponse, TemplateItem } from "../types";
+import { templatePreviewUrl } from "../utils/templateImage";
 import { radius, cardShadow, spacing } from "../theme/colors";
 import { fonts, textStyles, type as typeScale } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
@@ -54,6 +56,29 @@ export function IdCardsScreen() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const scrollRef = useRef<ScrollView>(null);
   const [greeting, setGreeting] = useState(() => greetingForNow());
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const [templateUrl, setTemplateUrl] = useState<string | null>(null);
+  const [templateNote, setTemplateNote] = useState<string | null>(null);
+
+  const openTemplate = useCallback(async () => {
+    setTemplateOpen(true);
+    setTemplateUrl(null);
+    setTemplateNote(null);
+    try {
+      const [orgRes, tplRes] = await Promise.all([
+        api.get<{ school?: { template_id?: string | null } }>("/teacher/organization"),
+        api.get<{ templates?: TemplateItem[] }>("/teacher/templates"),
+      ]);
+      const assignedId = orgRes.data.school?.template_id;
+      const list = tplRes.data.templates ?? [];
+      const match = list.find((item) => item.id === assignedId) ?? null;
+      const url = match ? templatePreviewUrl(match) : null;
+      if (!url) setTemplateNote("No template is assigned to this organization.");
+      else setTemplateUrl(url);
+    } catch (err) {
+      setTemplateNote(getErrorMessage(err, "Could not load the template."));
+    }
+  }, []);
 
   useEffect(() => {
     const refreshGreeting = () => setGreeting(greetingForNow());
@@ -159,6 +184,44 @@ export function IdCardsScreen() {
         total={total}
         hideCaption={instituteMode}
       />
+
+      <Pressable
+        onPress={() => void openTemplate()}
+        style={{
+          marginHorizontal: spacing.md,
+          marginTop: spacing.sm,
+          marginBottom: spacing.xs,
+          height: 40,
+          borderRadius: radius.md,
+          borderWidth: 1,
+          borderColor: colors.brandGreen,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: colors.surface,
+        }}
+      >
+        <Text style={{ color: colors.brandGreen, fontFamily: fonts.headingSemiBold, fontSize: typeScale.body }}>
+          View Template
+        </Text>
+      </Pressable>
+
+      <Modal visible={templateOpen} transparent animationType="fade" onRequestClose={() => setTemplateOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.72)", justifyContent: "center", padding: spacing.lg }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md }}>
+            <Text style={{ color: colors.text, fontFamily: fonts.headingSemiBold, fontSize: typeScale.title, marginBottom: spacing.sm }}>
+              Template
+            </Text>
+            {templateUrl ? (
+              <Image source={{ uri: templateUrl }} style={{ width: "100%", height: 360 }} resizeMode="contain" />
+            ) : (
+              <Text style={{ color: colors.textMuted, fontSize: typeScale.body }}>{templateNote ?? "Loading…"}</Text>
+            )}
+            <Pressable onPress={() => setTemplateOpen(false)} style={{ marginTop: spacing.md, alignItems: "center" }}>
+              <Text style={{ color: colors.brandGreen, fontFamily: fonts.headingSemiBold }}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       {instituteMode ? (
         <InstituteMembersPanel colors={colors} navigation={navigation} />

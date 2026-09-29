@@ -149,38 +149,31 @@ export function BrandLockup({
       ) : null}
       {title && titleAccent ? (
         <View style={{ width: lineW, alignItems: textAlign === "left" ? "flex-start" : "center" }}>
-          <Text
-            style={[
-              harshaStyle,
-              {
-                fontSize: scaleFont(sizes.harsha, harshaMin, undefined, screenW),
-                lineHeight: scaleFont(sizes.harsha, harshaMin, undefined, screenW) * 1.02,
-                width: lineW,
-              },
-            ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.45}
-          >
+          {(() => {
+            const longer = Math.max(title.length, titleAccent.length, 1);
+            const fitted = Math.min(
+              scaleFont(32, 18, undefined, screenW),
+              lineW / (longer * 0.62)
+            );
+            const shared = Math.max(18, fitted);
+            const lineStyle = {
+              fontSize: shared,
+              lineHeight: shared * 1.05,
+              width: lineW,
+              marginTop: 0,
+              paddingBottom: 0,
+            };
+            return (
+              <>
+          <Text style={[harshaStyle, lineStyle]} numberOfLines={1}>
             {title}
           </Text>
-          <Text
-            style={[
-              harshaStyle,
-              {
-                color: sColor,
-                fontSize: scaleFont(sizes.harsha, harshaMin, undefined, screenW),
-                lineHeight: scaleFont(sizes.harsha, harshaMin, undefined, screenW) * 1.02,
-                width: lineW,
-                marginTop: 0,
-              },
-            ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.45}
-          >
+          <Text style={[harshaStyle, lineStyle, { color: sColor }]} numberOfLines={1}>
             {titleAccent}
           </Text>
+              </>
+            );
+          })()}
         </View>
       ) : title ? (
         <Text

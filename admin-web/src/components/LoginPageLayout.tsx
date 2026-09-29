@@ -82,7 +82,7 @@ export function LoginPageLayout({
                 <button
                   type="button"
                   onClick={onTitlePress}
-                  className="block w-full text-center text-[clamp(1.125rem,2vw,1.375rem)] font-bold text-text-navy hover:underline"
+                  className="m-0 block w-full border-0 bg-transparent p-0 text-center text-[clamp(1.125rem,2vw,1.375rem)] font-bold leading-tight text-text-navy hover:underline"
                 >
                   {title}
                 </button>

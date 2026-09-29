@@ -37,6 +37,7 @@ import {
 } from "../utils/addSerial";
 import {
   assertNumberEditAllowed,
+  assertRecordEditAllowed,
   hasCapturedPhoto,
   hasCompleteRequiredData,
 } from "../utils/recordStatus";
@@ -621,7 +622,7 @@ export async function uploadStudentPhoto(
 }
 
 /**
- * POST /teacher/students/:id/signature — institute member signature only.
+ * POST /teacher/students/:id/signature — optional student or member signature.
  */
 export async function uploadMemberSignature(
   req: Request,
@@ -630,9 +631,6 @@ export async function uploadMemberSignature(
 ): Promise<void> {
   try {
     if (!req.user) throw new AppError("Authentication required", 401);
-    if (!isInstituteStaff(req.user)) {
-      throw new AppError("Signatures are only for institute members", 403);
-    }
     const studentId = req.params.id;
     if (!studentId) throw new AppError("Member id is required", 400);
     if (!req.file) {
@@ -646,21 +644,22 @@ export async function uploadMemberSignature(
     const student = studentResult.rows[0];
     if (!student) throw new AppError("Member not found", 404);
     assertStudentBelongsToOrg(req.user, student);
-    if (!student.institute_id) {
-      throw new AppError("Member is not assigned to an institute", 400);
+    const orgId = student.institute_id ?? student.school_id;
+    if (!orgId) {
+      throw new AppError("Student is not assigned to an organization", 400);
     }
 
     const signatureUrl = await uploadMemberSignatureToStorage(
-      student.institute_id,
+      orgId,
       student.id,
       req.file
     );
     const updated = await pool.query<TeacherStudentRow>(
       `UPDATE students
        SET signature_url = $1, updated_at = NOW()
-       WHERE id = $2 AND institute_id = $3
+       WHERE id = $2 AND (school_id = $3 OR institute_id = $3)
        RETURNING ${TEACHER_STUDENT_SELECT}`,
-      [signatureUrl, student.id, student.institute_id]
+      [signatureUrl, student.id, orgId]
     );
     const row = updated.rows[0];
     if (!row) throw new AppError("Failed to save signature", 500);
@@ -710,6 +709,11 @@ export async function updateTeacherStudent(
       });
     }
 
+    await assertRecordEditAllowed(student.school_id, student.institute_id, {
+      studentName: student.student_name,
+      classSection: student.class_section,
+      institute: Boolean(student.institute_id && !student.school_id),
+    });
     await assertNumberEditAllowed(
       student.school_id,
       student.institute_id,

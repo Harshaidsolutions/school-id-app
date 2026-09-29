@@ -710,9 +710,11 @@ async function migrate() {
 
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS show_captured_section BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS allow_number_edit BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS allow_record_edit BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS field_visibility JSONB NOT NULL DEFAULT '{}'::jsonb;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS show_captured_section BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS allow_number_edit BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS allow_record_edit BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS field_visibility JSONB NOT NULL DEFAULT '{}'::jsonb;
 
     ALTER TABLE students ADD COLUMN IF NOT EXISTS signature_url TEXT;

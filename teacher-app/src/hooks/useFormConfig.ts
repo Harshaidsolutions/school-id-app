@@ -16,6 +16,7 @@ export function useFormConfig(options?: { refreshOnFocus?: boolean }) {
     {}
   );
   const [allowNumberEdit, setAllowNumberEdit] = useState(true);
+  const [allowRecordEdit, setAllowRecordEdit] = useState(true);
   const [showCapturedSection, setShowCapturedSection] = useState(true);
   const [loading, setLoading] = useState(true);
 
@@ -36,16 +37,19 @@ export function useFormConfig(options?: { refreshOnFocus?: boolean }) {
           school?: {
             field_visibility?: Record<string, boolean> | null;
             allow_number_edit?: boolean | null;
+            allow_record_edit?: boolean | null;
             show_captured_section?: boolean | null;
           };
         }>("/teacher/organization");
         const school = orgResult.data.school;
         setFieldVisibility(school?.field_visibility ?? {});
         setAllowNumberEdit(school?.allow_number_edit !== false);
+        setAllowRecordEdit(school?.allow_record_edit !== false);
         setShowCapturedSection(school?.show_captured_section !== false);
       } catch {
         setFieldVisibility({});
         setAllowNumberEdit(true);
+        setAllowRecordEdit(true);
         setShowCapturedSection(true);
       }
     } catch {
@@ -66,6 +70,7 @@ export function useFormConfig(options?: { refreshOnFocus?: boolean }) {
     fields,
     fieldVisibility,
     allowNumberEdit,
+    allowRecordEdit,
     showCapturedSection,
     loading,
     reload,

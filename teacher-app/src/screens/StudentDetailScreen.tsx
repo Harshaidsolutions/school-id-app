@@ -84,7 +84,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
   const { student, classSection } = route.params;
 
   const hasPhoto = Boolean(student.photo_url);
-  const { fields: formFields, fieldVisibility, allowNumberEdit } = useFormConfig();
+  const { fields: formFields, fieldVisibility, allowNumberEdit, allowRecordEdit } = useFormConfig();
 
   const visibleFields = getVisibleStudentFields(student, classSection, formFields, {
     visibility: fieldVisibility,
@@ -236,6 +236,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
         <View style={styles.actions}>
 
+          {allowRecordEdit ? (
           <Pressable
 
             style={[styles.editBtn, { borderColor: colors.danger }]}
@@ -253,6 +254,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
             </Text>
 
           </Pressable>
+          ) : null}
 
           <Pressable
 

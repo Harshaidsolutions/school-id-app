@@ -34,6 +34,7 @@ type SchoolOrganization = OrganizationSelections & {
   organization_photo_url?: string | null;
   field_visibility?: Record<string, boolean> | null;
   allow_number_edit?: boolean | null;
+  allow_record_edit?: boolean | null;
   show_captured_section?: boolean | null;
 };
 
@@ -50,6 +51,7 @@ type InstituteOrganization = OrganizationSelections & {
   organization_photo_url?: string | null;
   field_visibility?: Record<string, boolean> | null;
   allow_number_edit?: boolean | null;
+  allow_record_edit?: boolean | null;
   show_captured_section?: boolean | null;
 };
 
@@ -394,6 +396,9 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
           }
           initialAllowNumberEdit={
             (isInstitute ? institute?.allow_number_edit : school?.allow_number_edit) !== false
+          }
+          initialAllowRecordEdit={
+            (isInstitute ? institute?.allow_record_edit : school?.allow_record_edit) !== false
           }
           initialShowCaptured={
             (isInstitute ? institute?.show_captured_section : school?.show_captured_section) !==

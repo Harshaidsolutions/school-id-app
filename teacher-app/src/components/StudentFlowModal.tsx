@@ -74,7 +74,7 @@ export function StudentFlowModal({
     fromModal: true,
     onBeforeNavigate: onClose,
   });
-  const { fields: formFields, fieldVisibility, allowNumberEdit } = useFormConfig();
+  const { fields: formFields, fieldVisibility, allowNumberEdit, allowRecordEdit } = useFormConfig();
 
   useEffect(() => {
     if (visible) {
@@ -272,6 +272,7 @@ export function StudentFlowModal({
             <Text style={[styles.navBtnText, { color: colors.text }]}>Back</Text>
           </Pressable>
 
+          {allowRecordEdit ? (
           <Pressable
             style={[
               styles.navBtn,
@@ -284,6 +285,7 @@ export function StudentFlowModal({
               Edit
             </Text>
           </Pressable>
+          ) : null}
 
           <Pressable
             style={[

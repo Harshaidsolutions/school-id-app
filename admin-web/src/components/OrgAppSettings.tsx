@@ -12,17 +12,20 @@ export function OrgAppSettings({
   institute,
   initialVisibility,
   initialAllowNumberEdit,
+  initialAllowRecordEdit,
   initialShowCaptured,
 }: {
   orgId: string;
   institute: boolean;
   initialVisibility: Record<string, boolean>;
   initialAllowNumberEdit: boolean;
+  initialAllowRecordEdit: boolean;
   initialShowCaptured: boolean;
 }) {
   const [fields, setFields] = useState<FormFieldConfig[]>([]);
   const [visibility, setVisibility] = useState(initialVisibility);
   const [allowNumberEdit, setAllowNumberEdit] = useState(initialAllowNumberEdit);
+  const [allowRecordEdit, setAllowRecordEdit] = useState(initialAllowRecordEdit);
   const [showCaptured, setShowCaptured] = useState(initialShowCaptured);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,8 +34,9 @@ export function OrgAppSettings({
   useEffect(() => {
     setVisibility(initialVisibility);
     setAllowNumberEdit(initialAllowNumberEdit);
+    setAllowRecordEdit(initialAllowRecordEdit);
     setShowCaptured(initialShowCaptured);
-  }, [initialVisibility, initialAllowNumberEdit, initialShowCaptured, orgId]);
+  }, [initialVisibility, initialAllowNumberEdit, initialAllowRecordEdit, initialShowCaptured, orgId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +59,7 @@ export function OrgAppSettings({
   async function save(next: {
     visibility: Record<string, boolean>;
     allowNumberEdit: boolean;
+    allowRecordEdit: boolean;
     showCaptured: boolean;
   }) {
     setSaving(true);
@@ -67,6 +72,7 @@ export function OrgAppSettings({
       await api.patch(path, {
         field_visibility: next.visibility,
         allow_number_edit: next.allowNumberEdit,
+        allow_record_edit: next.allowRecordEdit,
         show_captured_section: next.showCaptured,
       });
       setSaved("Saved for this organization.");
@@ -84,7 +90,7 @@ export function OrgAppSettings({
     if (locked.has(key)) return;
     const next = { ...visibility, [key]: on };
     setVisibility(next);
-    void save({ visibility: next, allowNumberEdit, showCaptured });
+    void save({ visibility: next, allowNumberEdit, allowRecordEdit, showCaptured });
   }
 
   const rows = fields.filter((field) => field.key !== "photo");
@@ -150,7 +156,30 @@ export function OrgAppSettings({
               onChange={(e) => {
                 const next = e.target.checked;
                 setAllowNumberEdit(next);
-                void save({ visibility, allowNumberEdit: next, showCaptured });
+                void save({ visibility, allowNumberEdit: next, allowRecordEdit, showCaptured });
+              }}
+              className="h-4 w-4"
+            />
+          </span>
+        </label>
+        <label className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+          <span>
+            <span className="block font-medium text-text-navy">Edit</span>
+            <span className="text-xs text-text-muted">
+              Off hides Edit in the app and the server rejects changes to complete records. Pending data can still be filled in.
+            </span>
+          </span>
+          <span className="flex items-center gap-2 text-text-muted">
+            {allowRecordEdit ? "ON" : "OFF"}
+            <input
+              type="checkbox"
+              role="switch"
+              checked={allowRecordEdit}
+              disabled={saving}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setAllowRecordEdit(next);
+                void save({ visibility, allowNumberEdit, allowRecordEdit: next, showCaptured });
               }}
               className="h-4 w-4"
             />
@@ -173,7 +202,7 @@ export function OrgAppSettings({
               onChange={(e) => {
                 const next = e.target.checked;
                 setShowCaptured(next);
-                void save({ visibility, allowNumberEdit, showCaptured: next });
+                void save({ visibility, allowNumberEdit, allowRecordEdit, showCaptured: next });
               }}
               className="h-4 w-4"
             />

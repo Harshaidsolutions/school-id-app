@@ -35,6 +35,7 @@ export async function getSchoolOrganizationInfo(
               s.template_id, s.owner_admin_id, s.created_at,
               COALESCE(s.field_visibility, '{}'::jsonb) AS field_visibility,
               COALESCE(s.allow_number_edit, true) AS allow_number_edit,
+              COALESCE(s.allow_record_edit, true) AS allow_record_edit,
               COALESCE(s.show_captured_section, true) AS show_captured_section,
               t.name AS template_name,
               t.image_url AS template_image_url
@@ -97,6 +98,7 @@ export async function getInstituteOrganizationInfo(
               i.model, i.tags, i.template_id, i.owner_admin_id,
               COALESCE(i.field_visibility, '{}'::jsonb) AS field_visibility,
               COALESCE(i.allow_number_edit, true) AS allow_number_edit,
+              COALESCE(i.allow_record_edit, true) AS allow_record_edit,
               COALESCE(i.show_captured_section, true) AS show_captured_section,
               t.name AS template_name,
               t.image_url AS template_image_url
@@ -148,10 +150,12 @@ async function saveOrgAppSettings(
   const current = await pool.query<{
     field_visibility: Record<string, boolean> | null;
     allow_number_edit: boolean;
+    allow_record_edit: boolean;
     show_captured_section: boolean;
   }>(
     `SELECT COALESCE(field_visibility, '{}'::jsonb) AS field_visibility,
             COALESCE(allow_number_edit, true) AS allow_number_edit,
+            COALESCE(allow_record_edit, true) AS allow_record_edit,
             COALESCE(show_captured_section, true) AS show_captured_section
      FROM ${table} WHERE id = $1 LIMIT 1`,
     [id]
@@ -164,16 +168,18 @@ async function saveOrgAppSettings(
       ? sanitizeFieldVisibility(body.field_visibility, institute)
       : row.field_visibility ?? {};
   const allowNumberEdit = readBool(body.allow_number_edit, row.allow_number_edit);
+  const allowRecordEdit = readBool(body.allow_record_edit, row.allow_record_edit);
   const showCaptured = readBool(body.show_captured_section, row.show_captured_section);
 
   const updated = await pool.query(
     `UPDATE ${table}
      SET field_visibility = $2::jsonb,
          allow_number_edit = $3,
-         show_captured_section = $4
+         allow_record_edit = $4,
+         show_captured_section = $5
      WHERE id = $1
-     RETURNING field_visibility, allow_number_edit, show_captured_section`,
-    [id, JSON.stringify(visibility), allowNumberEdit, showCaptured]
+     RETURNING field_visibility, allow_number_edit, allow_record_edit, show_captured_section`,
+    [id, JSON.stringify(visibility), allowNumberEdit, allowRecordEdit, showCaptured]
   );
   return updated.rows[0] as Record<string, unknown>;
 }
