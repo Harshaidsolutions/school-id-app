@@ -83,7 +83,7 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
           >
             <AppIcon size={splashLogoSize} />
           </View>
-          <BrandLockup variant="splash" showTagline style={{ marginTop: scale(12) }} />
+          <BrandLockup variant="splash" title="My School ID Card" showTagline={false} style={{ marginTop: scale(12) }} />
         </Animated.View>
       ) : null}
     </LinearGradient>

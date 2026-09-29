@@ -34,6 +34,7 @@ import {
   updateTeacherOrganization,
 } from "../controllers/organizationController";
 import { getLatestTeacherBrochure, listTeacherBrochures } from "../controllers/catalogController";
+import { getTeacherBranding } from "../controllers/customerBrandController";
 
 const router = Router();
 
@@ -44,6 +45,7 @@ router.use(
 );
 
 router.get("/home", getTeacherHome);
+router.get("/branding", getTeacherBranding);
 router.get("/form-config", getTeacherFormConfig);
 router.get("/organization", getTeacherOrganization);
 router.put("/organization", optionalUploadSchoolAssets, updateTeacherOrganization);

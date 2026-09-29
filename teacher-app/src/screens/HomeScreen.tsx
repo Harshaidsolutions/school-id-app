@@ -25,16 +25,18 @@ import { useTheme } from "../theme/ThemeContext";
 import { icons } from "../theme/responsive";
 import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
-import { ABOUT_US_PARAS } from "../constants/about";
 import { InfoParagraph } from "../components/InfoModal";
+import {
+  missingContact,
+  openBrandWhatsApp,
+  useCustomerBrand,
+} from "../hooks/useCustomerBrand";
 import { HOME_PRODUCTS } from "../constants/products";
 import { BEST_SCHOOLS } from "../constants/schools";
 import { BrandLockup } from "../components/BrandLockup";
 import { AppIcon } from "../components/AppIcon";
 import { headerLogoSize } from "../constants/headerLogo";
 import { BRAND } from "../constants/brand";
-import { buildHelpSupportMessage, SUPPORT_PHONE } from "../constants/support";
-import { openWhatsApp } from "../utils/whatsappBusiness";
 import type { NotificationsResponse } from "../types";
 import {
   notificationIsRead,
@@ -73,10 +75,10 @@ export function HomeScreen() {
   const [unread, setUnread] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const [supportOrgName, setSupportOrgName] = useState("Your School");
+  const { brand, error: brandError, reload: reloadBrand } = useCustomerBrand();
   const scrollRef = useRef<ScrollView>(null);
   const instructionsY = useRef(0);
-  const copyright = "© All Rights Reserved to Harsha ID Solutions 💚";
+  const copyright = `© All Rights Reserved to ${brand.adminName}`;
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -90,22 +92,13 @@ export function HomeScreen() {
           : notifRes.data.notifications.filter((n) => !notificationIsRead(n))
               .length;
       setUnread(unreadFromApi);
-      try {
-        const { data: home } = await api.get<{ schoolName?: string }>(
-          "/teacher/home"
-        );
-        if (home.schoolName?.trim()) {
-          setSupportOrgName(home.schoolName.trim());
-        }
-      } catch {
-        /* ignore org name */
-      }
     } catch {
       /* ignore */
     } finally {
+      await reloadBrand();
       setRefreshing(false);
     }
-  }, []);
+  }, [reloadBrand]);
 
   useFocusEffect(
     useCallback(() => {
@@ -208,7 +201,12 @@ export function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.hero}>
-          <BrandLockup variant="homeHero" showTagline />
+          <BrandLockup variant="homeHero" title={brand.adminName} showTagline={false} />
+          {brandError ? (
+            <Text style={{ color: colors.textMuted, textAlign: "center", marginTop: 8 }}>
+              {brandError}
+            </Text>
+          ) : null}
         </View>
 
         <View
@@ -247,13 +245,11 @@ export function HomeScreen() {
         ))}
         <SectionEnd accent={colors.primaryOrange} />
 
-        {ABOUT_US_PARAS.map((para) => (
-          <InfoParagraph
-            key={para.slice(0, 24)}
-            text={para}
-            colors={colors}
-          />
-        ))}
+        {(brand.aboutUs ? brand.aboutUs.split(/\n+/).filter((line) => line.trim()) : []).map(
+          (para) => (
+            <InfoParagraph key={para.slice(0, 24)} text={para} colors={colors} />
+          )
+        )}
         <SectionEnd accent={colors.primaryOrange} />
 
         <SectionTitle title="OUR PRODUCTS" accent={colors.primaryOrange} />
@@ -317,9 +313,7 @@ export function HomeScreen() {
         <Pressable
           style={[styles.fab, { backgroundColor: colors.whatsappGreen }]}
           onPress={() =>
-            void openWhatsApp(buildHelpSupportMessage(supportOrgName)).catch(
-              () => undefined
-            )
+            void openBrandWhatsApp(brand).catch(() => missingContact())
           }
           accessibilityLabel="WhatsApp support"
         >
@@ -327,7 +321,13 @@ export function HomeScreen() {
         </Pressable>
         <Pressable
           style={[styles.fab, { backgroundColor: colors.primaryOrange }]}
-          onPress={() => void Linking.openURL(`tel:${SUPPORT_PHONE}`)}
+          onPress={() => {
+            if (!brand.phone) {
+              missingContact();
+              return;
+            }
+            void Linking.openURL(`tel:${brand.phone}`);
+          }}
           accessibilityLabel="Call support"
         >
           <Ionicons name="call" size={icons.lg} color="#FFFFFF" />

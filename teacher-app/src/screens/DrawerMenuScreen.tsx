@@ -24,7 +24,6 @@ import type { RootStackParamList } from "../navigation/types";
 import { cardShadow, radius, spacing } from "../theme/colors";
 import { fonts, textStyles, type as typeScale } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
-import { ABOUT_US_PARAS } from "../constants/about";
 import { APP_INSTRUCTIONS } from "../constants/instructions";
 import { TERMS_AND_CONDITIONS } from "../constants/terms";
 import {
@@ -34,16 +33,11 @@ import {
 } from "../components/InfoModal";
 import api from "../api/client";
 import {
-  SUPPORT_EMAIL,
-  SUPPORT_WEBSITE,
-  SOCIAL_YOUTUBE,
-  SOCIAL_INSTAGRAM,
-  SOCIAL_FACEBOOK,
-  buildHelpSupportMessage,
-  buildReferShareMessage,
-  REFER_WHATSAPP_CATALOG_LINK,
-} from "../constants/support";
-import { openWhatsApp, openWhatsAppShare } from "../utils/whatsappBusiness";
+  missingContact,
+  openBrandRefer,
+  openBrandWhatsApp,
+  useCustomerBrand,
+} from "../hooks/useCustomerBrand";
 
 type Props = NativeStackScreenProps<RootStackParamList, "DrawerMenu">;
 
@@ -67,6 +61,7 @@ export function DrawerMenuScreen({ navigation }: Props) {
   const [termsOpen, setTermsOpen] = useState(false);
   const [rateOpen, setRateOpen] = useState(false);
   const [schoolName, setSchoolName] = useState("Your School");
+  const { brand } = useCustomerBrand();
 
   useEffect(() => {
     let cancelled = false;
@@ -98,9 +93,17 @@ export function DrawerMenuScreen({ navigation }: Props) {
     void Linking.openURL(url);
   }
 
+  function openConfigured(url: string | null) {
+    if (!url) {
+      missingContact();
+      return;
+    }
+    openUrl(url);
+  }
+
   async function openHelpSupport() {
     try {
-      await openWhatsApp(buildHelpSupportMessage(schoolName));
+      await openBrandWhatsApp(brand);
     } catch (err) {
       Alert.alert(
         "WhatsApp",
@@ -111,7 +114,7 @@ export function DrawerMenuScreen({ navigation }: Props) {
 
   async function openReferUs() {
     try {
-      await Linking.openURL(REFER_WHATSAPP_CATALOG_LINK);
+      await openBrandRefer(brand, schoolName);
     } catch (err) {
       Alert.alert(
         "WhatsApp",
@@ -148,22 +151,22 @@ export function DrawerMenuScreen({ navigation }: Props) {
     {
       icon: "logo-youtube",
       label: "YouTube",
-      onPress: () => openUrl(SOCIAL_YOUTUBE),
+      onPress: () => openConfigured(brand.youtube),
     },
     {
       icon: "logo-instagram",
       label: "Instagram",
-      onPress: () => openUrl(SOCIAL_INSTAGRAM),
+      onPress: () => openConfigured(brand.instagram),
     },
     {
       icon: "logo-facebook",
       label: "Facebook",
-      onPress: () => openUrl(SOCIAL_FACEBOOK),
+      onPress: () => openConfigured(brand.facebook),
     },
     {
       icon: "mail",
       label: "Email",
-      onPress: () => openUrl(`mailto:${SUPPORT_EMAIL}`),
+      onPress: () => openConfigured(brand.email ? `mailto:${brand.email}` : null),
     },
     {
       icon: "help-circle",
@@ -172,8 +175,14 @@ export function DrawerMenuScreen({ navigation }: Props) {
     },
     {
       icon: "globe",
-      label: "Website",
-      onPress: () => openUrl(SUPPORT_WEBSITE),
+      label: "Call",
+      onPress: () => {
+        if (!brand.phone) {
+          missingContact();
+          return;
+        }
+        openUrl(`tel:${brand.phone}`);
+      },
     },
     {
       icon: "newspaper-outline",
@@ -311,8 +320,9 @@ export function DrawerMenuScreen({ navigation }: Props) {
           compact
           prominentTitle
         >
-          {ABOUT_US_PARAS.filter(
-            (p) => p.trim().toUpperCase() !== "ABOUT US"
+          {(brand.aboutUs
+            ? brand.aboutUs.split(/\n+/).filter((line) => line.trim())
+            : ["About us has not been added yet."]
           ).map((p) => (
             <InfoParagraph key={p.slice(0, 24)} text={p} colors={colors} />
           ))}

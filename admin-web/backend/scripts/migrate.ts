@@ -677,6 +677,12 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS idx_templates_owner_admin ON templates (owner_admin_id);
     CREATE INDEX IF NOT EXISTS idx_catalog_items_owner_admin ON catalog_items (owner_admin_id);
 
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS facebook_url TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS instagram_url TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS youtube_url TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS about_us TEXT;
+
     UPDATE templates t
     SET owner_admin_id = super.id
     FROM (

@@ -6,10 +6,13 @@ const WHATSAPP_ANDROID = "com.whatsapp";
 /**
  * Open the teacher's normal WhatsApp app to message the company's WhatsApp Business number.
  */
-export async function openWhatsApp(message: string): Promise<void> {
+export async function openWhatsApp(message: string, phoneE164?: string): Promise<void> {
   const trimmed = message.trim();
   const text = trimmed ? encodeURIComponent(trimmed) : "";
-  const phone = SUPPORT_PHONE_E164;
+  const phone = (phoneE164 || SUPPORT_PHONE_E164).replace(/\D/g, "");
+  if (!phone) {
+    throw new Error("WhatsApp number is not configured.");
+  }
   const waMeUrl = text
     ? `https://wa.me/${phone}?text=${text}`
     : `https://wa.me/${phone}`;

@@ -47,7 +47,7 @@ export function AppIcon({ size, style, variant = "default" }: Props) {
         source={source}
         style={{ width, height }}
         resizeMode="contain"
-        accessibilityLabel="Harsha ID Solutions logo"
+        accessibilityLabel="My School ID Card logo"
       />
     </View>
   );

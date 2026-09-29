@@ -12,7 +12,7 @@ import type { ApiErrorBody } from "../types";
  *   2. app.json extra.apiUrl (baked into native APKs)
  *   3. Production EC2 origin (never fall back to localhost on a phone)
  */
-const PRODUCTION_ORIGIN = "http://13.203.129.105";
+const PRODUCTION_ORIGIN = "https://myschoolidcard.in";
 
 function extraApiUrl(): string {
   const extra = Constants.expoConfig?.extra as { apiUrl?: unknown } | undefined;

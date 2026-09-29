@@ -17,6 +17,8 @@ type Variant = "splash" | "hero" | "homeHero" | "headerRow" | "compact";
 
 type Props = {
   variant?: Variant;
+  /** Customer-facing name. Replaces the Harsha wordmark when set. */
+  title?: string;
   showMascot?: boolean;
   showTagline?: boolean;
   /** Default center; use left for Home header row. */
@@ -63,6 +65,7 @@ function BrandLine({
  */
 export function BrandLockup({
   variant = "hero",
+  title,
   showMascot = false,
   showTagline = true,
   align = "center",
@@ -138,9 +141,20 @@ export function BrandLockup({
             marginBottom: scale(6, screenW),
           }}
           resizeMode="contain"
-          accessibilityLabel="Harsha ID Solutions logo"
+          accessibilityLabel="My School ID Card logo"
         />
       ) : null}
+      {title ? (
+        <Text
+          style={[harshaStyle, { fontSize: scaleFont(sizes.harsha, harshaMin, undefined, screenW), lineHeight: scaleFont(sizes.harsha, harshaMin, undefined, screenW) * 1.15 }]}
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.45}
+        >
+          {title}
+        </Text>
+      ) : (
+        <>
       <BrandLine
         text={BRAND.harsha}
         baseSize={sizes.harsha}
@@ -155,7 +169,9 @@ export function BrandLockup({
         style={solutionsStyle}
         width={lineW}
       />
-      {showTagline ? (
+        </>
+      )}
+      {showTagline && !title ? (
         <BrandLine
           text={BRAND.tagline}
           baseSize={sizes.tag}

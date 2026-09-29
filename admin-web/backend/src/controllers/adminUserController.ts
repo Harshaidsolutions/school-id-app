@@ -20,6 +20,33 @@ function normalizePhone(value: string): string {
   return value.replace(/\D/g, "").slice(0, 10);
 }
 
+function cleanWhatsapp(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length < 10 || digits.length > 15) {
+    throw new AppError("WhatsApp number must be 10 to 15 digits", 400);
+  }
+  return digits;
+}
+
+function cleanUrl(value: string): string {
+  const url = value.trim();
+  if (!url) return "";
+  if (!/^https?:\/\//i.test(url) || url.length > 300) {
+    throw new AppError("Links must start with http:// or https://", 400);
+  }
+  return url;
+}
+
+function cleanAbout(value: string): string {
+  const text = value.trim();
+  if (text.length > 4000) throw new AppError("About Us is too long", 400);
+  return text;
+}
+
+const ADMIN_PUBLIC_COLUMNS = `id, email, username, display_name, phone, photo_url, created_at,
+  whatsapp, facebook_url, instagram_url, youtube_url, about_us`;
+
 export async function getAdminProfile(
   req: Request,
   res: Response,
@@ -91,7 +118,7 @@ export async function listManagedAdmins(
   try {
     await requireSuperAdmin(req);
     const result = await pool.query(
-      `SELECT id, email, username, display_name, phone, photo_url, created_at,
+      `SELECT ${ADMIN_PUBLIC_COLUMNS},
               COALESCE(is_super_admin, false) AS is_super_admin,
               COALESCE(is_active, true) AS is_active,
               NULLIF(TRIM(password_plain), '') AS password_plain
@@ -116,6 +143,11 @@ export async function createManagedAdmin(
     const username = String(req.body.username ?? "").trim();
     const email = String(req.body.email ?? "").trim();
     const phone = normalizePhone(String(req.body.phone ?? ""));
+    const whatsapp = cleanWhatsapp(String(req.body.whatsapp ?? ""));
+    const facebookUrl = cleanUrl(String(req.body.facebook ?? req.body.facebookUrl ?? ""));
+    const instagramUrl = cleanUrl(String(req.body.instagram ?? req.body.instagramUrl ?? ""));
+    const youtubeUrl = cleanUrl(String(req.body.youtube ?? req.body.youtubeUrl ?? ""));
+    const aboutUs = cleanAbout(String(req.body.aboutUs ?? req.body.about_us ?? ""));
     const password = String(req.body.password ?? "");
 
     if (!displayName) throw new AppError("Admin name is required", 400);
@@ -135,12 +167,28 @@ export async function createManagedAdmin(
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     const inserted = await pool.query(
-      `INSERT INTO users (email, username, password_hash, password_plain, role, display_name, phone, is_super_admin, is_active)
-       VALUES ($1, $2, $3, $4, 'admin', $5, $6, false, true)
-       RETURNING id, email, username, display_name, phone, photo_url, created_at,
+      `INSERT INTO users (
+         email, username, password_hash, password_plain, role, display_name, phone,
+         whatsapp, facebook_url, instagram_url, youtube_url, about_us,
+         is_super_admin, is_active
+       )
+       VALUES ($1, $2, $3, $4, 'admin', $5, $6, $7, $8, $9, $10, $11, false, true)
+       RETURNING ${ADMIN_PUBLIC_COLUMNS},
                  COALESCE(is_active, true) AS is_active,
                  NULLIF(TRIM(password_plain), '') AS password_plain`,
-      [email, username, passwordHash, password, displayName, phone]
+      [
+        email,
+        username,
+        passwordHash,
+        password,
+        displayName,
+        phone,
+        whatsapp || null,
+        facebookUrl || null,
+        instagramUrl || null,
+        youtubeUrl || null,
+        aboutUs || null,
+      ]
     );
 
     res.status(201).json({ status: "ok", admin: inserted.rows[0] });
@@ -178,6 +226,24 @@ export async function updateManagedAdmin(
       req.body.email !== undefined ? String(req.body.email).trim() : undefined;
     const phone =
       req.body.phone !== undefined ? normalizePhone(String(req.body.phone)) : undefined;
+    const whatsapp =
+      req.body.whatsapp !== undefined ? cleanWhatsapp(String(req.body.whatsapp)) : undefined;
+    const facebookUrl =
+      req.body.facebook !== undefined || req.body.facebookUrl !== undefined
+        ? cleanUrl(String(req.body.facebook ?? req.body.facebookUrl ?? ""))
+        : undefined;
+    const instagramUrl =
+      req.body.instagram !== undefined || req.body.instagramUrl !== undefined
+        ? cleanUrl(String(req.body.instagram ?? req.body.instagramUrl ?? ""))
+        : undefined;
+    const youtubeUrl =
+      req.body.youtube !== undefined || req.body.youtubeUrl !== undefined
+        ? cleanUrl(String(req.body.youtube ?? req.body.youtubeUrl ?? ""))
+        : undefined;
+    const aboutUs =
+      req.body.aboutUs !== undefined || req.body.about_us !== undefined
+        ? cleanAbout(String(req.body.aboutUs ?? req.body.about_us ?? ""))
+        : undefined;
 
     if (email !== undefined && !isValidEmail(email)) {
       throw new AppError("Valid email is required", 400);
@@ -191,10 +257,31 @@ export async function updateManagedAdmin(
          display_name = COALESCE($2, display_name),
          username = COALESCE($3, username),
          email = COALESCE($4, email),
-         phone = COALESCE($5, phone)
+         phone = COALESCE($5, phone),
+         whatsapp = CASE WHEN $6::boolean THEN NULLIF($7, '') ELSE whatsapp END,
+         facebook_url = CASE WHEN $8::boolean THEN NULLIF($9, '') ELSE facebook_url END,
+         instagram_url = CASE WHEN $10::boolean THEN NULLIF($11, '') ELSE instagram_url END,
+         youtube_url = CASE WHEN $12::boolean THEN NULLIF($13, '') ELSE youtube_url END,
+         about_us = CASE WHEN $14::boolean THEN NULLIF($15, '') ELSE about_us END
        WHERE id = $1
-       RETURNING id, email, username, display_name, phone, photo_url, created_at`,
-      [id, displayName ?? null, username ?? null, email ?? null, phone ?? null]
+       RETURNING ${ADMIN_PUBLIC_COLUMNS}`,
+      [
+        id,
+        displayName ?? null,
+        username ?? null,
+        email ?? null,
+        phone ?? null,
+        whatsapp !== undefined,
+        whatsapp ?? "",
+        facebookUrl !== undefined,
+        facebookUrl ?? "",
+        instagramUrl !== undefined,
+        instagramUrl ?? "",
+        youtubeUrl !== undefined,
+        youtubeUrl ?? "",
+        aboutUs !== undefined,
+        aboutUs ?? "",
+      ]
     );
 
     res.status(200).json({ status: "ok", admin: updated.rows[0] });
@@ -420,6 +507,68 @@ export async function setManagedAdminActive(
     );
 
     res.status(200).json({ status: "ok", admin: updated.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+}
+
+const CAPTURED_PHOTO = `LOWER(COALESCE(st.status, '')) IN ('captured', 'printed')`;
+
+export async function getManagedAdminOverview(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    await requireSuperAdmin(req);
+    const id = routeParam(req.params.id);
+    if (!id) throw new AppError("Admin id is required", 400);
+
+    const admin = await pool.query(
+      `SELECT ${ADMIN_PUBLIC_COLUMNS},
+              COALESCE(is_active, true) AS is_active
+       FROM users
+       WHERE id = $1
+         AND role = 'admin'
+         AND COALESCE(is_super_admin, false) = false
+       LIMIT 1`,
+      [id]
+    );
+    if (!admin.rows[0]) throw new AppError("Admin not found", 404);
+
+    const [schools, institutes] = await Promise.all([
+      pool.query(
+        `SELECT s.id, s.name, s.created_at, COALESCE(s.is_active, true) AS is_active,
+                COUNT(st.id)::int AS people_count,
+                COUNT(st.id) FILTER (WHERE ${CAPTURED_PHOTO})::int AS captured_photos,
+                COUNT(st.id) FILTER (WHERE NOT (${CAPTURED_PHOTO}))::int AS pending_photos
+         FROM schools s
+         LEFT JOIN students st ON st.school_id = s.id
+         WHERE s.owner_admin_id = $1
+         GROUP BY s.id
+         ORDER BY lower(s.name) ASC`,
+        [id]
+      ),
+      pool.query(
+        `SELECT i.id, i.name, i.created_at, COALESCE(i.is_active, true) AS is_active,
+                COUNT(st.id)::int AS people_count,
+                COUNT(st.id) FILTER (WHERE ${CAPTURED_PHOTO})::int AS captured_photos,
+                COUNT(st.id) FILTER (WHERE NOT (${CAPTURED_PHOTO}))::int AS pending_photos
+         FROM institutes i
+         LEFT JOIN students st ON st.institute_id = i.id
+         WHERE i.owner_admin_id = $1
+         GROUP BY i.id
+         ORDER BY lower(i.name) ASC`,
+        [id]
+      ),
+    ]);
+
+    res.status(200).json({
+      status: "ok",
+      admin: admin.rows[0],
+      schools: schools.rows,
+      institutes: institutes.rows,
+    });
   } catch (error) {
     next(error);
   }

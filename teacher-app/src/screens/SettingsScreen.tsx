@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Alert,
   Linking,
@@ -11,7 +11,6 @@ import {
 import Constants from "expo-constants";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-import api from "../api/client";
 import { OrangeGradientHeader } from "../components/OrangeGradientHeader";
 import { useAuth } from "../auth/AuthContext";
 import type { RootStackParamList } from "../navigation/types";
@@ -22,9 +21,8 @@ import { useTheme } from "../theme/ThemeContext";
 import {
   PLAY_STORE_MARKET_URL,
   PLAY_STORE_URL,
-  buildHelpSupportMessage,
 } from "../constants/support";
-import { openWhatsApp } from "../utils/whatsappBusiness";
+import { openBrandWhatsApp, useCustomerBrand } from "../hooks/useCustomerBrand";
 import { TERMS_AND_CONDITIONS } from "../constants/terms";
 import { InfoModal, InfoParagraph } from "../components/InfoModal";
 
@@ -44,33 +42,7 @@ export function SettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const version = appVersion();
   const [termsOpen, setTermsOpen] = useState(false);
-  const [schoolName, setSchoolName] = useState("Your School");
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const { data } = await api.get<{ school: { name: string } }>(
-          "/teacher/organization"
-        );
-        if (!cancelled && data.school?.name?.trim()) {
-          setSchoolName(data.school.name.trim());
-        }
-      } catch {
-        try {
-          const { data } = await api.get<{ schoolName: string }>("/teacher/home");
-          if (!cancelled && data.schoolName?.trim()) {
-            setSchoolName(data.schoolName.trim());
-          }
-        } catch {
-          /* ignore */
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { brand } = useCustomerBrand();
 
   function confirmLogout() {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -183,7 +155,7 @@ export function SettingsScreen({ navigation }: Props) {
           icon="logo-whatsapp"
           label="Help & Support"
           onPress={() =>
-            void openWhatsApp(buildHelpSupportMessage(schoolName)).catch((err) =>
+            void openBrandWhatsApp(brand).catch((err) =>
               Alert.alert(
                 "WhatsApp",
                 err instanceof Error ? err.message : "Could not open WhatsApp."

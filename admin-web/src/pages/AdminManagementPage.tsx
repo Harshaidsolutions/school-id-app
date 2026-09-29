@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
 import { OtpConfirmModal } from "../components/OtpConfirmModal";
@@ -36,6 +37,11 @@ export function AdminManagementPage() {
     username: "",
     email: "",
     phone: "",
+    whatsapp: "",
+    facebook: "",
+    instagram: "",
+    youtube: "",
+    aboutUs: "",
     password: "",
   });
   const [editTarget, setEditTarget] = useState<ManagedAdmin | null>(null);
@@ -93,6 +99,11 @@ export function AdminManagementPage() {
         username: "",
         email: "",
         phone: "",
+        whatsapp: "",
+        facebook: "",
+        instagram: "",
+        youtube: "",
+        aboutUs: "",
         password: "",
       });
       await load();
@@ -216,6 +227,42 @@ export function AdminManagementPage() {
             required
           />
           <input
+            className="input-field"
+            placeholder="WhatsApp number"
+            value={form.whatsapp}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                whatsapp: e.target.value.replace(/\D/g, "").slice(0, 15),
+              })
+            }
+          />
+          <input
+            className="input-field"
+            placeholder="Facebook URL"
+            value={form.facebook}
+            onChange={(e) => setForm({ ...form, facebook: e.target.value })}
+          />
+          <input
+            className="input-field"
+            placeholder="Instagram URL"
+            value={form.instagram}
+            onChange={(e) => setForm({ ...form, instagram: e.target.value })}
+          />
+          <input
+            className="input-field"
+            placeholder="YouTube URL"
+            value={form.youtube}
+            onChange={(e) => setForm({ ...form, youtube: e.target.value })}
+          />
+          <textarea
+            className="input-field sm:col-span-2"
+            placeholder="About Us"
+            rows={3}
+            value={form.aboutUs}
+            onChange={(e) => setForm({ ...form, aboutUs: e.target.value })}
+          />
+          <input
             className="input-field sm:col-span-2"
             type="text"
             placeholder="Password"
@@ -260,7 +307,14 @@ export function AdminManagementPage() {
             ) : (
               admins.map((a) => (
                 <tr key={a.id} className="border-t border-border align-top">
-                  <td className="px-3 py-2">{a.display_name ?? "—"}</td>
+                  <td className="px-3 py-2">
+                    <Link
+                      className="font-semibold text-button-blue hover:underline"
+                      to={`/extra-1/${a.id}`}
+                    >
+                      {a.display_name ?? "—"}
+                    </Link>
+                  </td>
                   <td className="px-3 py-2">{a.username ?? "—"}</td>
                   <td className="px-3 py-2">{a.email}</td>
                   <td className="px-3 py-2">{a.phone ?? "—"}</td>

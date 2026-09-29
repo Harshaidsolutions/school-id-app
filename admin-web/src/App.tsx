@@ -19,6 +19,7 @@ import { VerifyOtpPage } from "./pages/VerifyOtpPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { BrochuresPage, ExtraSection2Page } from "./pages/CatalogPages";
 import { AdminManagementPage } from "./pages/AdminManagementPage";
+import { ChildAdminDetailPage } from "./pages/ChildAdminDetailPage";
 
 export default function App() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
               <Route path="/models" element={<ModelsPage />} />
               <Route path="/brochures" element={<BrochuresPage />} />
               <Route path="/extra-1" element={<AdminManagementPage />} />
+              <Route path="/extra-1/:id" element={<ChildAdminDetailPage />} />
               <Route path="/extra-2" element={<ExtraSection2Page />} />
               <Route path="/students" element={<StudentsPage mode="school" />} />
               <Route path="/institute-members" element={<StudentsPage mode="institute" />} />

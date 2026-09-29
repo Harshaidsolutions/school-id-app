@@ -95,6 +95,7 @@ import {
   updateManagedAdmin,
   uploadManagedAdminPhoto,
   setManagedAdminActive,
+  getManagedAdminOverview,
 } from "../controllers/adminUserController";
 
 const router = Router();
@@ -198,6 +199,7 @@ router.post("/run-cleanup-now", runCleanupNow);
 
 // Super admin — managed admin accounts
 router.get("/managed-admins", listManagedAdmins);
+router.get("/managed-admins/:id/overview", getManagedAdminOverview);
 router.post("/managed-admins", createManagedAdmin);
 router.put("/managed-admins/:id", updateManagedAdmin);
 router.patch("/managed-admins/:id/active", setManagedAdminActive);

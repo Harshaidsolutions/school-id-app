@@ -268,7 +268,7 @@ function Page1({ nav }: { nav: NavProps }) {
       />
       <View style={styles.p1Top}>
         <AppIcon size={iconSize} style={{ marginBottom: spacing.md }} />
-        <BrandLockup variant="hero" showTagline />
+        <BrandLockup variant="hero" title="My School ID Card" showTagline={false} />
       </View>
 
       <OnboardingFooter accent="orange" nav={nav}>
