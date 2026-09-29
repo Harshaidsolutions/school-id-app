@@ -303,7 +303,11 @@ function withGeneratedIdentity(
 export function getVisibleStudentFields(
   student: TeacherStudent,
   classSection?: string,
-  formFields?: FormFieldConfig[]
+  formFields?: FormFieldConfig[],
+  options?: {
+    visibility?: Record<string, boolean>;
+    hideIdentity?: boolean;
+  }
 ): { key: string; label: string; value: string }[] {
   if (formFields?.length) {
     const rows: { key: string; label: string; value: string }[] = [];
@@ -322,7 +326,10 @@ export function getVisibleStudentFields(
             : "-",
       });
     }
-    return withGeneratedIdentity(collapseSameIdentityFields(rows), student, formFields);
+    return filterDisplayedRows(
+      withGeneratedIdentity(collapseSameIdentityFields(rows), student, formFields),
+      options
+    );
   }
 
   const standard = STUDENT_DETAIL_FIELDS.map((field) => {
@@ -338,11 +345,33 @@ export function getVisibleStudentFields(
   const dynamicWithEmpty = dynamic.length
     ? dynamic
     : [];
-  return withGeneratedIdentity(
-    collapseSameIdentityFields([...standard, ...dynamicWithEmpty]),
-    student,
-    formFields
+  return filterDisplayedRows(
+    withGeneratedIdentity(
+      collapseSameIdentityFields([...standard, ...dynamicWithEmpty]),
+      student,
+      formFields
+    ),
+    options
   );
+}
+
+function filterDisplayedRows(
+  rows: { key: string; label: string; value: string }[],
+  options?: {
+    visibility?: Record<string, boolean>;
+    hideIdentity?: boolean;
+  }
+): { key: string; label: string; value: string }[] {
+  return rows.filter((row) => {
+    if (options?.visibility && options.visibility[row.key] === false) return false;
+    if (
+      options?.hideIdentity &&
+      (row.key === "photo_id" || isIdentityAliasLabel(row.label))
+    ) {
+      return false;
+    }
+    return true;
+  });
 }
 
 /** Populate edit/add forms — same resolution as student details. */

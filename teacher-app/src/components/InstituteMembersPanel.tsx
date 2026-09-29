@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Modal,
@@ -40,20 +40,17 @@ import {
 } from "../utils/studentPhotoPicker";
 import { uploadStudentPhoto } from "../utils/uploadStudentPhoto";
 import { scrollToFocusedInput } from "../utils/scrollToFocusedInput";
+import { useFormConfig } from "../hooks/useFormConfig";
+import {
+  studentFullyCaptured,
+  studentHasPhoto,
+  studentPendingData,
+} from "../utils/recordStatus";
 
 const INSTITUTE_CACHE_KEY = "__institute__";
 const NUM_COLS = 2;
 
-type TabKey = "all" | "pending" | "captured";
-
-function isCaptured(student: TeacherStudent): boolean {
-  const status = (student.status ?? "").toLowerCase();
-  return (
-    Boolean(student.photo_url) ||
-    status === "captured" ||
-    status === "printed"
-  );
-}
+type TabKey = "all" | "pending-photos" | "pending-data" | "captured";
 
 type Props = {
   colors: AppColors;
@@ -74,6 +71,10 @@ export function InstituteMembersPanel({
 
   const [students, setStudents] = useState<TeacherStudent[]>([]);
   const [tab, setTab] = useState<TabKey>("all");
+  const { showCapturedSection } = useFormConfig();
+  useEffect(() => {
+    if (!showCapturedSection && tab === "captured") setTab("all");
+  }, [showCapturedSection, tab]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,33 +124,55 @@ export function InstituteMembersPanel({
     }, [loadMembers, photoBusy])
   );
 
-  const capturedCount = useMemo(
-    () => students.filter(isCaptured).length,
+  const pendingPhotoCount = useMemo(
+    () => students.filter((s) => !studentHasPhoto(s)).length,
     [students]
   );
-  const pendingCount = students.length - capturedCount;
+  const pendingDataCount = useMemo(
+    () => students.filter((s) => studentPendingData(s, true)).length,
+    [students]
+  );
+  const capturedCount = useMemo(
+    () => students.filter((s) => studentFullyCaptured(s, true)).length,
+    [students]
+  );
 
   const tabs: { key: TabKey; label: string; color: string; count: number }[] = [
     { key: "all", label: "All", color: colors.brandGreen, count: students.length },
     {
-      key: "pending",
-      label: "Pending",
+      key: "pending-photos",
+      label: "Pending Photos",
       color: colors.brandGreen,
-      count: pendingCount,
+      count: pendingPhotoCount,
     },
     {
-      key: "captured",
-      label: "Captured",
+      key: "pending-data",
+      label: "Pending Data",
       color: colors.brandGreen,
-      count: capturedCount,
+      count: pendingDataCount,
     },
+    ...(showCapturedSection
+      ? [
+          {
+            key: "captured" as const,
+            label: "Captured",
+            color: colors.brandGreen,
+            count: capturedCount,
+          },
+        ]
+      : []),
   ];
 
   const filtered = useMemo(() => {
-    if (tab === "pending") return students.filter((s) => !isCaptured(s));
-    if (tab === "captured") {
+    if (tab === "pending-photos") {
+      return students.filter((s) => !studentHasPhoto(s));
+    }
+    if (tab === "pending-data") {
+      return students.filter((s) => studentPendingData(s, true));
+    }
+    if (tab === "captured" && showCapturedSection) {
       return students
-        .filter(isCaptured)
+        .filter((s) => studentFullyCaptured(s, true))
         .sort((a, b) => {
           const aTs = Date.parse(a.photo_captured_at ?? "") || 0;
           const bTs = Date.parse(b.photo_captured_at ?? "") || 0;
@@ -158,12 +181,12 @@ export function InstituteMembersPanel({
         });
     }
     return students;
-  }, [students, tab]);
+  }, [students, tab, showCapturedSection]);
 
   const openMember = useCallback(
     (student: TeacherStudent) => {
       const idx = filtered.findIndex((s) => s.id === student.id);
-      if (tab === "pending" && !isCaptured(student)) {
+      if (tab === "pending-photos" && !studentHasPhoto(student)) {
         setPendingPhotoStudent(student);
         return;
       }
@@ -213,7 +236,7 @@ export function InstituteMembersPanel({
       <StudentGridCell
         item={item}
         width={itemSize}
-        captured={isCaptured(item)}
+        captured={studentHasPhoto(item)}
         colors={colors}
         onPress={openMember}
       />
@@ -315,8 +338,10 @@ export function InstituteMembersPanel({
           <Text style={[styles.empty, { color: colors.textMuted }]}>
             {students.length === 0
               ? "No members yet. Tap Add Member to get started."
-              : tab === "pending"
-                ? "No pending members."
+              : tab === "pending-photos"
+                ? "No members are waiting for a photo."
+                : tab === "pending-data"
+                  ? "No members are missing required data."
                 : "No captured photos yet."}
           </Text>
         }
@@ -328,7 +353,7 @@ export function InstituteMembersPanel({
         students={filtered}
         initialIndex={flowIndex}
         classSection=""
-        photoCaptureEnabled={tab === "pending"}
+        photoCaptureEnabled={tab === "pending-photos"}
         onClose={() => setFlowVisible(false)}
         navigation={navigation}
       />

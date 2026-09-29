@@ -7,12 +7,14 @@ type Step = "choose" | "date-wise";
 export function DownloadPhotosModal({
   schoolCreatedAt,
   downloadingAll,
+  photoCounts,
   onClose,
   onDownloadAll,
   onDownloadByDate,
 }: {
   schoolCreatedAt: string | null;
   downloadingAll: boolean;
+  photoCounts?: Record<string, number>;
   onClose: () => void;
   onDownloadAll: () => void;
   onDownloadByDate: (date: string) => void;
@@ -87,7 +89,7 @@ export function DownloadPhotosModal({
                 <option value="">Choose a date…</option>
                 {dateOptions.map((d) => (
                   <option key={d} value={d}>
-                    {formatCalendarDate(d)}
+                    {formatCalendarDate(d)} — {photoCounts?.[d] ?? 0} Photos
                   </option>
                 ))}
               </select>

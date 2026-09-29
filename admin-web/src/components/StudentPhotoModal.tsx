@@ -134,6 +134,19 @@ export function StudentPhotoModal({
             alt={student.student_name ?? "Student"}
             className="block max-h-[75vh] w-full bg-content-bg object-contain"
           />
+          {student.photo_captured_at ? (
+            <div className="border-t border-border px-4 py-2 text-center text-xs text-text-muted">
+              Captured:{" "}
+              {new Date(student.photo_captured_at).toLocaleString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}
+            </div>
+          ) : null}
           <div className="border-t border-border px-4 py-3 text-center">
             <div className="text-sm font-semibold text-text-navy">
               {student.student_name ?? "—"}

@@ -10,6 +10,7 @@ import {
 } from "../utils/teacherScope";
 import {
   deleteStudentPhotoFromStorage,
+  uploadMemberSignatureToStorage,
   uploadStudentPhotoToStorage,
 } from "../config/storage";
 import { loadFormConfigForOrg } from "./formConfigController";
@@ -34,6 +35,11 @@ import {
   firstIdentityValue,
   identityFields,
 } from "../utils/addSerial";
+import {
+  assertNumberEditAllowed,
+  hasCapturedPhoto,
+  hasCompleteRequiredData,
+} from "../utils/recordStatus";
 
 async function insertTeacherStudent(
   sql: string,
@@ -86,6 +92,7 @@ interface TeacherStudentRow {
   parent_phone: string | null;
   address: string | null;
   photo_id: string | null;
+  signature_url: string | null;
   dob: string | null;
   gender: string | null;
   blood_group: string | null;
@@ -102,11 +109,12 @@ interface TeacherModelRow {
   name: string;
   description: string | null;
   image_url: string | null;
+  video_url: string | null;
   created_at: string | null;
 }
 
 const TEACHER_STUDENT_SELECT = `
-  id, student_name, roll_no, photo_url, photo_captured_at, status, school_id, institute_id, class_section,
+  id, student_name, roll_no, photo_url, photo_captured_at, signature_url, status, school_id, institute_id, class_section,
   parent_name, parent_phone, address, photo_id,
   dob, gender, blood_group, custom_1, custom_2, custom_3, extra_fields, field_labels
 `;
@@ -135,6 +143,7 @@ function toStudentJson(row: TeacherStudentRow) {
     roll_no: row.roll_no,
     photo_url: row.photo_url,
     photo_captured_at: row.photo_captured_at,
+    signature_url: row.signature_url,
     status: row.status,
     class_section: row.class_section,
     parent_name: row.parent_name,
@@ -149,6 +158,19 @@ function toStudentJson(row: TeacherStudentRow) {
     custom_3: row.custom_3,
     extra_fields: Object.keys(extraFields).length ? extraFields : null,
     field_labels: fieldLabels,
+    pending_photo: !hasCapturedPhoto(row.photo_url),
+    pending_data: !hasCompleteRequiredData({
+      studentName: row.student_name,
+      classSection: row.class_section,
+      institute: Boolean(row.institute_id),
+    }),
+    fully_captured:
+      hasCapturedPhoto(row.photo_url) &&
+      hasCompleteRequiredData({
+        studentName: row.student_name,
+        classSection: row.class_section,
+        institute: Boolean(row.institute_id),
+      }),
   };
 }
 
@@ -599,6 +621,56 @@ export async function uploadStudentPhoto(
 }
 
 /**
+ * POST /teacher/students/:id/signature — institute member signature only.
+ */
+export async function uploadMemberSignature(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    if (!isInstituteStaff(req.user)) {
+      throw new AppError("Signatures are only for institute members", 403);
+    }
+    const studentId = req.params.id;
+    if (!studentId) throw new AppError("Member id is required", 400);
+    if (!req.file) {
+      throw new AppError("Image file is required (field name: signature)", 400);
+    }
+
+    const studentResult = await pool.query<TeacherStudentRow>(
+      `SELECT ${TEACHER_STUDENT_SELECT} FROM students WHERE id = $1 LIMIT 1`,
+      [studentId]
+    );
+    const student = studentResult.rows[0];
+    if (!student) throw new AppError("Member not found", 404);
+    assertStudentBelongsToOrg(req.user, student);
+    if (!student.institute_id) {
+      throw new AppError("Member is not assigned to an institute", 400);
+    }
+
+    const signatureUrl = await uploadMemberSignatureToStorage(
+      student.institute_id,
+      student.id,
+      req.file
+    );
+    const updated = await pool.query<TeacherStudentRow>(
+      `UPDATE students
+       SET signature_url = $1, updated_at = NOW()
+       WHERE id = $2 AND institute_id = $3
+       RETURNING ${TEACHER_STUDENT_SELECT}`,
+      [signatureUrl, student.id, student.institute_id]
+    );
+    const row = updated.rows[0];
+    if (!row) throw new AppError("Failed to save signature", 500);
+    res.status(200).json({ status: "ok", student: toStudentJson(row) });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * PUT /teacher/students/:id — update student details after capture (Add Details).
  */
 export async function updateTeacherStudent(
@@ -637,6 +709,13 @@ export async function updateTeacherStudent(
         classSection: student.class_section,
       });
     }
+
+    await assertNumberEditAllowed(
+      student.school_id,
+      student.institute_id,
+      req.body as Record<string, unknown>,
+      student.photo_id
+    );
 
     const studentName = student.student_name;
     if (!studentName) {
@@ -1080,14 +1159,14 @@ export async function listTeacherModels(
     }
     const [modelsResult, tagsResult] = await Promise.all([
       pool.query<TeacherModelRow>(
-        `SELECT id, kind, name, description, image_url, created_at
+        `SELECT id, kind, name, description, image_url, video_url, created_at
          FROM catalog_items
          WHERE kind = 'model' AND owner_admin_id = $1
          ORDER BY created_at DESC`,
         [ownerAdminId]
       ),
       pool.query<TeacherModelRow>(
-        `SELECT id, kind, name, description, image_url, created_at
+        `SELECT id, kind, name, description, image_url, video_url, created_at
          FROM catalog_items
          WHERE kind = 'tag' AND owner_admin_id = $1
          ORDER BY created_at DESC`,

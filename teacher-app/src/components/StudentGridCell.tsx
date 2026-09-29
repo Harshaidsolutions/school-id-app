@@ -2,6 +2,7 @@ import { memo } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { TeacherStudent } from "../types";
+import { formatCapturedAt } from "../utils/recordStatus";
 import { radius, spacing } from "../theme/colors";
 import { fonts, type as typeScale } from "../theme/typography";
 import type { AppColors } from "../theme/palettes";
@@ -62,6 +63,20 @@ export const StudentGridCell = memo(function StudentGridCell({
             />
           )}
         </View>
+        {captured && formatCapturedAt(item.photo_captured_at) ? (
+          <Text
+            style={{
+              paddingHorizontal: 6,
+              paddingVertical: 4,
+              fontSize: 10,
+              color: colors.textMuted,
+              textAlign: "center",
+            }}
+            numberOfLines={2}
+          >
+            Captured: {formatCapturedAt(item.photo_captured_at)}
+          </Text>
+        ) : null}
         <View style={[styles.nameBar, { backgroundColor: colors.brandGreen }]}>
           <Text
             style={styles.studentName}

@@ -87,7 +87,10 @@ export function EditStudentScreen({ navigation, route }: Props) {
 
   const { colors } = useTheme();
   const { showToast } = useToast();
-  const { fields: formFields } = useFormConfig();
+  const { fields: formFields, fieldVisibility, allowNumberEdit } = useFormConfig();
+  const displayFields = formFields.filter(
+    (field) => fieldVisibility[field.key] !== false
+  );
 
   const insets = useSafeAreaInsets();
   const { scale } = useResponsiveLayout();
@@ -187,6 +190,15 @@ export function EditStudentScreen({ navigation, route }: Props) {
       custom3,
       extraValues,
     });
+    if (!allowNumberEdit) {
+      delete payload.photo_id;
+      const extra = payload.extra_fields;
+      if (extra && typeof extra === "object") {
+        const rec = extra as Record<string, unknown>;
+        delete rec.photo_id;
+        delete rec.photoId;
+      }
+    }
 
     const student_name = String(payload.student_name ?? "").trim();
     if (!student_name) {
@@ -355,10 +367,11 @@ export function EditStudentScreen({ navigation, route }: Props) {
 
 
             <DynamicStudentFieldList
-              formFields={formFields}
+              formFields={displayFields}
               colors={colors}
               inputStyle={inputStyle}
               lockIdentityFields
+              hideNumberField={!allowNumberEdit}
               photoId={currentStudent.photo_id ?? ""}
               studentName={currentStudent.student_name ?? ""}
               firstName={firstName}

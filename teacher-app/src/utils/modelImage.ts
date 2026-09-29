@@ -29,6 +29,11 @@ export function modelImageUrl(model: TeacherModel | null | undefined): string | 
   return resolveMediaUrl(raw);
 }
 
+export function modelVideoUrl(model: TeacherModel | null | undefined): string | null {
+  if (!model?.video_url?.trim()) return null;
+  return resolveMediaUrl(model.video_url);
+}
+
 export function modelImageUrlByName(
   name: string,
   catalog: TeacherModel[]

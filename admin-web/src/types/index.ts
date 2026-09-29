@@ -29,6 +29,7 @@ export interface Student {
   address: string | null;
   photo_id: string | null;
   photo_url: string | null;
+  photo_captured_at?: string | null;
   status: string | null;
   custom_1?: string | null;
   custom_2?: string | null;
@@ -107,6 +108,7 @@ export interface CatalogItem {
   name: string;
   description: string | null;
   image_url: string | null;
+  video_url?: string | null;
   extra_image_urls?: string[] | null;
   file_size: number | null;
   created_at: string | null;

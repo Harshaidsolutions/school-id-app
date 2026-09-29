@@ -18,6 +18,7 @@ import { useStudentPhotoCapture } from "../hooks/useStudentPhotoCapture";
 import type { RootStackParamList } from "../navigation/types";
 import type { TeacherStudent } from "../types";
 import { getVisibleStudentFields } from "../utils/studentFields";
+import { formatCapturedAt } from "../utils/recordStatus";
 import { useFormConfig } from "../hooks/useFormConfig";
 import { radius, spacing } from "../theme/colors";
 import { fonts, type as typeScale } from "../theme/typography";
@@ -73,7 +74,7 @@ export function StudentFlowModal({
     fromModal: true,
     onBeforeNavigate: onClose,
   });
-  const { fields: formFields } = useFormConfig();
+  const { fields: formFields, fieldVisibility, allowNumberEdit } = useFormConfig();
 
   useEffect(() => {
     if (visible) {
@@ -126,7 +127,10 @@ export function StudentFlowModal({
   const photoExists = hasPhoto(student);
   const canPrev = index > 0;
   const canNext = index < students.length - 1;
-  const detailFields = getVisibleStudentFields(student, classSection, formFields);
+  const detailFields = getVisibleStudentFields(student, classSection, formFields, {
+    visibility: fieldVisibility,
+    hideIdentity: !allowNumberEdit,
+  });
 
   return (
     <Modal
@@ -199,6 +203,21 @@ export function StudentFlowModal({
                 </View>
               )}
             </Pressable>
+            {formatCapturedAt(student.photo_captured_at) ? (
+              <Text style={[styles.tapHint, { color: colors.textMuted, marginTop: 6 }]}>
+                Captured: {formatCapturedAt(student.photo_captured_at)}
+              </Text>
+            ) : null}
+            {student.signature_url ? (
+              <View style={{ marginTop: 8, alignItems: "center" }}>
+                <Text style={[styles.tapHint, { color: colors.textMuted }]}>Signature</Text>
+                <Image
+                  source={{ uri: student.signature_url }}
+                  style={{ width: photoSize * 0.7, height: 64, marginTop: 4 }}
+                  resizeMode="contain"
+                />
+              </View>
+            ) : null}
           </View>
 
           <Text style={[styles.name, { color: colors.text }]}>

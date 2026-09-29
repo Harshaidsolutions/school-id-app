@@ -22,6 +22,42 @@ import { routeParam } from "../utils/routeParams";
 
 const SALT_ROUNDS = 10;
 
+async function notifySuperAdminSchoolCreated(
+  req: Request,
+  scope: Awaited<ReturnType<typeof requireAdminScope>>,
+  school: { id: string; name: string }
+): Promise<void> {
+  try {
+    if (await adminSeesAllOrganizations(scope, req)) return;
+    const who = await pool.query<{ label: string | null }>(
+      `SELECT COALESCE(
+         NULLIF(btrim(display_name), ''),
+         NULLIF(btrim(username), ''),
+         email
+       ) AS label
+       FROM users WHERE id = $1 LIMIT 1`,
+      [scope.adminUserId]
+    );
+    const creator = who.rows[0]?.label?.trim() || "Child Admin";
+    await pool.query(
+      `INSERT INTO notifications (school_id, title, message, created_by, audience)
+       VALUES (
+         $1,
+         'New school created',
+         $2 || ' created school "' || $3 || '" on ' ||
+           to_char(NOW() AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, HH12:MI AM') || '.',
+         $4,
+         'super_admin'
+       )
+       ON CONFLICT (school_id) WHERE audience = 'super_admin' AND school_id IS NOT NULL
+       DO NOTHING`,
+      [school.id, creator, school.name, scope.adminUserId]
+    );
+  } catch (error) {
+    console.error("[school-create] super admin notification failed", error);
+  }
+}
+
 function defaultAcademicYear(): string {
   return String(new Date().getFullYear());
 }
@@ -101,10 +137,13 @@ export async function createSchool(
         `UPDATE schools SET logo_url = $1, signature_url = $2 WHERE id = $3 RETURNING *`,
         [logoUrl, signatureUrl, school.id]
       );
-      res.status(201).json({ status: "ok", school: updated.rows[0] });
+      const saved = updated.rows[0] ?? school;
+      await notifySuperAdminSchoolCreated(req, scope, saved);
+      res.status(201).json({ status: "ok", school: saved });
       return;
     }
 
+    await notifySuperAdminSchoolCreated(req, scope, school);
     res.status(201).json({ status: "ok", school });
   } catch (error) {
     next(error);
@@ -181,6 +220,8 @@ export async function createSchoolWithOwner(
     );
 
     await client.query("COMMIT");
+
+    await notifySuperAdminSchoolCreated(req, scope, school);
 
     res.status(201).json({
       success: true,

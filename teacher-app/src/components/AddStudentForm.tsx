@@ -56,7 +56,10 @@ export function AddStudentForm({
   const { scale, hp } = useResponsiveLayout();
   const photoSize = scale(140);
   const pickerMaxHeight = hp(38);
-  const { fields: formFields } = useFormConfig();
+  const { fields: formFields, fieldVisibility } = useFormConfig();
+  const displayFields = formFields.filter(
+    (field) => fieldVisibility[field.key] !== false
+  );
   const defaultClass =
     initialClass ?? getAssignedClassSection(user) ?? "";
 
@@ -80,6 +83,8 @@ export function AddStudentForm({
   const [saving, setSaving] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
+  const [signatureUri, setSignatureUri] = useState<string | null>(null);
+  const [signatureSheetOpen, setSignatureSheetOpen] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
 
   useEffect(() => {
@@ -141,6 +146,17 @@ export function AddStudentForm({
     }
   }
 
+  async function handleSignaturePick(source: PhotoSource) {
+    setPhotoBusy(true);
+    try {
+      const uri = await pickStudentPhotoForFormUpload(source);
+      if (uri) setSignatureUri(uri);
+    } finally {
+      setPhotoBusy(false);
+      setSignatureSheetOpen(false);
+    }
+  }
+
   async function handleSubmit() {
     const effectiveClass = instituteMode
       ? classSection.trim() || "ALL"
@@ -192,6 +208,19 @@ export function AddStudentForm({
           type: "image/jpeg",
         } as unknown as Blob);
         await api.post(`/teacher/students/${data.student.id}/photo`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+          transformRequest: (body) => body,
+        });
+      }
+
+      if (instituteMode && signatureUri) {
+        const formData = new FormData();
+        formData.append("signature", {
+          uri: signatureUri,
+          name: `${data.student.id}-signature.jpg`,
+          type: "image/jpeg",
+        } as unknown as Blob);
+        await api.post(`/teacher/students/${data.student.id}/signature`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
           transformRequest: (body) => body,
         });
@@ -260,8 +289,49 @@ export function AddStudentForm({
         </View>
       ) : null}
 
+      {instituteMode ? (
+        <View style={styles.photoSection}>
+          <Text style={[styles.label, { color: colors.text }]}>Signature</Text>
+          <Pressable
+            style={[
+              styles.photoArea,
+              {
+                width: photoSize,
+                height: photoSize * 0.55,
+                borderColor: colors.border,
+                backgroundColor: colors.inputBg,
+              },
+            ]}
+            onPress={() => setSignatureSheetOpen(true)}
+            disabled={photoBusy || saving}
+          >
+            {signatureUri ? (
+              <Image
+                source={{ uri: signatureUri }}
+                style={styles.photoPreview}
+                resizeMode="contain"
+              />
+            ) : (
+              <View style={styles.photoPlaceholder}>
+                <Ionicons name="create-outline" size={28} color={colors.textMuted} />
+                <Text style={[styles.photoHint, { color: colors.textMuted }]}>
+                  Tap to capture or choose a signature
+                </Text>
+              </View>
+            )}
+          </Pressable>
+          {signatureUri ? (
+            <Pressable onPress={() => setSignatureUri(null)} disabled={saving}>
+              <Text style={[styles.photoHint, { color: colors.primaryOrange, marginTop: 6 }]}>
+                Remove signature
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+
       <DynamicStudentFieldList
-        formFields={formFields}
+        formFields={displayFields}
         colors={colors}
         inputStyle={inputStyle}
         firstName={firstName}
@@ -403,6 +473,16 @@ export function AddStudentForm({
           setPhotoSheetOpen(false);
         }}
         onPick={(source) => void handlePhotoPick(source)}
+      />
+      <PendingPhotoSheet
+        visible={signatureSheetOpen}
+        studentName="Signature"
+        colors={colors}
+        onClose={() => {
+          if (photoBusy) return;
+          setSignatureSheetOpen(false);
+        }}
+        onPick={(source) => void handleSignaturePick(source)}
       />
     </View>
   );

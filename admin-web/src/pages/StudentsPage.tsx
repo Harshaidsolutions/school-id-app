@@ -19,7 +19,7 @@ import {
   type FormFieldConfig,
 } from "../constants/formFields";
 
-type TabKey = "all" | "pending" | "captured";
+type TabKey = "all" | "pending-photos" | "pending-data" | "captured";
 
 async function downloadAuthenticatedFile(
   urlPath: string,
@@ -69,7 +69,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     useState<Student | null>(null);
   const [confirmDeleteDataStudent, setConfirmDeleteDataStudent] =
     useState<Student | null>(null);
-  const [showDeleteExcelOtp, setShowDeleteExcelOtp] = useState(false);
+  const [photoCounts, setPhotoCounts] = useState<Record<string, number>>({});
   const [showDeletePhotosOtp, setShowDeletePhotosOtp] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showDeleteOptions, setShowDeleteOptions] = useState(false);
@@ -261,10 +261,12 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return students.filter((s) => {
-      const status = (s.status ?? "pending").toLowerCase();
-      const isCaptured = status === "captured" || status === "printed";
-      if (tab === "pending" && isCaptured) return false;
-      if (tab === "captured" && !isCaptured) return false;
+      const photo = Boolean(s.photo_url?.trim());
+      const dataMissing =
+        !s.student_name?.trim() || (!isInstitute && !s.class_section?.trim());
+      if (tab === "pending-photos" && photo) return false;
+      if (tab === "pending-data" && !dataMissing) return false;
+      if (tab === "captured" && !(photo && !dataMissing)) return false;
       if (classFilter && s.class_section !== classFilter) return false;
       if (q) {
         const hay = [
@@ -282,18 +284,27 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       }
       return true;
     });
-  }, [students, tab, classFilter, search]);
+  }, [students, tab, classFilter, search, isInstitute]);
 
   const counts = useMemo(() => {
-    let pending = 0;
+    let pendingPhotos = 0;
+    let pendingData = 0;
     let captured = 0;
     for (const s of students) {
-      const status = (s.status ?? "pending").toLowerCase();
-      if (status === "captured" || status === "printed") captured += 1;
-      else pending += 1;
+      const photo = Boolean(s.photo_url?.trim());
+      const dataMissing =
+        !s.student_name?.trim() || (!isInstitute && !s.class_section?.trim());
+      if (!photo) pendingPhotos += 1;
+      if (dataMissing) pendingData += 1;
+      if (photo && !dataMissing) captured += 1;
     }
-    return { all: students.length, pending, captured };
-  }, [students]);
+    return {
+      all: students.length,
+      "pending-photos": pendingPhotos,
+      "pending-data": pendingData,
+      captured,
+    };
+  }, [students, isInstitute]);
 
   async function handleDeleteImage(student: Student) {
     setConfirmDeletePhotoStudent(null);
@@ -322,18 +333,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     setConfirmDeleteDataStudent(null);
   }
 
-  async function handleDeleteExcelConfirmed(otp: string) {
-    if (isInstitute) {
-      if (!instituteId) return;
-      await api.delete(`/admin/institutes/${instituteId}/students`, { data: { otp } });
-    } else {
-      if (!schoolId) return;
-      await api.delete(`/admin/schools/${schoolId}/students`, { data: { otp } });
-    }
-    setStudents([]);
-    setShowDeleteExcelOtp(false);
-  }
-
   async function handleDownloadStudentPhoto(student: Student) {
     if (!student.photo_url) return;
     setDownloadingPhotoId(student.id);
@@ -353,7 +352,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     }
   }
 
-  async function handleDownloadExcel() {
+  async function handleDownloadExcel(scope: "all" | "pending" | "captured" = "all") {
     if (!orgId) {
       setError(isInstitute ? "Open an institute to download Excel." : "Select a school before downloading Excel.");
       return;
@@ -362,9 +361,10 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     setError(null);
     try {
       const path = isInstitute
-        ? `/admin/institutes/${instituteId}/export-members`
-        : `/admin/students/${schoolId}/export`;
-      await downloadAuthenticatedFile(path, isInstitute ? "members.xlsx" : "students.xlsx");
+        ? `/admin/institutes/${instituteId}/export-members?scope=${scope}`
+        : `/admin/students/${schoolId}/export?scope=${scope}`;
+      const filename = isInstitute ? `members-${scope}.xlsx` : `students-${scope}.xlsx`;
+      await downloadAuthenticatedFile(path, filename);
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const body = err.response?.data as ApiErrorBody | undefined;
@@ -464,8 +464,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   }
 
   function isCaptured(student: Student) {
-    const status = (student.status ?? "pending").toLowerCase();
-    return status === "captured" || status === "printed";
+    return Boolean(student.photo_url?.trim());
   }
 
   function handleAddStudent() {
@@ -537,16 +536,41 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             <button
               type="button"
               disabled={!orgId || exportingExcel}
-              onClick={() => void handleDownloadExcel()}
+              onClick={() => void handleDownloadExcel("all")}
               className="detail-toolbar-btn"
             >
-              {exportingExcel ? "Exporting…" : "Download Excel"}
+              {exportingExcel ? "Exporting…" : "All Excel"}
+            </button>
+            <button
+              type="button"
+              disabled={!orgId || exportingExcel}
+              onClick={() => void handleDownloadExcel("pending")}
+              className="detail-toolbar-btn"
+            >
+              Pending Excel
+            </button>
+            <button
+              type="button"
+              disabled={!orgId || exportingExcel}
+              onClick={() => void handleDownloadExcel("captured")}
+              className="detail-toolbar-btn"
+            >
+              Captured Excel
             </button>
 
             <button
               type="button"
               disabled={!orgId}
-              onClick={() => setShowDownloadPhotosModal(true)}
+              onClick={() => {
+                setShowDownloadPhotosModal(true);
+                const path = isInstitute
+                  ? `/admin/institutes/${instituteId}/photo-capture-counts`
+                  : `/admin/schools/${schoolId}/photo-capture-counts`;
+                void api
+                  .get<{ counts: Record<string, number> }>(path)
+                  .then(({ data }) => setPhotoCounts(data.counts ?? {}))
+                  .catch(() => setPhotoCounts({}));
+              }}
               className="detail-toolbar-btn"
             >
               Download Photos
@@ -590,7 +614,8 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               {(
                 [
                   { key: "all", label: isInstitute ? "All" : "All Classes", count: counts.all },
-                  { key: "pending", label: "Pending", count: counts.pending },
+                  { key: "pending-photos", label: "Pending Photos", count: counts["pending-photos"] },
+                  { key: "pending-data", label: "Pending Data", count: counts["pending-data"] },
                   { key: "captured", label: "Captured", count: counts.captured },
                 ] as const
               ).map((t) => (
@@ -650,7 +675,8 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             {(
               [
                 { key: "all", label: "All", count: counts.all },
-                { key: "pending", label: "Pending", count: counts.pending },
+                { key: "pending-photos", label: "Pending Photos", count: counts["pending-photos"] },
+                { key: "pending-data", label: "Pending Data", count: counts["pending-data"] },
                 { key: "captured", label: "Captured", count: counts.captured },
               ] as const
             ).map((t) => (
@@ -945,10 +971,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       {showDeleteOptions && orgId && (
         <DeleteOptionsModal
           onClose={() => setShowDeleteOptions(false)}
-          onDeleteExcel={() => {
-            setShowDeleteOptions(false);
-            setShowDeleteExcelOtp(true);
-          }}
           onDeletePhotos={() => {
             setShowDeleteOptions(false);
             setShowDeletePhotosOtp(true);
@@ -960,6 +982,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         <DownloadPhotosModal
           schoolCreatedAt={orgCreatedAt}
           downloadingAll={exportingPhotos}
+          photoCounts={photoCounts}
           onClose={() => setShowDownloadPhotosModal(false)}
           onDownloadAll={() => void handleDownloadAllPhotos()}
           onDownloadByDate={(date) => void handleDownloadPhotosByDate(date)}
@@ -981,44 +1004,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
           }}
           onConfirm={async (otp) => {
             await handleDeletePhotosConfirmed(otp);
-          }}
-        />
-      )}
-
-      {showDeleteExcelOtp && orgId && (
-        <OtpConfirmModal
-          title="Delete Excel data"
-          description={`Remove all imported student records for ${selectedSchoolName ?? (isInstitute ? "this institute" : "this school")}.`}
-          confirmLabel="Delete Excel"
-          onClose={() => setShowDeleteExcelOtp(false)}
-          onRequestOtp={async () => {
-            try {
-              const url = isInstitute
-                ? `/admin/institutes/${instituteId}/request-delete-excel-otp`
-                : `/admin/schools/${schoolId}/request-delete-excel-otp`;
-              const { data } = await api.post<{
-                message?: string;
-                devOtp?: string;
-              }>(url);
-              return { message: data.message, devOtp: data.devOtp };
-            } catch (err) {
-              if (axios.isAxiosError(err)) {
-                const body = err.response?.data as ApiErrorBody | undefined;
-                throw new Error(body?.message ?? "Failed to send OTP.");
-              }
-              throw new Error("Failed to send OTP.");
-            }
-          }}
-          onConfirm={async (otp) => {
-            try {
-              await handleDeleteExcelConfirmed(otp);
-            } catch (err) {
-              if (axios.isAxiosError(err)) {
-                const body = err.response?.data as ApiErrorBody | undefined;
-                throw new Error(body?.message ?? "Failed to delete Excel data.");
-              }
-              throw new Error("Failed to delete Excel data.");
-            }
           }}
         />
       )}

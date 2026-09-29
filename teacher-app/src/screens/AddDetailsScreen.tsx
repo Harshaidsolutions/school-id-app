@@ -53,7 +53,10 @@ export function AddDetailsScreen({ navigation, route }: Props) {
   const { scale } = useResponsiveLayout();
   const photoSize = scale(120);
   const { showToast } = useToast();
-  const { fields: formFields } = useFormConfig();
+  const { fields: formFields, fieldVisibility } = useFormConfig();
+  const displayFields = formFields.filter(
+    (field) => fieldVisibility[field.key] !== false
+  );
   const { student, photoUri } = route.params;
   const initial = useMemo(
     () => splitName(student.student_name),
@@ -196,7 +199,7 @@ export function AddDetailsScreen({ navigation, route }: Props) {
           </View>
 
           <DynamicStudentFieldList
-            formFields={formFields}
+            formFields={displayFields}
             colors={colors}
             inputStyle={inputStyle}
             firstName={firstName}

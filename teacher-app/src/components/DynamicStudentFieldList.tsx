@@ -104,6 +104,8 @@ export type DynamicStudentFieldListProps = {
   parentPhoneTenDigits?: boolean;
   /** Edit flow: Photo ID and student name stay visible but cannot be changed. */
   lockIdentityFields?: boolean;
+  /** When number editing is off, do not show the number field at all. */
+  hideNumberField?: boolean;
   photoId?: string;
   studentName?: string;
   onInputFocus?: (nativeTarget: number) => void;
@@ -160,6 +162,7 @@ export function DynamicStudentFieldList({
   classSectionReadOnly = false,
   parentPhoneTenDigits = false,
   lockIdentityFields = false,
+  hideNumberField = false,
   photoId = "",
   studentName = "",
   onInputFocus,
@@ -171,7 +174,7 @@ export function DynamicStudentFieldList({
 
   return (
     <>
-      {lockIdentityFields ? (
+      {lockIdentityFields && !hideNumberField ? (
         <>
           {lockedIdentity.length > 0 ? (
             lockedIdentity.map((field) => (
@@ -198,17 +201,19 @@ export function DynamicStudentFieldList({
               />
             </Field>
           )}
-          <Field label="Name" colors={colors}>
-            <TextInput
-              style={inputStyle}
-              value={studentName}
-              editable={false}
-              showSoftInputOnFocus={false}
-              caretHidden
-              placeholderTextColor={colors.textSubtle}
-            />
-          </Field>
         </>
+      ) : null}
+      {lockIdentityFields ? (
+        <Field label="Name" colors={colors}>
+          <TextInput
+            style={inputStyle}
+            value={studentName}
+            editable={false}
+            showSoftInputOnFocus={false}
+            caretHidden
+            placeholderTextColor={colors.textSubtle}
+          />
+        </Field>
       ) : null}
       {ordered.map((field) => {
         const kind = resolveFieldKind(field);

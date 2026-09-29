@@ -219,6 +219,67 @@ export async function deleteTemplate(
   }
 }
 
+export async function bulkDeleteTemplates(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const raw = req.body?.ids;
+    if (!Array.isArray(raw)) throw new AppError("ids are required", 400);
+    const ids = [
+      ...new Set(
+        raw.map((id: unknown) => String(id).trim()).filter((id) => id.length > 0)
+      ),
+    ];
+    if (ids.length === 0) throw new AppError("Select at least one item", 400);
+    if (ids.length > 200) {
+      throw new AppError("Select 200 items or fewer at a time", 400);
+    }
+    const deleted: string[] = [];
+    const failed: { id: string; message: string }[] = [];
+    for (const id of ids) {
+      try {
+        await assertCatalogRowOwnedByAdmin(scope, "templates", id);
+        const result = await pool.query(
+          `DELETE FROM templates WHERE id = $1 RETURNING id`,
+          [id]
+        );
+        if (!result.rows[0]) {
+          failed.push({ id, message: "Template not found" });
+          continue;
+        }
+        await pool.query(
+          `UPDATE schools SET template_id = NULL WHERE template_id = $1`,
+          [id]
+        );
+        await pool.query(
+          `UPDATE institutes SET template_id = NULL WHERE template_id = $1`,
+          [id]
+        );
+        deleted.push(id);
+      } catch (error) {
+        failed.push({
+          id,
+          message: error instanceof AppError ? error.message : "Delete failed",
+        });
+      }
+    }
+    const status =
+      failed.length === 0 ? "ok" : deleted.length === 0 ? "error" : "partial";
+    res.status(deleted.length === 0 ? 400 : 200).json({
+      status,
+      deleted,
+      failed,
+      deletedCount: deleted.length,
+      failedCount: failed.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 /** Teacher: all global templates + this school's selected template_id. */
 export async function listTeacherTemplates(
   req: Request,

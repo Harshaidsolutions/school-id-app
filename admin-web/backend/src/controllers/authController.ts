@@ -626,8 +626,14 @@ export async function getSuperAdminContacts(
   next: NextFunction
 ): Promise<void> {
   try {
-    const result = await pool.query<{ phone: string | null; whatsapp: string | null }>(
-      `SELECT phone, whatsapp
+    const result = await pool.query<{
+      phone: string | null;
+      whatsapp: string | null;
+      facebook_url: string | null;
+      instagram_url: string | null;
+      youtube_url: string | null;
+    }>(
+      `SELECT phone, whatsapp, facebook_url, instagram_url, youtube_url
        FROM users
        WHERE role = 'admin'
          AND (
@@ -643,6 +649,9 @@ export async function getSuperAdminContacts(
       status: "ok",
       phone: row?.phone?.trim() || null,
       whatsapp: row?.whatsapp?.trim() || null,
+      facebook: row?.facebook_url?.trim() || null,
+      instagram: row?.instagram_url?.trim() || null,
+      youtube: row?.youtube_url?.trim() || null,
     });
   } catch (error) {
     next(error);

@@ -220,6 +220,7 @@ export async function assertNotificationOwnedByAdmin(
      LEFT JOIN schools s ON s.id = n.school_id
      LEFT JOIN institutes i ON i.id = n.institute_id
      WHERE n.id = $1
+       AND COALESCE(n.audience, 'org') <> 'super_admin'
        AND (
          s.owner_admin_id = $2
          OR i.owner_admin_id = $2

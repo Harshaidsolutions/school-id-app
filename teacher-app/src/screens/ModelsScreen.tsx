@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Image,
+  Linking,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -22,7 +23,7 @@ import api, { getErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { mergeOrgDetailsDraft } from "../utils/orgDetailsDraft";
 import { resolveMediaUrl } from "../utils/mediaUrl";
-import { modelImageUrl } from "../utils/modelImage";
+import { modelImageUrl, modelVideoUrl } from "../utils/modelImage";
 import { useToast } from "../components/Toast";
 import { OrangeGradientHeader } from "../components/OrangeGradientHeader";
 import { PRODUCT_MODELS, MODEL_TABS, MODEL_CATEGORY, type TeacherModel } from "../types";
@@ -232,6 +233,11 @@ export function ModelsScreen() {
     return modelImageUrl(match ?? null);
   }
 
+  function videoFor(name: string): string | null {
+    const match = tabCatalog.find((m) => m.name === name);
+    return modelVideoUrl(match ?? null);
+  }
+
   const modelViewerItems = useMemo(
     () =>
       modelNames
@@ -403,6 +409,7 @@ export function ModelsScreen() {
 
           const isSelected = selectedModel === item;
           const imageUrl = imageFor(item);
+          const videoUrl = videoFor(item);
           return (
             <Pressable
               style={[
@@ -415,6 +422,10 @@ export function ModelsScreen() {
                 },
               ]}
               onPress={() => {
+                if (videoUrl && !imageUrl) {
+                  void Linking.openURL(videoUrl);
+                  return;
+                }
                 const uri = imageFor(item);
                 if (!uri) return;
                 const vi = modelViewerItems.findIndex((e) => e.name === item);
@@ -438,6 +449,13 @@ export function ModelsScreen() {
                     style={styles.modelImageFull}
                     resizeMode="contain"
                   />
+                ) : videoUrl ? (
+                  <View style={{ alignItems: "center" }}>
+                    <Ionicons name="play-circle" size={36} color={colors.primaryOrange} />
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>
+                      Play video
+                    </Text>
+                  </View>
                 ) : (
                   <Ionicons
                     name="cube-outline"

@@ -455,6 +455,21 @@ export async function uploadManagedAdminPhoto(
     const id = routeParam(req.params.id);
     const file = req.file;
     if (!id) throw new AppError("Admin id is required", 400);
+    const remove =
+      req.body?.remove === true ||
+      req.body?.remove === "true" ||
+      req.body?.remove === "1";
+    if (!file && !remove) throw new AppError("Photo file is required", 400);
+    if (!file && remove) {
+      const cleared = await pool.query(
+        `UPDATE users SET photo_url = NULL WHERE id = $1 AND role = 'admin'
+         RETURNING id, email, username, display_name, phone, photo_url`,
+        [id]
+      );
+      if (!cleared.rows[0]) throw new AppError("Admin not found", 404);
+      res.status(200).json({ status: "ok", admin: cleared.rows[0] });
+      return;
+    }
     if (!file) throw new AppError("Photo file is required", 400);
 
     const ext = file.mimetype === "image/png" ? "png" : "jpg";

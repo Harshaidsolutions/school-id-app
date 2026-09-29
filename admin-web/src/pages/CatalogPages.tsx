@@ -4,6 +4,7 @@ import api from "../api/client";
 import { CatalogPreviewThumb, ImagePreviewModal } from "../components/ImagePreviewModal";
 import { SearchInput } from "../components/ui/SearchInput";
 import { UploadDropzone } from "../components/ui/UploadDropzone";
+import { BulkActionBar, bulkDeleteMessage } from "../components/BulkActionBar";
 import type { ApiErrorBody, CatalogItem } from "../types";
 import { sequentialUploadProgressLabel } from "../utils/sequentialUploadProgress";
 
@@ -28,6 +29,8 @@ export function CatalogGridPage({
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<CatalogItem | null>(null);
 
@@ -120,9 +123,67 @@ export function CatalogGridPage({
         {loading ? (
           <div className="text-sm text-text-muted">Loading {title.toLowerCase()}…</div>
         ) : (
+          <>
+          {kind === "brochure" ? (
+            <BulkActionBar
+              selectedCount={filtered.filter((item) => selectedIds.has(item.id)).length}
+              allSelected={
+                filtered.length > 0 && filtered.every((item) => selectedIds.has(item.id))
+              }
+              deleting={bulkDeleting}
+              onToggleAll={() => {
+                setSelectedIds((prev) => {
+                  const all = filtered.every((item) => prev.has(item.id));
+                  if (all) return new Set();
+                  return new Set(filtered.map((item) => item.id));
+                });
+              }}
+              onClear={() => setSelectedIds(new Set())}
+              onDelete={() => {
+                const ids = filtered.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
+                if (ids.length === 0) return;
+                if (!confirm(`Delete ${ids.length} brochure${ids.length === 1 ? "" : "s"}?`)) return;
+                setBulkDeleting(true);
+                void api
+                  .post<{ deletedCount: number; failedCount: number }>(
+                    "/admin/catalog/bulk-delete",
+                    { ids }
+                  )
+                  .then(({ data }) => {
+                    setError(bulkDeleteMessage(data));
+                    setSelectedIds(new Set());
+                    return load();
+                  })
+                  .catch((err: unknown) => {
+                    if (axios.isAxiosError(err)) {
+                      const body = err.response?.data as ApiErrorBody | undefined;
+                      setError(body?.message ?? "Bulk delete failed.");
+                    } else setError("Bulk delete failed.");
+                  })
+                  .finally(() => setBulkDeleting(false));
+              }}
+            />
+          ) : null}
           <div className="card-grid-responsive">
             {filtered.map((item) => (
               <div key={item.id} className="card overflow-hidden">
+                {kind === "brochure" ? (
+                  <label className="flex items-center gap-2 px-3 pt-3 text-xs text-text-muted">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(item.id)}
+                      onChange={() => {
+                        setSelectedIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(item.id)) next.delete(item.id);
+                          else next.add(item.id);
+                          return next;
+                        });
+                      }}
+                    />
+                    Select
+                  </label>
+                ) : null}
                 <CatalogPreviewThumb
                   imageUrl={item.image_url}
                   alt={item.name}
@@ -145,6 +206,7 @@ export function CatalogGridPage({
               </div>
             ))}
           </div>
+          </>
         )}
       </div>
 
@@ -214,7 +276,7 @@ export function ExtraSection2Page() {
   return (
     <CatalogGridPage
       kind="extra_2"
-      title="Extra Section 2"
+      title="Organization"
       searchPlaceholder="Search by name..."
     />
   );

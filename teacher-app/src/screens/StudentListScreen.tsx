@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Modal,
@@ -44,20 +44,17 @@ import { fonts, type as typeScale } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
 import { gridItemWidth } from "../theme/responsive";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
+import { useFormConfig } from "../hooks/useFormConfig";
+import {
+  studentFullyCaptured,
+  studentHasPhoto,
+  studentPendingData,
+} from "../utils/recordStatus";
 
 type Props = NativeStackScreenProps<RootStackParamList, "StudentList">;
-type TabKey = "all" | "pending" | "captured";
+type TabKey = "all" | "pending-photos" | "pending-data" | "captured";
 
 const NUM_COLS = 2;
-
-function isCaptured(student: TeacherStudent): boolean {
-  const status = (student.status ?? "").toLowerCase();
-  return (
-    Boolean(student.photo_url) ||
-    status === "captured" ||
-    status === "printed"
-  );
-}
 
 export function StudentListScreen({ navigation, route }: Props) {
   const styles = useStudentListStyles();
@@ -66,11 +63,15 @@ export function StudentListScreen({ navigation, route }: Props) {
   const { width } = useWindowDimensions();
   const { colors } = useTheme();
   const { showToast } = useToast();
+  const { showCapturedSection } = useFormConfig();
   const gridGap = spacing.cardGap;
   const gridPad = spacing.sm;
   const itemSize = gridItemWidth(NUM_COLS, gridPad, gridGap, width);
   const [students, setStudents] = useState<TeacherStudent[]>([]);
   const [tab, setTab] = useState<TabKey>("all");
+  useEffect(() => {
+    if (!showCapturedSection && tab === "captured") setTab("all");
+  }, [showCapturedSection, tab]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -149,22 +150,54 @@ export function StudentListScreen({ navigation, route }: Props) {
     }, [classSection, loadStudents, navigation, openStudentId, patchStudent, photoBusy])
   );
 
-  const capturedCount = useMemo(
-    () => students.filter(isCaptured).length,
+  const pendingPhotoCount = useMemo(
+    () => students.filter((s) => !studentHasPhoto(s)).length,
     [students]
   );
-  const pendingCount = students.length - capturedCount;
+  const pendingDataCount = useMemo(
+    () => students.filter((s) => studentPendingData(s, false)).length,
+    [students]
+  );
+  const capturedCount = useMemo(
+    () => students.filter((s) => studentFullyCaptured(s, false)).length,
+    [students]
+  );
   const tabs: { key: TabKey; label: string; color: string; count: number }[] = [
     { key: "all", label: "All", color: colors.brandGreen, count: students.length },
-    { key: "pending", label: "Pending", color: colors.brandGreen, count: pendingCount },
-    { key: "captured", label: "Captured", color: colors.brandGreen, count: capturedCount },
+    {
+      key: "pending-photos",
+      label: "Pending Photos",
+      color: colors.brandGreen,
+      count: pendingPhotoCount,
+    },
+    {
+      key: "pending-data",
+      label: "Pending Data",
+      color: colors.brandGreen,
+      count: pendingDataCount,
+    },
+    ...(showCapturedSection
+      ? [
+          {
+            key: "captured" as const,
+            label: "Captured",
+            color: colors.brandGreen,
+            count: capturedCount,
+          },
+        ]
+      : []),
   ];
 
   const filtered = useMemo(() => {
-    if (tab === "pending") return students.filter((s) => !isCaptured(s));
-    if (tab === "captured") {
+    if (tab === "pending-photos") {
+      return students.filter((s) => !studentHasPhoto(s));
+    }
+    if (tab === "pending-data") {
+      return students.filter((s) => studentPendingData(s, false));
+    }
+    if (tab === "captured" && showCapturedSection) {
       return students
-        .filter(isCaptured)
+        .filter((s) => studentFullyCaptured(s, false))
         .sort((a, b) => {
           const aTs = Date.parse(a.photo_captured_at ?? "") || 0;
           const bTs = Date.parse(b.photo_captured_at ?? "") || 0;
@@ -173,13 +206,13 @@ export function StudentListScreen({ navigation, route }: Props) {
         });
     }
     return students;
-  }, [students, tab]);
+  }, [students, tab, showCapturedSection]);
 
   const openStudentModal = useCallback((student: TeacherStudent) => {
     const idx = filtered.findIndex((s) => s.id === student.id);
     const safeIdx = idx >= 0 ? idx : 0;
 
-    if (tab === "pending" && !isCaptured(student)) {
+    if (tab === "pending-photos" && !studentHasPhoto(student)) {
       setPendingPhotoStudent(student);
       return;
     }
@@ -228,7 +261,7 @@ export function StudentListScreen({ navigation, route }: Props) {
       <StudentGridCell
         item={item}
         width={itemSize}
-        captured={isCaptured(item)}
+        captured={studentHasPhoto(item)}
         colors={colors}
         onPress={openStudentModal}
       />
@@ -337,9 +370,11 @@ export function StudentListScreen({ navigation, route }: Props) {
           <Text style={[styles.empty, { color: colors.textMuted }]}>
             {students.length === 0
               ? "No students in this class yet."
-              : tab === "pending"
-                ? "No pending students."
-                : "No captured photos yet."}
+              : tab === "pending-photos"
+                ? "No students are waiting for a photo."
+                : tab === "pending-data"
+                  ? "No students are missing required data."
+                  : "No captured records yet."}
           </Text>
         }
         renderItem={renderStudent}
@@ -350,7 +385,7 @@ export function StudentListScreen({ navigation, route }: Props) {
         students={filtered}
         initialIndex={flowIndex}
         classSection={classSection}
-        photoCaptureEnabled={tab === "pending"}
+        photoCaptureEnabled={tab === "pending-photos"}
         onClose={() => setFlowVisible(false)}
         navigation={navigation}
       />

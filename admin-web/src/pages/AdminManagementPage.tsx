@@ -62,6 +62,31 @@ export function AdminManagementPage() {
   const [newPassword, setNewPassword] = useState("");
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [createPhoto, setCreatePhoto] = useState<File | null>(null);
+  const [createPhotoPreview, setCreatePhotoPreview] = useState<string | null>(null);
+  const [editPhoto, setEditPhoto] = useState<File | null>(null);
+  const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null);
+  const [removeEditPhoto, setRemoveEditPhoto] = useState(false);
+
+  useEffect(() => {
+    if (!createPhoto) {
+      setCreatePhotoPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(createPhoto);
+    setCreatePhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [createPhoto]);
+
+  useEffect(() => {
+    if (!editPhoto) {
+      setEditPhotoPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(editPhoto);
+    setEditPhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [editPhoto]);
 
   async function load() {
     setLoading(true);
@@ -96,7 +121,18 @@ export function AdminManagementPage() {
     e.preventDefault();
     setError(null);
     try {
-      await api.post("/admin/managed-admins", form);
+      const created = await api.post<{ admin: { id: string } }>(
+        "/admin/managed-admins",
+        form
+      );
+      if (createPhoto) {
+        const body = new FormData();
+        body.append("photo", createPhoto);
+        await api.post(`/admin/managed-admins/${created.data.admin.id}/photo`, body, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+      setCreatePhoto(null);
       setForm({
         displayName: "",
         username: "",
@@ -120,6 +156,8 @@ export function AdminManagementPage() {
   }
 
   function openEdit(admin: ManagedAdmin) {
+    setEditPhoto(null);
+    setRemoveEditPhoto(false);
     setEditTarget(admin);
     setEditForm({
       displayName: admin.display_name ?? "",
@@ -152,6 +190,16 @@ export function AdminManagementPage() {
         youtube: editForm.youtube,
         aboutUs: editForm.aboutUs,
       });
+      if (editPhoto || removeEditPhoto) {
+        const body = new FormData();
+        if (editPhoto) body.append("photo", editPhoto);
+        if (removeEditPhoto) body.append("remove", "true");
+        await api.post(`/admin/managed-admins/${editTarget.id}/photo`, body, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+      setEditPhoto(null);
+      setRemoveEditPhoto(false);
       if (editForm.password.trim().length >= 8) {
         setPasswordOtpTarget(editTarget);
         setNewPassword(editForm.password);
@@ -305,6 +353,22 @@ export function AdminManagementPage() {
             minLength={8}
             autoComplete="new-password"
           />
+          <div className="sm:col-span-2 text-sm">
+            <span className="mb-1.5 block font-medium text-text-navy">Profile photo</span>
+            {createPhotoPreview ? (
+              <img src={createPhotoPreview} alt="" className="mb-2 h-16 w-16 rounded-full object-cover" />
+            ) : null}
+            <input
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={(e) => setCreatePhoto(e.target.files?.[0] ?? null)}
+            />
+            {createPhoto ? (
+              <button type="button" className="mt-1 block text-xs text-danger" onClick={() => setCreatePhoto(null)}>
+                Remove photo
+              </button>
+            ) : null}
+          </div>
         </div>
         <div className="flex gap-2">
           <button type="submit" className="btn-primary">
@@ -501,6 +565,32 @@ export function AdminManagementPage() {
                 minLength={8}
                 autoComplete="new-password"
               />
+              <div className="text-sm">
+                <span className="mb-1.5 block font-medium text-text-navy">Profile photo</span>
+                {editPhotoPreview ? (
+                  <img src={editPhotoPreview} alt="" className="mb-2 h-16 w-16 rounded-full object-cover" />
+                ) : editTarget.photo_url && !removeEditPhoto ? (
+                  <img src={editTarget.photo_url} alt="" className="mb-2 h-16 w-16 rounded-full object-cover" />
+                ) : null}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  onChange={(e) => {
+                    setEditPhoto(e.target.files?.[0] ?? null);
+                    setRemoveEditPhoto(false);
+                  }}
+                />
+                <button
+                  type="button"
+                  className="mt-1 block text-xs text-danger"
+                  onClick={() => {
+                    setEditPhoto(null);
+                    setRemoveEditPhoto(true);
+                  }}
+                >
+                  Remove photo
+                </button>
+              </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button

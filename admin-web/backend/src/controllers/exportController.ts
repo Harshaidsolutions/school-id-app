@@ -8,6 +8,12 @@ import {
   buildExportHeaders,
   studentFieldValue,
 } from "../utils/studentExcel";
+import {
+  assertInstituteOwnedByAdmin,
+  assertSchoolOwnedByAdmin,
+  requireAdminScope,
+} from "../utils/adminScope";
+import { excelScopeClause } from "../utils/recordStatus";
 
 function sanitizePhotoIdFilename(photoId: string): string {
   const cleaned = photoId
@@ -49,6 +55,9 @@ async function downloadOrgPhotosZip(
     const { schoolId, instituteId } = options;
     const orgId = schoolId ?? instituteId;
     if (!orgId) throw new AppError("Organization id is required", 400);
+    const scope = await requireAdminScope(req);
+    if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
+    if (instituteId) await assertInstituteOwnedByAdmin(scope, instituteId);
 
     const org = schoolId
       ? await pool.query<{ name: string }>(
@@ -191,6 +200,69 @@ export async function downloadInstitutePhotosZip(
   return downloadOrgPhotosZip(req, res, next, { instituteId });
 }
 
+async function listPhotoCaptureCounts(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  options: { schoolId?: string; instituteId?: string }
+): Promise<void> {
+  try {
+    const { schoolId, instituteId } = options;
+    const orgId = schoolId ?? instituteId;
+    if (!orgId) throw new AppError("Organization id is required", 400);
+    const scope = await requireAdminScope(req);
+    if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
+    if (instituteId) await assertInstituteOwnedByAdmin(scope, instituteId);
+    const whereOrg = schoolId ? "school_id = $1" : "institute_id = $1";
+    const result = await pool.query<{ capture_date: string; photo_count: number }>(
+      `SELECT to_char(
+                COALESCE(
+                  (photo_captured_at AT TIME ZONE 'UTC')::date,
+                  (updated_at AT TIME ZONE 'UTC')::date
+                ),
+                'YYYY-MM-DD'
+              ) AS capture_date,
+              COUNT(*)::int AS photo_count
+       FROM students
+       WHERE ${whereOrg}
+         AND photo_url IS NOT NULL
+         AND status IN ('captured', 'printed')
+       GROUP BY 1
+       ORDER BY 1`,
+      [orgId]
+    );
+    const counts: Record<string, number> = {};
+    for (const row of result.rows) {
+      if (row.capture_date) counts[row.capture_date] = row.photo_count;
+    }
+    res.status(200).json({ status: "ok", counts });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listSchoolPhotoCaptureCounts(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const schoolId =
+    typeof req.params.schoolId === "string" ? req.params.schoolId.trim() : "";
+  return listPhotoCaptureCounts(req, res, next, { schoolId });
+}
+
+export async function listInstitutePhotoCaptureCounts(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const instituteId =
+    typeof req.params.instituteId === "string"
+      ? req.params.instituteId.trim()
+      : "";
+  return listPhotoCaptureCounts(req, res, next, { instituteId });
+}
+
 /**
  * GET /admin/students/:schoolId/export
  * Live Excel export: Photo_Id, Class_Section, Name, Parent, Phone, Address,
@@ -208,6 +280,13 @@ export async function exportStudentsExcel(
     if (!schoolId) {
       throw new AppError("schoolId is required", 400);
     }
+    const scope = await requireAdminScope(req);
+    await assertSchoolOwnedByAdmin(scope, schoolId);
+    const exportScope =
+      typeof req.query.scope === "string" ? req.query.scope.trim() : "all";
+    if (!["all", "pending", "captured"].includes(exportScope)) {
+      throw new AppError("scope must be all, pending, or captured", 400);
+    }
 
     const school = await pool.query<{ name: string }>(
       `SELECT name FROM schools WHERE id = $1 LIMIT 1`,
@@ -222,7 +301,7 @@ export async function exportStudentsExcel(
               address, roll_no, dob::text AS dob, gender, blood_group,
               custom_1, custom_2, custom_3, extra_fields, status
        FROM students
-       WHERE school_id = $1
+       WHERE school_id = $1${excelScopeClause(exportScope, false)}
        ORDER BY class_section ASC, roll_no ASC NULLS LAST, student_name ASC`,
       [schoolId]
     );
@@ -243,7 +322,7 @@ export async function exportStudentsExcel(
       bookType: "xlsx",
     }) as Buffer;
 
-    const filename = `${schoolFilenameSlug(school.rows[0].name)}_students.xlsx`;
+    const filename = `${schoolFilenameSlug(school.rows[0].name)}_students_${exportScope}.xlsx`;
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -274,6 +353,13 @@ export async function exportInstituteMembersExcel(
     if (!instituteId) {
       throw new AppError("instituteId is required", 400);
     }
+    const scope = await requireAdminScope(req);
+    await assertInstituteOwnedByAdmin(scope, instituteId);
+    const exportScope =
+      typeof req.query.scope === "string" ? req.query.scope.trim() : "all";
+    if (!["all", "pending", "captured"].includes(exportScope)) {
+      throw new AppError("scope must be all, pending, or captured", 400);
+    }
 
     const institute = await pool.query<{ name: string }>(
       `SELECT name FROM institutes WHERE id = $1 LIMIT 1`,
@@ -288,7 +374,7 @@ export async function exportInstituteMembersExcel(
               address, roll_no, dob::text AS dob, gender, blood_group,
               custom_1, custom_2, custom_3, extra_fields, status
        FROM students
-       WHERE institute_id = $1
+       WHERE institute_id = $1${excelScopeClause(exportScope, true)}
        ORDER BY class_section ASC, roll_no ASC NULLS LAST, student_name ASC`,
       [instituteId]
     );
@@ -308,7 +394,7 @@ export async function exportInstituteMembersExcel(
       bookType: "xlsx",
     }) as Buffer;
 
-    const filename = `${schoolFilenameSlug(institute.rows[0].name)}_members.xlsx`;
+    const filename = `${schoolFilenameSlug(institute.rows[0].name)}_members_${exportScope}.xlsx`;
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

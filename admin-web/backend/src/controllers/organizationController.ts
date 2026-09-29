@@ -43,7 +43,10 @@ export async function getTeacherOrganization(
                     logo_url, signature_url, organization_photo_url, model, tags,
                     template_id, created_at,
                     COALESCE(allow_screenshot, true) AS allow_screenshot,
-                    COALESCE(allow_screen_recording, true) AS allow_screen_recording
+                    COALESCE(allow_screen_recording, true) AS allow_screen_recording,
+                    COALESCE(field_visibility, '{}'::jsonb) AS field_visibility,
+                    COALESCE(allow_number_edit, true) AS allow_number_edit,
+                    COALESCE(show_captured_section, true) AS show_captured_section
              FROM institutes
              WHERE id = $1
              LIMIT 1`,
@@ -56,7 +59,10 @@ export async function getTeacherOrganization(
                     logo_url, signature_url, organization_photo_url, model, tags,
                     template_id, created_at,
                     COALESCE(allow_screenshot, true) AS allow_screenshot,
-                    COALESCE(allow_screen_recording, true) AS allow_screen_recording
+                    COALESCE(allow_screen_recording, true) AS allow_screen_recording,
+                    COALESCE(field_visibility, '{}'::jsonb) AS field_visibility,
+                    COALESCE(allow_number_edit, true) AS allow_number_edit,
+                    COALESCE(show_captured_section, true) AS show_captured_section
              FROM schools
              WHERE id = $1
              LIMIT 1`,

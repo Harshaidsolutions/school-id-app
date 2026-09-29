@@ -128,7 +128,8 @@ export async function listAllAdminNotifications(
     const values: unknown[] = [];
     const accessFilter = seeAll
       ? ""
-      : ` WHERE (s.owner_admin_id = $1 OR i.owner_admin_id = $1)`;
+      : ` WHERE (s.owner_admin_id = $1 OR i.owner_admin_id = $1)
+            AND COALESCE(n.audience, 'org') <> 'super_admin'`;
     if (!seeAll) {
       values.push(scope.adminUserId);
     }
@@ -170,6 +171,7 @@ export async function listAdminNotifications(
     const result = await pool.query<NotificationRow>(
       `SELECT * FROM notifications
        WHERE school_id = $1
+         AND COALESCE(audience, 'org') <> 'super_admin'
        ORDER BY created_at DESC`,
       [schoolId]
     );
@@ -265,6 +267,102 @@ export async function deleteNotification(
   }
 }
 
+function bulkNotificationResourceId(ids: string[]): string {
+  return [...ids].sort().join(",");
+}
+
+function parseNotificationIds(raw: unknown): string[] {
+  if (!Array.isArray(raw)) throw new AppError("ids are required", 400);
+  const ids = [
+    ...new Set(raw.map((id) => String(id).trim()).filter((id) => id.length > 0)),
+  ];
+  if (ids.length === 0) throw new AppError("Select at least one notification", 400);
+  if (ids.length > 200) {
+    throw new AppError("Select 200 notifications or fewer at a time", 400);
+  }
+  return ids;
+}
+
+export async function requestNotificationBulkDeleteOtp(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const ids = parseNotificationIds(req.body?.ids);
+    const scope = await requireAdminScope(req);
+    const seeAll = await adminSeesAllOrganizations(scope, req);
+    for (const id of ids) {
+      await assertNotificationOwnedByAdmin(scope, seeAll, id);
+    }
+    const admin = await pool.query<{ email: string }>(
+      `SELECT email FROM users WHERE id = $1 AND role = 'admin' LIMIT 1`,
+      [req.user.userId]
+    );
+    const adminEmail = admin.rows[0]?.email;
+    if (!adminEmail) {
+      throw new AppError("Admin account email is required to send OTP", 400);
+    }
+    const otpResult = await requestAdminActionOtp({
+      adminUserId: req.user.userId,
+      adminEmail,
+      actionType: "delete_notification_bulk",
+      resourceId: bulkNotificationResourceId(ids),
+      emailSubject: "Confirm notification deletion",
+      emailIntro: `Confirm deletion of ${ids.length} notification${ids.length === 1 ? "" : "s"}.`,
+      logPrefix: "[notification-bulk-delete]",
+    });
+    res.status(200).json({ status: "ok", ...otpResult });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function bulkDeleteNotifications(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const ids = parseNotificationIds(req.body?.ids);
+    const scope = await requireAdminScope(req);
+    const seeAll = await adminSeesAllOrganizations(scope, req);
+    for (const id of ids) {
+      await assertNotificationOwnedByAdmin(scope, seeAll, id);
+    }
+    const otp = String(req.body?.otp ?? "").trim();
+    await verifyAdminActionOtp({
+      adminUserId: req.user.userId,
+      actionType: "delete_notification_bulk",
+      resourceId: bulkNotificationResourceId(ids),
+      otp,
+    });
+    const deleted: string[] = [];
+    const failed: { id: string; message: string }[] = [];
+    for (const id of ids) {
+      const result = await pool.query(
+        `DELETE FROM notifications WHERE id = $1 RETURNING id`,
+        [id]
+      );
+      if (result.rows[0]) deleted.push(id);
+      else failed.push({ id, message: "Notification not found" });
+    }
+    const status =
+      failed.length === 0 ? "ok" : deleted.length === 0 ? "error" : "partial";
+    res.status(deleted.length === 0 ? 400 : 200).json({
+      status,
+      deleted,
+      failed,
+      deletedCount: deleted.length,
+      failedCount: failed.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function listTeacherNotifications(
   req: Request,
   res: Response,
@@ -294,6 +392,7 @@ export async function listTeacherNotifications(
                 ) AS is_read
          FROM notifications n
          WHERE n.institute_id = $1
+           AND COALESCE(n.audience, 'org') <> 'super_admin'
            AND NOT EXISTS (
              SELECT 1 FROM notification_deletes d
              WHERE d.notification_id = n.id AND d.user_id = $2
@@ -326,6 +425,7 @@ export async function listTeacherNotifications(
               ) AS is_read
        FROM notifications n
        WHERE n.school_id = $1
+         AND COALESCE(n.audience, 'org') <> 'super_admin'
          AND NOT EXISTS (
            SELECT 1 FROM notification_deletes d
            WHERE d.notification_id = n.id AND d.user_id = $2

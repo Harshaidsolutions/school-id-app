@@ -4,6 +4,7 @@ import api from "../api/client";
 import { ImagePreviewModal } from "../components/ImagePreviewModal";
 import { SearchInput } from "../components/ui/SearchInput";
 import { formatFileSize } from "./CatalogPages";
+import { BulkActionBar, bulkDeleteMessage } from "../components/BulkActionBar";
 import type { ApiErrorBody, CatalogItem } from "../types";
 import { sequentialUploadProgressLabel } from "../utils/sequentialUploadProgress";
 
@@ -36,6 +37,10 @@ export function ModelsPage() {
   const [nameFromFile, setNameFromFile] = useState(false);
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [tagFiles, setTagFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
@@ -72,6 +77,16 @@ export function ModelsPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!videoFile) {
+      setVideoPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(videoFile);
+    setVideoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [videoFile]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return items;
@@ -94,6 +109,7 @@ export function ModelsPage() {
     setNameFromFile(false);
     setDescription("");
     setFile(null);
+    setVideoFile(null);
     setTagFiles([]);
   }
 
@@ -192,12 +208,13 @@ export function ModelsPage() {
         form.append("name", name.trim());
         form.append("description", isTagsTab ? "" : description.trim());
         if (file) form.append("file", file);
+        if (videoFile) form.append("video", videoFile);
         if (editing) {
           await api.put(`/admin/catalog/${editing.id}`, form, {
             headers: { "Content-Type": "multipart/form-data" },
           });
         } else {
-          if (!file) throw new Error("Image is required");
+          if (!file && !videoFile) throw new Error("Add an image or a video");
           await api.post(`/admin/catalog?kind=${encodeURIComponent(tab)}`, form, {
             headers: { "Content-Type": "multipart/form-data" },
           });
@@ -258,6 +275,44 @@ export function ModelsPage() {
           className="mb-4"
         />
         {error && <div className="mb-4 alert-error">{error}</div>}
+        {!isTagsTab && !loading && filtered.length > 0 ? (
+          <BulkActionBar
+            selectedCount={filtered.filter((item) => selectedIds.has(item.id)).length}
+            allSelected={filtered.every((item) => selectedIds.has(item.id))}
+            deleting={bulkDeleting}
+            onToggleAll={() => {
+              setSelectedIds((prev) => {
+                const all = filtered.every((item) => prev.has(item.id));
+                if (all) return new Set();
+                return new Set(filtered.map((item) => item.id));
+              });
+            }}
+            onClear={() => setSelectedIds(new Set())}
+            onDelete={() => {
+              const ids = filtered.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
+              if (ids.length === 0) return;
+              if (!confirm(`Delete ${ids.length} model${ids.length === 1 ? "" : "s"}?`)) return;
+              setBulkDeleting(true);
+              void api
+                .post<{ deletedCount: number; failedCount: number }>(
+                  "/admin/catalog/bulk-delete",
+                  { ids }
+                )
+                .then(({ data }) => {
+                  setError(bulkDeleteMessage(data));
+                  setSelectedIds(new Set());
+                  return load();
+                })
+                .catch((err: unknown) => {
+                  if (axios.isAxiosError(err)) {
+                    const body = err.response?.data as ApiErrorBody | undefined;
+                    setError(body?.message ?? "Bulk delete failed.");
+                  } else setError("Bulk delete failed.");
+                })
+                .finally(() => setBulkDeleting(false));
+            }}
+          />
+        ) : null}
         {uploadProgress && <div className="mb-4 alert-success">{uploadProgress}</div>}
         <div className="models-table-scroll card">
           <table className="models-table">
@@ -291,6 +346,21 @@ export function ModelsPage() {
                   <tr key={item.id}>
                     <td className="col-sno">{index + 1}</td>
                     <td className="col-image">
+                      {!isTagsTab ? (
+                        <input
+                          type="checkbox"
+                          className="mr-2"
+                          checked={selectedIds.has(item.id)}
+                          onChange={() => {
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(item.id)) next.delete(item.id);
+                              else next.add(item.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      ) : null}
                       {item.image_url ? (
                         <button
                           type="button"
@@ -307,6 +377,13 @@ export function ModelsPage() {
                       ) : (
                         "—"
                       )}
+                      {item.video_url ? (
+                        <video
+                          src={item.video_url}
+                          controls
+                          className="mt-2 h-16 w-24 rounded bg-black"
+                        />
+                      ) : null}
                     </td>
                     <td className="col-name">
                       <div className="truncate font-medium text-text-navy" title={item.name}>
@@ -357,6 +434,7 @@ export function ModelsPage() {
                             setNameFromFile(false);
                             setDescription(item.description ?? "");
                             setFile(null);
+                            setVideoFile(null);
                           }}
                         >
                           Edit
@@ -411,6 +489,27 @@ export function ModelsPage() {
               />
             </div>
           </label>
+          {!isTagsTab ? (
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-medium">Upload model video</span>
+              <input
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+                onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm"
+              />
+              {videoPreview ? (
+                <video src={videoPreview} controls className="mt-2 h-28 w-full rounded bg-black" />
+              ) : null}
+              {videoFile ? (
+                <button type="button" className="mt-1 text-xs text-danger" onClick={() => setVideoFile(null)}>
+                  Remove video
+                </button>
+              ) : (
+                <p className="mt-1 text-xs text-text-muted">MP4, WEBM, or MOV. Up to 50MB.</p>
+              )}
+            </label>
+          ) : null}
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium">Image Name *</span>
             <input

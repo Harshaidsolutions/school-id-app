@@ -707,6 +707,20 @@ async function migrate() {
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS allow_screen_recording BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS allow_screenshot BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS allow_screen_recording BOOLEAN NOT NULL DEFAULT true;
+
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS show_captured_section BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS allow_number_edit BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS field_visibility JSONB NOT NULL DEFAULT '{}'::jsonb;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS show_captured_section BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS allow_number_edit BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS field_visibility JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+    ALTER TABLE students ADD COLUMN IF NOT EXISTS signature_url TEXT;
+    ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS video_url TEXT;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS audience TEXT NOT NULL DEFAULT 'org';
+    CREATE UNIQUE INDEX IF NOT EXISTS notifications_super_school_created_uidx
+      ON notifications (school_id)
+      WHERE audience = 'super_admin' AND school_id IS NOT NULL;
   `);
 
   console.log("Migration completed successfully.");

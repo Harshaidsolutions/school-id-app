@@ -79,6 +79,28 @@ export function studentPhotoStoragePath(
   return `${schoolId}/${studentId}.jpg`;
 }
 
+export function memberSignatureStoragePath(
+  orgId: string,
+  studentId: string,
+  ext: "jpg" | "png"
+): string {
+  return `${orgId}/signatures/${studentId}.${ext}`;
+}
+
+export async function uploadMemberSignatureToStorage(
+  orgId: string,
+  studentId: string,
+  file: Express.Multer.File
+): Promise<string> {
+  const ext = file.mimetype === "image/png" ? "png" : "jpg";
+  return uploadBufferToBucket(
+    STUDENT_PHOTOS_BUCKET,
+    memberSignatureStoragePath(orgId, studentId, ext),
+    file.buffer,
+    file.mimetype
+  );
+}
+
 export function studentPhotoOrgId(
   schoolId: string | null | undefined,
   instituteId: string | null | undefined
@@ -244,8 +266,19 @@ export async function uploadTemplateImage(
 
 function catalogExt(file: Express.Multer.File): string {
   const name = file.originalname.toLowerCase();
-  if (name.endsWith(".pdf") || file.mimetype === "application/pdf") return "pdf";
-  if (name.endsWith(".png") || file.mimetype === "image/png") return "png";
+  const mime = (file.mimetype || "").toLowerCase();
+  if (name.endsWith(".pdf") || mime === "application/pdf") return "pdf";
+  if (name.endsWith(".png") || mime === "image/png") return "png";
+  if (name.endsWith(".mp4") || mime === "video/mp4") return "mp4";
+  if (name.endsWith(".webm") || mime === "video/webm") return "webm";
+  if (name.endsWith(".mov") || mime === "video/quicktime") return "mov";
+  if (
+    name.endsWith(".jpg") ||
+    name.endsWith(".jpeg") ||
+    mime === "image/jpeg"
+  ) {
+    return "jpg";
+  }
   return "jpg";
 }
 

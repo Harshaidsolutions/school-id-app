@@ -33,12 +33,26 @@ export function AddStudentModal({
   const [values, setValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setValues({});
     setError(null);
+    setPhotoFile(null);
+    setPhotoPreview(null);
   }, [open, formFields]);
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPhotoPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(photoFile);
+    setPhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photoFile]);
 
   if (!open) return null;
 
@@ -61,6 +75,15 @@ export function AddStudentModal({
     }
     if (classField && !fieldValue(classField.key).trim()) {
       setError(`${classField.label} is required.`);
+      return;
+    }
+
+    if (
+      photoFile &&
+      (!["image/jpeg", "image/png"].includes(photoFile.type) ||
+        photoFile.size > 10 * 1024 * 1024)
+    ) {
+      setError("Photo must be a JPG or PNG under 10MB.");
       return;
     }
 
@@ -87,7 +110,29 @@ export function AddStudentModal({
       payload.extra_fields = extraFields;
 
       const { data } = await api.post<{ student: Student }>("/admin/students", payload);
-      onCreated(data.student);
+      let student = data.student;
+      if (photoFile) {
+        try {
+          const form = new FormData();
+          form.append("photo", photoFile);
+          const uploaded = await api.post<{ student: Student }>(
+            `/admin/students/${student.id}/photo`,
+            form,
+            { headers: { "Content-Type": "multipart/form-data" } }
+          );
+          student = uploaded.data.student ?? student;
+        } catch (err) {
+          onCreated(student);
+          if (axios.isAxiosError(err)) {
+            const body = err.response?.data as ApiErrorBody | undefined;
+            setError(body?.message ?? "Record saved, but the photo could not be uploaded.");
+          } else {
+            setError("Record saved, but the photo could not be uploaded.");
+          }
+          return;
+        }
+      }
+      onCreated(student);
       onClose();
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -223,6 +268,33 @@ export function AddStudentModal({
           <p className="mt-4 text-sm text-text-muted">Upload Excel first to configure form fields.</p>
         ) : (
           <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
+            <div className="text-sm">
+              <span className="mb-1.5 block font-medium text-text-navy">Photo</span>
+              {photoPreview ? (
+                <img
+                  src={photoPreview}
+                  alt="Selected photo"
+                  className="mb-2 h-28 w-24 rounded-lg object-cover"
+                />
+              ) : null}
+              <input
+                type="file"
+                accept="image/jpeg,image/png"
+                onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm"
+              />
+              {photoFile ? (
+                <button
+                  type="button"
+                  className="mt-1 text-xs font-semibold text-danger"
+                  onClick={() => setPhotoFile(null)}
+                >
+                  Remove photo
+                </button>
+              ) : (
+                <p className="mt-1 text-xs text-text-muted">Optional. JPG or PNG, up to 10MB.</p>
+              )}
+            </div>
             {fields.map((field) => renderField(field))}
             {error && <div className="alert-error">{error}</div>}
             <div className="flex gap-2 pt-1">

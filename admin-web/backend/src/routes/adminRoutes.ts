@@ -32,6 +32,8 @@ import {
   downloadStudentPhoto,
   exportStudentsExcel,
   exportInstituteMembersExcel,
+  listInstitutePhotoCaptureCounts,
+  listSchoolPhotoCaptureCounts,
 } from "../controllers/exportController";
 import {
   createPrintBatch,
@@ -59,6 +61,7 @@ import {
   setInstituteCapturePolicy,
 } from "../controllers/instituteController";
 import {
+  bulkDeleteTemplates,
   createTemplate,
   deleteTemplate,
   listTemplates,
@@ -66,9 +69,11 @@ import {
   updateTemplate,
 } from "../controllers/templateController";
 import {
+  bulkDeleteNotifications,
   createNotification,
   deleteNotification,
   listAdminNotifications,
+  requestNotificationBulkDeleteOtp,
   listAllAdminNotifications,
   requestNotificationDeleteOtp,
 } from "../controllers/notificationController";
@@ -77,15 +82,18 @@ import { getFormConfig, putFormConfig, syncFormConfig } from "../controllers/for
 import {
   getInstituteOrganizationInfo,
   getSchoolOrganizationInfo,
+  updateInstituteAppSettings,
+  updateSchoolAppSettings,
 } from "../controllers/organizationInfoController";
 import {
   appendCatalogExtraImage,
+  bulkDeleteCatalogItems,
   createCatalogItem,
   deleteCatalogItem,
   listCatalogItems,
   updateCatalogItem,
 } from "../controllers/catalogController";
-import { uploadCatalogFile } from "../middleware/upload";
+import { uploadCatalogFile, uploadCatalogMedia } from "../middleware/upload";
 import {
   changeManagedAdminPassword,
   createManagedAdmin,
@@ -123,6 +131,8 @@ router.post("/schools/:schoolId/request-delete-photos-otp", requestSchoolPhotosD
 router.delete("/schools/:schoolId/students", deleteSchoolExcelData);
 router.delete("/schools/:schoolId/photos", deleteSchoolPhotosData);
 router.get("/schools/:schoolId/download-photos", downloadSchoolPhotosZip);
+router.get("/schools/:schoolId/photo-capture-counts", listSchoolPhotoCaptureCounts);
+router.patch("/schools/:id/app-settings", updateSchoolAppSettings);
 router.get("/schools/:id/organization-info", getSchoolOrganizationInfo);
 
 // Institutes
@@ -140,9 +150,15 @@ router.post("/institutes/:instituteId/request-delete-photos-otp", requestInstitu
 router.delete("/institutes/:instituteId/students", deleteInstituteExcelData);
 router.delete("/institutes/:instituteId/photos", deleteInstitutePhotosData);
 router.get("/institutes/:instituteId/download-photos", downloadInstitutePhotosZip);
+router.get(
+  "/institutes/:instituteId/photo-capture-counts",
+  listInstitutePhotoCaptureCounts
+);
+router.patch("/institutes/:id/app-settings", updateInstituteAppSettings);
 router.get("/institutes/:id/organization-info", getInstituteOrganizationInfo);
 
 // Templates (global — shared by all schools)
+router.post("/templates/bulk-delete", bulkDeleteTemplates);
 router.post("/templates", uploadTemplateImageField, createTemplate);
 router.get("/templates", listTemplates);
 // Legacy path: schoolId ignored; returns all templates
@@ -151,6 +167,8 @@ router.put("/templates/:id", uploadTemplateImageField, updateTemplate);
 router.delete("/templates/:id", deleteTemplate);
 
 // Notifications
+router.post("/notifications/bulk-delete/request-otp", requestNotificationBulkDeleteOtp);
+router.post("/notifications/bulk-delete", bulkDeleteNotifications);
 router.post("/notifications", createNotification);
 router.get("/notifications", listAllAdminNotifications);
 router.post("/notifications/:id/request-delete-otp", requestNotificationDeleteOtp);
@@ -184,8 +202,23 @@ router.get("/print-batches/:schoolId", listPrintBatches);
 
 // Catalog (models, brochures, extra sections)
 router.get("/catalog", listCatalogItems);
-router.post("/catalog", uploadCatalogFile.single("file"), createCatalogItem);
-router.put("/catalog/:id", uploadCatalogFile.single("file"), updateCatalogItem);
+router.post("/catalog/bulk-delete", bulkDeleteCatalogItems);
+router.post(
+  "/catalog",
+  uploadCatalogMedia.fields([
+    { name: "file", maxCount: 1 },
+    { name: "video", maxCount: 1 },
+  ]),
+  createCatalogItem
+);
+router.put(
+  "/catalog/:id",
+  uploadCatalogMedia.fields([
+    { name: "file", maxCount: 1 },
+    { name: "video", maxCount: 1 },
+  ]),
+  updateCatalogItem
+);
 router.post(
   "/catalog/:id/extra-images",
   uploadCatalogFile.single("file"),

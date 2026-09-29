@@ -12,6 +12,7 @@ import {
   getTeacherFormConfig,
   listTeacherStudents,
   updateTeacherStudent,
+  uploadMemberSignature,
   uploadStudentPhoto,
 } from "../controllers/teacherController";
 import {
@@ -57,6 +58,11 @@ router.post(
   "/students/:id/photo",
   photoUpload.single("photo"),
   uploadStudentPhoto
+);
+router.post(
+  "/students/:id/signature",
+  photoUpload.single("signature"),
+  uploadMemberSignature
 );
 router.delete("/students/:id/photo", deleteStudentPhoto);
 router.get("/students/:id/card-preview", getTeacherCardPreview);

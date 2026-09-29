@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
 import { ImagePreviewModal } from "../components/ImagePreviewModal";
+import { OrgAppSettings } from "../components/OrgAppSettings";
 import type { ApiErrorBody } from "../types";
 
 type TagSelectionItem = {
@@ -31,6 +32,9 @@ type SchoolOrganization = OrganizationSelections & {
   logo_url: string | null;
   signature_url: string | null;
   organization_photo_url?: string | null;
+  field_visibility?: Record<string, boolean> | null;
+  allow_number_edit?: boolean | null;
+  show_captured_section?: boolean | null;
 };
 
 type InstituteOrganization = OrganizationSelections & {
@@ -44,6 +48,9 @@ type InstituteOrganization = OrganizationSelections & {
   logo_url: string | null;
   signature_url: string | null;
   organization_photo_url?: string | null;
+  field_visibility?: Record<string, boolean> | null;
+  allow_number_edit?: boolean | null;
+  show_captured_section?: boolean | null;
 };
 
 function InfoRow({
@@ -377,6 +384,23 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
           )}
         </div>
       )}
+
+      {orgId && (school || institute) ? (
+        <OrgAppSettings
+          orgId={orgId}
+          institute={isInstitute}
+          initialVisibility={
+            (isInstitute ? institute?.field_visibility : school?.field_visibility) ?? {}
+          }
+          initialAllowNumberEdit={
+            (isInstitute ? institute?.allow_number_edit : school?.allow_number_edit) !== false
+          }
+          initialShowCaptured={
+            (isInstitute ? institute?.show_captured_section : school?.show_captured_section) !==
+            false
+          }
+        />
+      ) : null}
 
       <ImagePreviewModal
         open={Boolean(preview)}

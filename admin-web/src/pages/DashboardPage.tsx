@@ -6,6 +6,7 @@ import axios from "axios";
 
 import api from "../api/client";
 
+import { useAuth } from "../context/AuthContext";
 import { useYear } from "../context/YearContext";
 
 import type { ApiErrorBody, DashboardSummary } from "../types";
@@ -180,6 +181,69 @@ function MetricPatternGrid({
 
 
 
+function SuperAdminContactCard() {
+  const { user } = useAuth();
+  const [contacts, setContacts] = useState<{
+    phone: string | null;
+    whatsapp: string | null;
+    facebook: string | null;
+    instagram: string | null;
+    youtube: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (user?.isSuperAdmin) return;
+    let cancelled = false;
+    void api
+      .get<{
+        phone: string | null;
+        whatsapp: string | null;
+        facebook?: string | null;
+        instagram?: string | null;
+        youtube?: string | null;
+      }>("/auth/support-contacts")
+      .then(({ data }) => {
+        if (!cancelled) {
+          setContacts({
+            phone: data.phone,
+            whatsapp: data.whatsapp,
+            facebook: data.facebook ?? null,
+            instagram: data.instagram ?? null,
+            youtube: data.youtube ?? null,
+          });
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.isSuperAdmin]);
+
+  if (user?.isSuperAdmin || !contacts) return null;
+  const rows = [
+    ["Phone", contacts.phone],
+    ["WhatsApp", contacts.whatsapp],
+    ["Facebook", contacts.facebook],
+    ["Instagram", contacts.instagram],
+    ["YouTube", contacts.youtube],
+  ].filter((row) => row[1]);
+  if (rows.length === 0) return null;
+
+  return (
+    <section className="dashboard-section">
+      <h2 className="dashboard-section-title uppercase">Super Admin contact</h2>
+      <div className="card divide-y divide-border">
+        {rows.map(([label, value]) => (
+          <div key={label} className="px-4 py-3 text-sm">
+            <div className="text-xs font-semibold uppercase text-text-muted">{label}</div>
+            <div className="mt-1 text-text-navy">{value}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function DashboardPage() {
 
   const { year } = useYear();
@@ -349,6 +413,7 @@ export function DashboardPage() {
     <div className="app-page dashboard-page space-y-6 pb-2 sm:space-y-8">
 
       {error && <div className="alert-error">{error}</div>}
+      <SuperAdminContactCard />
 
       {loading ? (
 

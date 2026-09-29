@@ -38,10 +38,11 @@ import {
   requireAdminScope,
 } from "../utils/adminScope";
 import { Student, StudentRowInput } from "../types/student";
+import { assertNumberEditAllowed } from "../utils/recordStatus";
 
 const STUDENT_SELECT = `
   id, school_id, institute_id, class_section, roll_no, student_name, parent_name, parent_phone,
-  address, photo_id, photo_url, status, import_batch_id, printed_at, created_at, updated_at,
+  address, photo_id, photo_url, photo_captured_at, signature_url, status, import_batch_id, printed_at, created_at, updated_at,
   custom_1, custom_2, custom_3, dob, gender, blood_group, extra_fields, field_labels
 `;
 
@@ -507,6 +508,13 @@ export async function updateStudentAdmin(
     );
     const student = existing.rows[0];
     if (!student) throw new AppError("Student not found", 404);
+
+    await assertNumberEditAllowed(
+      student.school_id,
+      student.institute_id,
+      req.body as Record<string, unknown>,
+      student.photo_id
+    );
 
     const optional = (key: string, alt?: string): string | null | undefined => {
       if (req.body[key] !== undefined) {

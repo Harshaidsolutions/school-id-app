@@ -20,7 +20,7 @@ const NAV: NavItem[] = [
   { label: "Brochures", icon: "brochure", to: "/brochures" },
   { label: "Notifications", icon: "notification", to: "/notifications" },
   { label: "Admin Management", icon: "extra", to: "/extra-1", superOnly: true },
-  { label: "Extra Section 2", icon: "extra", to: "/extra-2", superOnly: true },
+  { label: "Organization", icon: "extra", to: "/extra-2", superOnly: true },
 ];
 
 const TITLES: Record<string, string> = {
@@ -32,7 +32,7 @@ const TITLES: Record<string, string> = {
   "/notifications": "Notifications",
   "/brochures": "Brochures",
   "/extra-1": "Admin Management",
-  "/extra-2": "Extra Section 2",
+  "/extra-2": "Organization",
   "/students": "Students",
   "/institute-members": "Members",
   "/bulk-upload": "Excel Upload",
@@ -193,6 +193,13 @@ export function AppLayout() {
           <HarshaLogo compact />
         ) : (
           <div className="px-1 py-1 text-sm">
+            {user?.photoUrl ? (
+              <img
+                src={user.photoUrl}
+                alt=""
+                className="mb-2 h-12 w-12 rounded-full object-cover"
+              />
+            ) : null}
             <div className="text-text-muted">Hi</div>
             <div className="font-semibold text-text-navy">
               {user?.displayName?.trim() || user?.username || user?.email}

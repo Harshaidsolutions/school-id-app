@@ -23,6 +23,7 @@ import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import type { AppColors } from "../theme/palettes";
 
 import { getVisibleStudentFields } from "../utils/studentFields";
+import { formatCapturedAt } from "../utils/recordStatus";
 import { useFormConfig } from "../hooks/useFormConfig";
 
 
@@ -83,9 +84,12 @@ export function StudentDetailScreen({ navigation, route }: Props) {
   const { student, classSection } = route.params;
 
   const hasPhoto = Boolean(student.photo_url);
-  const { fields: formFields } = useFormConfig();
+  const { fields: formFields, fieldVisibility, allowNumberEdit } = useFormConfig();
 
-  const visibleFields = getVisibleStudentFields(student, classSection, formFields);
+  const visibleFields = getVisibleStudentFields(student, classSection, formFields, {
+    visibility: fieldVisibility,
+    hideIdentity: !allowNumberEdit,
+  });
 
   const photoCapture = useStudentPhotoCapture(navigation);
   const { scale } = useResponsiveLayout();
@@ -181,6 +185,22 @@ export function StudentDetailScreen({ navigation, route }: Props) {
             </Pressable>
 
           </View>
+
+          {formatCapturedAt(student.photo_captured_at) ? (
+            <Text style={{ marginTop: 8, color: colors.textMuted, textAlign: "center" }}>
+              Captured: {formatCapturedAt(student.photo_captured_at)}
+            </Text>
+          ) : null}
+          {student.signature_url ? (
+            <View style={{ marginTop: 12, alignItems: "center" }}>
+              <Text style={{ color: colors.textMuted, marginBottom: 4 }}>Signature</Text>
+              <Image
+                source={{ uri: student.signature_url }}
+                style={{ width: photoSize, height: 72 }}
+                resizeMode="contain"
+              />
+            </View>
+          ) : null}
 
           <Text style={[styles.studentName, { color: colors.text }]}>
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import axios from "axios";
 import api from "../api/client";
+import { BulkActionBar, bulkDeleteMessage } from "../components/BulkActionBar";
 import { OtpConfirmModal } from "../components/OtpConfirmModal";
 import type {
   ApiErrorBody,
@@ -28,6 +29,9 @@ export function NotificationsPage() {
   );
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<NotificationRow | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -312,6 +316,25 @@ export function NotificationsPage() {
       <h2 className="mb-3 text-lg font-semibold text-text-navy">
         Sent Notifications
       </h2>
+      {!loading && notifications.length > 0 ? (
+        <BulkActionBar
+          selectedCount={notifications.filter((n) => selectedIds.has(n.id)).length}
+          allSelected={notifications.every((n) => selectedIds.has(n.id))}
+          deleting={bulkDeleting}
+          onToggleAll={() => {
+            setSelectedIds((prev) => {
+              const all = notifications.every((n) => prev.has(n.id));
+              if (all) return new Set();
+              return new Set(notifications.map((n) => n.id));
+            });
+          }}
+          onClear={() => setSelectedIds(new Set())}
+          onDelete={() => {
+            if (notifications.filter((n) => selectedIds.has(n.id)).length === 0) return;
+            setBulkOpen(true);
+          }}
+        />
+      ) : null}
       <div className="space-y-3">
         {loading && (
           <div className="text-sm text-text-muted">Loading…</div>
@@ -327,7 +350,21 @@ export function NotificationsPage() {
             className="rounded-2xl border border-border/60 bg-white p-5 shadow-sm"
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="font-semibold text-text-navy">{n.title}</div>
+              <label className="flex items-center gap-2 font-semibold text-text-navy">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(n.id)}
+                  onChange={() => {
+                    setSelectedIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(n.id)) next.delete(n.id);
+                      else next.add(n.id);
+                      return next;
+                    });
+                  }}
+                />
+                {n.title}
+              </label>
               <div className="flex items-center gap-3">
                 <div className="text-xs text-text-muted">
                   {n.created_at
@@ -352,6 +389,49 @@ export function NotificationsPage() {
           </div>
         ))}
       </div>
+
+      {bulkOpen && (
+        <OtpConfirmModal
+          title="Delete notifications"
+          description={`Remove ${notifications.filter((n) => selectedIds.has(n.id)).length} selected notification(s).`}
+          confirmLabel="Delete selected"
+          onClose={() => {
+            if (!bulkDeleting) setBulkOpen(false);
+          }}
+          onRequestOtp={async () => {
+            const ids = notifications.filter((n) => selectedIds.has(n.id)).map((n) => n.id);
+            const { data } = await api.post<{ message?: string; devOtp?: string }>(
+              "/admin/notifications/bulk-delete/request-otp",
+              { ids }
+            );
+            return { message: data.message, devOtp: data.devOtp };
+          }}
+          onConfirm={async (otp) => {
+            const ids = notifications.filter((n) => selectedIds.has(n.id)).map((n) => n.id);
+            setBulkDeleting(true);
+            try {
+              const { data } = await api.post<{
+                deleted: string[];
+                deletedCount: number;
+                failedCount: number;
+              }>("/admin/notifications/bulk-delete", { ids, otp });
+              const message = bulkDeleteMessage(data);
+              setError(message);
+              setNotifications((prev) => prev.filter((item) => !data.deleted?.includes(item.id)));
+              setSelectedIds(new Set());
+              setBulkOpen(false);
+            } catch (err) {
+              if (axios.isAxiosError(err)) {
+                const body = err.response?.data as ApiErrorBody | undefined;
+                throw new Error(body?.message ?? "Failed to delete notifications.");
+              }
+              throw new Error("Failed to delete notifications.");
+            } finally {
+              setBulkDeleting(false);
+            }
+          }}
+        />
+      )}
 
       {deleteTarget && (
         <OtpConfirmModal

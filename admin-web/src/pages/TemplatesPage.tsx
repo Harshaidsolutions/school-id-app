@@ -5,6 +5,7 @@ import { SearchInput } from "../components/ui/SearchInput";
 import { UploadDropzone } from "../components/ui/UploadDropzone";
 import { TemplateFormModal } from "../components/TemplateFormModal";
 import { CatalogPreviewThumb, ImagePreviewModal } from "../components/ImagePreviewModal";
+import { BulkActionBar, bulkDeleteMessage } from "../components/BulkActionBar";
 import type { ApiErrorBody, Template, TemplateOrientation } from "../types";
 import { TEMPLATE_TABS as TABS } from "../types";
 
@@ -28,6 +29,8 @@ export function TemplatesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editTemplate, setEditTemplate] = useState<Template | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -166,9 +169,69 @@ export function TemplatesPage() {
               No templates in this category yet. Upload using the panel on the right.
             </div>
           ) : (
+            <>
+            <BulkActionBar
+              selectedCount={templateRows.filter((tpl) => selectedIds.has(tpl.id)).length}
+              allSelected={
+                templateRows.length > 0 &&
+                templateRows.every((tpl) => selectedIds.has(tpl.id))
+              }
+              deleting={bulkDeleting}
+              onToggleAll={() => {
+                setSelectedIds((prev) => {
+                  const all = templateRows.every((tpl) => prev.has(tpl.id));
+                  if (all) return new Set();
+                  return new Set(templateRows.map((tpl) => tpl.id));
+                });
+              }}
+              onClear={() => setSelectedIds(new Set())}
+              onDelete={() => {
+                const ids = templateRows
+                  .filter((tpl) => selectedIds.has(tpl.id))
+                  .map((tpl) => tpl.id);
+                if (ids.length === 0) return;
+                if (!confirm(`Delete ${ids.length} template${ids.length === 1 ? "" : "s"}?`)) {
+                  return;
+                }
+                setBulkDeleting(true);
+                void api
+                  .post<{ deletedCount: number; failedCount: number }>(
+                    "/admin/templates/bulk-delete",
+                    { ids }
+                  )
+                  .then(({ data }) => {
+                    const message = bulkDeleteMessage(data);
+                    setError(message);
+                    setSelectedIds(new Set());
+                    return loadTemplates();
+                  })
+                  .catch((err: unknown) => {
+                    if (axios.isAxiosError(err)) {
+                      const body = err.response?.data as ApiErrorBody | undefined;
+                      setError(body?.message ?? "Bulk delete failed.");
+                    } else setError("Bulk delete failed.");
+                  })
+                  .finally(() => setBulkDeleting(false));
+              }}
+            />
             <div className="card-grid-responsive">
               {templateRows.map((tpl) => (
                 <div key={tpl.id} className="card overflow-hidden">
+                  <label className="flex items-center gap-2 px-3 pt-3 text-xs text-text-muted">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(tpl.id)}
+                      onChange={() => {
+                        setSelectedIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(tpl.id)) next.delete(tpl.id);
+                          else next.add(tpl.id);
+                          return next;
+                        });
+                      }}
+                    />
+                    Select
+                  </label>
                   <CatalogPreviewThumb
                     imageUrl={tpl.image_url}
                     alt={tpl.name}
@@ -205,6 +268,7 @@ export function TemplatesPage() {
                 </div>
               ))}
             </div>
+            </>
           )}
         </div>
 
