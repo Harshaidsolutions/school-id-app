@@ -81,6 +81,7 @@ export type DynamicStudentFieldListProps = {
   /** Edit flow: Photo ID and student name stay visible but cannot be changed. */
   lockIdentityFields?: boolean;
   photoId?: string;
+  studentName?: string;
   onInputFocus?: (nativeTarget: number) => void;
 };
 
@@ -136,6 +137,7 @@ export function DynamicStudentFieldList({
   parentPhoneTenDigits = false,
   lockIdentityFields = false,
   photoId = "",
+  studentName = "",
   onInputFocus,
 }: DynamicStudentFieldListProps) {
   const focus = focusProps(onInputFocus);
@@ -144,14 +146,28 @@ export function DynamicStudentFieldList({
   return (
     <>
       {lockIdentityFields ? (
-        <Field label="Photo ID" colors={colors}>
-          <TextInput
-            style={inputStyle}
-            value={photoId}
-            editable={false}
-            placeholderTextColor={colors.textSubtle}
-          />
-        </Field>
+        <>
+          <Field label="Photo ID" colors={colors}>
+            <TextInput
+              style={inputStyle}
+              value={photoId}
+              editable={false}
+              showSoftInputOnFocus={false}
+              caretHidden
+              placeholderTextColor={colors.textSubtle}
+            />
+          </Field>
+          <Field label="Name" colors={colors}>
+            <TextInput
+              style={inputStyle}
+              value={studentName}
+              editable={false}
+              showSoftInputOnFocus={false}
+              caretHidden
+              placeholderTextColor={colors.textSubtle}
+            />
+          </Field>
+        </>
       ) : null}
       {ordered.map((field) => {
         const kind = resolveFieldKind(field);
@@ -161,6 +177,7 @@ export function DynamicStudentFieldList({
         }
 
         if (kind === "student_name") {
+          if (lockIdentityFields) return null;
           return (
             <View key={field.key}>
               <Field label="First Name" colors={colors} required={nameRequired && !lockIdentityFields}>

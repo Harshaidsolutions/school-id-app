@@ -144,6 +144,7 @@ export async function createManagedAdmin(
     const email = String(req.body.email ?? "").trim();
     const phone = normalizePhone(String(req.body.phone ?? ""));
     const whatsapp = cleanWhatsapp(String(req.body.whatsapp ?? ""));
+    if (!whatsapp) throw new AppError("WhatsApp number is required", 400);
     const facebookUrl = cleanUrl(String(req.body.facebook ?? req.body.facebookUrl ?? ""));
     const instagramUrl = cleanUrl(String(req.body.instagram ?? req.body.instagramUrl ?? ""));
     const youtubeUrl = cleanUrl(String(req.body.youtube ?? req.body.youtubeUrl ?? ""));
@@ -250,6 +251,9 @@ export async function updateManagedAdmin(
     }
     if (phone !== undefined && phone.length !== 10) {
       throw new AppError("Phone must be 10 digits", 400);
+    }
+    if (whatsapp !== undefined && !whatsapp) {
+      throw new AppError("WhatsApp number is required", 400);
     }
 
     const updated = await pool.query(

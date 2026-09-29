@@ -41,7 +41,9 @@ export async function getTeacherOrganization(
           await pool.query<InstituteRow>(
             `SELECT id, name, year, phone, institute_code, address, instructions,
                     logo_url, signature_url, organization_photo_url, model, tags,
-                    template_id, created_at
+                    template_id, created_at,
+                    COALESCE(allow_screenshot, true) AS allow_screenshot,
+                    COALESCE(allow_screen_recording, true) AS allow_screen_recording
              FROM institutes
              WHERE id = $1
              LIMIT 1`,
@@ -52,7 +54,9 @@ export async function getTeacherOrganization(
           await pool.query<SchoolRow>(
             `SELECT id, name, year, phone, phone2, school_code, address, instructions,
                     logo_url, signature_url, organization_photo_url, model, tags,
-                    template_id, created_at
+                    template_id, created_at,
+                    COALESCE(allow_screenshot, true) AS allow_screenshot,
+                    COALESCE(allow_screen_recording, true) AS allow_screen_recording
              FROM schools
              WHERE id = $1
              LIMIT 1`,

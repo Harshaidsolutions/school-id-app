@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
@@ -28,16 +28,15 @@ type OrgRow = {
   pending_photos: number;
 };
 
-type FormState = {
-  displayName: string;
-  email: string;
-  phone: string;
-  whatsapp: string;
-  facebook: string;
-  instagram: string;
-  youtube: string;
-  aboutUs: string;
-};
+function Detail({ label, value }: { label: string; value: string | null | undefined }) {
+  const text = value?.trim() ? value : "—";
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</p>
+      <p className="mt-1 whitespace-pre-wrap text-sm text-text-navy">{text}</p>
+    </div>
+  );
+}
 
 function formatCreated(value: string | null): string {
   if (!value) return "—";
@@ -106,11 +105,8 @@ export function ChildAdminDetailPage() {
   const [admin, setAdmin] = useState<AdminRow | null>(null);
   const [schools, setSchools] = useState<OrgRow[]>([]);
   const [institutes, setInstitutes] = useState<OrgRow[]>([]);
-  const [form, setForm] = useState<FormState | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
 
   async function load() {
     if (!id) return;
@@ -125,16 +121,6 @@ export function ChildAdminDetailPage() {
       setAdmin(data.admin);
       setSchools(data.schools);
       setInstitutes(data.institutes);
-      setForm({
-        displayName: data.admin.display_name ?? "",
-        email: data.admin.email,
-        phone: data.admin.phone ?? "",
-        whatsapp: data.admin.whatsapp ?? "",
-        facebook: data.admin.facebook_url ?? "",
-        instagram: data.admin.instagram_url ?? "",
-        youtube: data.admin.youtube_url ?? "",
-        aboutUs: data.admin.about_us ?? "",
-      });
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const body = err.response?.data as ApiErrorBody | undefined;
@@ -157,122 +143,28 @@ export function ChildAdminDetailPage() {
     );
   }
 
-  async function save(event: FormEvent) {
-    event.preventDefault();
-    if (!id || !form) return;
-    setSaving(true);
-    setError(null);
-    setSaved(false);
-    try {
-      await api.put(`/admin/managed-admins/${id}`, form);
-      setSaved(true);
-      await load();
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const body = err.response?.data as ApiErrorBody | undefined;
-        setError(body?.message ?? "Could not save these details.");
-      } else setError("Could not save these details.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
     <div className="app-page space-y-4">
       <Link to="/extra-1" className="text-sm font-semibold text-button-blue hover:underline">
         Back to Admin Management
       </Link>
-      <h1 className="text-xl font-bold text-text-navy">Child Admin Details</h1>
+      <h1 className="text-xl font-bold text-text-navy">Created Admin Details</h1>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
-      {saved ? <p className="text-sm text-text-navy">Saved. The app will use these details on the next refresh.</p> : null}
-      {loading || !form ? (
+      {loading || !admin ? (
         <p className="text-text-muted">Loading…</p>
       ) : (
         <>
-          <form onSubmit={(e) => void save(e)} className="card space-y-3 p-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1 text-sm font-semibold text-text-navy">
-                Name
-                <input
-                  className="input-field"
-                  value={form.displayName}
-                  onChange={(e) => setForm({ ...form, displayName: e.target.value })}
-                  required
-                />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-text-navy">
-                Email
-                <input
-                  className="input-field"
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
-                />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-text-navy">
-                Phone
-                <input
-                  className="input-field"
-                  value={form.phone}
-                  maxLength={10}
-                  onChange={(e) =>
-                    setForm({ ...form, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })
-                  }
-                  required
-                />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-text-navy">
-                WhatsApp
-                <input
-                  className="input-field"
-                  value={form.whatsapp}
-                  onChange={(e) =>
-                    setForm({ ...form, whatsapp: e.target.value.replace(/\D/g, "").slice(0, 15) })
-                  }
-                />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-text-navy">
-                Facebook
-                <input
-                  className="input-field"
-                  value={form.facebook}
-                  onChange={(e) => setForm({ ...form, facebook: e.target.value })}
-                />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-text-navy">
-                Instagram
-                <input
-                  className="input-field"
-                  value={form.instagram}
-                  onChange={(e) => setForm({ ...form, instagram: e.target.value })}
-                />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-text-navy sm:col-span-2">
-                YouTube
-                <input
-                  className="input-field"
-                  value={form.youtube}
-                  onChange={(e) => setForm({ ...form, youtube: e.target.value })}
-                />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-text-navy sm:col-span-2">
-                About Us
-                <textarea
-                  className="input-field"
-                  rows={4}
-                  value={form.aboutUs}
-                  onChange={(e) => setForm({ ...form, aboutUs: e.target.value })}
-                />
-              </label>
-            </div>
-            <p className="text-sm text-text-muted">
-              Account status: {admin?.is_active === false ? "Inactive" : "Active"}
-            </p>
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </button>
-          </form>
+          <section className="card grid gap-3 p-4 sm:grid-cols-2">
+            <Detail label="Admin/Company Name" value={admin.display_name} />
+            <Detail label="Email" value={admin.email} />
+            <Detail label="Phone" value={admin.phone} />
+            <Detail label="WhatsApp" value={admin.whatsapp} />
+            <Detail label="Facebook" value={admin.facebook_url} />
+            <Detail label="Instagram" value={admin.instagram_url} />
+            <Detail label="YouTube" value={admin.youtube_url} />
+            <Detail label="About Us" value={admin.about_us} />
+            <Detail label="Status" value={admin.is_active === false ? "Inactive" : "Active"} />
+          </section>
           <OrgTable title="Total Schools" peopleLabel="Students" rows={schools} />
           <OrgTable title="Total Institutes" peopleLabel="Members" rows={institutes} />
         </>

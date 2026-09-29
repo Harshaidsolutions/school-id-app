@@ -16,6 +16,7 @@ export function SchoolListPage() {
   const [deleteTarget, setDeleteTarget] = useState<School | null>(null);
   const [editTarget, setEditTarget] = useState<School | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [captureId, setCaptureId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
 
   async function loadSchools() {
@@ -73,6 +74,45 @@ export function SchoolListPage() {
     }
   }
 
+  async function toggleCapture(school: School, which: "screenshot" | "recording") {
+    const allowScreenshot =
+      which === "screenshot"
+        ? school.allow_screenshot === false
+        : school.allow_screenshot !== false;
+    const allowRecording =
+      which === "recording"
+        ? school.allow_screen_recording === false
+        : school.allow_screen_recording !== false;
+    setCaptureId(school.id);
+    try {
+      const { data } = await api.patch<{ school: School }>(
+        `/admin/schools/${school.id}/capture`,
+        {
+          allow_screenshot: allowScreenshot,
+          allow_screen_recording: allowRecording,
+        }
+      );
+      setSchools((prev) =>
+        prev.map((s) =>
+          s.id === school.id
+            ? {
+                ...s,
+                allow_screenshot: data.school?.allow_screenshot !== false,
+                allow_screen_recording: data.school?.allow_screen_recording !== false,
+              }
+            : s
+        )
+      );
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const body = err.response?.data as ApiErrorBody | undefined;
+        setError(body?.message ?? "Failed to update capture settings.");
+      } else setError("Failed to update capture settings.");
+    } finally {
+      setCaptureId(null);
+    }
+  }
+
   return (
     <div className="app-page school-list-page admin-scroll-root">
       <PageActions
@@ -93,6 +133,9 @@ export function SchoolListPage() {
       />
 
       {error && <div className="mb-4 alert-error">{error}</div>}
+      <p className="mb-3 text-xs text-text-muted">
+        On Android, screenshots and screen recording are blocked together. If either switch is off, both are blocked for that school.
+      </p>
 
       <div className="card list-table-scroll school-list-table-panel admin-scroll-panel">
         <table className="list-data-table">
@@ -105,20 +148,21 @@ export function SchoolListPage() {
               <th className="hidden w-[12%] px-2 py-3 lg:table-cell sm:px-3">Phone</th>
               <th className="hidden w-[14%] px-2 py-3 sm:table-cell sm:px-3">Created</th>
               <th className="w-16 px-2 py-3 sm:px-3">Status</th>
+              <th className="px-2 py-3 sm:px-3">Capture</th>
               <th className="w-24 px-2 py-3 text-right sm:px-3">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {loading && (
               <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-text-muted">
+                <td colSpan={9} className="px-4 py-10 text-center text-text-muted">
                   Loading…
                 </td>
               </tr>
             )}
             {!loading && filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-text-muted">
+                <td colSpan={9} className="px-4 py-10 text-center text-text-muted">
                   No schools yet — click Add School to get started.
                 </td>
               </tr>
@@ -159,6 +203,28 @@ export function SchoolListPage() {
                       onChange={() => void toggleActive(school)}
                       label={`${school.name} status`}
                     />
+                  </td>
+                  <td className="px-2 py-3 sm:px-3">
+                    <div className="grid gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-text-muted">Screenshot</span>
+                        <ToggleSwitch
+                          checked={school.allow_screenshot !== false}
+                          disabled={captureId === school.id}
+                          onChange={() => void toggleCapture(school, "screenshot")}
+                          label={`${school.name} screenshot`}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-text-muted">Recording</span>
+                        <ToggleSwitch
+                          checked={school.allow_screen_recording !== false}
+                          disabled={captureId === school.id}
+                          onChange={() => void toggleCapture(school, "recording")}
+                          label={`${school.name} screen recording`}
+                        />
+                      </div>
+                    </div>
                   </td>
                   <td className="px-2 py-3 sm:px-3">
                     <div className="flex items-center justify-end gap-1">

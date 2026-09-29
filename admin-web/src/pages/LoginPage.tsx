@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
@@ -36,6 +36,25 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [contacts, setContacts] = useState<{ phone: string | null; whatsapp: string | null }>({
+    phone: null,
+    whatsapp: null,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    void api
+      .get<{ phone: string | null; whatsapp: string | null }>("/auth/support-contacts")
+      .then(({ data }) => {
+        if (!cancelled) {
+          setContacts({ phone: data.phone ?? null, whatsapp: data.whatsapp ?? null });
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -70,14 +89,10 @@ export function LoginPage() {
 
   return (
     <LoginPageLayout
-      title={
-        <button
-          type="button"
-          onClick={() => navigate("/forgot-password")}
-          className="block w-full cursor-pointer border-0 bg-transparent p-0 text-inherit font-inherit text-text-navy no-underline hover:text-text-navy focus:outline-none"
-        >
-          Admin Login
-        </button>
+      appBrand
+      title="Welcome Admin"
+      footer={
+        <SuperAdminContacts phone={contacts.phone} whatsapp={contacts.whatsapp} />
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -145,7 +160,51 @@ export function LoginPage() {
         <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 text-sm sm:text-[15px]">
           {loading ? "Logging in…" : "Login"}
         </button>
+        <button
+          type="button"
+          onClick={() => navigate("/forgot-password")}
+          className="block w-full text-center text-sm font-semibold text-button-blue hover:underline"
+        >
+          Forgot Password
+        </button>
       </form>
     </LoginPageLayout>
+  );
+}
+
+function waDigits(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 10) return `91${digits}`;
+  return digits;
+}
+
+function SuperAdminContacts({
+  phone,
+  whatsapp,
+}: {
+  phone: string | null;
+  whatsapp: string | null;
+}) {
+  const call = phone?.trim() || null;
+  const chat = whatsapp?.trim() || call;
+  if (!call && !chat) return null;
+  return (
+    <div className="flex flex-col items-center gap-2 text-sm">
+      {chat ? (
+        <a
+          className="font-semibold text-button-blue hover:underline"
+          href={`https://wa.me/${waDigits(chat)}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          WhatsApp {chat}
+        </a>
+      ) : null}
+      {call ? (
+        <a className="font-semibold text-button-blue hover:underline" href={`tel:${call}`}>
+          Phone {call}
+        </a>
+      ) : null}
+    </div>
   );
 }

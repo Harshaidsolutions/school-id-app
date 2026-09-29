@@ -19,6 +19,7 @@ import { AppIcon } from "../components/AppIcon";
 import { loginLogoSize } from "../constants/headerLogo";
 import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import { BrandLockup } from "../components/BrandLockup";
+import { BRAND } from "../constants/brand";
 import { KeyboardDismissView } from "../components/KeyboardDismissView";
 import type { LoginResponse } from "../types";
 import type { RootStackParamList } from "../navigation/types";
@@ -127,7 +128,12 @@ export function LoginScreen(_props: Props) {
             showsVerticalScrollIndicator={false}
           >
             <AppIcon size={logoSize} />
-            <BrandLockup variant="hero" showTagline={false} style={{ marginTop: spacing.sm }} />
+            <BrandLockup
+              variant="hero"
+              title={BRAND.appName}
+              showTagline={false}
+              style={{ marginTop: spacing.sm }}
+            />
 
             <Text style={styles.title}>Welcome Back!</Text>
             <Text style={styles.subtitle}>Login to continue</Text>

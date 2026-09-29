@@ -6,12 +6,14 @@ import {
   forgotPassword,
   verifyResetOtp,
   resetPassword,
+  getSuperAdminContacts,
 } from "../controllers/authController";
 import { authMiddleware, requireRole } from "../middleware/auth";
 
 const router = Router();
 
 router.post("/login", login);
+router.get("/support-contacts", getSuperAdminContacts);
 /** One-time bootstrap only — refuses once any admin exists */
 router.post("/setup-first-admin", setupFirstAdmin);
 /** Teachers (and additional users) may only be created by an authenticated admin */

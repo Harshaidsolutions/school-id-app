@@ -702,6 +702,11 @@ async function migrate() {
       LIMIT 1
     ) super
     WHERE c.owner_admin_id IS NULL;
+
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS allow_screenshot BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS allow_screen_recording BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS allow_screenshot BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS allow_screen_recording BOOLEAN NOT NULL DEFAULT true;
   `);
 
   console.log("Migration completed successfully.");

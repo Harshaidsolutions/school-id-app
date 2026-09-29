@@ -436,6 +436,42 @@ export async function setSchoolActive(
   }
 }
 
+/** PATCH /admin/schools/:id/capture — per-school screenshot and recording flags. */
+export async function setSchoolCapturePolicy(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const id = routeParam(req.params.id);
+    if (!id) throw new AppError("School id is required", 400);
+    await assertSchoolOwnedByAdmin(scope, id);
+
+    const allowScreenshot = parseBooleanField(
+      req.body.allow_screenshot ?? req.body.allowScreenshot,
+      true
+    );
+    const allowRecording = parseBooleanField(
+      req.body.allow_screen_recording ?? req.body.allowScreenRecording,
+      true
+    );
+
+    const updated = await pool.query<SchoolRow>(
+      `UPDATE schools
+       SET allow_screenshot = $1, allow_screen_recording = $2
+       WHERE id = $3::uuid
+       RETURNING *`,
+      [allowScreenshot, allowRecording, id]
+    );
+    const school = updated.rows[0];
+    if (!school) throw new AppError("School not found", 404);
+    res.status(200).json({ status: "ok", school });
+  } catch (error) {
+    next(error);
+  }
+}
+
 const OTP_TTL_MS = 15 * 60 * 1000;
 const OTP_LENGTH = 6;
 

@@ -454,6 +454,42 @@ export async function setInstituteActive(
   }
 }
 
+/** PATCH /admin/institutes/:id/capture — per-institute screenshot and recording flags. */
+export async function setInstituteCapturePolicy(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const id = routeParam(req.params.id);
+    if (!id) throw new AppError("Institute id is required", 400);
+    await assertInstituteOwnedByAdmin(scope, id);
+
+    const allowScreenshot = parseBooleanField(
+      req.body.allow_screenshot ?? req.body.allowScreenshot,
+      true
+    );
+    const allowRecording = parseBooleanField(
+      req.body.allow_screen_recording ?? req.body.allowScreenRecording,
+      true
+    );
+
+    const updated = await pool.query<InstituteRow>(
+      `UPDATE institutes
+       SET allow_screenshot = $1, allow_screen_recording = $2
+       WHERE id = $3::uuid
+       RETURNING *`,
+      [allowScreenshot, allowRecording, id]
+    );
+    const institute = updated.rows[0];
+    if (!institute) throw new AppError("Institute not found", 404);
+    res.status(200).json({ status: "ok", institute });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function getAdminEmail(adminUserId: string): Promise<string> {
   const adminResult = await pool.query<{ email: string }>(
     `SELECT email FROM users WHERE id = $1 AND role = 'admin' LIMIT 1`,

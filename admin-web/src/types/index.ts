@@ -130,6 +130,9 @@ export interface School {
   owner_password?: string | null;
   /** Active/Inactive — defaults to true when API omits it */
   is_active?: boolean | null;
+  /** Existing organizations default to allowed until an admin turns one off. */
+  allow_screenshot?: boolean | null;
+  allow_screen_recording?: boolean | null;
 }
 
 export interface Institute {
@@ -147,6 +150,8 @@ export interface Institute {
   owner_user_id?: string | null;
   owner_password?: string | null;
   is_active?: boolean | null;
+  allow_screenshot?: boolean | null;
+  allow_screen_recording?: boolean | null;
 }
 
 export type TemplateOrientation =

@@ -65,6 +65,12 @@ const INSTRUCTIONS = [
 
 const PRODUCTS = HOME_PRODUCTS;
 
+function splitAdminName(name: string): { lead: string; accent?: string } {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return { lead: parts[0] || name.trim() };
+  return { lead: parts[0], accent: parts.slice(1).join(" ") };
+}
+
 export function HomeScreen() {
   const styles = useHomeStyles();
   const { scale, wp, width } = useResponsiveLayout();
@@ -80,6 +86,7 @@ export function HomeScreen() {
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const { brand, ready, error: brandError, reload: reloadBrand } = useCustomerBrand();
   const childBrand = ready && brand.source === "child";
+  const adminNameParts = childBrand ? splitAdminName(brand.adminName) : null;
   const scrollRef = useRef<ScrollView>(null);
   const instructionsY = useRef(0);
   const copyright = !ready
@@ -210,7 +217,12 @@ export function HomeScreen() {
       >
         <View style={styles.hero}>
           {!ready ? null : childBrand ? (
-            <BrandLockup variant="homeHero" title={brand.adminName} showTagline={false} />
+            <BrandLockup
+              variant="homeHero"
+              title={adminNameParts?.lead}
+              titleAccent={adminNameParts?.accent}
+              showTagline={false}
+            />
           ) : (
             <BrandLockup variant="homeHero" showTagline />
           )}

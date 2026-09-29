@@ -16,6 +16,7 @@ import {
   isPrimarySuperAdminEmail,
   queryAdminSeesAllOrganizations,
   resolveIsSuperAdmin,
+  SUPER_ADMIN_EMAIL,
   userMayUseAdminPasswordReset,
 } from "../utils/adminScope";
 
@@ -612,6 +613,36 @@ export async function resetPassword(
     res.status(200).json({
       status: "ok",
       message: "Password updated. You can log in with your new password.",
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** Public login-page contacts for the Super Admin account only. */
+export async function getSuperAdminContacts(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const result = await pool.query<{ phone: string | null; whatsapp: string | null }>(
+      `SELECT phone, whatsapp
+       FROM users
+       WHERE role = 'admin'
+         AND (
+           COALESCE(is_super_admin, false) = true
+           OR lower(trim(email)) = $1
+         )
+       ORDER BY COALESCE(is_super_admin, false) DESC, created_at ASC NULLS LAST
+       LIMIT 1`,
+      [SUPER_ADMIN_EMAIL]
+    );
+    const row = result.rows[0];
+    res.status(200).json({
+      status: "ok",
+      phone: row?.phone?.trim() || null,
+      whatsapp: row?.whatsapp?.trim() || null,
     });
   } catch (error) {
     next(error);

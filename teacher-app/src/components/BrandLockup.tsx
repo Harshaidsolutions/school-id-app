@@ -19,6 +19,8 @@ type Props = {
   variant?: Variant;
   /** Customer-facing name. Replaces the Harsha wordmark when set. */
   title?: string;
+  /** Second part of a child-admin name. Uses the green SOLUTIONS color. */
+  titleAccent?: string;
   showMascot?: boolean;
   showTagline?: boolean;
   /** Default center; use left for Home header row. */
@@ -66,6 +68,7 @@ function BrandLine({
 export function BrandLockup({
   variant = "hero",
   title,
+  titleAccent,
   showMascot = false,
   showTagline = true,
   align = "center",
@@ -146,12 +149,22 @@ export function BrandLockup({
       ) : null}
       {title ? (
         <Text
-          style={[harshaStyle, { fontSize: scaleFont(sizes.harsha, harshaMin, undefined, screenW), lineHeight: scaleFont(sizes.harsha, harshaMin, undefined, screenW) * 1.15 }]}
+          style={[
+            harshaStyle,
+            titleAccent ? { letterSpacing: 0 } : null,
+            {
+              fontSize: scaleFont(sizes.harsha, harshaMin, undefined, screenW),
+              lineHeight: scaleFont(sizes.harsha, harshaMin, undefined, screenW) * 1.15,
+            },
+          ]}
           numberOfLines={2}
           adjustsFontSizeToFit
           minimumFontScale={0.45}
         >
           {title}
+          {titleAccent ? (
+            <Text style={{ color: sColor, letterSpacing: 0 }}>{` ${titleAccent}`}</Text>
+          ) : null}
         </Text>
       ) : (
         <>

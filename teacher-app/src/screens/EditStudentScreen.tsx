@@ -360,6 +360,7 @@ export function EditStudentScreen({ navigation, route }: Props) {
               inputStyle={inputStyle}
               lockIdentityFields
               photoId={currentStudent.photo_id ?? ""}
+              studentName={currentStudent.student_name ?? ""}
               firstName={firstName}
               lastName={lastName}
               onFirstNameChange={setFirstName}

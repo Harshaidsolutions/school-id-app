@@ -13,6 +13,11 @@ type ManagedAdmin = {
   username: string | null;
   display_name: string | null;
   phone: string | null;
+  whatsapp?: string | null;
+  facebook_url?: string | null;
+  instagram_url?: string | null;
+  youtube_url?: string | null;
+  about_us?: string | null;
   photo_url: string | null;
   is_super_admin: boolean;
   is_active: boolean;
@@ -24,6 +29,11 @@ type EditForm = {
   username: string;
   email: string;
   phone: string;
+  whatsapp: string;
+  facebook: string;
+  instagram: string;
+  youtube: string;
+  aboutUs: string;
   password: string;
 };
 
@@ -51,6 +61,7 @@ export function AdminManagementPage() {
   const [passwordOtpTarget, setPasswordOtpTarget] = useState<ManagedAdmin | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -98,6 +109,7 @@ export function AdminManagementPage() {
         aboutUs: "",
         password: "",
       });
+      setShowCreate(false);
       await load();
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -114,6 +126,11 @@ export function AdminManagementPage() {
       username: admin.username ?? "",
       email: admin.email,
       phone: admin.phone ?? "",
+      whatsapp: admin.whatsapp ?? "",
+      facebook: admin.facebook_url ?? "",
+      instagram: admin.instagram_url ?? "",
+      youtube: admin.youtube_url ?? "",
+      aboutUs: admin.about_us ?? "",
       password: "",
     });
   }
@@ -129,6 +146,11 @@ export function AdminManagementPage() {
         username: editForm.username,
         email: editForm.email,
         phone: editForm.phone,
+        whatsapp: editForm.whatsapp,
+        facebook: editForm.facebook,
+        instagram: editForm.instagram,
+        youtube: editForm.youtube,
+        aboutUs: editForm.aboutUs,
       });
       if (editForm.password.trim().length >= 8) {
         setPasswordOtpTarget(editTarget);
@@ -185,9 +207,18 @@ export function AdminManagementPage() {
 
   return (
     <div className="app-page space-y-6">
-      <h1 className="text-xl font-bold text-text-navy">Admin Management</h1>
       {error ? <div className="alert-error">{error}</div> : null}
+      <div>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => setShowCreate((open) => !open)}
+        >
+          {showCreate ? "Close" : "Create Admin"}
+        </button>
+      </div>
 
+      {showCreate ? (
       <form onSubmit={(e) => void handleCreate(e)} className="card space-y-3 p-4">
         <h2 className="font-semibold text-text-navy">Create Admin</h2>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -229,6 +260,8 @@ export function AdminManagementPage() {
           <input
             className="input-field"
             placeholder="WhatsApp number"
+            required
+            minLength={10}
             value={form.whatsapp}
             onChange={(e) =>
               setForm({
@@ -239,25 +272,25 @@ export function AdminManagementPage() {
           />
           <input
             className="input-field"
-            placeholder="Facebook URL"
+            placeholder="Facebook URL (optional)"
             value={form.facebook}
             onChange={(e) => setForm({ ...form, facebook: e.target.value })}
           />
           <input
             className="input-field"
-            placeholder="Instagram URL"
+            placeholder="Instagram URL (optional)"
             value={form.instagram}
             onChange={(e) => setForm({ ...form, instagram: e.target.value })}
           />
           <input
             className="input-field"
-            placeholder="YouTube URL"
+            placeholder="YouTube URL (optional)"
             value={form.youtube}
             onChange={(e) => setForm({ ...form, youtube: e.target.value })}
           />
           <textarea
             className="input-field sm:col-span-2"
-            placeholder="About Us"
+            placeholder="About Us (optional)"
             rows={3}
             value={form.aboutUs}
             onChange={(e) => setForm({ ...form, aboutUs: e.target.value })}
@@ -273,10 +306,20 @@ export function AdminManagementPage() {
             autoComplete="new-password"
           />
         </div>
-        <button type="submit" className="btn-primary">
-          Create Admin
-        </button>
+        <div className="flex gap-2">
+          <button type="submit" className="btn-primary">
+            Create Admin
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => setShowCreate(false)}
+          >
+            Cancel
+          </button>
+        </div>
       </form>
+      ) : null}
 
       <div className="card overflow-hidden">
         <table className="list-data-table w-full">
@@ -363,7 +406,7 @@ export function AdminManagementPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4">
           <form
             onSubmit={(e) => void saveEdit(e)}
-            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
           >
             <h2 className="text-lg font-bold text-text-navy">Edit Admin</h2>
             <div className="mt-4 space-y-3">
@@ -407,6 +450,45 @@ export function AdminManagementPage() {
                 }
                 placeholder="Phone"
                 required
+              />
+              <input
+                className="input-field w-full"
+                value={editForm.whatsapp}
+                required
+                minLength={10}
+                maxLength={15}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    whatsapp: e.target.value.replace(/\D/g, "").slice(0, 15),
+                  })
+                }
+                placeholder="WhatsApp number"
+              />
+              <input
+                className="input-field w-full"
+                value={editForm.facebook}
+                onChange={(e) => setEditForm({ ...editForm, facebook: e.target.value })}
+                placeholder="Facebook URL (optional)"
+              />
+              <input
+                className="input-field w-full"
+                value={editForm.instagram}
+                onChange={(e) => setEditForm({ ...editForm, instagram: e.target.value })}
+                placeholder="Instagram URL (optional)"
+              />
+              <input
+                className="input-field w-full"
+                value={editForm.youtube}
+                onChange={(e) => setEditForm({ ...editForm, youtube: e.target.value })}
+                placeholder="YouTube URL (optional)"
+              />
+              <textarea
+                className="input-field w-full"
+                rows={3}
+                value={editForm.aboutUs}
+                onChange={(e) => setEditForm({ ...editForm, aboutUs: e.target.value })}
+                placeholder="About Us (optional)"
               />
               <input
                 className="input-field w-full"

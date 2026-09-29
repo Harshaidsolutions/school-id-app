@@ -46,6 +46,7 @@ import {
   requestSchoolDeleteOtp,
   updateSchool,
   setSchoolActive,
+  setSchoolCapturePolicy,
 } from "../controllers/schoolController";
 import {
   createInstitute,
@@ -55,6 +56,7 @@ import {
   requestInstituteDeleteOtp,
   updateInstitute,
   setInstituteActive,
+  setInstituteCapturePolicy,
 } from "../controllers/instituteController";
 import {
   createTemplate,
@@ -112,6 +114,7 @@ router.post("/schools", uploadSchoolAssets, createSchool);
 router.post("/schools-with-owner", createSchoolWithOwner);
 router.get("/schools", listSchools);
 router.patch("/schools/:id/active", setSchoolActive);
+router.patch("/schools/:id/capture", setSchoolCapturePolicy);
 router.put("/schools/:id", optionalUploadSchoolAssets, updateSchool);
 router.post("/schools/:id/request-delete-otp", requestSchoolDeleteOtp);
 router.delete("/schools/:id", deleteSchool);
@@ -127,6 +130,7 @@ router.post("/institutes", uploadSchoolAssets, createInstitute);
 router.post("/institutes-with-owner", createInstituteWithOwner);
 router.get("/institutes", listInstitutes);
 router.patch("/institutes/:id/active", setInstituteActive);
+router.patch("/institutes/:id/capture", setInstituteCapturePolicy);
 router.put("/institutes/:id", optionalUploadSchoolAssets, updateInstitute);
 router.post("/institutes/:id/request-delete-otp", requestInstituteDeleteOtp);
 router.delete("/institutes/:id", deleteInstitute);

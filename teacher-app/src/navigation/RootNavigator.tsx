@@ -30,6 +30,7 @@ import { fonts } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
 import { hydrateLastClassSection } from "./captureContext";
 import { usePushNotifications } from "../hooks/usePushNotifications";
+import { useOrgCapturePolicy } from "../hooks/useOrgCapturePolicy";
 import {
   resolveAuthInitialRoute,
   type AuthInitialRoute,
@@ -46,6 +47,7 @@ export function RootNavigator() {
   const [authInitialRoute, setAuthInitialRoute] =
     useState<AuthInitialRoute>("Login");
   const [authRouteReady, setAuthRouteReady] = useState(false);
+  useOrgCapturePolicy();
   usePushNotifications(
     pushEnabled,
     navRef.current,
