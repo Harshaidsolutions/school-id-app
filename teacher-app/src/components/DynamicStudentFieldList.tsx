@@ -10,6 +10,7 @@ import {
 } from "./StudentDemographicFields";
 import type { AppColors } from "../theme/palettes";
 import { resolveFieldKind, resolveFieldLabelKind } from "../utils/formFieldKinds";
+import { isIdentityAliasLabel } from "../utils/identityFields";
 import { resetFocusedInputScrollLock } from "../utils/scrollToFocusedInput";
 
 function Field({
@@ -32,6 +33,29 @@ function Field({
       {children}
     </View>
   );
+}
+
+function lockedIdentityValue(
+  key: string,
+  extraValues: Record<string, string>,
+  photoId: string
+): string {
+  const typed = extraValues[key]?.trim();
+  return typed || photoId;
+}
+
+function visibleLockedIdentity(
+  fields: FormFieldConfig[],
+  extraValues: Record<string, string>,
+  photoId: string
+): FormFieldConfig[] {
+  if (fields.length <= 1) return fields;
+  const values = fields
+    .map((field) => lockedIdentityValue(field.key, extraValues, photoId).trim())
+    .filter(Boolean);
+  const unique = new Set(values.map((value) => value.toLowerCase()));
+  if (unique.size > 1) return fields;
+  return [fields[0]];
 }
 
 export type DynamicStudentFieldListProps = {
@@ -142,21 +166,38 @@ export function DynamicStudentFieldList({
 }: DynamicStudentFieldListProps) {
   const focus = focusProps(onInputFocus);
   const ordered = sortFormFields(formFields).filter((f) => f.enabled);
+  const identityFields = ordered.filter((field) => isIdentityAliasLabel(field.label));
+  const lockedIdentity = lockIdentityFields ? visibleLockedIdentity(identityFields, extraValues, photoId) : [];
 
   return (
     <>
       {lockIdentityFields ? (
         <>
-          <Field label="Photo ID" colors={colors}>
-            <TextInput
-              style={inputStyle}
-              value={photoId}
-              editable={false}
-              showSoftInputOnFocus={false}
-              caretHidden
-              placeholderTextColor={colors.textSubtle}
-            />
-          </Field>
+          {lockedIdentity.length > 0 ? (
+            lockedIdentity.map((field) => (
+              <Field key={field.key} label={field.label} colors={colors}>
+                <TextInput
+                  style={inputStyle}
+                  value={lockedIdentityValue(field.key, extraValues, photoId)}
+                  editable={false}
+                  showSoftInputOnFocus={false}
+                  caretHidden
+                  placeholderTextColor={colors.textSubtle}
+                />
+              </Field>
+            ))
+          ) : (
+            <Field label={/^ADD_\d+$/i.test(photoId.trim()) ? "ID" : "Photo ID"} colors={colors}>
+              <TextInput
+                style={inputStyle}
+                value={photoId}
+                editable={false}
+                showSoftInputOnFocus={false}
+                caretHidden
+                placeholderTextColor={colors.textSubtle}
+              />
+            </Field>
+          )}
           <Field label="Name" colors={colors}>
             <TextInput
               style={inputStyle}
@@ -172,7 +213,13 @@ export function DynamicStudentFieldList({
       {ordered.map((field) => {
         const kind = resolveFieldKind(field);
         const labelKind = resolveFieldLabelKind(field);
-        if (kind === "photo" || labelKind === "photo") {
+        if (
+          (kind === "photo" || labelKind === "photo") &&
+          !isIdentityAliasLabel(field.label)
+        ) {
+          return null;
+        }
+        if (lockIdentityFields && isIdentityAliasLabel(field.label)) {
           return null;
         }
 

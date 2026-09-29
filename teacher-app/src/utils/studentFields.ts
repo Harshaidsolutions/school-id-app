@@ -1,6 +1,7 @@
 import type { FormFieldConfig } from "../constants/formFields";
 import { fieldLabel, isFieldEnabled, sortFormFields } from "../constants/formFields";
 import type { TeacherStudent } from "../types";
+import { collapseSameIdentityFields, isIdentityAliasLabel } from "./identityFields";
 
 type FieldKey = keyof TeacherStudent | "class_section";
 
@@ -90,7 +91,9 @@ function canonicalValueForLabel(
 ): string | null {
   const n = normalizeHeaderForMatch(label);
   if (!n) return null;
-  if (n.includes("photo") && !n.includes("url")) return student.photo_id ?? null;
+  if (n === "id" || n === "photoid" || (n.includes("photo") && !n.includes("url"))) {
+    return student.photo_id ?? null;
+  }
   if (
     n === "class" ||
     n.includes("classsection") ||
@@ -281,6 +284,22 @@ function dynamicEntries(
   return rows;
 }
 
+function withGeneratedIdentity(
+  rows: { key: string; label: string; value: string }[],
+  student: TeacherStudent,
+  formFields?: FormFieldConfig[]
+): { key: string; label: string; value: string }[] {
+  const generated = String(student.photo_id ?? "").trim();
+  if (!/^ADD_\d+$/i.test(generated)) return rows;
+  const hasAlias = (formFields ?? []).some(
+    (field) => field.enabled && isIdentityAliasLabel(field.label)
+  );
+  if (hasAlias || rows.some((row) => isIdentityAliasLabel(row.label) || row.key === "photo_id")) {
+    return rows;
+  }
+  return [...rows, { key: "photo_id", label: "ID", value: generated }];
+}
+
 export function getVisibleStudentFields(
   student: TeacherStudent,
   classSection?: string,
@@ -303,7 +322,7 @@ export function getVisibleStudentFields(
             : "-",
       });
     }
-    return rows;
+    return withGeneratedIdentity(collapseSameIdentityFields(rows), student, formFields);
   }
 
   const standard = STUDENT_DETAIL_FIELDS.map((field) => {
@@ -319,7 +338,11 @@ export function getVisibleStudentFields(
   const dynamicWithEmpty = dynamic.length
     ? dynamic
     : [];
-  return [...standard, ...dynamicWithEmpty];
+  return withGeneratedIdentity(
+    collapseSameIdentityFields([...standard, ...dynamicWithEmpty]),
+    student,
+    formFields
+  );
 }
 
 /** Populate edit/add forms — same resolution as student details. */

@@ -2,6 +2,7 @@ import type { FormFieldConfig } from "../constants/formFields";
 import { sortFormFields } from "../constants/formFields";
 import type { TeacherStudent } from "../types";
 import { resolveFieldKind, resolveFieldLabelKind } from "./formFieldKinds";
+import { isIdentityAliasLabel } from "./identityFields";
 import { studentFieldValueForForm } from "./studentFields";
 
 function isNameLabel(label: string): boolean {
@@ -73,7 +74,7 @@ export function initialExtraValuesFromStudent(
   const out: Record<string, string> = {};
   for (const field of sortFormFields(formFields)) {
     if (!field.enabled) continue;
-    if (resolveFieldKind(field) === "photo") continue;
+    if (resolveFieldKind(field) === "photo" && !isIdentityAliasLabel(field.label)) continue;
     if (/^fld_\d+$/.test(field.key) || field.key.startsWith("dyn_")) {
       const v = studentFieldValueForForm(student, field, student.class_section ?? undefined);
       if (v.trim()) out[field.key] = v.trim();
@@ -98,7 +99,13 @@ export function buildTeacherStudentPayload(
   for (const field of sortFormFields(formFields)) {
     if (!field.enabled) continue;
     const kind = resolveFieldKind(field);
-    if (kind === "photo") continue;
+    if (kind === "photo") {
+      if (isIdentityAliasLabel(field.label)) {
+        const value = state.extraValues[field.key]?.trim() ?? "";
+        extraFields[field.key] = value || null;
+      }
+      continue;
+    }
 
     if (kind === "generic") {
       const value = state.extraValues[field.key]?.trim() ?? "";
@@ -192,6 +199,14 @@ export function buildTeacherStudentPayload(
         break;
     }
   }
+
+  let identityPhoto: string | null = null;
+  for (const field of sortFormFields(formFields)) {
+    if (!field.enabled || !isIdentityAliasLabel(field.label)) continue;
+    const value = state.extraValues[field.key]?.trim();
+    if (value && !identityPhoto) identityPhoto = value;
+  }
+  if (identityPhoto) payload.photo_id = identityPhoto;
 
   payload.extra_fields = extraFields;
   return payload;

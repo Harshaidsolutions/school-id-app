@@ -91,6 +91,7 @@ export function LoginPage() {
     <LoginPageLayout
       appBrand
       title="Welcome Admin"
+      onTitlePress={() => navigate("/forgot-password")}
       footer={
         <SuperAdminContacts phone={contacts.phone} whatsapp={contacts.whatsapp} />
       }
@@ -159,13 +160,6 @@ export function LoginPage() {
 
         <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 text-sm sm:text-[15px]">
           {loading ? "Logging in…" : "Login"}
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate("/forgot-password")}
-          className="block w-full text-center text-sm font-semibold text-button-blue hover:underline"
-        >
-          Forgot Password
         </button>
       </form>
     </LoginPageLayout>

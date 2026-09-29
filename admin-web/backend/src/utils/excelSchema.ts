@@ -40,6 +40,11 @@ export function normalizeHeaderForMatch(header: string): string {
     .replace(/[^a-z0-9]+/g, "");
 }
 
+/** Excel headers that are the same identity column: ID or PHOTO_ID. */
+export function isIdentityAliasHeader(normalized: string): boolean {
+  return normalized === "id" || normalized === "photoid";
+}
+
 function isPhotoHeader(normalized: string): boolean {
   if (!normalized.includes("photo")) return false;
   if (normalized.includes("url")) return false;
@@ -146,6 +151,7 @@ function isBloodGroupHeader(normalized: string): boolean {
 
 /** Infer which canonical DB column a header maps to (internal only — not used as form field key). */
 export function inferSemanticKey(normalized: string): CanonicalFieldKey | null {
+  if (isIdentityAliasHeader(normalized)) return "photo_id";
   if (isPhotoHeader(normalized)) return "photo_id";
   if (isClassHeader(normalized)) return "class_section";
   if (isStudentNameHeader(normalized)) return "student_name";

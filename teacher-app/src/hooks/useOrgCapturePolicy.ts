@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { AppState } from "react-native";
 import * as ScreenCapture from "expo-screen-capture";
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -6,30 +7,43 @@ import { useAuth } from "../auth/AuthContext";
 const CAPTURE_KEY = "org-secure";
 
 /**
- * Android FLAG_SECURE blocks screenshots and screen recording together.
- * There is no supported API that blocks only one of them. If either
- * organization setting is off, both are blocked. If both are on, capture
- * is allowed. Defaults match the database: both allowed.
+ * Android's supported block is WindowManager.LayoutParams.FLAG_SECURE
+ * (expo-screen-capture). It blocks screenshots and screen recording
+ * together, including the recents thumbnail. There is no public Android
+ * API that blocks only one of them. FLAG_SECURE is set when either
+ * organization flag is false, and cleared only when both are true.
+ * A flag that is ON is therefore also blocked while the other is OFF.
  */
+function isOff(value: unknown): boolean {
+  return value === false || value === "false" || value === "f" || value === 0 || value === "0";
+}
+
 export function useOrgCapturePolicy() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, bootstrapping, user } = useAuth();
+  const requestId = useRef(0);
 
   useEffect(() => {
-    let cancelled = false;
+    const id = ++requestId.current;
 
     async function apply(block: boolean) {
-      if (block) await ScreenCapture.preventScreenCaptureAsync(CAPTURE_KEY);
-      else await ScreenCapture.allowScreenCaptureAsync(CAPTURE_KEY);
+      if (id !== requestId.current) return;
+      if (!block) {
+        await ScreenCapture.allowScreenCaptureAsync(CAPTURE_KEY);
+        return;
+      }
+      // The JS tag survives activity recreation, but FLAG_SECURE does not.
+      // Clearing the tag forces the native call onto the current window.
+      await ScreenCapture.allowScreenCaptureAsync(CAPTURE_KEY);
+      if (id !== requestId.current) return;
+      await ScreenCapture.preventScreenCaptureAsync(CAPTURE_KEY);
     }
 
-    if (!isAuthenticated) {
-      void apply(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    void (async () => {
+    async function load() {
+      if (bootstrapping || id !== requestId.current) return;
+      if (!isAuthenticated) {
+        await apply(false);
+        return;
+      }
       try {
         const { data } = await api.get<{
           school?: {
@@ -37,17 +51,22 @@ export function useOrgCapturePolicy() {
             allow_screen_recording?: boolean | null;
           };
         }>("/teacher/organization");
-        if (cancelled) return;
-        const allowScreenshot = data.school?.allow_screenshot !== false;
-        const allowRecording = data.school?.allow_screen_recording !== false;
-        await apply(!allowScreenshot || !allowRecording);
+        if (id !== requestId.current) return;
+        const org = data.school;
+        await apply(isOff(org?.allow_screenshot) || isOff(org?.allow_screen_recording));
       } catch {
-        /* Keep the last applied policy if the organization request fails. */
+        /* Retry on the next resume. Do not clear a block that already applied. */
       }
-    })();
+    }
+
+    void load();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void load();
+    });
 
     return () => {
-      cancelled = true;
+      requestId.current += 1;
+      subscription.remove();
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, bootstrapping, user?.id]);
 }

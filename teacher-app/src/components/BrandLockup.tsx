@@ -147,11 +147,45 @@ export function BrandLockup({
           accessibilityLabel="Harsha ID Solutions logo"
         />
       ) : null}
-      {title ? (
+      {title && titleAccent ? (
+        <View style={{ width: lineW, alignItems: textAlign === "left" ? "flex-start" : "center" }}>
+          <Text
+            style={[
+              harshaStyle,
+              {
+                fontSize: scaleFont(sizes.harsha, harshaMin, undefined, screenW),
+                lineHeight: scaleFont(sizes.harsha, harshaMin, undefined, screenW) * 1.02,
+                width: lineW,
+              },
+            ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.45}
+          >
+            {title}
+          </Text>
+          <Text
+            style={[
+              harshaStyle,
+              {
+                color: sColor,
+                fontSize: scaleFont(sizes.harsha, harshaMin, undefined, screenW),
+                lineHeight: scaleFont(sizes.harsha, harshaMin, undefined, screenW) * 1.02,
+                width: lineW,
+                marginTop: 0,
+              },
+            ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.45}
+          >
+            {titleAccent}
+          </Text>
+        </View>
+      ) : title ? (
         <Text
           style={[
             harshaStyle,
-            titleAccent ? { letterSpacing: 0 } : null,
             {
               fontSize: scaleFont(sizes.harsha, harshaMin, undefined, screenW),
               lineHeight: scaleFont(sizes.harsha, harshaMin, undefined, screenW) * 1.15,
@@ -162,9 +196,6 @@ export function BrandLockup({
           minimumFontScale={0.45}
         >
           {title}
-          {titleAccent ? (
-            <Text style={{ color: sColor, letterSpacing: 0 }}>{` ${titleAccent}`}</Text>
-          ) : null}
         </Text>
       ) : (
         <>

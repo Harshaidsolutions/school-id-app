@@ -20,6 +20,10 @@ import { INSTRUCTIONS_READ_KEY } from "../screens/InstructionsScreen";
 import { ONBOARDING_COMPLETE_KEY } from "../screens/OnboardingScreen";
 import { unregisterStoredPushToken } from "../utils/pushTokenRegistration";
 import { recordLogoutForPushSync } from "../utils/pendingNotificationSync";
+import {
+  invalidateStudentsCache,
+  invalidateTeacherHomeCache,
+} from "../utils/teacherDataCache";
 
 interface AuthContextValue {
   token: string | null;
@@ -71,6 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (nextToken: string, nextUser: AuthUser) => {
+    invalidateTeacherHomeCache();
+    invalidateStudentsCache();
     await AsyncStorage.removeItem(INSTRUCTIONS_READ_KEY);
     await saveToken(nextToken);
     await saveUserJson(JSON.stringify(nextUser));
@@ -80,6 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    invalidateTeacherHomeCache();
+    invalidateStudentsCache();
     const loggingOutUserId = user?.id;
     await unregisterStoredPushToken();
     if (loggingOutUserId) {

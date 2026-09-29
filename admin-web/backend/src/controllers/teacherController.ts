@@ -29,6 +29,48 @@ import {
 } from "../utils/schoolPhotoId";
 import { studentPhotoOrgId } from "../config/storage";
 import { loadOrgOwnerAdminId } from "../utils/adminScope";
+import {
+  allocateReusableAddSerial,
+  firstIdentityValue,
+  identityFields,
+} from "../utils/addSerial";
+
+async function insertTeacherStudent(
+  sql: string,
+  params: unknown[],
+  allocate: { schoolId?: string; instituteId?: string } | null
+) {
+  if (!allocate) return pool.query(sql, params);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    params[1] = await allocateReusableAddSerial(client, allocate);
+    const result = await client.query(sql, params);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function manualPhotoId(
+  scope: { schoolId?: string; instituteId?: string },
+  requested: string | null,
+  extraFields: Record<string, string | null>
+): Promise<{ photoId: string | null; allocate: boolean }> {
+  const fields = await loadFormConfigForOrg({
+    schoolId: scope.schoolId ?? null,
+    instituteId: scope.instituteId ?? null,
+  });
+  const fromField = firstIdentityValue(fields, extraFields);
+  if (fromField) return { photoId: fromField, allocate: false };
+  if (requested) return { photoId: requested, allocate: false };
+  if (identityFields(fields).length > 0) return { photoId: null, allocate: false };
+  return { photoId: null, allocate: true };
+}
 
 interface TeacherStudentRow {
   id: string;
@@ -285,13 +327,17 @@ export async function createTeacherStudent(
       const photoIdRaw = String(
         req.body.photo_id ?? req.body.photoId ?? ""
       ).trim();
-      const photoId = photoIdRaw || null;
 
       const extraFields = parseExtraFields(
         req.body.extra_fields ?? req.body.extraFields
       );
+      const resolvedPhoto = await manualPhotoId(
+        { instituteId },
+        photoIdRaw || null,
+        extraFields
+      );
 
-      const result = await pool.query<TeacherStudentRow>(
+      const result = await insertTeacherStudent(
         `INSERT INTO students
            (institute_id, photo_id, class_section, student_name, parent_name, parent_phone,
             address, roll_no, dob, gender, blood_group, custom_1, custom_2, custom_3,
@@ -300,7 +346,7 @@ export async function createTeacherStudent(
          RETURNING ${TEACHER_STUDENT_SELECT}`,
         [
           instituteId,
-          photoId,
+          resolvedPhoto.photoId,
           classSection,
           studentName,
           parentName,
@@ -314,7 +360,8 @@ export async function createTeacherStudent(
           custom2,
           custom3,
           JSON.stringify(extraFields),
-        ]
+        ],
+        resolvedPhoto.allocate ? { instituteId } : null
       );
 
       const student = result.rows[0];
@@ -375,11 +422,14 @@ export async function createTeacherStudent(
     const custom3 =
       optionalBodyString(body, ["custom_3", "custom3"]) ?? null;
 
-    const photoId = String(req.body.photo_id ?? req.body.photoId ?? "").trim() || null;
-
     const extraFields = parseExtraFields(req.body.extra_fields ?? req.body.extraFields);
+    const resolvedPhoto = await manualPhotoId(
+      { schoolId },
+      String(req.body.photo_id ?? req.body.photoId ?? "").trim() || null,
+      extraFields
+    );
 
-    const result = await pool.query<TeacherStudentRow>(
+    const result = await insertTeacherStudent(
       `INSERT INTO students
          (school_id, photo_id, class_section, student_name, parent_name, parent_phone,
           address, roll_no, dob, gender, blood_group, custom_1, custom_2, custom_3,
@@ -388,7 +438,7 @@ export async function createTeacherStudent(
        RETURNING ${TEACHER_STUDENT_SELECT}`,
       [
         schoolId,
-        photoId,
+        resolvedPhoto.photoId,
         classSection,
         studentName,
         parentName,
@@ -402,7 +452,8 @@ export async function createTeacherStudent(
         custom2,
         custom3,
         JSON.stringify(extraFields),
-      ]
+      ],
+      resolvedPhoto.allocate ? { schoolId } : null
     );
 
     const student = result.rows[0];
@@ -480,8 +531,16 @@ export async function uploadStudentPhoto(
     try {
       await client.query("BEGIN");
 
+      const orgFields = await loadFormConfigForOrg({
+        schoolId: student.school_id,
+        instituteId: student.institute_id,
+      });
+      const keepUploadedIdentity = identityFields(orgFields).length > 0;
+
       let capturePhotoId: string | null = null;
-      if (instituteCapture && instituteId) {
+      if (keepUploadedIdentity) {
+        capturePhotoId = student.photo_id?.trim() || null;
+      } else if (instituteCapture && instituteId) {
         if (isInstituteCapturePhotoId(student.photo_id)) {
           capturePhotoId = student.photo_id!.trim();
         } else {

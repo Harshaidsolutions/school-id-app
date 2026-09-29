@@ -24,6 +24,11 @@ import {
   rowToInsertParams,
 } from "../utils/studentFieldAccess";
 import { deriveCanonicalValuesFromExtraFields } from "../utils/excelSchema";
+import {
+  allocateReusableAddSerial,
+  firstIdentityValue,
+  identityFields,
+} from "../utils/addSerial";
 import { studentPhotoOrgId } from "../config/storage";
 import { loadFormConfigForOrg } from "./formConfigController";
 import { routeParam } from "../utils/routeParams";
@@ -337,10 +342,8 @@ export async function createStudentAdmin(
     const firstName = String(req.body.firstName ?? "").trim();
     const lastName = String(req.body.lastName ?? "").trim();
 
-    let photoId = bodyVal("photoId", "photo_id") ?? "";
-    if (!photoId) {
-      photoId = `M-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    }
+    const requestedPhotoId = bodyVal("photoId", "photo_id") ?? "";
+    let photoId = requestedPhotoId;
 
     const extraFields = mergeExtraFieldsForSave(
       formFields,
@@ -421,19 +424,25 @@ export async function createStudentAdmin(
       extraFields,
     };
 
-    const params = rowToInsertParams(rowInput, { bulkImport: true });
+    const fromIdentity = firstIdentityValue(formFields, extraFields);
+    const hasIdentityColumn = identityFields(formFields).length > 0;
+    if (fromIdentity) photoId = fromIdentity;
+    const allocateAddSerial = !photoId && !hasIdentityColumn;
+    rowInput.photoId = photoId;
 
-    const result = await pool.query<Student>(
-      `INSERT INTO students
+    const params = rowToInsertParams(rowInput, { bulkImport: true });
+    let storedPhotoId: string | null = fromIdentity || requestedPhotoId || null;
+
+    const insertSql = `INSERT INTO students
          (school_id, institute_id, photo_id, class_section, student_name, parent_name, parent_phone,
           address, roll_no, dob, gender, blood_group, custom_1, custom_2, custom_3,
           extra_fields, field_labels, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::jsonb, $17::jsonb, 'pending')
-       RETURNING ${STUDENT_SELECT}`,
-      [
+       RETURNING ${STUDENT_SELECT}`;
+    const insertParams = () => [
         schoolId,
         instituteId,
-        params.photoId,
+        storedPhotoId,
         params.classSection,
         params.studentName,
         params.parentName,
@@ -448,8 +457,28 @@ export async function createStudentAdmin(
         params.custom3,
         JSON.stringify(params.extraFields),
         JSON.stringify(fieldLabels),
-      ]
-    );
+      ];
+
+    const result = allocateAddSerial
+      ? await (async () => {
+          const client = await pool.connect();
+          try {
+            await client.query("BEGIN");
+            storedPhotoId = await allocateReusableAddSerial(client, {
+              schoolId,
+              instituteId,
+            });
+            const inserted = await client.query<Student>(insertSql, insertParams());
+            await client.query("COMMIT");
+            return inserted;
+          } catch (error) {
+            await client.query("ROLLBACK");
+            throw error;
+          } finally {
+            client.release();
+          }
+        })()
+      : await pool.query<Student>(insertSql, insertParams());
 
     const student = result.rows[0];
     if (!student) throw new AppError("Failed to create student", 500);

@@ -19,11 +19,13 @@ export function LoginPageLayout({
   children,
   footer,
   appBrand = false,
+  onTitlePress,
 }: {
   title: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
   appBrand?: boolean;
+  onTitlePress?: () => void;
 }) {
   return (
     <div className="login-shell relative flex min-h-[100dvh] flex-col overflow-x-hidden">
@@ -76,9 +78,19 @@ export function LoginPageLayout({
                 </div>
               )}
 
-              <h1 className="text-center text-[clamp(1.125rem,2vw,1.375rem)] font-bold text-text-navy">
-                {title}
-              </h1>
+              {onTitlePress ? (
+                <button
+                  type="button"
+                  onClick={onTitlePress}
+                  className="block w-full text-center text-[clamp(1.125rem,2vw,1.375rem)] font-bold text-text-navy hover:underline"
+                >
+                  {title}
+                </button>
+              ) : (
+                <h1 className="text-center text-[clamp(1.125rem,2vw,1.375rem)] font-bold text-text-navy">
+                  {title}
+                </h1>
+              )}
 
               <div className="mt-6">{children}</div>
               {footer ? <div className="mt-5">{footer}</div> : null}

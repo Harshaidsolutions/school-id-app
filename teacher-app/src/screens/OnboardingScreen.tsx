@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import type { RootStackParamList } from "../navigation/types";
 import { BrandLockup } from "../components/BrandLockup";
+import { BRAND } from "../constants/brand";
 import { AppIcon } from "../components/AppIcon";
 import { IconChip } from "../components/IconChip";
 import { OnboardingTapZones } from "../components/OnboardingTapZones";
@@ -268,7 +269,7 @@ function Page1({ nav }: { nav: NavProps }) {
       />
       <View style={styles.p1Top}>
         <AppIcon size={iconSize} style={{ marginBottom: spacing.md }} />
-        <BrandLockup variant="hero" showTagline />
+        <BrandLockup variant="hero" title={BRAND.appName} showTagline={false} />
       </View>
 
       <OnboardingFooter accent="orange" nav={nav}>
