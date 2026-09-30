@@ -14,7 +14,16 @@ import {
   ownerUsernameSelect,
 } from "../utils/ownerCredentials";
 import type { SchoolRow } from "../types/admin";
-import { parseBooleanField } from "../utils/parseBoolean";
+import { captureAllowedFromBody, parseBooleanField } from "../utils/parseBoolean";
+import {
+  requestAdminActionOtp,
+  verifyAdminActionOtp,
+} from "../utils/adminOtp";
+import {
+  bulkResourceId,
+  parseBulkIds,
+  requireAdminEmail,
+} from "../utils/bulkIds";
 import {
   adminSeesAllOrganizations,
   assertSchoolOwnedByAdmin,
@@ -543,21 +552,14 @@ export async function setSchoolCapturePolicy(
     if (!id) throw new AppError("School id is required", 400);
     await assertSchoolOwnedByAdmin(scope, id);
 
-    const allowScreenshot = parseBooleanField(
-      req.body.allow_screenshot ?? req.body.allowScreenshot,
-      true
-    );
-    const allowRecording = parseBooleanField(
-      req.body.allow_screen_recording ?? req.body.allowScreenRecording,
-      true
-    );
+    const allowCapture = captureAllowedFromBody(req.body);
 
     const updated = await pool.query<SchoolRow>(
       `UPDATE schools
-       SET allow_screenshot = $1, allow_screen_recording = $2
-       WHERE id = $3::uuid
+       SET allow_screenshot = $1, allow_screen_recording = $1
+       WHERE id = $2::uuid
        RETURNING *`,
-      [allowScreenshot, allowRecording, id]
+      [allowCapture, id]
     );
     const school = updated.rows[0];
     if (!school) throw new AppError("School not found", 404);
@@ -749,6 +751,114 @@ export async function deleteSchool(
       status: "ok",
       message: `School "${school.name}" deleted.`,
       schoolId: school.id,
+    });
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    next(error);
+  } finally {
+    client.release();
+  }
+}
+
+async function assertSchoolsOwned(
+  scope: Awaited<ReturnType<typeof requireAdminScope>>,
+  ids: string[]
+): Promise<void> {
+  for (const id of ids) {
+    await assertSchoolOwnedByAdmin(scope, id);
+  }
+  const found = await pool.query<{ id: string }>(
+    `SELECT id FROM schools WHERE id = ANY($1::uuid[])`,
+    [ids]
+  );
+  if (found.rows.length !== ids.length) {
+    throw new AppError("One or more schools were not found", 404);
+  }
+}
+
+/** POST /admin/schools/bulk-delete/request-otp */
+export async function requestSchoolBulkDeleteOtp(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const ids = parseBulkIds(req.body?.ids, "school");
+    const scope = await requireAdminScope(req);
+    await assertSchoolsOwned(scope, ids);
+    const adminEmail = await requireAdminEmail(req.user.userId);
+    const otpResult = await requestAdminActionOtp({
+      adminUserId: req.user.userId,
+      adminEmail,
+      actionType: "delete_school_bulk",
+      resourceId: bulkResourceId(ids),
+      emailSubject: "Confirm school deletion",
+      emailIntro: `Confirm deletion of ${ids.length} school${ids.length === 1 ? "" : "s"} and related records.`,
+      logPrefix: "[school-bulk-delete]",
+    });
+    res.status(200).json({ status: "ok", ...otpResult });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** POST /admin/schools/bulk-delete — body: { ids, otp } */
+export async function bulkDeleteSchools(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const client = await pool.connect();
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const ids = parseBulkIds(req.body?.ids, "school");
+    const scope = await requireAdminScope(req);
+    await assertSchoolsOwned(scope, ids);
+    const otp = String(req.body?.otp ?? "").trim();
+    await verifyAdminActionOtp({
+      adminUserId: req.user.userId,
+      actionType: "delete_school_bulk",
+      resourceId: bulkResourceId(ids),
+      otp,
+    });
+
+    await client.query("BEGIN");
+    const locked = await client.query<{ id: string; owner_admin_id: string | null }>(
+      `SELECT id, owner_admin_id FROM schools WHERE id = ANY($1::uuid[]) FOR UPDATE`,
+      [ids]
+    );
+    if (locked.rows.length !== ids.length) {
+      throw new AppError("One or more schools were not found", 404);
+    }
+    if (!scope.isSuperAdmin) {
+      for (const row of locked.rows) {
+        if (row.owner_admin_id !== scope.adminUserId) {
+          throw new AppError("School not found", 404);
+        }
+      }
+    }
+
+    await client.query(`DELETE FROM users WHERE school_id = ANY($1::uuid[])`, [ids]);
+    await client.query(
+      `UPDATE schools SET template_id = NULL WHERE id = ANY($1::uuid[])`,
+      [ids]
+    );
+    const deleted = await client.query<{ id: string }>(
+      `DELETE FROM schools WHERE id = ANY($1::uuid[]) RETURNING id`,
+      [ids]
+    );
+    await client.query("COMMIT");
+
+    res.status(200).json({
+      status: "ok",
+      deleted: deleted.rows.map((row) => row.id),
+      deletedCount: deleted.rows.length,
+      failedCount: 0,
     });
   } catch (error) {
     try {

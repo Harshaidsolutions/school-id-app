@@ -9,6 +9,7 @@ import { AddStudentModal } from "../components/AddStudentModal";
 import { DeleteOptionsModal } from "../components/DeleteOptionsModal";
 import { BulkUploadModal } from "../components/BulkUploadModal";
 import { DownloadPhotosModal } from "../components/DownloadPhotosModal";
+import { BulkModeButtons } from "../components/BulkActionBar";
 import { OtpConfirmModal } from "../components/OtpConfirmModal";
 import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
 import type { ApiErrorBody, Institute, School, Student, StudentsResponse } from "../types";
@@ -156,6 +157,10 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [showDeleteOptions, setShowDeleteOptions] = useState(false);
   const [showDownloadPhotosModal, setShowDownloadPhotosModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [excelMenuOpen, setExcelMenuOpen] = useState(false);
   const [exportingPhotos, setExportingPhotos] = useState(false);
@@ -323,7 +328,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
 
   const enabledFields = useMemo(() => dedupeDisplayFields(formFields), [formFields]);
 
-  const tableColSpan = enabledFields.length + 3;
+  const tableColSpan = enabledFields.length + 3 + (selecting && isDetailView ? 1 : 0);
 
   const classOptions = useMemo(
     () =>
@@ -730,18 +735,41 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               })}
             </div>
 
-            <div className="detail-toolbar-row2-search relative min-w-0">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-muted">
-                <SearchIcon />
-              </span>
-              <input
-                type="text"
-                placeholder="Search…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                aria-label="Search"
-                className="input-field w-full pl-10 text-sm"
-              />
+            <div className="detail-toolbar-row2-search">
+              <div className="relative min-w-0 flex-1">
+                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-muted">
+                  <SearchIcon />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  aria-label="Search"
+                  className="input-field w-full pl-10 text-sm"
+                />
+              </div>
+              {selecting || filtered.length > 0 ? (
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <BulkModeButtons
+                    selecting={selecting}
+                    selectedCount={filtered.filter((student) => selectedIds.has(student.id)).length}
+                    deleting={bulkDeleting}
+                    onStart={() => setSelecting(true)}
+                    onCancel={() => {
+                      setSelectedIds(new Set());
+                      setSelecting(false);
+                      setOtpOpen(false);
+                    }}
+                    onConfirm={() => {
+                      if (filtered.filter((student) => selectedIds.has(student.id)).length === 0) {
+                        return;
+                      }
+                      setOtpOpen(true);
+                    }}
+                  />
+                </div>
+              ) : null}
             </div>
 
             <select
@@ -887,6 +915,26 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         <table className="students-data-table">
           <thead>
             <tr>
+              {selecting && isDetailView ? (
+                <th className="bulk-check-cell">
+                  <input
+                    type="checkbox"
+                    className="bulk-check"
+                    aria-label={isInstitute ? "Select all members" : "Select all students"}
+                    checked={
+                      filtered.length > 0 &&
+                      filtered.every((student) => selectedIds.has(student.id))
+                    }
+                    onChange={() => {
+                      setSelectedIds((prev) => {
+                        const all = filtered.every((student) => prev.has(student.id));
+                        if (all) return new Set();
+                        return new Set(filtered.map((student) => student.id));
+                      });
+                    }}
+                  />
+                </th>
+              ) : null}
               <th className="col-sno">S.NO.</th>
               {enabledFields.map((field) => (
                 <th key={field.key} className={fieldColumnClass(field)}>
@@ -919,6 +967,24 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               const serial = rowIndex + 1;
               return (
                 <tr key={student.id} className="hover:bg-content-bg/50">
+                  {selecting && isDetailView ? (
+                    <td className="bulk-check-cell">
+                      <input
+                        type="checkbox"
+                        className="bulk-check"
+                        aria-label={`Select ${student.student_name ?? student.photo_id ?? "record"}`}
+                        checked={selectedIds.has(student.id)}
+                        onChange={() => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(student.id)) next.delete(student.id);
+                            else next.add(student.id);
+                            return next;
+                          });
+                        }}
+                      />
+                    </td>
+                  ) : null}
                   <td className="col-sno text-text-muted">{serial}</td>
                   {enabledFields.map((field) => (
                     <td key={field.key} className={fieldColumnClass(field)}>
@@ -1092,6 +1158,50 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
           onClose={() => setShowDownloadPhotosModal(false)}
           onDownloadAll={() => void handleDownloadAllPhotos()}
           onDownloadByDate={(date) => void handleDownloadPhotosByDate(date)}
+        />
+      )}
+
+      {otpOpen && orgId && (
+        <OtpConfirmModal
+          title={isInstitute ? "Delete members" : "Delete students"}
+          description={`Remove ${filtered.filter((student) => selectedIds.has(student.id)).length} selected ${isInstitute ? "member" : "student"}(s).`}
+          confirmLabel="Delete selected"
+          onClose={() => {
+            if (!bulkDeleting) setOtpOpen(false);
+          }}
+          onRequestOtp={async () => {
+            const ids = filtered.filter((student) => selectedIds.has(student.id)).map((student) => student.id);
+            const { data } = await api.post<{ message?: string; devOtp?: string }>(
+              "/admin/students/bulk-delete/request-otp",
+              isInstitute ? { ids, instituteId: orgId } : { ids, schoolId: orgId }
+            );
+            return { message: data.message, devOtp: data.devOtp };
+          }}
+          onConfirm={async (otp) => {
+            const ids = filtered.filter((student) => selectedIds.has(student.id)).map((student) => student.id);
+            setBulkDeleting(true);
+            try {
+              const { data } = await api.post<{ deleted?: string[] }>(
+                "/admin/students/bulk-delete",
+                isInstitute
+                  ? { ids, otp, instituteId: orgId }
+                  : { ids, otp, schoolId: orgId }
+              );
+              const deleted = new Set(data.deleted ?? ids);
+              setStudents((prev) => prev.filter((student) => !deleted.has(student.id)));
+              setSelectedIds(new Set());
+              setSelecting(false);
+              setOtpOpen(false);
+            } catch (err) {
+              if (axios.isAxiosError(err)) {
+                const body = err.response?.data as ApiErrorBody | undefined;
+                throw new Error(body?.message ?? "Failed to delete selected records.");
+              }
+              throw new Error("Failed to delete selected records.");
+            } finally {
+              setBulkDeleting(false);
+            }
+          }}
         />
       )}
 

@@ -16,6 +16,11 @@ import {
   requestAdminActionOtp,
   verifyAdminActionOtp,
 } from "../utils/adminOtp";
+import {
+  bulkResourceId,
+  parseBulkIds,
+  requireAdminEmail,
+} from "../utils/bulkIds";
 import { syncFormConfigFromExcelFields } from "./formConfigController";
 import {
   buildFieldLabelsFromConfig,
@@ -35,6 +40,7 @@ import { routeParam } from "../utils/routeParams";
 import {
   assertInstituteOwnedByAdmin,
   assertSchoolOwnedByAdmin,
+  assertStudentOwnedByAdmin,
   requireAdminScope,
 } from "../utils/adminScope";
 import { Student, StudentRowInput } from "../types/student";
@@ -508,6 +514,7 @@ export async function updateStudentAdmin(
     );
     const student = existing.rows[0];
     if (!student) throw new AppError("Student not found", 404);
+    await assertStudentOwnedByAdmin(await requireAdminScope(req), student);
 
     await assertNumberEditAllowed(
       student.school_id,
@@ -710,6 +717,20 @@ export async function listStudentsAdmin(
       values.push(instituteId);
       conditions.push(`institute_id = $${values.length}`);
     }
+    if (!schoolId && !instituteId) {
+      values.push(scope.adminUserId);
+      const ownerParam = values.length;
+      const schoolOwner = scope.isSuperAdmin
+        ? `(s.owner_admin_id = $${ownerParam} OR s.owner_admin_id IS NULL)`
+        : `s.owner_admin_id = $${ownerParam}`;
+      const instituteOwner = scope.isSuperAdmin
+        ? `(i.owner_admin_id = $${ownerParam} OR i.owner_admin_id IS NULL)`
+        : `i.owner_admin_id = $${ownerParam}`;
+      conditions.push(`(
+        EXISTS (SELECT 1 FROM schools s WHERE s.id = students.school_id AND ${schoolOwner})
+        OR EXISTS (SELECT 1 FROM institutes i WHERE i.id = students.institute_id AND ${instituteOwner})
+      )`);
+    }
     if (classFilter) {
       values.push(classFilter);
       conditions.push(`class_section = $${values.length}`);
@@ -765,34 +786,51 @@ export async function uploadStudentPhotoAdmin(
     if (!studentId) throw new AppError("Student id is required", 400);
     if (!req.file) throw new AppError("Image file is required (field name: photo)", 400);
 
+    const scope = await requireAdminScope(req);
     const studentResult = await pool.query<Student>(
       `SELECT ${STUDENT_SELECT} FROM students WHERE id = $1 LIMIT 1`,
       [studentId]
     );
     const student = studentResult.rows[0];
     if (!student) throw new AppError("Student not found", 404);
+    await assertStudentOwnedByAdmin(scope, student);
 
-    const orgId = student.school_id ?? student.institute_id;
-    if (!orgId) throw new AppError("Student is not assigned to an organization", 400);
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const locked = await client.query<Student>(
+        `SELECT ${STUDENT_SELECT} FROM students WHERE id = $1 FOR UPDATE`,
+        [studentId]
+      );
+      const current = locked.rows[0];
+      if (!current) throw new AppError("Student not found", 404);
+      await assertStudentOwnedByAdmin(scope, current);
+      const orgId = current.school_id ?? current.institute_id;
+      if (!orgId) throw new AppError("Student is not assigned to an organization", 400);
 
-    if (student.photo_url && student.school_id) {
-      await deleteStudentPhotoFromStorage(student.school_id, student.id);
+      const photoUrl = await uploadStudentPhotoToStorage(orgId, current.id, req.file);
+      const updated = await client.query<Student>(
+        `UPDATE students
+         SET photo_url = $1,
+             status = 'captured',
+             photo_captured_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $2
+         RETURNING ${STUDENT_SELECT}`,
+        [photoUrl, studentId]
+      );
+      await client.query("COMMIT");
+      res.status(200).json({ status: "ok", student: updated.rows[0] });
+    } catch (error) {
+      try {
+        await client.query("ROLLBACK");
+      } catch {
+        /* ignore */
+      }
+      throw error;
+    } finally {
+      client.release();
     }
-
-    const photoUrl = await uploadStudentPhotoToStorage(orgId, student.id, req.file);
-
-    const updated = await pool.query<Student>(
-      `UPDATE students
-       SET photo_url = $1,
-           status = 'captured',
-           photo_captured_at = NOW(),
-           updated_at = NOW()
-       WHERE id = $2
-       RETURNING ${STUDENT_SELECT}`,
-      [photoUrl, studentId]
-    );
-
-    res.status(200).json({ status: "ok", student: updated.rows[0] });
   } catch (error) {
     next(error);
   }
@@ -816,6 +854,7 @@ export async function deleteStudentPhotoAdmin(
     );
     const student = studentResult.rows[0];
     if (!student) throw new AppError("Student not found", 404);
+    await assertStudentOwnedByAdmin(await requireAdminScope(req), student);
     const photoOrgId = studentPhotoOrgId(student.school_id, student.institute_id);
     if (student.photo_url && photoOrgId) {
       await deleteStudentPhotoFromStorage(photoOrgId, student.id);
@@ -847,12 +886,17 @@ export async function requestStudentDeleteOtp(
     const studentId = routeParam(req.params.id);
     if (!studentId) throw new AppError("Student id is required", 400);
 
-    const studentResult = await pool.query<{ student_name: string | null }>(
-      `SELECT student_name FROM students WHERE id = $1 LIMIT 1`,
+    const studentResult = await pool.query<{
+      student_name: string | null;
+      school_id: string | null;
+      institute_id: string | null;
+    }>(
+      `SELECT student_name, school_id, institute_id FROM students WHERE id = $1 LIMIT 1`,
       [studentId]
     );
     const student = studentResult.rows[0];
     if (!student) throw new AppError("Student not found", 404);
+    await assertStudentOwnedByAdmin(await requireAdminScope(req), student);
 
     const adminEmail = await getAdminEmail(req.user.userId);
     const otpResult = await requestAdminActionOtp({
@@ -892,6 +936,7 @@ export async function deleteStudentAdmin(
     );
     const student = studentResult.rows[0];
     if (!student) throw new AppError("Student not found", 404);
+    await assertStudentOwnedByAdmin(await requireAdminScope(req), student);
 
     const photoOrgId = studentPhotoOrgId(student.school_id, student.institute_id);
     if (student.photo_url && photoOrgId) {
@@ -1277,6 +1322,152 @@ export async function deleteInstitutePhotosData(
       status: "ok",
       message: "All member photos deleted for this institute.",
       deletedCount: students.rows.length,
+    });
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    next(error);
+  } finally {
+    client.release();
+  }
+}
+
+function orgScopeFromBody(body: {
+  schoolId?: unknown;
+  instituteId?: unknown;
+}): { schoolId: string; instituteId: string } {
+  const schoolId = String(body.schoolId ?? "").trim();
+  const instituteId = String(body.instituteId ?? "").trim();
+  if (Boolean(schoolId) === Boolean(instituteId)) {
+    throw new AppError("Organization is required", 400);
+  }
+  return { schoolId, instituteId };
+}
+
+async function assertStudentsInOrg(
+  scope: Awaited<ReturnType<typeof requireAdminScope>>,
+  ids: string[],
+  schoolId: string,
+  instituteId: string
+): Promise<void> {
+  if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
+  else await assertInstituteOwnedByAdmin(scope, instituteId);
+
+  const found = await pool.query<{
+    id: string;
+    school_id: string | null;
+    institute_id: string | null;
+  }>(
+    `SELECT id, school_id, institute_id FROM students WHERE id = ANY($1::uuid[])`,
+    [ids]
+  );
+  if (found.rows.length !== ids.length) {
+    throw new AppError("One or more records were not found", 404);
+  }
+  for (const row of found.rows) {
+    if (schoolId && row.school_id !== schoolId) {
+      throw new AppError("Student not found", 404);
+    }
+    if (instituteId && row.institute_id !== instituteId) {
+      throw new AppError("Member not found", 404);
+    }
+    await assertStudentOwnedByAdmin(scope, row);
+  }
+}
+
+/** POST /admin/students/bulk-delete/request-otp */
+export async function requestStudentBulkDeleteOtp(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const ids = parseBulkIds(req.body?.ids, "record");
+    const { schoolId, instituteId } = orgScopeFromBody(req.body ?? {});
+    const scope = await requireAdminScope(req);
+    await assertStudentsInOrg(scope, ids, schoolId, instituteId);
+    const adminEmail = await requireAdminEmail(req.user.userId);
+    const label = instituteId ? "member" : "student";
+    const otpResult = await requestAdminActionOtp({
+      adminUserId: req.user.userId,
+      adminEmail,
+      actionType: "delete_student_bulk",
+      resourceId: bulkResourceId(ids),
+      emailSubject: `Confirm ${label} deletion`,
+      emailIntro: `Confirm deletion of ${ids.length} ${label}${ids.length === 1 ? "" : "s"}.`,
+      logPrefix: "[student-bulk-delete]",
+    });
+    res.status(200).json({ status: "ok", ...otpResult });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** POST /admin/students/bulk-delete — body: { ids, otp, schoolId | instituteId } */
+export async function bulkDeleteStudents(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const client = await pool.connect();
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const ids = parseBulkIds(req.body?.ids, "record");
+    const { schoolId, instituteId } = orgScopeFromBody(req.body ?? {});
+    const scope = await requireAdminScope(req);
+    await assertStudentsInOrg(scope, ids, schoolId, instituteId);
+    const otp = String(req.body?.otp ?? "").trim();
+    await verifyAdminActionOtp({
+      adminUserId: req.user.userId,
+      actionType: "delete_student_bulk",
+      resourceId: bulkResourceId(ids),
+      otp,
+    });
+
+    await client.query("BEGIN");
+    const locked = await client.query<{
+      id: string;
+      school_id: string | null;
+      institute_id: string | null;
+      photo_url: string | null;
+    }>(
+      `SELECT id, school_id, institute_id, photo_url
+       FROM students
+       WHERE id = ANY($1::uuid[])
+       FOR UPDATE`,
+      [ids]
+    );
+    if (locked.rows.length !== ids.length) {
+      throw new AppError("One or more records were not found", 404);
+    }
+    for (const row of locked.rows) {
+      if (schoolId && row.school_id !== schoolId) {
+        throw new AppError("Student not found", 404);
+      }
+      if (instituteId && row.institute_id !== instituteId) {
+        throw new AppError("Member not found", 404);
+      }
+      await assertStudentOwnedByAdmin(scope, row);
+      const photoOrgId = studentPhotoOrgId(row.school_id, row.institute_id);
+      if (row.photo_url && photoOrgId) {
+        await deleteStudentPhotoFromStorage(photoOrgId, row.id);
+      }
+    }
+    const deleted = await client.query<{ id: string }>(
+      `DELETE FROM students WHERE id = ANY($1::uuid[]) RETURNING id`,
+      [ids]
+    );
+    await client.query("COMMIT");
+
+    res.status(200).json({
+      status: "ok",
+      deleted: deleted.rows.map((row) => row.id),
+      deletedCount: deleted.rows.length,
+      failedCount: 0,
     });
   } catch (error) {
     try {

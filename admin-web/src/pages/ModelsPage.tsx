@@ -4,7 +4,7 @@ import api from "../api/client";
 import { ImagePreviewModal } from "../components/ImagePreviewModal";
 import { SearchInput } from "../components/ui/SearchInput";
 import { formatFileSize } from "./CatalogPages";
-import { BulkActionBar, bulkDeleteMessage } from "../components/BulkActionBar";
+import { BulkActionBar, BulkModeButtons, bulkDeleteMessage } from "../components/BulkActionBar";
 import type { ApiErrorBody, CatalogItem } from "../types";
 import { sequentialUploadProgressLabel } from "../utils/sequentialUploadProgress";
 
@@ -98,7 +98,7 @@ export function ModelsPage() {
     });
   }, [items, search, isTagsTab]);
 
-  const tableColSpan = isTagsTab ? 5 : 6;
+  const tableColSpan = (isTagsTab ? 5 : 6) + (selecting ? 1 : 0);
 
   const previewIndex = previewItem
     ? filtered.findIndex((item) => item.id === previewItem.id)
@@ -267,61 +267,64 @@ export function ModelsPage() {
           ))}
         </div>
 
-        <SearchInput
-          value={search}
-          onChange={(value) => {
-            setSearch(value);
-          }}
-          placeholder={isTagsTab ? "Search tags..." : "Search models..."}
-          className="mb-4"
-        />
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <SearchInput
+            value={search}
+            onChange={(value) => {
+              setSearch(value);
+            }}
+            placeholder={isTagsTab ? "Search tags..." : "Search models..."}
+            className="min-w-[12rem] flex-1"
+          />
+          {(!loading && filtered.length > 0) || selecting ? (
+            <BulkModeButtons
+              selecting={selecting}
+              selectedCount={filtered.filter((item) => selectedIds.has(item.id)).length}
+              deleting={bulkDeleting}
+              onStart={() => setSelecting(true)}
+              onCancel={() => {
+                setSelectedIds(new Set());
+                setSelecting(false);
+              }}
+              onConfirm={() => {
+                const ids = filtered.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
+                if (ids.length === 0) return;
+                const noun = isTagsTab ? "tag" : "model";
+                if (!confirm(`Delete ${ids.length} ${noun}${ids.length === 1 ? "" : "s"}?`)) return;
+                setBulkDeleting(true);
+                void api
+                  .post<{ deletedCount: number; failedCount: number }>(
+                    "/admin/catalog/bulk-delete",
+                    { ids }
+                  )
+                  .then(({ data }) => {
+                    setError(bulkDeleteMessage(data));
+                    setSelectedIds(new Set());
+                    setSelecting(false);
+                    return load();
+                  })
+                  .catch((err: unknown) => {
+                    if (axios.isAxiosError(err)) {
+                      const body = err.response?.data as ApiErrorBody | undefined;
+                      setError(body?.message ?? "Bulk delete failed.");
+                    } else setError("Bulk delete failed.");
+                  })
+                  .finally(() => setBulkDeleting(false));
+              }}
+            />
+          ) : null}
+        </div>
         {error && <div className="mb-4 alert-error">{error}</div>}
-        <button
-          type="button"
-          className="btn-secondary mb-3"
-          onClick={() => setSelecting(true)}
-        >
-          Bulk Delete
-        </button>
         {selecting && !loading && filtered.length > 0 ? (
           <BulkActionBar
             selectedCount={filtered.filter((item) => selectedIds.has(item.id)).length}
             allSelected={filtered.every((item) => selectedIds.has(item.id))}
-            deleting={bulkDeleting}
             onToggleAll={() => {
               setSelectedIds((prev) => {
                 const all = filtered.every((item) => prev.has(item.id));
                 if (all) return new Set();
                 return new Set(filtered.map((item) => item.id));
               });
-            }}
-            onClear={() => {
-              setSelectedIds(new Set());
-              setSelecting(false);
-            }}
-            onDelete={() => {
-              const ids = filtered.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
-              if (ids.length === 0) return;
-              if (!confirm(`Delete ${ids.length} model${ids.length === 1 ? "" : "s"}?`)) return;
-              setBulkDeleting(true);
-              void api
-                .post<{ deletedCount: number; failedCount: number }>(
-                  "/admin/catalog/bulk-delete",
-                  { ids }
-                )
-                .then(({ data }) => {
-                  setError(bulkDeleteMessage(data));
-                  setSelectedIds(new Set());
-                  setSelecting(false);
-                  return load();
-                })
-                .catch((err: unknown) => {
-                  if (axios.isAxiosError(err)) {
-                    const body = err.response?.data as ApiErrorBody | undefined;
-                    setError(body?.message ?? "Bulk delete failed.");
-                  } else setError("Bulk delete failed.");
-                })
-                .finally(() => setBulkDeleting(false));
             }}
           />
         ) : null}
@@ -330,6 +333,25 @@ export function ModelsPage() {
           <table className="models-table">
             <thead>
               <tr>
+                {selecting ? (
+                  <th className="bulk-check-cell">
+                    <input
+                      type="checkbox"
+                      className="bulk-check"
+                      aria-label={isTagsTab ? "Select all tags" : "Select all models"}
+                      checked={
+                        filtered.length > 0 && filtered.every((item) => selectedIds.has(item.id))
+                      }
+                      onChange={() => {
+                        setSelectedIds((prev) => {
+                          const all = filtered.every((item) => prev.has(item.id));
+                          if (all) return new Set();
+                          return new Set(filtered.map((item) => item.id));
+                        });
+                      }}
+                    />
+                  </th>
+                ) : null}
                 <th className="col-sno">S.NO.</th>
                 <th className="col-image">{itemLabel} Image</th>
                 <th className="col-name">Image Name</th>
@@ -356,23 +378,26 @@ export function ModelsPage() {
               {!loading &&
                 filtered.map((item, index) => (
                   <tr key={item.id}>
+                    {selecting ? (
+                      <td className="bulk-check-cell">
+                        <input
+                          type="checkbox"
+                          className="bulk-check"
+                          aria-label={`Select ${item.name}`}
+                          checked={selectedIds.has(item.id)}
+                          onChange={() => {
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(item.id)) next.delete(item.id);
+                              else next.add(item.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      </td>
+                    ) : null}
                     <td className="col-sno">{index + 1}</td>
                     <td className="col-image">
-                      {selecting ? (
-                      <input
-                        type="checkbox"
-                        className="mr-2"
-                        checked={selectedIds.has(item.id)}
-                        onChange={() => {
-                          setSelectedIds((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(item.id)) next.delete(item.id);
-                            else next.add(item.id);
-                            return next;
-                          });
-                        }}
-                      />
-                      ) : null}
                       {item.image_url ? (
                         <button
                           type="button"

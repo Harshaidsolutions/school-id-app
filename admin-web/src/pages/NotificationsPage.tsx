@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import axios from "axios";
 import api from "../api/client";
-import { useAuth } from "../context/AuthContext";
-import { BulkActionBar, bulkDeleteMessage } from "../components/BulkActionBar";
+import { BulkActionBar, BulkModeButtons, bulkDeleteMessage } from "../components/BulkActionBar";
 import { OtpConfirmModal } from "../components/OtpConfirmModal";
 import type {
   ApiErrorBody,
@@ -20,7 +19,6 @@ type NotificationRow = NotificationItem & {
  * Notifications — compose and send to schools / institutes
  */
 export function NotificationsPage() {
-  const { user } = useAuth();
   const [schools, setSchools] = useState<School[]>([]);
   const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [selectedSchoolIds, setSelectedSchoolIds] = useState<Set<string>>(
@@ -33,6 +31,7 @@ export function NotificationsPage() {
   const [deleteTarget, setDeleteTarget] = useState<NotificationRow | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [otpOpen, setOtpOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -59,15 +58,6 @@ export function NotificationsPage() {
     }
   }
 
-  useEffect(() => {
-    if (user?.isSuperAdmin !== true) return;
-    void api.post("/admin/notifications/incoming/mark-read").catch(() => undefined);
-  }, [user?.isSuperAdmin, notifications.length]);
-
-  const incomingNotifications = useMemo(
-    () => notifications.filter((item) => item.audience === "super_admin"),
-    [notifications]
-  );
   const sentNotifications = useMemo(
     () => notifications.filter((item) => item.audience !== "super_admin"),
     [notifications]
@@ -329,57 +319,38 @@ export function NotificationsPage() {
         </button>
       </form>
 
-      {user?.isSuperAdmin === true ? (
-        <>
-          <h2 className="mb-3 text-lg font-semibold text-text-navy">
-            Incoming Notifications
-          </h2>
-          <div className="mb-8 space-y-3">
-            {!loading && incomingNotifications.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-8 text-center text-sm text-text-muted">
-                No incoming school or institute notifications.
-              </div>
-            ) : null}
-            {incomingNotifications.map((n) => (
-              <div
-                key={n.id}
-                className="rounded-2xl border border-border/60 bg-white p-5 shadow-sm"
-              >
-                <div className="font-semibold text-text-navy">{n.title}</div>
-                <p className="mt-2 whitespace-pre-wrap text-sm text-text">{n.message}</p>
-              </div>
-            ))}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-text-navy">Sent Notifications</h2>
+        {!loading && sentNotifications.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <BulkModeButtons
+              selecting={bulkOpen}
+              selectedCount={sentNotifications.filter((n) => selectedIds.has(n.id)).length}
+              deleting={bulkDeleting}
+              onStart={() => setBulkOpen(true)}
+              onCancel={() => {
+                setSelectedIds(new Set());
+                setBulkOpen(false);
+                setOtpOpen(false);
+              }}
+              onConfirm={() => {
+                if (sentNotifications.filter((n) => selectedIds.has(n.id)).length === 0) return;
+                setOtpOpen(true);
+              }}
+            />
           </div>
-        </>
-      ) : null}
-
-      <h2 className="mb-3 text-lg font-semibold text-text-navy">
-        Sent Notifications
-      </h2>
-      {!loading && sentNotifications.length > 0 ? (
-        <button type="button" className="btn-secondary mb-3" onClick={() => setBulkOpen(true)}>
-          Bulk Delete
-        </button>
-      ) : null}
+        ) : null}
+      </div>
       {bulkOpen && !loading && sentNotifications.length > 0 ? (
         <BulkActionBar
           selectedCount={sentNotifications.filter((n) => selectedIds.has(n.id)).length}
           allSelected={sentNotifications.every((n) => selectedIds.has(n.id))}
-          deleting={bulkDeleting}
           onToggleAll={() => {
             setSelectedIds((prev) => {
               const all = sentNotifications.every((n) => prev.has(n.id));
               if (all) return new Set();
               return new Set(sentNotifications.map((n) => n.id));
             });
-          }}
-          onClear={() => {
-            setSelectedIds(new Set());
-            setBulkOpen(false);
-          }}
-          onDelete={() => {
-            if (notifications.filter((n) => selectedIds.has(n.id)).length === 0) return;
-            setBulkOpen(true);
           }}
         />
       ) : null}
@@ -395,13 +366,14 @@ export function NotificationsPage() {
         {sentNotifications.map((n) => (
           <div
             key={n.id}
-            className="rounded-2xl border border-border/60 bg-white p-5 shadow-sm"
+            className="rounded-2xl border border-border/60 bg-white p-5 pl-6 shadow-sm"
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <label className="flex items-center gap-2 font-semibold text-text-navy">
+              <label className="flex items-center gap-3 pl-1 font-semibold text-text-navy">
                 {bulkOpen ? (
                 <input
                   type="checkbox"
+                  className="bulk-check"
                   checked={selectedIds.has(n.id)}
                   onChange={() => {
                     setSelectedIds((prev) => {
@@ -440,16 +412,16 @@ export function NotificationsPage() {
         ))}
       </div>
 
-      {bulkOpen && (
+      {otpOpen && (
         <OtpConfirmModal
           title="Delete notifications"
-          description={`Remove ${notifications.filter((n) => selectedIds.has(n.id)).length} selected notification(s).`}
+          description={`Remove ${sentNotifications.filter((n) => selectedIds.has(n.id)).length} selected notification(s).`}
           confirmLabel="Delete selected"
           onClose={() => {
-            if (!bulkDeleting) setBulkOpen(false);
+            if (!bulkDeleting) setOtpOpen(false);
           }}
           onRequestOtp={async () => {
-            const ids = notifications.filter((n) => selectedIds.has(n.id)).map((n) => n.id);
+            const ids = sentNotifications.filter((n) => selectedIds.has(n.id)).map((n) => n.id);
             const { data } = await api.post<{ message?: string; devOtp?: string }>(
               "/admin/notifications/bulk-delete/request-otp",
               { ids }
@@ -457,7 +429,7 @@ export function NotificationsPage() {
             return { message: data.message, devOtp: data.devOtp };
           }}
           onConfirm={async (otp) => {
-            const ids = notifications.filter((n) => selectedIds.has(n.id)).map((n) => n.id);
+            const ids = sentNotifications.filter((n) => selectedIds.has(n.id)).map((n) => n.id);
             setBulkDeleting(true);
             try {
               const { data } = await api.post<{
@@ -470,7 +442,7 @@ export function NotificationsPage() {
               setNotifications((prev) => prev.filter((item) => !data.deleted?.includes(item.id)));
               setSelectedIds(new Set());
               setBulkOpen(false);
-              setBulkOpen(false);
+              setOtpOpen(false);
             } catch (err) {
               if (axios.isAxiosError(err)) {
                 const body = err.response?.data as ApiErrorBody | undefined;

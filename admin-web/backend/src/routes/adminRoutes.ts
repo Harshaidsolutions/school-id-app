@@ -14,8 +14,10 @@ import {
   deleteInstituteExcelData,
   deleteSchoolPhotosData,
   deleteInstitutePhotosData,
+  bulkDeleteStudents,
   deleteStudentAdmin,
   deleteStudentPhotoAdmin,
+  requestStudentBulkDeleteOtp,
   uploadStudentPhotoAdmin,
   listStudentsAdmin,
   listStudentsBySchool,
@@ -43,8 +45,10 @@ import { runCleanupNow } from "../controllers/cleanupController";
 import {
   createSchool,
   createSchoolWithOwner,
+  bulkDeleteSchools,
   deleteSchool,
   listSchools,
+  requestSchoolBulkDeleteOtp,
   requestSchoolDeleteOtp,
   updateSchool,
   setSchoolActive,
@@ -53,8 +57,10 @@ import {
 import {
   createInstitute,
   createInstituteWithOwner,
+  bulkDeleteInstitutes,
   deleteInstitute,
   listInstitutes,
+  requestInstituteBulkDeleteOtp,
   requestInstituteDeleteOtp,
   updateInstitute,
   setInstituteActive,
@@ -123,6 +129,8 @@ router.get("/dashboard-summary", getDashboardSummary);
 router.post("/schools", uploadSchoolAssets, createSchool);
 router.post("/schools-with-owner", createSchoolWithOwner);
 router.get("/schools", listSchools);
+router.post("/schools/bulk-delete/request-otp", requestSchoolBulkDeleteOtp);
+router.post("/schools/bulk-delete", bulkDeleteSchools);
 router.patch("/schools/:id/active", setSchoolActive);
 router.patch("/schools/:id/capture", setSchoolCapturePolicy);
 router.put("/schools/:id", optionalUploadSchoolAssets, updateSchool);
@@ -141,6 +149,8 @@ router.get("/schools/:id/organization-info", getSchoolOrganizationInfo);
 router.post("/institutes", uploadSchoolAssets, createInstitute);
 router.post("/institutes-with-owner", createInstituteWithOwner);
 router.get("/institutes", listInstitutes);
+router.post("/institutes/bulk-delete/request-otp", requestInstituteBulkDeleteOtp);
+router.post("/institutes/bulk-delete", bulkDeleteInstitutes);
 router.patch("/institutes/:id/active", setInstituteActive);
 router.patch("/institutes/:id/capture", setInstituteCapturePolicy);
 router.put("/institutes/:id", optionalUploadSchoolAssets, updateInstitute);
@@ -188,6 +198,8 @@ router.post(
   uploadExcel.single("file"),
   bulkUploadStudents
 );
+router.post("/students/bulk-delete/request-otp", requestStudentBulkDeleteOtp);
+router.post("/students/bulk-delete", bulkDeleteStudents);
 router.post("/students/:id/request-delete-otp", requestStudentDeleteOtp);
 router.post(
   "/students/:id/photo",

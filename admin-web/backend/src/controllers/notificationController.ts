@@ -5,6 +5,7 @@ import {
   requestAdminActionOtp,
   verifyAdminActionOtp,
 } from "../utils/adminOtp";
+import { parseBulkIds } from "../utils/bulkIds";
 import { routeParam } from "../utils/routeParams";
 import type { NotificationRow } from "../types/admin";
 import { sendSnsPushNotifications } from "../utils/snsPush";
@@ -201,14 +202,29 @@ export async function markIncomingNotificationsRead(
       res.status(200).json({ status: "ok" });
       return;
     }
-    await pool.query(
-      `INSERT INTO notification_reads (notification_id, user_id)
-       SELECT n.id, $1
-       FROM notifications n
-       WHERE n.audience = 'super_admin'
-       ON CONFLICT DO NOTHING`,
-      [scope.adminUserId]
-    );
+    const requested = Array.isArray(req.body?.ids)
+      ? parseBulkIds(req.body.ids, "notification")
+      : null;
+    if (requested) {
+      await pool.query(
+        `INSERT INTO notification_reads (notification_id, user_id)
+         SELECT n.id, $1
+         FROM notifications n
+         WHERE n.audience = 'super_admin'
+           AND n.id = ANY($2::uuid[])
+         ON CONFLICT DO NOTHING`,
+        [scope.adminUserId, requested]
+      );
+    } else {
+      await pool.query(
+        `INSERT INTO notification_reads (notification_id, user_id)
+         SELECT n.id, $1
+         FROM notifications n
+         WHERE n.audience = 'super_admin'
+         ON CONFLICT DO NOTHING`,
+        [scope.adminUserId]
+      );
+    }
     res.status(200).json({ status: "ok" });
   } catch (error) {
     next(error);

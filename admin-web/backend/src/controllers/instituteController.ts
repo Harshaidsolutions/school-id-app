@@ -8,7 +8,12 @@ import {
   verifyAdminActionOtp,
 } from "../utils/adminOtp";
 import { routeParam } from "../utils/routeParams";
-import { parseBooleanField } from "../utils/parseBoolean";
+import { captureAllowedFromBody, parseBooleanField } from "../utils/parseBoolean";
+import {
+  bulkResourceId,
+  parseBulkIds,
+  requireAdminEmail,
+} from "../utils/bulkIds";
 import {
   assertInstituteOwnedByAdmin,
   requireAdminScope,
@@ -497,21 +502,14 @@ export async function setInstituteCapturePolicy(
     if (!id) throw new AppError("Institute id is required", 400);
     await assertInstituteOwnedByAdmin(scope, id);
 
-    const allowScreenshot = parseBooleanField(
-      req.body.allow_screenshot ?? req.body.allowScreenshot,
-      true
-    );
-    const allowRecording = parseBooleanField(
-      req.body.allow_screen_recording ?? req.body.allowScreenRecording,
-      true
-    );
+    const allowCapture = captureAllowedFromBody(req.body);
 
     const updated = await pool.query<InstituteRow>(
       `UPDATE institutes
-       SET allow_screenshot = $1, allow_screen_recording = $2
-       WHERE id = $3::uuid
+       SET allow_screenshot = $1, allow_screen_recording = $1
+       WHERE id = $2::uuid
        RETURNING *`,
-      [allowScreenshot, allowRecording, id]
+      [allowCapture, id]
     );
     const institute = updated.rows[0];
     if (!institute) throw new AppError("Institute not found", 404);
@@ -607,6 +605,110 @@ export async function deleteInstitute(
       status: "ok",
       message: `Institute "${institute.name}" deleted.`,
       deleted: true,
+    });
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    next(error);
+  } finally {
+    client.release();
+  }
+}
+
+async function assertInstitutesOwned(
+  scope: Awaited<ReturnType<typeof requireAdminScope>>,
+  ids: string[]
+): Promise<void> {
+  for (const id of ids) {
+    await assertInstituteOwnedByAdmin(scope, id);
+  }
+  const found = await pool.query<{ id: string }>(
+    `SELECT id FROM institutes WHERE id = ANY($1::uuid[])`,
+    [ids]
+  );
+  if (found.rows.length !== ids.length) {
+    throw new AppError("One or more institutes were not found", 404);
+  }
+}
+
+/** POST /admin/institutes/bulk-delete/request-otp */
+export async function requestInstituteBulkDeleteOtp(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const ids = parseBulkIds(req.body?.ids, "institute");
+    const scope = await requireAdminScope(req);
+    await assertInstitutesOwned(scope, ids);
+    const adminEmail = await requireAdminEmail(req.user.userId);
+    const otpResult = await requestAdminActionOtp({
+      adminUserId: req.user.userId,
+      adminEmail,
+      actionType: "delete_institute_bulk",
+      resourceId: bulkResourceId(ids),
+      emailSubject: "Confirm institute deletion",
+      emailIntro: `Confirm deletion of ${ids.length} institute${ids.length === 1 ? "" : "s"} and related records.`,
+      logPrefix: "[institute-bulk-delete]",
+    });
+    res.status(200).json({ status: "ok", ...otpResult });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** POST /admin/institutes/bulk-delete — body: { ids, otp } */
+export async function bulkDeleteInstitutes(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const client = await pool.connect();
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const ids = parseBulkIds(req.body?.ids, "institute");
+    const scope = await requireAdminScope(req);
+    await assertInstitutesOwned(scope, ids);
+    const otp = String(req.body?.otp ?? "").trim();
+    await verifyAdminActionOtp({
+      adminUserId: req.user.userId,
+      actionType: "delete_institute_bulk",
+      resourceId: bulkResourceId(ids),
+      otp,
+    });
+
+    await client.query("BEGIN");
+    const locked = await client.query<{ id: string; owner_admin_id: string | null }>(
+      `SELECT id, owner_admin_id FROM institutes WHERE id = ANY($1::uuid[]) FOR UPDATE`,
+      [ids]
+    );
+    if (locked.rows.length !== ids.length) {
+      throw new AppError("One or more institutes were not found", 404);
+    }
+    if (!scope.isSuperAdmin) {
+      for (const row of locked.rows) {
+        if (row.owner_admin_id !== scope.adminUserId) {
+          throw new AppError("Institute not found", 404);
+        }
+      }
+    }
+
+    await client.query(`DELETE FROM users WHERE institute_id = ANY($1::uuid[])`, [ids]);
+    const deleted = await client.query<{ id: string }>(
+      `DELETE FROM institutes WHERE id = ANY($1::uuid[]) RETURNING id`,
+      [ids]
+    );
+    await client.query("COMMIT");
+
+    res.status(200).json({
+      status: "ok",
+      deleted: deleted.rows.map((row) => row.id),
+      deletedCount: deleted.rows.length,
+      failedCount: 0,
     });
   } catch (error) {
     try {

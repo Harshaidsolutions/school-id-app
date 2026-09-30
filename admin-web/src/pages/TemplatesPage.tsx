@@ -5,7 +5,7 @@ import { SearchInput } from "../components/ui/SearchInput";
 import { UploadDropzone } from "../components/ui/UploadDropzone";
 import { TemplateFormModal } from "../components/TemplateFormModal";
 import { CatalogPreviewThumb, ImagePreviewModal } from "../components/ImagePreviewModal";
-import { BulkActionBar, bulkDeleteMessage } from "../components/BulkActionBar";
+import { BulkActionBar, BulkModeButtons, bulkDeleteMessage } from "../components/BulkActionBar";
 import type { ApiErrorBody, Template, TemplateOrientation } from "../types";
 import { TEMPLATE_TABS as TABS } from "../types";
 
@@ -157,12 +157,55 @@ export function TemplatesPage() {
 
       <div className="split-layout">
         <div className="split-layout-main">
-          <SearchInput
-            value={templateSearch}
-            onChange={setTemplateSearch}
-            placeholder="Search templates by name..."
-            className="mb-4"
-          />
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <SearchInput
+              value={templateSearch}
+              onChange={setTemplateSearch}
+              placeholder="Search templates by name..."
+              className="min-w-[12rem] flex-1"
+            />
+            {(!loading && templateRows.length > 0) || selecting ? (
+              <BulkModeButtons
+                selecting={selecting}
+                selectedCount={templateRows.filter((tpl) => selectedIds.has(tpl.id)).length}
+                deleting={bulkDeleting}
+                onStart={() => setSelecting(true)}
+                onCancel={() => {
+                  setSelectedIds(new Set());
+                  setSelecting(false);
+                }}
+                onConfirm={() => {
+                  const ids = templateRows
+                    .filter((tpl) => selectedIds.has(tpl.id))
+                    .map((tpl) => tpl.id);
+                  if (ids.length === 0) return;
+                  if (!confirm(`Delete ${ids.length} template${ids.length === 1 ? "" : "s"}?`)) {
+                    return;
+                  }
+                  setBulkDeleting(true);
+                  void api
+                    .post<{ deletedCount: number; failedCount: number }>(
+                      "/admin/templates/bulk-delete",
+                      { ids }
+                    )
+                    .then(({ data }) => {
+                      const message = bulkDeleteMessage(data);
+                      setError(message);
+                      setSelectedIds(new Set());
+                      setSelecting(false);
+                      return loadTemplates();
+                    })
+                    .catch((err: unknown) => {
+                      if (axios.isAxiosError(err)) {
+                        const body = err.response?.data as ApiErrorBody | undefined;
+                        setError(body?.message ?? "Bulk delete failed.");
+                      } else setError("Bulk delete failed.");
+                    })
+                    .finally(() => setBulkDeleting(false));
+                }}
+              />
+            ) : null}
+          </div>
           {loading ? (
             <div className="text-sm text-text-muted">Loading templates…</div>
           ) : templateRows.length === 0 ? (
@@ -171,9 +214,6 @@ export function TemplatesPage() {
             </div>
           ) : (
             <>
-            <button type="button" className="btn-secondary mb-3" onClick={() => setSelecting(true)}>
-              Bulk Delete
-            </button>
             {selecting ? (
             <BulkActionBar
               selectedCount={templateRows.filter((tpl) => selectedIds.has(tpl.id)).length}
@@ -181,7 +221,6 @@ export function TemplatesPage() {
                 templateRows.length > 0 &&
                 templateRows.every((tpl) => selectedIds.has(tpl.id))
               }
-              deleting={bulkDeleting}
               onToggleAll={() => {
                 setSelectedIds((prev) => {
                   const all = templateRows.every((tpl) => prev.has(tpl.id));
@@ -189,48 +228,16 @@ export function TemplatesPage() {
                   return new Set(templateRows.map((tpl) => tpl.id));
                 });
               }}
-              onClear={() => {
-                setSelectedIds(new Set());
-                setSelecting(false);
-              }}
-              onDelete={() => {
-                const ids = templateRows
-                  .filter((tpl) => selectedIds.has(tpl.id))
-                  .map((tpl) => tpl.id);
-                if (ids.length === 0) return;
-                if (!confirm(`Delete ${ids.length} template${ids.length === 1 ? "" : "s"}?`)) {
-                  return;
-                }
-                setBulkDeleting(true);
-                void api
-                  .post<{ deletedCount: number; failedCount: number }>(
-                    "/admin/templates/bulk-delete",
-                    { ids }
-                  )
-                  .then(({ data }) => {
-                    const message = bulkDeleteMessage(data);
-                    setError(message);
-                    setSelectedIds(new Set());
-                    setSelecting(false);
-                    return loadTemplates();
-                  })
-                  .catch((err: unknown) => {
-                    if (axios.isAxiosError(err)) {
-                      const body = err.response?.data as ApiErrorBody | undefined;
-                      setError(body?.message ?? "Bulk delete failed.");
-                    } else setError("Bulk delete failed.");
-                  })
-                  .finally(() => setBulkDeleting(false));
-              }}
             />
             ) : null}
             <div className="card-grid-responsive">
               {templateRows.map((tpl) => (
                 <div key={tpl.id} className="card overflow-hidden">
                   {selecting ? (
-                  <label className="flex items-center gap-2 px-3 pt-3 text-xs text-text-muted">
+                  <label className="flex items-center gap-2 px-4 pt-3 text-xs text-text-muted sm:px-5">
                     <input
                       type="checkbox"
+                      className="bulk-check"
                       checked={selectedIds.has(tpl.id)}
                       onChange={() => {
                         setSelectedIds((prev) => {

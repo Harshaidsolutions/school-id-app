@@ -4,7 +4,7 @@ import api from "../api/client";
 import { CatalogPreviewThumb, ImagePreviewModal } from "../components/ImagePreviewModal";
 import { SearchInput } from "../components/ui/SearchInput";
 import { UploadDropzone } from "../components/ui/UploadDropzone";
-import { BulkActionBar, bulkDeleteMessage } from "../components/BulkActionBar";
+import { BulkActionBar, BulkModeButtons, bulkDeleteMessage } from "../components/BulkActionBar";
 import type { ApiErrorBody, CatalogItem } from "../types";
 import { sequentialUploadProgressLabel } from "../utils/sequentialUploadProgress";
 
@@ -113,42 +113,24 @@ export function CatalogGridPage({
   return (
     <div className="app-page split-layout">
       <div className="split-layout-main">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder={searchPlaceholder}
-          className="mb-4"
-        />
-        {error && <div className="mb-4 alert-error">{error}</div>}
-        {uploadProgress && <div className="mb-4 alert-success">{uploadProgress}</div>}
-        {loading ? (
-          <div className="text-sm text-text-muted">Loading {title.toLowerCase()}…</div>
-        ) : (
-          <>
-          {kind === "brochure" ? (
-            <button type="button" className="btn-secondary mb-3" onClick={() => setSelecting(true)}>
-              Bulk Delete
-            </button>
-          ) : null}
-          {kind === "brochure" && selecting ? (
-            <BulkActionBar
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder={searchPlaceholder}
+            className="min-w-[12rem] flex-1"
+          />
+          {kind === "brochure" && (selecting || filtered.length > 0) ? (
+            <BulkModeButtons
+              selecting={selecting}
               selectedCount={filtered.filter((item) => selectedIds.has(item.id)).length}
-              allSelected={
-                filtered.length > 0 && filtered.every((item) => selectedIds.has(item.id))
-              }
               deleting={bulkDeleting}
-              onToggleAll={() => {
-                setSelectedIds((prev) => {
-                  const all = filtered.every((item) => prev.has(item.id));
-                  if (all) return new Set();
-                  return new Set(filtered.map((item) => item.id));
-                });
-              }}
-              onClear={() => {
+              onStart={() => setSelecting(true)}
+              onCancel={() => {
                 setSelectedIds(new Set());
                 setSelecting(false);
               }}
-              onDelete={() => {
+              onConfirm={() => {
                 const ids = filtered.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
                 if (ids.length === 0) return;
                 if (!confirm(`Delete ${ids.length} brochure${ids.length === 1 ? "" : "s"}?`)) return;
@@ -174,13 +156,36 @@ export function CatalogGridPage({
               }}
             />
           ) : null}
+        </div>
+        {error && <div className="mb-4 alert-error">{error}</div>}
+        {uploadProgress && <div className="mb-4 alert-success">{uploadProgress}</div>}
+        {loading ? (
+          <div className="text-sm text-text-muted">Loading {title.toLowerCase()}…</div>
+        ) : (
+          <>
+          {kind === "brochure" && selecting ? (
+            <BulkActionBar
+              selectedCount={filtered.filter((item) => selectedIds.has(item.id)).length}
+              allSelected={
+                filtered.length > 0 && filtered.every((item) => selectedIds.has(item.id))
+              }
+              onToggleAll={() => {
+                setSelectedIds((prev) => {
+                  const all = filtered.every((item) => prev.has(item.id));
+                  if (all) return new Set();
+                  return new Set(filtered.map((item) => item.id));
+                });
+              }}
+            />
+          ) : null}
           <div className="card-grid-responsive">
             {filtered.map((item) => (
               <div key={item.id} className="card overflow-hidden">
                 {kind === "brochure" && selecting ? (
-                  <label className="flex items-center gap-2 px-3 pt-3 text-xs text-text-muted">
+                  <label className="flex items-center gap-2 px-4 pt-3 text-xs text-text-muted sm:px-5">
                     <input
                       type="checkbox"
+                      className="bulk-check"
                       checked={selectedIds.has(item.id)}
                       onChange={() => {
                         setSelectedIds((prev) => {

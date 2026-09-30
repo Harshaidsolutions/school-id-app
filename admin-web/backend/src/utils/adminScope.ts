@@ -153,6 +153,22 @@ export async function assertSchoolOwnedByAdmin(
   }
 }
 
+/** Child admins may only touch a student in a school or institute they own. */
+export async function assertStudentOwnedByAdmin(
+  scope: AdminScope,
+  student: { school_id?: string | null; institute_id?: string | null }
+): Promise<void> {
+  if (student.school_id) {
+    await assertSchoolOwnedByAdmin(scope, student.school_id);
+    return;
+  }
+  if (student.institute_id) {
+    await assertInstituteOwnedByAdmin(scope, student.institute_id);
+    return;
+  }
+  throw new AppError("Student not found", 404);
+}
+
 export async function assertInstituteOwnedByAdmin(
   scope: AdminScope,
   instituteId: string

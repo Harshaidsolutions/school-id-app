@@ -708,6 +708,14 @@ async function migrate() {
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS allow_screenshot BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS allow_screen_recording BOOLEAN NOT NULL DEFAULT true;
 
+    -- One screen-capture setting: if either old flag blocked capture, keep both blocked.
+    UPDATE schools
+    SET allow_screenshot = false, allow_screen_recording = false
+    WHERE allow_screenshot = false OR allow_screen_recording = false;
+    UPDATE institutes
+    SET allow_screenshot = false, allow_screen_recording = false
+    WHERE allow_screenshot = false OR allow_screen_recording = false;
+
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS show_captured_section BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS allow_number_edit BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS allow_record_edit BOOLEAN NOT NULL DEFAULT true;
@@ -732,6 +740,12 @@ async function migrate() {
     CREATE UNIQUE INDEX IF NOT EXISTS users_admin_username_lower_unique
       ON users (lower(username))
       WHERE username IS NOT NULL AND role = 'admin';
+
+    CREATE UNIQUE INDEX IF NOT EXISTS students_institute_class_section_photo_id_key
+      ON students (institute_id, class_section, photo_id)
+      WHERE institute_id IS NOT NULL
+        AND photo_id IS NOT NULL
+        AND btrim(photo_id) <> '';
   `);
 
   console.log("Migration completed successfully.");

@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "re
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
+import { BulkModeButtons } from "../components/BulkActionBar";
 import { ImageUploadField } from "../components/ImageUploadField";
+import { OtpConfirmModal } from "../components/OtpConfirmModal";
 import { PageActions } from "../components/ui/PageActions";
 import { SearchInput } from "../components/ui/SearchInput";
 import { ToggleSwitch } from "../components/ui/ToggleSwitch";
@@ -19,6 +21,10 @@ export function InstituteListPage() {
   const [deleteTarget, setDeleteTarget] = useState<Institute | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [captureId, setCaptureId] = useState<string | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   async function loadInstitutes() {
     setLoading(true);
@@ -77,22 +83,23 @@ export function InstituteListPage() {
     }
   }
 
-  async function toggleCapture(institute: Institute, which: "screenshot" | "recording") {
-    const allowScreenshot =
-      which === "screenshot"
-        ? institute.allow_screenshot === false
-        : institute.allow_screenshot !== false;
-    const allowRecording =
-      which === "recording"
-        ? institute.allow_screen_recording === false
-        : institute.allow_screen_recording !== false;
+  function captureProtected(institute: Institute) {
+    return (
+      institute.allow_screenshot === false || institute.allow_screen_recording === false
+    );
+  }
+
+  async function toggleCaptureProtection(institute: Institute) {
+    const nextProtected = !captureProtected(institute);
+    const allow = !nextProtected;
     setCaptureId(institute.id);
     try {
       const { data } = await api.patch<{ institute: Institute }>(
         `/admin/institutes/${institute.id}/capture`,
         {
-          allow_screenshot: allowScreenshot,
-          allow_screen_recording: allowRecording,
+          allow_screenshot: allow,
+          allow_screen_recording: allow,
+          screen_capture_protection: nextProtected,
         }
       );
       setInstitutes((prev) =>
@@ -129,9 +136,30 @@ export function InstituteListPage() {
           />
         }
         actions={
-          <button type="button" className="btn-primary" onClick={() => setShowAdd(true)}>
-            + Add Institute
-          </button>
+          <>
+            {selecting || filtered.length > 0 ? (
+              <BulkModeButtons
+                selecting={selecting}
+                selectedCount={filtered.filter((institute) => selectedIds.has(institute.id)).length}
+                deleting={bulkDeleting}
+                onStart={() => setSelecting(true)}
+                onCancel={() => {
+                  setSelectedIds(new Set());
+                  setSelecting(false);
+                  setOtpOpen(false);
+                }}
+                onConfirm={() => {
+                  if (filtered.filter((institute) => selectedIds.has(institute.id)).length === 0) {
+                    return;
+                  }
+                  setOtpOpen(true);
+                }}
+              />
+            ) : null}
+            <button type="button" className="btn-primary" onClick={() => setShowAdd(true)}>
+              + Add Institute
+            </button>
+          </>
         }
       />
 
@@ -141,6 +169,26 @@ export function InstituteListPage() {
         <table className="list-data-table">
           <thead>
             <tr>
+              {selecting ? (
+                <th className="bulk-check-cell">
+                  <input
+                    type="checkbox"
+                    className="bulk-check"
+                    aria-label="Select all institutes"
+                    checked={
+                      filtered.length > 0 &&
+                      filtered.every((institute) => selectedIds.has(institute.id))
+                    }
+                    onChange={() => {
+                      setSelectedIds((prev) => {
+                        const all = filtered.every((institute) => prev.has(institute.id));
+                        if (all) return new Set();
+                        return new Set(filtered.map((institute) => institute.id));
+                      });
+                    }}
+                  />
+                </th>
+              ) : null}
               <th className="w-10 px-2 py-3 sm:px-3">S.NO.</th>
               <th className="w-[22%] px-2 py-3 sm:px-3">Institute Name</th>
               <th className="hidden w-[14%] px-2 py-3 md:table-cell sm:px-3">Username</th>
@@ -155,14 +203,14 @@ export function InstituteListPage() {
           <tbody className="divide-y divide-border">
             {loading && (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-text-muted">
+                <td colSpan={selecting ? 10 : 9} className="px-4 py-10 text-center text-text-muted">
                   Loading…
                 </td>
               </tr>
             )}
             {!loading && filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-text-muted">
+                <td colSpan={selecting ? 10 : 9} className="px-4 py-10 text-center text-text-muted">
                   No institutes yet — click Add Institute to get started.
                 </td>
               </tr>
@@ -171,6 +219,24 @@ export function InstituteListPage() {
               const active = institute.is_active !== false;
               return (
                 <tr key={institute.id} className="hover:bg-content-bg/50 align-top">
+                  {selecting ? (
+                    <td className="bulk-check-cell">
+                      <input
+                        type="checkbox"
+                        className="bulk-check"
+                        aria-label={`Select ${institute.name}`}
+                        checked={selectedIds.has(institute.id)}
+                        onChange={() => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(institute.id)) next.delete(institute.id);
+                            else next.add(institute.id);
+                            return next;
+                          });
+                        }}
+                      />
+                    </td>
+                  ) : null}
                   <td className="px-2 py-3 text-text-muted sm:px-3">
                     {index + 1}
                   </td>
@@ -206,25 +272,14 @@ export function InstituteListPage() {
                     />
                   </td>
                   <td className="px-2 py-3 sm:px-3">
-                    <div className="grid gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-text-muted">Screenshot</span>
-                        <ToggleSwitch
-                          checked={institute.allow_screenshot !== false}
-                          disabled={captureId === institute.id}
-                          onChange={() => void toggleCapture(institute, "screenshot")}
-                          label={`${institute.name} screenshot`}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-text-muted">Recording</span>
-                        <ToggleSwitch
-                          checked={institute.allow_screen_recording !== false}
-                          disabled={captureId === institute.id}
-                          onChange={() => void toggleCapture(institute, "recording")}
-                          label={`${institute.name} screen recording`}
-                        />
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-text-muted">Screen Capture Protection</span>
+                      <ToggleSwitch
+                        checked={captureProtected(institute)}
+                        disabled={captureId === institute.id}
+                        onChange={() => void toggleCaptureProtection(institute)}
+                        label={`${institute.name} screen capture protection`}
+                      />
                     </div>
                   </td>
                   <td className="px-2 py-3 sm:px-3">
@@ -273,6 +328,52 @@ export function InstituteListPage() {
               prev.map((item) => (item.id === updated.id ? { ...item, ...updated } : item))
             );
             setEditTarget(null);
+          }}
+        />
+      )}
+
+      {otpOpen && (
+        <OtpConfirmModal
+          title="Delete institutes"
+          description={`Remove ${filtered.filter((institute) => selectedIds.has(institute.id)).length} selected institute(s) and their related records.`}
+          confirmLabel="Delete selected"
+          onClose={() => {
+            if (!bulkDeleting) setOtpOpen(false);
+          }}
+          onRequestOtp={async () => {
+            const ids = filtered
+              .filter((institute) => selectedIds.has(institute.id))
+              .map((institute) => institute.id);
+            const { data } = await api.post<{ message?: string; devOtp?: string }>(
+              "/admin/institutes/bulk-delete/request-otp",
+              { ids }
+            );
+            return { message: data.message, devOtp: data.devOtp };
+          }}
+          onConfirm={async (otp) => {
+            const ids = filtered
+              .filter((institute) => selectedIds.has(institute.id))
+              .map((institute) => institute.id);
+            setBulkDeleting(true);
+            try {
+              const { data } = await api.post<{ deleted?: string[] }>(
+                "/admin/institutes/bulk-delete",
+                { ids, otp }
+              );
+              const deleted = new Set(data.deleted ?? ids);
+              setInstitutes((prev) => prev.filter((institute) => !deleted.has(institute.id)));
+              setSelectedIds(new Set());
+              setSelecting(false);
+              setOtpOpen(false);
+            } catch (err) {
+              if (axios.isAxiosError(err)) {
+                const body = err.response?.data as ApiErrorBody | undefined;
+                throw new Error(body?.message ?? "Failed to delete institutes.");
+              }
+              throw new Error("Failed to delete institutes.");
+            } finally {
+              setBulkDeleting(false);
+            }
           }}
         />
       )}

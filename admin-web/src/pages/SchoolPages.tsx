@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "re
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
+import { BulkModeButtons } from "../components/BulkActionBar";
+import { OtpConfirmModal } from "../components/OtpConfirmModal";
 import { PageActions } from "../components/ui/PageActions";
 import { SearchInput } from "../components/ui/SearchInput";
 import { ToggleSwitch } from "../components/ui/ToggleSwitch";
@@ -18,6 +20,10 @@ export function SchoolListPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [captureId, setCaptureId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   async function loadSchools() {
     setLoading(true);
@@ -74,22 +80,21 @@ export function SchoolListPage() {
     }
   }
 
-  async function toggleCapture(school: School, which: "screenshot" | "recording") {
-    const allowScreenshot =
-      which === "screenshot"
-        ? school.allow_screenshot === false
-        : school.allow_screenshot !== false;
-    const allowRecording =
-      which === "recording"
-        ? school.allow_screen_recording === false
-        : school.allow_screen_recording !== false;
+  function captureProtected(school: School) {
+    return school.allow_screenshot === false || school.allow_screen_recording === false;
+  }
+
+  async function toggleCaptureProtection(school: School) {
+    const nextProtected = !captureProtected(school);
+    const allow = !nextProtected;
     setCaptureId(school.id);
     try {
       const { data } = await api.patch<{ school: School }>(
         `/admin/schools/${school.id}/capture`,
         {
-          allow_screenshot: allowScreenshot,
-          allow_screen_recording: allowRecording,
+          allow_screenshot: allow,
+          allow_screen_recording: allow,
+          screen_capture_protection: nextProtected,
         }
       );
       setSchools((prev) =>
@@ -126,9 +131,28 @@ export function SchoolListPage() {
           />
         }
         actions={
-          <button type="button" className="btn-primary" onClick={() => setShowAdd(true)}>
-            + Add School
-          </button>
+          <>
+            {selecting || filtered.length > 0 ? (
+              <BulkModeButtons
+                selecting={selecting}
+                selectedCount={filtered.filter((school) => selectedIds.has(school.id)).length}
+                deleting={bulkDeleting}
+                onStart={() => setSelecting(true)}
+                onCancel={() => {
+                  setSelectedIds(new Set());
+                  setSelecting(false);
+                  setOtpOpen(false);
+                }}
+                onConfirm={() => {
+                  if (filtered.filter((school) => selectedIds.has(school.id)).length === 0) return;
+                  setOtpOpen(true);
+                }}
+              />
+            ) : null}
+            <button type="button" className="btn-primary" onClick={() => setShowAdd(true)}>
+              + Add School
+            </button>
+          </>
         }
       />
 
@@ -138,6 +162,26 @@ export function SchoolListPage() {
         <table className="list-data-table">
           <thead>
             <tr>
+              {selecting ? (
+                <th className="bulk-check-cell">
+                  <input
+                    type="checkbox"
+                    className="bulk-check"
+                    aria-label="Select all schools"
+                    checked={
+                      filtered.length > 0 &&
+                      filtered.every((school) => selectedIds.has(school.id))
+                    }
+                    onChange={() => {
+                      setSelectedIds((prev) => {
+                        const all = filtered.every((school) => prev.has(school.id));
+                        if (all) return new Set();
+                        return new Set(filtered.map((school) => school.id));
+                      });
+                    }}
+                  />
+                </th>
+              ) : null}
               <th className="w-10 px-2 py-3 sm:px-3">S.NO.</th>
               <th className="w-[22%] px-2 py-3 sm:px-3">School Name</th>
               <th className="hidden w-[14%] px-2 py-3 md:table-cell sm:px-3">Username</th>
@@ -152,14 +196,14 @@ export function SchoolListPage() {
           <tbody className="divide-y divide-border">
             {loading && (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-text-muted">
+                <td colSpan={selecting ? 10 : 9} className="px-4 py-10 text-center text-text-muted">
                   Loading…
                 </td>
               </tr>
             )}
             {!loading && filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-text-muted">
+                <td colSpan={selecting ? 10 : 9} className="px-4 py-10 text-center text-text-muted">
                   No schools yet — click Add School to get started.
                 </td>
               </tr>
@@ -168,6 +212,24 @@ export function SchoolListPage() {
               const active = school.is_active !== false;
               return (
                 <tr key={school.id} className="hover:bg-content-bg/50 align-top">
+                  {selecting ? (
+                    <td className="bulk-check-cell">
+                      <input
+                        type="checkbox"
+                        className="bulk-check"
+                        aria-label={`Select ${school.name}`}
+                        checked={selectedIds.has(school.id)}
+                        onChange={() => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(school.id)) next.delete(school.id);
+                            else next.add(school.id);
+                            return next;
+                          });
+                        }}
+                      />
+                    </td>
+                  ) : null}
                   <td className="px-2 py-3 text-text-muted sm:px-3">{index + 1}</td>
                   <td className="px-2 py-3 font-medium text-text-navy sm:px-3">
                     <Link
@@ -202,25 +264,14 @@ export function SchoolListPage() {
                     />
                   </td>
                   <td className="px-2 py-3 sm:px-3">
-                    <div className="grid gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-text-muted">Screenshot</span>
-                        <ToggleSwitch
-                          checked={school.allow_screenshot !== false}
-                          disabled={captureId === school.id}
-                          onChange={() => void toggleCapture(school, "screenshot")}
-                          label={`${school.name} screenshot`}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-text-muted">Recording</span>
-                        <ToggleSwitch
-                          checked={school.allow_screen_recording !== false}
-                          disabled={captureId === school.id}
-                          onChange={() => void toggleCapture(school, "recording")}
-                          label={`${school.name} screen recording`}
-                        />
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-text-muted">Screen Capture Protection</span>
+                      <ToggleSwitch
+                        checked={captureProtected(school)}
+                        disabled={captureId === school.id}
+                        onChange={() => void toggleCaptureProtection(school)}
+                        label={`${school.name} screen capture protection`}
+                      />
                     </div>
                   </td>
                   <td className="px-2 py-3 sm:px-3">
@@ -270,6 +321,48 @@ export function SchoolListPage() {
             );
             setEditTarget(null);
             void loadSchools();
+          }}
+        />
+      )}
+
+      {otpOpen && (
+        <OtpConfirmModal
+          title="Delete schools"
+          description={`Remove ${filtered.filter((school) => selectedIds.has(school.id)).length} selected school(s) and their related records.`}
+          confirmLabel="Delete selected"
+          onClose={() => {
+            if (!bulkDeleting) setOtpOpen(false);
+          }}
+          onRequestOtp={async () => {
+            const ids = filtered.filter((school) => selectedIds.has(school.id)).map((school) => school.id);
+            const { data } = await api.post<{ message?: string; devOtp?: string }>(
+              "/admin/schools/bulk-delete/request-otp",
+              { ids }
+            );
+            return { message: data.message, devOtp: data.devOtp };
+          }}
+          onConfirm={async (otp) => {
+            const ids = filtered.filter((school) => selectedIds.has(school.id)).map((school) => school.id);
+            setBulkDeleting(true);
+            try {
+              const { data } = await api.post<{ deleted?: string[] }>(
+                "/admin/schools/bulk-delete",
+                { ids, otp }
+              );
+              const deleted = new Set(data.deleted ?? ids);
+              setSchools((prev) => prev.filter((school) => !deleted.has(school.id)));
+              setSelectedIds(new Set());
+              setSelecting(false);
+              setOtpOpen(false);
+            } catch (err) {
+              if (axios.isAxiosError(err)) {
+                const body = err.response?.data as ApiErrorBody | undefined;
+                throw new Error(body?.message ?? "Failed to delete schools.");
+              }
+              throw new Error("Failed to delete schools.");
+            } finally {
+              setBulkDeleting(false);
+            }
           }}
         />
       )}

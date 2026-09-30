@@ -1,48 +1,69 @@
-export function BulkActionBar({
+export function BulkModeButtons({
+  selecting,
   selectedCount,
-  allSelected,
   deleting,
-  onToggleAll,
-  onClear,
-  onDelete,
+  onStart,
+  onCancel,
+  onConfirm,
 }: {
+  selecting: boolean;
   selectedCount: number;
-  allSelected: boolean;
   deleting: boolean;
-  onToggleAll: () => void;
-  onClear: () => void;
-  onDelete: () => void;
+  onStart: () => void;
+  onCancel: () => void;
+  onConfirm: () => void;
 }) {
+  if (!selecting) {
+    return (
+      <button type="button" className="btn-secondary shrink-0" onClick={onStart}>
+        Bulk Delete
+      </button>
+    );
+  }
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-white px-3 py-2">
-      <label className="flex items-center gap-2 text-sm text-text-navy">
-        <input
-          type="checkbox"
-          checked={allSelected}
-          onChange={onToggleAll}
-          className="h-4 w-4 rounded border-border"
-        />
-        Select all
-      </label>
-      <span className="text-sm text-text-muted">
-        {selectedCount} selected
-      </span>
+    <>
       <button
         type="button"
-        className="btn-secondary px-3 py-1.5 text-sm"
-        onClick={onClear}
+        className="btn-secondary shrink-0"
+        onClick={onCancel}
         disabled={deleting}
       >
         Cancel
       </button>
       <button
         type="button"
-        className="btn-primary px-3 py-1.5 text-sm disabled:opacity-50"
-        onClick={onDelete}
+        className="btn-primary shrink-0 disabled:opacity-50"
+        onClick={onConfirm}
         disabled={selectedCount === 0 || deleting}
       >
-        {deleting ? "Deleting…" : `Bulk Delete (${selectedCount})`}
+        {deleting ? "Deleting…" : `Bulk Delete Selected (${selectedCount})`}
       </button>
+    </>
+  );
+}
+
+export function BulkActionBar({
+  selectedCount,
+  allSelected,
+  onToggleAll,
+}: {
+  selectedCount: number;
+  allSelected: boolean;
+  onToggleAll: () => void;
+}) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-white px-4 py-2">
+      <label className="flex items-center gap-2 pl-1 text-sm text-text-navy">
+        <input
+          type="checkbox"
+          checked={allSelected}
+          onChange={onToggleAll}
+          className="bulk-check"
+          aria-label="Select all"
+        />
+        Select all
+      </label>
+      <span className="text-sm text-text-muted">{selectedCount} selected</span>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useYear } from "../context/YearContext";
@@ -143,6 +143,36 @@ function SidebarNav({
   );
 }
 
+type IncomingNotice = {
+  id: string;
+  title: string;
+  message: string;
+  created_at?: string | null;
+  audience?: string | null;
+};
+
+function parseNoticeDetails(message: string): { label: string; value: string }[] {
+  const rows: { label: string; value: string }[] = [];
+  let label: string | null = null;
+  for (const line of message.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed.endsWith(":") && trimmed.length < 40 && !trimmed.includes(" ")) {
+      label = trimmed.slice(0, -1);
+      continue;
+    }
+    if (trimmed.endsWith(":") && trimmed.length < 48) {
+      label = trimmed.slice(0, -1);
+      continue;
+    }
+    if (label) {
+      rows.push({ label, value: trimmed });
+      label = null;
+    }
+  }
+  return rows;
+}
+
 export function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -152,6 +182,11 @@ export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [notices, setNotices] = useState<IncomingNotice[]>([]);
+  const [noticesLoading, setNoticesLoading] = useState(false);
+  const [openNoticeId, setOpenNoticeId] = useState<string | null>(null);
+  const noticeRef = useRef<HTMLDivElement>(null);
 
   const studentsSchoolId = searchParams.get("schoolId");
   const studentsSchoolName = searchParams.get("schoolName");
@@ -204,6 +239,54 @@ export function AppLayout() {
       window.clearInterval(timer);
     };
   }, [isDashboard, user?.isSuperAdmin]);
+
+  useEffect(() => {
+    if (!noticeOpen) return;
+    function onPointerDown(event: MouseEvent) {
+      if (noticeRef.current && !noticeRef.current.contains(event.target as Node)) {
+        setNoticeOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [noticeOpen]);
+
+  useEffect(() => {
+    if (!noticeOpen || user?.isSuperAdmin !== true) return;
+    let cancelled = false;
+    setNoticesLoading(true);
+    void api
+      .get<{ notifications?: IncomingNotice[] }>("/admin/notifications")
+      .then(({ data }) => {
+        if (cancelled) return;
+        setNotices(
+          (data.notifications ?? []).filter((item) => item.audience === "super_admin")
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setNotices([]);
+      })
+      .finally(() => {
+        if (!cancelled) setNoticesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [noticeOpen, user?.isSuperAdmin]);
+
+  async function openIncomingNotice(notice: IncomingNotice) {
+    setOpenNoticeId((current) => (current === notice.id ? null : notice.id));
+    if (openNoticeId === notice.id) return;
+    try {
+      await api.post("/admin/notifications/incoming/mark-read", { ids: [notice.id] });
+      const { data } = await api.get<{ unreadCount?: number }>(
+        "/admin/notifications/unread-count"
+      );
+      setUnreadCount(data.unreadCount ?? 0);
+    } catch {
+      /* details stay visible; badge refreshes on the next poll */
+    }
+  }
   const isOrgListPage =
     location.pathname === "/schools" || location.pathname === "/institutes";
   const isOrgDetailListPage =
@@ -326,22 +409,82 @@ export function AppLayout() {
           )}
 
           {isDashboard ? (
-            <button
-              type="button"
-              className="relative rounded-lg p-2 text-text-muted hover:bg-content-bg"
-              aria-label="Notifications"
-              onClick={() => navigate("/notifications")}
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9" />
-                <path d="M10 21a2 2 0 0 0 4 0" />
-              </svg>
-              {user?.isSuperAdmin === true && unreadCount > 0 ? (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-white">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
+            <div className="relative" ref={noticeRef}>
+              <button
+                type="button"
+                className="relative rounded-lg p-2 text-text-muted hover:bg-content-bg"
+                aria-label="Notifications"
+                aria-expanded={user?.isSuperAdmin === true ? noticeOpen : undefined}
+                onClick={() => {
+                  if (user?.isSuperAdmin !== true) {
+                    navigate("/notifications");
+                    return;
+                  }
+                  setNoticeOpen((open) => !open);
+                }}
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9" />
+                  <path d="M10 21a2 2 0 0 0 4 0" />
+                </svg>
+                {user?.isSuperAdmin === true && unreadCount > 0 ? (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                ) : null}
+              </button>
+              {user?.isSuperAdmin === true && noticeOpen ? (
+                <div className="absolute right-0 top-full z-30 mt-2 w-[min(24rem,calc(100vw-1.5rem))] rounded-xl border border-border bg-white p-3 shadow-lg">
+                  <div className="mb-2 text-sm font-semibold text-text-navy">Notifications</div>
+                  {noticesLoading ? (
+                    <div className="px-1 py-3 text-sm text-text-muted">Loading…</div>
+                  ) : notices.length === 0 ? (
+                    <div className="px-1 py-3 text-sm text-text-muted">No incoming notifications.</div>
+                  ) : (
+                    <div className="max-h-[70vh] space-y-2 overflow-y-auto">
+                      {notices.map((notice) => {
+                        const open = openNoticeId === notice.id;
+                        const details = parseNoticeDetails(notice.message);
+                        return (
+                          <div key={notice.id} className="rounded-lg border border-border/70">
+                            <button
+                              type="button"
+                              className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left"
+                              onClick={() => void openIncomingNotice(notice)}
+                            >
+                              <span className="text-sm font-semibold text-text-navy">{notice.title}</span>
+                              <span className="shrink-0 text-xs text-text-muted">
+                                {notice.created_at
+                                  ? new Date(notice.created_at).toLocaleString()
+                                  : ""}
+                              </span>
+                            </button>
+                            {open ? (
+                              details.length > 0 ? (
+                                <dl className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-3 gap-y-1 border-t border-border/70 px-3 py-2 text-sm">
+                                  {details.map((row) => (
+                                    <div key={`${notice.id}-${row.label}`} className="contents">
+                                      <dt className="text-text-muted">
+                                        {row.label === "Created By" ? "Child Admin" : row.label}
+                                      </dt>
+                                      <dd className="break-all font-medium text-text-navy">{row.value}</dd>
+                                    </div>
+                                  ))}
+                                </dl>
+                              ) : (
+                                <p className="whitespace-pre-wrap border-t border-border/70 px-3 py-2 text-sm text-text">
+                                  {notice.message}
+                                </p>
+                              )
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               ) : null}
-            </button>
+            </div>
           ) : (
             <div className="w-9 shrink-0" aria-hidden />
           )}
