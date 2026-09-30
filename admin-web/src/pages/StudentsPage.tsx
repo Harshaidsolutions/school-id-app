@@ -750,7 +750,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                 />
               </div>
               {selecting || filtered.length > 0 ? (
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <div className="bulk-inline-actions">
                   <BulkModeButtons
                     selecting={selecting}
                     selectedCount={filtered.filter((student) => selectedIds.has(student.id)).length}

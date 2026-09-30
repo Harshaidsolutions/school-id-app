@@ -52,8 +52,8 @@ export function BulkActionBar({
   onToggleAll: () => void;
 }) {
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-white px-4 py-2">
-      <label className="flex items-center gap-2 pl-1 text-sm text-text-navy">
+    <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-white py-2 pl-4 pr-3">
+      <label className="flex items-center gap-2 text-sm text-text-navy">
         <input
           type="checkbox"
           checked={allSelected}

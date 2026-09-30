@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { useYear } from "../context/YearContext";
 import api from "../api/client";
+import { BulkModeButtons } from "./BulkActionBar";
 import { HarshaLogo } from "./HarshaLogo";
+import { OtpConfirmModal } from "./OtpConfirmModal";
 
 interface NavItem {
   label: string;
@@ -186,6 +189,10 @@ export function AppLayout() {
   const [notices, setNotices] = useState<IncomingNotice[]>([]);
   const [noticesLoading, setNoticesLoading] = useState(false);
   const [openNoticeId, setOpenNoticeId] = useState<string | null>(null);
+  const [noticeSelecting, setNoticeSelecting] = useState(false);
+  const [noticeSelected, setNoticeSelected] = useState<Set<string>>(new Set());
+  const [noticeOtpOpen, setNoticeOtpOpen] = useState(false);
+  const [noticeDeleting, setNoticeDeleting] = useState(false);
   const noticeRef = useRef<HTMLDivElement>(null);
 
   const studentsSchoolId = searchParams.get("schoolId");
@@ -420,7 +427,15 @@ export function AppLayout() {
                     navigate("/notifications");
                     return;
                   }
-                  setNoticeOpen((open) => !open);
+                  setNoticeOpen((open) => {
+                    if (open) {
+                      setNoticeSelecting(false);
+                      setNoticeSelected(new Set());
+                      setNoticeOtpOpen(false);
+                      setOpenNoticeId(null);
+                    }
+                    return !open;
+                  });
                 }}
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -434,34 +449,97 @@ export function AppLayout() {
                 ) : null}
               </button>
               {user?.isSuperAdmin === true && noticeOpen ? (
-                <div className="absolute right-0 top-full z-30 mt-2 w-[min(24rem,calc(100vw-1.5rem))] rounded-xl border border-border bg-white p-3 shadow-lg">
-                  <div className="mb-2 text-sm font-semibold text-text-navy">Notifications</div>
+                <div className="absolute right-0 top-full z-30 mt-2 w-[min(28rem,calc(100vw-1.5rem))] rounded-xl border border-border bg-white p-3 shadow-lg">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-sm font-semibold text-text-navy">Notifications</div>
+                    {notices.length > 0 ? (
+                      <div className="bulk-inline-actions">
+                        <BulkModeButtons
+                          selecting={noticeSelecting}
+                          selectedCount={notices.filter((notice) => noticeSelected.has(notice.id)).length}
+                          deleting={noticeDeleting}
+                          onStart={() => setNoticeSelecting(true)}
+                          onCancel={() => {
+                            setNoticeSelected(new Set());
+                            setNoticeSelecting(false);
+                            setNoticeOtpOpen(false);
+                          }}
+                          onConfirm={() => {
+                            if (notices.filter((notice) => noticeSelected.has(notice.id)).length === 0) {
+                              return;
+                            }
+                            setNoticeOtpOpen(true);
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                   {noticesLoading ? (
                     <div className="px-1 py-3 text-sm text-text-muted">Loading…</div>
                   ) : notices.length === 0 ? (
                     <div className="px-1 py-3 text-sm text-text-muted">No incoming notifications.</div>
                   ) : (
-                    <div className="max-h-[70vh] space-y-2 overflow-y-auto">
+                    <div className="max-h-[70vh] space-y-2 overflow-y-auto pr-1">
+                      {noticeSelecting ? (
+                        <label className="flex items-center gap-2.5 px-3 py-1 text-sm text-text-navy">
+                          <input
+                            type="checkbox"
+                            className="bulk-check"
+                            aria-label="Select all notifications"
+                            checked={notices.every((notice) => noticeSelected.has(notice.id))}
+                            onChange={() => {
+                              setNoticeSelected((prev) => {
+                                const all = notices.every((notice) => prev.has(notice.id));
+                                if (all) return new Set();
+                                return new Set(notices.map((notice) => notice.id));
+                              });
+                            }}
+                          />
+                          Select all
+                        </label>
+                      ) : null}
                       {notices.map((notice) => {
                         const open = openNoticeId === notice.id;
                         const details = parseNoticeDetails(notice.message);
                         return (
                           <div key={notice.id} className="rounded-lg border border-border/70">
-                            <button
-                              type="button"
-                              className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left"
-                              onClick={() => void openIncomingNotice(notice)}
-                            >
-                              <span className="text-sm font-semibold text-text-navy">{notice.title}</span>
-                              <span className="shrink-0 text-xs text-text-muted">
-                                {notice.created_at
-                                  ? new Date(notice.created_at).toLocaleString()
-                                  : ""}
-                              </span>
-                            </button>
+                            <div className="flex items-center gap-2.5 px-3 py-2">
+                              {noticeSelecting ? (
+                                <input
+                                  type="checkbox"
+                                  className="bulk-check"
+                                  aria-label={`Select ${notice.title}`}
+                                  checked={noticeSelected.has(notice.id)}
+                                  onChange={() => {
+                                    setNoticeSelected((prev) => {
+                                      const next = new Set(prev);
+                                      if (next.has(notice.id)) next.delete(notice.id);
+                                      else next.add(notice.id);
+                                      return next;
+                                    });
+                                  }}
+                                />
+                              ) : null}
+                              <button
+                                type="button"
+                                className="flex min-w-0 flex-1 items-start justify-between gap-3 text-left"
+                                onClick={() => void openIncomingNotice(notice)}
+                              >
+                                <span className="text-sm font-semibold text-text-navy">{notice.title}</span>
+                                <span className="shrink-0 text-xs text-text-muted">
+                                  {notice.created_at
+                                    ? new Date(notice.created_at).toLocaleString()
+                                    : ""}
+                                </span>
+                              </button>
+                            </div>
                             {open ? (
                               details.length > 0 ? (
-                                <dl className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-3 gap-y-1 border-t border-border/70 px-3 py-2 text-sm">
+                                <dl
+                                  className={`grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-3 gap-y-1 border-t border-border/70 py-2 pr-3 text-sm ${
+                                    noticeSelecting ? "pl-10" : "pl-3"
+                                  }`}
+                                >
                                   {details.map((row) => (
                                     <div key={`${notice.id}-${row.label}`} className="contents">
                                       <dt className="text-text-muted">
@@ -472,7 +550,11 @@ export function AppLayout() {
                                   ))}
                                 </dl>
                               ) : (
-                                <p className="whitespace-pre-wrap border-t border-border/70 px-3 py-2 text-sm text-text">
+                                <p
+                                  className={`whitespace-pre-wrap border-t border-border/70 py-2 pr-3 text-sm text-text ${
+                                    noticeSelecting ? "pl-10" : "pl-3"
+                                  }`}
+                                >
                                   {notice.message}
                                 </p>
                               )
@@ -482,6 +564,58 @@ export function AppLayout() {
                       })}
                     </div>
                   )}
+                  {noticeOtpOpen ? (
+                    <OtpConfirmModal
+                      title="Delete notifications"
+                      description={`Remove ${notices.filter((notice) => noticeSelected.has(notice.id)).length} selected notification(s).`}
+                      confirmLabel="Delete selected"
+                      onClose={() => {
+                        if (!noticeDeleting) setNoticeOtpOpen(false);
+                      }}
+                      onRequestOtp={async () => {
+                        const ids = notices
+                          .filter((notice) => noticeSelected.has(notice.id))
+                          .map((notice) => notice.id);
+                        const { data } = await api.post<{ message?: string; devOtp?: string }>(
+                          "/admin/notifications/bulk-delete/request-otp",
+                          { ids }
+                        );
+                        return { message: data.message, devOtp: data.devOtp };
+                      }}
+                      onConfirm={async (otp) => {
+                        const ids = notices
+                          .filter((notice) => noticeSelected.has(notice.id))
+                          .map((notice) => notice.id);
+                        setNoticeDeleting(true);
+                        try {
+                          const { data } = await api.post<{ deleted?: string[] }>(
+                            "/admin/notifications/bulk-delete",
+                            { ids, otp }
+                          );
+                          const deleted = new Set(data.deleted ?? ids);
+                          setNotices((prev) => prev.filter((notice) => !deleted.has(notice.id)));
+                          setNoticeSelected(new Set());
+                          setNoticeSelecting(false);
+                          setNoticeOtpOpen(false);
+                          setOpenNoticeId((current) =>
+                            current && deleted.has(current) ? null : current
+                          );
+                          const unread = await api.get<{ unreadCount?: number }>(
+                            "/admin/notifications/unread-count"
+                          );
+                          setUnreadCount(unread.data.unreadCount ?? 0);
+                        } catch (err) {
+                          if (axios.isAxiosError(err)) {
+                            const body = err.response?.data as { message?: string } | undefined;
+                            throw new Error(body?.message ?? "Failed to delete notifications.");
+                          }
+                          throw new Error("Failed to delete notifications.");
+                        } finally {
+                          setNoticeDeleting(false);
+                        }
+                      }}
+                    />
+                  ) : null}
                 </div>
               ) : null}
             </div>
