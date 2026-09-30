@@ -20,8 +20,8 @@ export function useFormConfig(options?: { refreshOnFocus?: boolean }) {
   const [showCapturedSection, setShowCapturedSection] = useState(true);
   const [loading, setLoading] = useState(true);
 
-  const reload = useCallback(async () => {
-    setLoading(true);
+  const reload = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const formResult = await api.get<{ fields: FormFieldConfig[] }>(
         "/teacher/form-config"
@@ -62,7 +62,11 @@ export function useFormConfig(options?: { refreshOnFocus?: boolean }) {
   useFocusEffect(
     useCallback(() => {
       if (!refreshOnFocus) return;
-      void reload();
+      void reload(false);
+      const timer = setInterval(() => {
+        void reload(true);
+      }, 2500);
+      return () => clearInterval(timer);
     }, [refreshOnFocus, reload])
   );
 

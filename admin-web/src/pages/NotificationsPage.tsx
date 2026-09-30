@@ -317,6 +317,11 @@ export function NotificationsPage() {
         Sent Notifications
       </h2>
       {!loading && notifications.length > 0 ? (
+        <button type="button" className="btn-secondary mb-3" onClick={() => setBulkOpen(true)}>
+          Bulk Delete
+        </button>
+      ) : null}
+      {bulkOpen && !loading && notifications.length > 0 ? (
         <BulkActionBar
           selectedCount={notifications.filter((n) => selectedIds.has(n.id)).length}
           allSelected={notifications.every((n) => selectedIds.has(n.id))}
@@ -328,7 +333,10 @@ export function NotificationsPage() {
               return new Set(notifications.map((n) => n.id));
             });
           }}
-          onClear={() => setSelectedIds(new Set())}
+          onClear={() => {
+            setSelectedIds(new Set());
+            setBulkOpen(false);
+          }}
           onDelete={() => {
             if (notifications.filter((n) => selectedIds.has(n.id)).length === 0) return;
             setBulkOpen(true);
@@ -351,6 +359,7 @@ export function NotificationsPage() {
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <label className="flex items-center gap-2 font-semibold text-text-navy">
+                {bulkOpen ? (
                 <input
                   type="checkbox"
                   checked={selectedIds.has(n.id)}
@@ -363,6 +372,7 @@ export function NotificationsPage() {
                     });
                   }}
                 />
+                ) : null}
                 {n.title}
               </label>
               <div className="flex items-center gap-3">
@@ -419,6 +429,7 @@ export function NotificationsPage() {
               setError(message);
               setNotifications((prev) => prev.filter((item) => !data.deleted?.includes(item.id)));
               setSelectedIds(new Set());
+              setBulkOpen(false);
               setBulkOpen(false);
             } catch (err) {
               if (axios.isAxiosError(err)) {

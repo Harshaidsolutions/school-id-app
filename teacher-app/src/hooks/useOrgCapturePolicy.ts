@@ -60,12 +60,16 @@ export function useOrgCapturePolicy() {
     }
 
     void load();
+    const timer = setInterval(() => {
+      void load();
+    }, 2500);
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") void load();
     });
 
     return () => {
       requestId.current += 1;
+      clearInterval(timer);
       subscription.remove();
     };
   }, [isAuthenticated, bootstrapping, user?.id]);

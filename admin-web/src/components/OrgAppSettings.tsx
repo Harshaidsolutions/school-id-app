@@ -93,7 +93,9 @@ export function OrgAppSettings({
     void save({ visibility: next, allowNumberEdit, allowRecordEdit, showCaptured });
   }
 
-  const rows = fields.filter((field) => field.key !== "photo");
+  const rows = fields.filter(
+    (field) => field.enabled !== false && field.key !== "photo" && field.key !== "photo_id"
+  );
 
   return (
     <div className="centered-page-card mt-6 overflow-hidden">
@@ -139,34 +141,9 @@ export function OrgAppSettings({
         })}
         <label className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
           <span>
-            <span className="block font-medium text-text-navy">
-              {institute ? "Allow Member Number Editing" : "Allow Student Number Editing"}
-            </span>
+            <span className="block font-medium text-text-navy">Edit Form</span>
             <span className="text-xs text-text-muted">
-              Off hides the number on Edit and the server rejects number changes.
-            </span>
-          </span>
-          <span className="flex items-center gap-2 text-text-muted">
-            {allowNumberEdit ? "ON" : "OFF"}
-            <input
-              type="checkbox"
-              role="switch"
-              checked={allowNumberEdit}
-              disabled={saving}
-              onChange={(e) => {
-                const next = e.target.checked;
-                setAllowNumberEdit(next);
-                void save({ visibility, allowNumberEdit: next, allowRecordEdit, showCaptured });
-              }}
-              className="h-4 w-4"
-            />
-          </span>
-        </label>
-        <label className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
-          <span>
-            <span className="block font-medium text-text-navy">Edit</span>
-            <span className="text-xs text-text-muted">
-              Off hides Edit in the app and the server rejects changes to complete records. Pending data can still be filled in.
+              Off hides Edit Form in the app and the server rejects changes to complete records. Pending data can still be filled in.
             </span>
           </span>
           <span className="flex items-center gap-2 text-text-muted">

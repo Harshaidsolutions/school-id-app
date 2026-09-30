@@ -190,7 +190,7 @@ export function DynamicStudentFieldList({
               </Field>
             ))
           ) : (
-            <Field label={/^ADD_\d+$/i.test(photoId.trim()) ? "ID" : "Photo ID"} colors={colors}>
+            <Field label="Photo ID" colors={colors}>
               <TextInput
                 style={inputStyle}
                 value={photoId}

@@ -723,6 +723,9 @@ async function migrate() {
     CREATE UNIQUE INDEX IF NOT EXISTS notifications_super_school_created_uidx
       ON notifications (school_id)
       WHERE audience = 'super_admin' AND school_id IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS notifications_super_institute_created_uidx
+      ON notifications (institute_id)
+      WHERE audience = 'super_admin' AND institute_id IS NOT NULL;
   `);
 
   console.log("Migration completed successfully.");

@@ -11,10 +11,11 @@ import { routeParam } from "../utils/routeParams";
 import { parseBooleanField } from "../utils/parseBoolean";
 import {
   assertInstituteOwnedByAdmin,
-  adminSeesAllOrganizations,
   requireAdminScope,
 } from "../utils/adminScope";
+import { notifySuperAdminOrgCreated } from "./schoolController";
 import {
+  assertOwnerUsernameAvailable,
   findOwnerUserSql,
   ownerPasswordSelect,
   ownerUserLateralJoin,
@@ -167,17 +168,7 @@ export async function createInstituteWithOwner(
 
     await client.query("BEGIN");
 
-    const taken = await client.query(
-      `SELECT id FROM users
-       WHERE (username IS NOT NULL AND lower(username) = lower($1))
-          OR lower(email) = lower($1)
-          OR lower(email) = lower($2)
-       LIMIT 1`,
-      [username, email]
-    );
-    if (taken.rows[0]) {
-      throw new AppError("Owner username is already taken", 409);
-    }
+    await assertOwnerUsernameAvailable(client, username);
 
     const instituteResult = await client.query<InstituteRow>(
       `INSERT INTO institutes (name, phone, year, owner_username_plain, owner_password_plain, owner_admin_id)
@@ -203,6 +194,14 @@ export async function createInstituteWithOwner(
     );
 
     await client.query("COMMIT");
+
+    await notifySuperAdminOrgCreated(req, scope, {
+      id: institute.id,
+      name: institute.name,
+      kind: "institute",
+      username,
+      password,
+    });
 
     res.status(201).json({
       success: true,
@@ -236,10 +235,13 @@ export async function listInstitutes(
       filters.push(`i.year = $${values.length + 1}`);
       values.push(year);
     }
-    if (!(await adminSeesAllOrganizations(scope, req))) {
-      filters.push(`i.owner_admin_id = $${values.length + 1}`);
-      values.push(scope.adminUserId);
-    }
+    values.push(scope.adminUserId);
+    const ownerParam = values.length;
+    filters.push(
+      scope.isSuperAdmin
+        ? `(i.owner_admin_id = $${ownerParam} OR i.owner_admin_id IS NULL)`
+        : `i.owner_admin_id = $${ownerParam}`
+    );
     const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
 
     const result = await pool.query<InstituteRow>(

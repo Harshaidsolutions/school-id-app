@@ -150,25 +150,31 @@ export function BrandLockup({
       {title && titleAccent ? (
         <View style={{ width: lineW, alignItems: textAlign === "left" ? "flex-start" : "center" }}>
           {(() => {
-            const longer = Math.max(title.length, titleAccent.length, 1);
-            const fitted = Math.min(
-              scaleFont(32, 18, undefined, screenW),
-              lineW / (longer * 0.62)
-            );
-            const shared = Math.max(18, fitted);
-            const lineStyle = {
-              fontSize: shared,
-              lineHeight: shared * 1.05,
+            const leadSize = scaleFont(sizes.harsha, harshaMin, undefined, screenW);
+            const accentSize = scaleFont(sizes.solutions, solutionsMin, undefined, screenW);
+            const line = (fontSize: number) => ({
+              fontSize,
+              lineHeight: fontSize * 1.02,
               width: lineW,
               marginTop: 0,
               paddingBottom: 0,
-            };
+            });
             return (
               <>
-          <Text style={[harshaStyle, lineStyle]} numberOfLines={1}>
+          <Text
+            style={[harshaStyle, line(leadSize)]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
             {title}
           </Text>
-          <Text style={[harshaStyle, lineStyle, { color: sColor }]} numberOfLines={1}>
+          <Text
+            style={[harshaStyle, line(accentSize), { color: sColor, marginTop: -2 }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
             {titleAccent}
           </Text>
               </>

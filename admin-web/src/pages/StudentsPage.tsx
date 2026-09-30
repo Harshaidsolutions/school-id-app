@@ -290,6 +290,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const counts = useMemo(() => {
     let pendingPhotos = 0;
     let pendingData = 0;
+    let pending = 0;
     let captured = 0;
     for (const s of students) {
       const photo = Boolean(s.photo_url?.trim());
@@ -297,10 +298,12 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         !s.student_name?.trim() || (!isInstitute && !s.class_section?.trim());
       if (!photo) pendingPhotos += 1;
       if (dataMissing) pendingData += 1;
+      if (!photo || dataMissing) pending += 1;
       if (photo && !dataMissing) captured += 1;
     }
     return {
       all: students.length,
+      pending,
       "pending-photos": pendingPhotos,
       "pending-data": pendingData,
       captured,
@@ -504,6 +507,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       )}
 
       {isDetailView ? (
+        <>
         <div className="detail-toolbar-shell">
           <div className="detail-toolbar-row1">
             <button
@@ -616,29 +620,41 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
 
             <div className="detail-toolbar-btn detail-toolbar-btn-placeholder">Empty</div>
             <div className="detail-toolbar-btn detail-toolbar-btn-placeholder">Empty</div>
+            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder">Empty</div>
           </div>
 
           <div className="detail-toolbar-row2">
             <div className="detail-status-tabs-inline detail-toolbar-row2-tabs">
               {(
                 [
-                  { key: "all", label: isInstitute ? "All" : "All Classes", count: counts.all },
-                  { key: "pending-photos", label: "Pending Photos", count: counts["pending-photos"] },
-                  { key: "pending-data", label: "Pending Data", count: counts["pending-data"] },
-                  { key: "captured", label: "Captured", count: counts.captured },
-                ] as const
-              ).map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => setTab(t.key)}
-                  className={`detail-toolbar-status-tab ${
-                    tab === t.key ? "detail-toolbar-status-tab-active" : "detail-toolbar-status-tab-idle"
-                  }`}
-                >
-                  {t.label} ({t.count})
-                </button>
-              ))}
+                  { key: "all" as const, label: "All", count: counts.all },
+                  {
+                    key: "pending" as const,
+                    label: "Pending",
+                    count: counts.pending,
+                  },
+                  { key: "captured" as const, label: "Captured", count: counts.captured },
+                ]
+              ).map((t) => {
+                const active =
+                  t.key === "pending"
+                    ? tab === "pending-photos" || tab === "pending-data"
+                    : tab === t.key;
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() =>
+                      setTab(t.key === "pending" ? "pending-photos" : t.key)
+                    }
+                    className={`detail-toolbar-status-tab ${
+                      active ? "detail-toolbar-status-tab-active" : "detail-toolbar-status-tab-idle"
+                    }`}
+                  >
+                    {t.label} ({t.count})
+                  </button>
+                );
+              })}
             </div>
 
             <div className="detail-toolbar-row2-search relative min-w-0">
@@ -678,14 +694,32 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             </button>
           </div>
         </div>
+        {tab === "pending-photos" || tab === "pending-data" ? (
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setTab("pending-photos")}
+              className={`detail-toolbar-btn w-auto px-3 ${tab === "pending-photos" ? "detail-toolbar-btn-primary" : ""}`}
+            >
+              Pending Photos ({counts["pending-photos"]})
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("pending-data")}
+              className={`detail-toolbar-btn w-auto px-3 ${tab === "pending-data" ? "detail-toolbar-btn-primary" : ""}`}
+            >
+              Pending Data ({counts["pending-data"]})
+            </button>
+          </div>
+        ) : null}
+        </>
       ) : !isDetailView ? (
         <>
           <div className="mb-3 flex gap-1 border-b border-border">
             {(
               [
                 { key: "all", label: "All", count: counts.all },
-                { key: "pending-photos", label: "Pending Photos", count: counts["pending-photos"] },
-                { key: "pending-data", label: "Pending Data", count: counts["pending-data"] },
+                { key: "pending-photos", label: "Pending", count: counts.pending },
                 { key: "captured", label: "Captured", count: counts.captured },
               ] as const
             ).map((t) => (
@@ -783,7 +817,11 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               <th className="col-sno">S.NO.</th>
               {enabledFields.map((field) => (
                 <th key={field.key} className={fieldColumnClass(field)}>
-                  {field.label}
+                  {field.key === "photo_id"
+                    ? "Photo ID"
+                    : field.key === "student_name"
+                      ? "Student Name"
+                      : field.label}
                 </th>
               ))}
               <th className="col-captured">Captured</th>
@@ -830,6 +868,19 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                                 src={student.photo_url}
                                 alt={student.student_name ?? "Student"}
                                 className="h-12 w-12 rounded-lg object-cover ring-1 ring-border"
+                                onError={(event) => {
+                                  const img = event.currentTarget;
+                                  if (img.dataset.auth === "1") return;
+                                  img.dataset.auth = "1";
+                                  void api
+                                    .get(`/admin/students/${student.id}/photo`, {
+                                      responseType: "blob",
+                                    })
+                                    .then(({ data }) => {
+                                      img.src = URL.createObjectURL(data as Blob);
+                                    })
+                                    .catch(() => undefined);
+                                }}
                               />
                             ) : (
                               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-content-bg text-xs font-semibold text-text-muted">

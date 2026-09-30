@@ -6,6 +6,7 @@ import { AppError } from "../middleware/errorHandler";
 import { uploadSchoolAsset } from "../config/storage";
 import { sendEmail } from "../utils/email";
 import {
+  assertOwnerUsernameAvailable,
   findOwnerUserSql,
   ownerPasswordSelect,
   ownerUserLateralJoin,
@@ -22,10 +23,16 @@ import { routeParam } from "../utils/routeParams";
 
 const SALT_ROUNDS = 10;
 
-async function notifySuperAdminSchoolCreated(
+export async function notifySuperAdminOrgCreated(
   req: Request,
   scope: Awaited<ReturnType<typeof requireAdminScope>>,
-  school: { id: string; name: string }
+  org: {
+    id: string;
+    name: string;
+    kind: "school" | "institute";
+    username?: string | null;
+    password?: string | null;
+  }
 ): Promise<void> {
   try {
     if (await adminSeesAllOrganizations(scope, req)) return;
@@ -39,22 +46,31 @@ async function notifySuperAdminSchoolCreated(
       [scope.adminUserId]
     );
     const creator = who.rows[0]?.label?.trim() || "Child Admin";
+    const username = org.username?.trim() || "";
+    const password = org.password?.trim() || "";
+    const when = `to_char(NOW() AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, HH12:MI AM')`;
+    const kindLabel = org.kind === "institute" ? "institute" : "school";
+    const messageSql = `$2 || ' created ' || $3 || ' "' || $4 || '" on ' || ${when} ||
+      '. Username: ' || $5 || '. Password: ' || $6 || '.'`;
+    if (org.kind === "institute") {
+      await pool.query(
+        `INSERT INTO notifications (institute_id, title, message, created_by, audience)
+         VALUES ($1, 'New institute created', ${messageSql}, $7, 'super_admin')
+         ON CONFLICT (institute_id) WHERE audience = 'super_admin' AND institute_id IS NOT NULL
+         DO NOTHING`,
+        [org.id, creator, kindLabel, org.name, username, password, scope.adminUserId]
+      );
+      return;
+    }
     await pool.query(
       `INSERT INTO notifications (school_id, title, message, created_by, audience)
-       VALUES (
-         $1,
-         'New school created',
-         $2 || ' created school "' || $3 || '" on ' ||
-           to_char(NOW() AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, HH12:MI AM') || '.',
-         $4,
-         'super_admin'
-       )
+       VALUES ($1, 'New school created', ${messageSql}, $7, 'super_admin')
        ON CONFLICT (school_id) WHERE audience = 'super_admin' AND school_id IS NOT NULL
        DO NOTHING`,
-      [school.id, creator, school.name, scope.adminUserId]
+      [org.id, creator, kindLabel, org.name, username, password, scope.adminUserId]
     );
   } catch (error) {
-    console.error("[school-create] super admin notification failed", error);
+    console.error("[org-create] super admin notification failed", error);
   }
 }
 
@@ -138,12 +154,20 @@ export async function createSchool(
         [logoUrl, signatureUrl, school.id]
       );
       const saved = updated.rows[0] ?? school;
-      await notifySuperAdminSchoolCreated(req, scope, saved);
+      await notifySuperAdminOrgCreated(req, scope, {
+        id: saved.id,
+        name: saved.name,
+        kind: "school",
+      });
       res.status(201).json({ status: "ok", school: saved });
       return;
     }
 
-    await notifySuperAdminSchoolCreated(req, scope, school);
+    await notifySuperAdminOrgCreated(req, scope, {
+      id: school.id,
+      name: school.name,
+      kind: "school",
+    });
     res.status(201).json({ status: "ok", school });
   } catch (error) {
     next(error);
@@ -184,17 +208,7 @@ export async function createSchoolWithOwner(
 
     await client.query("BEGIN");
 
-    const taken = await client.query(
-      `SELECT id FROM users
-       WHERE (username IS NOT NULL AND lower(username) = lower($1))
-          OR lower(email) = lower($1)
-          OR lower(email) = lower($2)
-       LIMIT 1`,
-      [username, email]
-    );
-    if (taken.rows[0]) {
-      throw new AppError("Owner username is already taken", 409);
-    }
+    await assertOwnerUsernameAvailable(client, username);
 
     const schoolResult = await client.query<SchoolRow>(
       `INSERT INTO schools (name, phone, year, owner_username_plain, owner_password_plain, owner_admin_id)
@@ -221,7 +235,13 @@ export async function createSchoolWithOwner(
 
     await client.query("COMMIT");
 
-    await notifySuperAdminSchoolCreated(req, scope, school);
+    await notifySuperAdminOrgCreated(req, scope, {
+      id: school.id,
+      name: school.name,
+      kind: "school",
+      username,
+      password,
+    });
 
     res.status(201).json({
       success: true,
@@ -255,10 +275,13 @@ export async function listSchools(
       filters.push(`s.year = $${values.length + 1}`);
       values.push(year);
     }
-    if (!(await adminSeesAllOrganizations(scope, req))) {
-      filters.push(`s.owner_admin_id = $${values.length + 1}`);
-      values.push(scope.adminUserId);
-    }
+    values.push(scope.adminUserId);
+    const ownerParam = values.length;
+    filters.push(
+      scope.isSuperAdmin
+        ? `(s.owner_admin_id = $${ownerParam} OR s.owner_admin_id IS NULL)`
+        : `s.owner_admin_id = $${ownerParam}`
+    );
     const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
 
     const result = await pool.query<SchoolRow & {

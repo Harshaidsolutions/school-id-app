@@ -572,14 +572,18 @@ export function AdminManagementPage() {
                 ) : editTarget.photo_url && !removeEditPhoto ? (
                   <img src={editTarget.photo_url} alt="" className="mb-2 h-16 w-16 rounded-full object-cover" />
                 ) : null}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  onChange={(e) => {
-                    setEditPhoto(e.target.files?.[0] ?? null);
-                    setRemoveEditPhoto(false);
-                  }}
-                />
+                <label className="relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy">
+                  {editPhoto ? editPhoto.name : "Choose File"}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                    onChange={(e) => {
+                      setEditPhoto(e.target.files?.[0] ?? null);
+                      setRemoveEditPhoto(false);
+                    }}
+                  />
+                </label>
                 <button
                   type="button"
                   className="mt-1 block text-xs text-danger"

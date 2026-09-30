@@ -35,6 +35,39 @@ export const ownerPasswordSelect = (plainColumn: string): string => `
     NULLIF(TRIM(owner.password_plain), '')
   )`;
 
+import type { PoolClient } from "pg";
+import { AppError } from "../middleware/errorHandler";
+
+/** Username only. School and institute names are not part of this check. */
+export async function assertOwnerUsernameAvailable(
+  client: PoolClient,
+  username: string
+): Promise<void> {
+  const taken = await client.query(
+    `SELECT 1
+     FROM users
+     WHERE username IS NOT NULL AND lower(btrim(username)) = lower(btrim($1))
+     UNION ALL
+     SELECT 1
+     FROM schools
+     WHERE owner_username_plain IS NOT NULL
+       AND lower(btrim(owner_username_plain)) = lower(btrim($1))
+     UNION ALL
+     SELECT 1
+     FROM institutes
+     WHERE owner_username_plain IS NOT NULL
+       AND lower(btrim(owner_username_plain)) = lower(btrim($1))
+     LIMIT 1`,
+    [username]
+  );
+  if (taken.rows[0]) {
+    throw new AppError(
+      "This username is already in use. Choose a different username.",
+      409
+    );
+  }
+}
+
 /** Find the best owner user row for credential updates. */
 export const findOwnerUserSql = (
   linkColumn: "school_id" | "institute_id"

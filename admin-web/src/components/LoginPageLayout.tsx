@@ -41,7 +41,7 @@ export function LoginPageLayout({
         <path d="M0 160 C350 110 600 170 850 130 C1100 90 1250 160 1440 140 L1440 220 L0 220 Z" fill="#2563EB" opacity="0.92" />
       </svg>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[1400px] flex-1 items-center justify-center px-[clamp(1rem,4vw,2.5rem)] py-[clamp(1.25rem,3vh,2.5rem)] pb-[clamp(8rem,16vh,11rem)]">
+      <div className="relative z-10 mx-auto flex w-full max-w-[1400px] flex-1 items-center justify-center overflow-y-auto px-[clamp(0.75rem,3vw,2rem)] py-[clamp(0.75rem,2vh,1.5rem)] pb-[clamp(5.5rem,12vh,8rem)]">
         <div
           className={
             appBrand
@@ -68,7 +68,7 @@ export function LoginPageLayout({
                   <img
                     src="/app-logo.png"
                     alt="My School ID Card"
-                    className="h-[8.5rem] w-auto object-contain"
+                    className="h-[clamp(4.25rem,16vh,7.5rem)] w-auto object-contain"
                   />
                   <p className="mt-2 text-lg font-bold text-text-navy">My School ID Card</p>
                 </div>
@@ -82,7 +82,7 @@ export function LoginPageLayout({
                 <button
                   type="button"
                   onClick={onTitlePress}
-                  className="m-0 block w-full border-0 bg-transparent p-0 text-center text-[clamp(1.125rem,2vw,1.375rem)] font-bold leading-tight text-text-navy hover:underline"
+                  className="m-0 block w-full cursor-pointer border-0 bg-transparent p-0 text-center text-[clamp(1.125rem,2vw,1.375rem)] font-bold leading-tight text-text-navy no-underline hover:no-underline"
                 >
                   {title}
                 </button>

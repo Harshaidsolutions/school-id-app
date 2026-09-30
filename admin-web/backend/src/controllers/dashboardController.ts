@@ -19,20 +19,18 @@ export async function getDashboardSummary(
     const seeAll = await adminSeesAllOrganizations(scope, req);
     const year =
       typeof req.query.year === "string" ? req.query.year.trim() : "";
+    const ownedSchool = seeAll
+      ? `(owner_admin_id = $1 OR owner_admin_id IS NULL)`
+      : `owner_admin_id = $1`;
+    const ownedInstitute = seeAll
+      ? `(owner_admin_id = $1 OR owner_admin_id IS NULL)`
+      : `owner_admin_id = $1`;
 
-    const schoolValues: unknown[] = [];
-    let schoolWhere = "";
-    if (!seeAll) {
-      schoolValues.push(scope.adminUserId);
-      schoolWhere = ` WHERE owner_admin_id = $1`;
-    }
+    const schoolValues: unknown[] = [scope.adminUserId];
+    const schoolWhere = ` WHERE ${ownedSchool}`;
 
-    const instituteValues: unknown[] = [];
-    let instituteWhere = "";
-    if (!seeAll) {
-      instituteValues.push(scope.adminUserId);
-      instituteWhere = ` WHERE owner_admin_id = $1`;
-    }
+    const instituteValues: unknown[] = [scope.adminUserId];
+    const instituteWhere = ` WHERE ${ownedInstitute}`;
 
     const schoolStats = await pool.query<{
       total: string;
@@ -60,15 +58,14 @@ export async function getDashboardSummary(
       instituteValues
     );
 
-    const studentValues: unknown[] = [];
+    const studentValues: unknown[] = [scope.adminUserId];
     const studentFilters: string[] = [
       "s.school_id IS NOT NULL",
       "COALESCE(sc.is_active, true) = true",
+      seeAll
+        ? `(sc.owner_admin_id = $1 OR sc.owner_admin_id IS NULL)`
+        : `sc.owner_admin_id = $1`,
     ];
-    if (!seeAll) {
-      studentValues.push(scope.adminUserId);
-      studentFilters.push(`sc.owner_admin_id = $${studentValues.length}`);
-    }
     const studentWhere = `WHERE ${studentFilters.join(" AND ")}`;
 
     const capturedExpr = `LOWER(COALESCE(s.status, '')) IN ('captured', 'printed')`;
@@ -88,15 +85,14 @@ export async function getDashboardSummary(
       studentValues
     );
 
-    const instituteMemberValues: unknown[] = [];
+    const instituteMemberValues: unknown[] = [scope.adminUserId];
     const instituteMemberFilters: string[] = [
       "s.institute_id IS NOT NULL",
       "COALESCE(i.is_active, true) = true",
+      seeAll
+        ? `(i.owner_admin_id = $1 OR i.owner_admin_id IS NULL)`
+        : `i.owner_admin_id = $1`,
     ];
-    if (!seeAll) {
-      instituteMemberValues.push(scope.adminUserId);
-      instituteMemberFilters.push(`i.owner_admin_id = $${instituteMemberValues.length}`);
-    }
     const instituteMemberWhere = `WHERE ${instituteMemberFilters.join(" AND ")}`;
 
     const instituteMemberStats = await pool.query<{
@@ -124,12 +120,12 @@ export async function getDashboardSummary(
     );
 
     const overviewSchoolFilter = seeAll
-      ? ""
+      ? ` AND (s.owner_admin_id = $1 OR s.owner_admin_id IS NULL)`
       : ` AND s.owner_admin_id = $1`;
     const overviewInstituteFilter = seeAll
-      ? ""
+      ? ` AND (i.owner_admin_id = $1 OR i.owner_admin_id IS NULL)`
       : ` AND i.owner_admin_id = $1`;
-    const overviewValues = seeAll ? [] : [scope.adminUserId];
+    const overviewValues = [scope.adminUserId];
 
     const overview = await pool.query<{
       day: string;
@@ -147,22 +143,16 @@ export async function getDashboardSummary(
     const activityValues: unknown[] = [];
     const activityParts: string[] = [];
 
-    if (seeAll) {
-      activityParts.push(
-        `SELECT 'school'::text AS kind, name AS title, created_at FROM schools`
-      );
-      activityParts.push(
-        `SELECT 'institute', name, created_at FROM institutes`
-      );
-    } else {
-      activityValues.push(scope.adminUserId);
-      activityParts.push(
-        `SELECT 'school'::text AS kind, name AS title, created_at FROM schools WHERE owner_admin_id = $1`
-      );
-      activityParts.push(
-        `SELECT 'institute', name, created_at FROM institutes WHERE owner_admin_id = $1`
-      );
-    }
+    activityValues.push(scope.adminUserId);
+    const ownedActivity = seeAll
+      ? `(owner_admin_id = $1 OR owner_admin_id IS NULL)`
+      : `owner_admin_id = $1`;
+    activityParts.push(
+      `SELECT 'school'::text AS kind, name AS title, created_at FROM schools WHERE ${ownedActivity}`
+    );
+    activityParts.push(
+      `SELECT 'institute', name, created_at FROM institutes WHERE ${ownedActivity}`
+    );
 
     activityValues.push(scope.adminUserId);
     const catalogParam = activityValues.length;

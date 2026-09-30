@@ -162,19 +162,18 @@ export function StudentListScreen({ navigation, route }: Props) {
     () => students.filter((s) => studentFullyCaptured(s, false)).length,
     [students]
   );
+  const pendingCount = useMemo(
+    () =>
+      students.filter((s) => !studentHasPhoto(s) || studentPendingData(s, false)).length,
+    [students]
+  );
   const tabs: { key: TabKey; label: string; color: string; count: number }[] = [
     { key: "all", label: "All", color: colors.brandGreen, count: students.length },
     {
       key: "pending-photos",
-      label: "Pending Photos",
+      label: "Pending",
       color: colors.brandGreen,
-      count: pendingPhotoCount,
-    },
-    {
-      key: "pending-data",
-      label: "Pending Data",
-      color: colors.brandGreen,
-      count: pendingDataCount,
+      count: pendingCount,
     },
     ...(showCapturedSection
       ? [
@@ -312,7 +311,10 @@ export function StudentListScreen({ navigation, route }: Props) {
 
       <View style={styles.tabs}>
         {tabs.map((t) => {
-          const active = tab === t.key;
+          const active =
+            t.key === "pending-photos"
+              ? tab === "pending-photos" || tab === "pending-data"
+              : tab === t.key;
           return (
             <Pressable
               key={t.key}
@@ -341,6 +343,20 @@ export function StudentListScreen({ navigation, route }: Props) {
           );
         })}
       </View>
+      {tab === "pending-photos" || tab === "pending-data" ? (
+        <View style={{ flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.md, paddingBottom: spacing.sm }}>
+          <Pressable onPress={() => setTab("pending-photos")}>
+            <Text style={{ color: tab === "pending-photos" ? colors.brandGreen : colors.textMuted, fontFamily: fonts.semiBold }}>
+              Pending Photos ({pendingPhotoCount})
+            </Text>
+          </Pressable>
+          <Pressable onPress={() => setTab("pending-data")}>
+            <Text style={{ color: tab === "pending-data" ? colors.brandGreen : colors.textMuted, fontFamily: fonts.semiBold }}>
+              Pending Data ({pendingDataCount})
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <FlatList
         data={filtered}

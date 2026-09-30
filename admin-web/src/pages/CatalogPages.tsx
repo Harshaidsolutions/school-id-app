@@ -30,6 +30,7 @@ export function CatalogGridPage({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selecting, setSelecting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<CatalogItem | null>(null);
@@ -125,6 +126,11 @@ export function CatalogGridPage({
         ) : (
           <>
           {kind === "brochure" ? (
+            <button type="button" className="btn-secondary mb-3" onClick={() => setSelecting(true)}>
+              Bulk Delete
+            </button>
+          ) : null}
+          {kind === "brochure" && selecting ? (
             <BulkActionBar
               selectedCount={filtered.filter((item) => selectedIds.has(item.id)).length}
               allSelected={
@@ -138,7 +144,10 @@ export function CatalogGridPage({
                   return new Set(filtered.map((item) => item.id));
                 });
               }}
-              onClear={() => setSelectedIds(new Set())}
+              onClear={() => {
+                setSelectedIds(new Set());
+                setSelecting(false);
+              }}
               onDelete={() => {
                 const ids = filtered.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
                 if (ids.length === 0) return;
@@ -152,6 +161,7 @@ export function CatalogGridPage({
                   .then(({ data }) => {
                     setError(bulkDeleteMessage(data));
                     setSelectedIds(new Set());
+                    setSelecting(false);
                     return load();
                   })
                   .catch((err: unknown) => {
@@ -167,7 +177,7 @@ export function CatalogGridPage({
           <div className="card-grid-responsive">
             {filtered.map((item) => (
               <div key={item.id} className="card overflow-hidden">
-                {kind === "brochure" ? (
+                {kind === "brochure" && selecting ? (
                   <label className="flex items-center gap-2 px-3 pt-3 text-xs text-text-muted">
                     <input
                       type="checkbox"

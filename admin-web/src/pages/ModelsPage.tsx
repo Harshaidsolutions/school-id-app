@@ -40,6 +40,7 @@ export function ModelsPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selecting, setSelecting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [tagFiles, setTagFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
@@ -275,7 +276,14 @@ export function ModelsPage() {
           className="mb-4"
         />
         {error && <div className="mb-4 alert-error">{error}</div>}
-        {!loading && filtered.length > 0 ? (
+        <button
+          type="button"
+          className="btn-secondary mb-3"
+          onClick={() => setSelecting(true)}
+        >
+          Bulk Delete
+        </button>
+        {selecting && !loading && filtered.length > 0 ? (
           <BulkActionBar
             selectedCount={filtered.filter((item) => selectedIds.has(item.id)).length}
             allSelected={filtered.every((item) => selectedIds.has(item.id))}
@@ -287,7 +295,10 @@ export function ModelsPage() {
                 return new Set(filtered.map((item) => item.id));
               });
             }}
-            onClear={() => setSelectedIds(new Set())}
+            onClear={() => {
+              setSelectedIds(new Set());
+              setSelecting(false);
+            }}
             onDelete={() => {
               const ids = filtered.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
               if (ids.length === 0) return;
@@ -301,6 +312,7 @@ export function ModelsPage() {
                 .then(({ data }) => {
                   setError(bulkDeleteMessage(data));
                   setSelectedIds(new Set());
+                  setSelecting(false);
                   return load();
                 })
                 .catch((err: unknown) => {
@@ -346,6 +358,7 @@ export function ModelsPage() {
                   <tr key={item.id}>
                     <td className="col-sno">{index + 1}</td>
                     <td className="col-image">
+                      {selecting ? (
                       <input
                         type="checkbox"
                         className="mr-2"
@@ -359,6 +372,7 @@ export function ModelsPage() {
                           });
                         }}
                       />
+                      ) : null}
                       {item.image_url ? (
                         <button
                           type="button"

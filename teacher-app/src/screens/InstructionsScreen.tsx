@@ -265,11 +265,19 @@ export function InstructionsScreen(_props: Props) {
               </Text>
 
               {step.linkUrl ? (
-                <Image
-                  source={{ uri: step.linkUrl }}
-                  style={{ width: "100%", height: 180, marginTop: 8, borderRadius: 8 }}
-                  resizeMode="contain"
-                />
+                <View style={{ marginTop: 8 }}>
+                  <Text style={{ color: colors.brandGreen, fontFamily: fonts.headingSemiBold, marginBottom: 4 }}>
+                    ✓ Correct — face clear, centered, and evenly lit
+                  </Text>
+                  <Image
+                    source={{ uri: step.linkUrl }}
+                    style={{ width: "100%", height: 180, borderRadius: 8 }}
+                    resizeMode="contain"
+                  />
+                  <Text style={{ color: colors.danger, fontFamily: fonts.headingSemiBold, marginTop: 8 }}>
+                    ✕ Incorrect — too dark, too close, cut off, tilted, blurry, or blocked
+                  </Text>
+                </View>
               ) : null}
 
               {step.linkUrl && step.linkLabel ? (

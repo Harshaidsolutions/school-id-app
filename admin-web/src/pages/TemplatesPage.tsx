@@ -30,6 +30,7 @@ export function TemplatesPage() {
   const [editTemplate, setEditTemplate] = useState<Template | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selecting, setSelecting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
@@ -170,6 +171,10 @@ export function TemplatesPage() {
             </div>
           ) : (
             <>
+            <button type="button" className="btn-secondary mb-3" onClick={() => setSelecting(true)}>
+              Bulk Delete
+            </button>
+            {selecting ? (
             <BulkActionBar
               selectedCount={templateRows.filter((tpl) => selectedIds.has(tpl.id)).length}
               allSelected={
@@ -184,7 +189,10 @@ export function TemplatesPage() {
                   return new Set(templateRows.map((tpl) => tpl.id));
                 });
               }}
-              onClear={() => setSelectedIds(new Set())}
+              onClear={() => {
+                setSelectedIds(new Set());
+                setSelecting(false);
+              }}
               onDelete={() => {
                 const ids = templateRows
                   .filter((tpl) => selectedIds.has(tpl.id))
@@ -203,6 +211,7 @@ export function TemplatesPage() {
                     const message = bulkDeleteMessage(data);
                     setError(message);
                     setSelectedIds(new Set());
+                    setSelecting(false);
                     return loadTemplates();
                   })
                   .catch((err: unknown) => {
@@ -214,9 +223,11 @@ export function TemplatesPage() {
                   .finally(() => setBulkDeleting(false));
               }}
             />
+            ) : null}
             <div className="card-grid-responsive">
               {templateRows.map((tpl) => (
                 <div key={tpl.id} className="card overflow-hidden">
+                  {selecting ? (
                   <label className="flex items-center gap-2 px-3 pt-3 text-xs text-text-muted">
                     <input
                       type="checkbox"
@@ -232,6 +243,7 @@ export function TemplatesPage() {
                     />
                     Select
                   </label>
+                  ) : null}
                   <CatalogPreviewThumb
                     imageUrl={tpl.image_url}
                     alt={tpl.name}

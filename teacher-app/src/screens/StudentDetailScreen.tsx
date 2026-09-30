@@ -249,7 +249,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
             <Text style={[styles.editBtnText, { color: colors.danger }]}>
 
-              Edit
+              Edit Form
 
             </Text>
 

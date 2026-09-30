@@ -297,7 +297,7 @@ function withGeneratedIdentity(
   if (hasAlias || rows.some((row) => isIdentityAliasLabel(row.label) || row.key === "photo_id")) {
     return rows;
   }
-  return [...rows, { key: "photo_id", label: "ID", value: generated }];
+  return [...rows, { key: "photo_id", label: "Photo ID", value: generated }];
 }
 
 export function getVisibleStudentFields(
@@ -336,7 +336,12 @@ export function getVisibleStudentFields(
     const raw = fieldValue(field, student, classSection);
     return {
       key: String(field.key),
-      label: field.label,
+      label:
+        field.key === "photo_id"
+          ? "Photo ID"
+          : field.key === "student_name"
+            ? "Student Name"
+            : field.label,
       value: raw != null && String(raw).trim() !== "" ? String(raw).trim() : "-",
     };
   });
