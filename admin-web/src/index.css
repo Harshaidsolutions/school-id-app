@@ -373,6 +373,15 @@
     accent-color: #2563eb;
   }
 
+  .bulk-card-select {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 1rem 0.75rem 0.625rem 1.25rem;
+    box-sizing: border-box;
+  }
+
   .list-data-table th.bulk-check-cell,
   .list-data-table td.bulk-check-cell,
   .students-data-table th.bulk-check-cell,

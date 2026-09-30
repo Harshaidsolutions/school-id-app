@@ -182,7 +182,7 @@ export function CatalogGridPage({
             {filtered.map((item) => (
               <div key={item.id} className="card overflow-hidden">
                 {kind === "brochure" && selecting ? (
-                  <label className="flex items-center gap-2 px-3 pt-3 text-xs text-text-muted">
+                  <label className="bulk-card-select text-xs text-text-muted">
                     <input
                       type="checkbox"
                       className="bulk-check"

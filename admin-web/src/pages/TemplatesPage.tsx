@@ -234,7 +234,7 @@ export function TemplatesPage() {
               {templateRows.map((tpl) => (
                 <div key={tpl.id} className="card overflow-hidden">
                   {selecting ? (
-                  <label className="flex items-center gap-2 px-3 pt-3 text-xs text-text-muted">
+                  <label className="bulk-card-select text-xs text-text-muted">
                     <input
                       type="checkbox"
                       className="bulk-check"
