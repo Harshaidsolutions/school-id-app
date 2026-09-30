@@ -84,10 +84,9 @@ export function StudentDetailScreen({ navigation, route }: Props) {
   const { student, classSection } = route.params;
 
   const hasPhoto = Boolean(student.photo_url);
-  const { fields: formFields, fieldVisibility, allowNumberEdit, allowRecordEdit } = useFormConfig();
+  const { fields: formFields, allowNumberEdit, allowRecordEdit } = useFormConfig();
 
   const visibleFields = getVisibleStudentFields(student, classSection, formFields, {
-    visibility: fieldVisibility,
     hideIdentity: !allowNumberEdit,
   });
 

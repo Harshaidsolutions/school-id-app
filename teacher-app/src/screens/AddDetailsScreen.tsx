@@ -53,10 +53,8 @@ export function AddDetailsScreen({ navigation, route }: Props) {
   const { scale } = useResponsiveLayout();
   const photoSize = scale(120);
   const { showToast } = useToast();
-  const { fields: formFields, fieldVisibility } = useFormConfig();
-  const displayFields = formFields.filter(
-    (field) => fieldVisibility[field.key] !== false
-  );
+  const { fields: formFields } = useFormConfig();
+  const displayFields = formFields.filter((field) => field.enabled !== false);
   const { student, photoUri } = route.params;
   const initial = useMemo(
     () => splitName(student.student_name),

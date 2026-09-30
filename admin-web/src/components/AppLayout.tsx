@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useYear } from "../context/YearContext";
+import api from "../api/client";
 import { HarshaLogo } from "./HarshaLogo";
 
 interface NavItem {
@@ -150,6 +151,7 @@ export function AppLayout() {
   const [searchParams] = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const studentsSchoolId = searchParams.get("schoolId");
   const studentsSchoolName = searchParams.get("schoolName");
@@ -178,6 +180,30 @@ export function AppLayout() {
         : baseTitle;
 
   const isDashboard = location.pathname === "/";
+
+  useEffect(() => {
+    if (!isDashboard || user?.isSuperAdmin !== true) {
+      setUnreadCount(0);
+      return;
+    }
+    let cancelled = false;
+    async function loadUnread() {
+      try {
+        const { data } = await api.get<{ unreadCount?: number }>(
+          "/admin/notifications/unread-count"
+        );
+        if (!cancelled) setUnreadCount(data.unreadCount ?? 0);
+      } catch {
+        if (!cancelled) setUnreadCount(0);
+      }
+    }
+    void loadUnread();
+    const timer = window.setInterval(() => void loadUnread(), 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [isDashboard, user?.isSuperAdmin]);
   const isOrgListPage =
     location.pathname === "/schools" || location.pathname === "/institutes";
   const isOrgDetailListPage =
@@ -310,6 +336,11 @@ export function AppLayout() {
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9" />
                 <path d="M10 21a2 2 0 0 0 4 0" />
               </svg>
+              {user?.isSuperAdmin === true && unreadCount > 0 ? (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              ) : null}
             </button>
           ) : (
             <div className="w-9 shrink-0" aria-hidden />

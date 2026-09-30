@@ -184,6 +184,7 @@ export interface NotificationItem {
   message: string;
   created_by: string | null;
   created_at: string | null;
+  audience?: string | null;
   school_name?: string | null;
   institute_name?: string | null;
 }

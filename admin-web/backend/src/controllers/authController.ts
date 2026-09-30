@@ -79,28 +79,33 @@ export async function login(
           OR (u.username IS NOT NULL AND lower(u.username) = lower($1))
        ORDER BY
          COALESCE(u.is_super_admin, false) DESC,
+         CASE WHEN u.role = 'admin' THEN 0 ELSE 1 END,
          CASE WHEN lower(u.email) = lower($1) THEN 0 ELSE 1 END,
-         u.created_at ASC NULLS LAST
-       LIMIT 1`,
+         u.created_at ASC NULLS LAST`,
       [email.trim()]
     );
 
-    const user = result.rows[0];
-    if (!user) {
+    if (result.rows.length === 0) {
       throw new AppError("User not found", 401);
     }
 
-    if (!user.password_hash || typeof user.password_hash !== "string") {
-      throw new AppError("Wrong password", 401);
-    }
-
+    let user = result.rows[0];
     let passwordMatches = false;
-    try {
-      passwordMatches = await bcrypt.compare(password, user.password_hash);
-    } catch {
-      throw new AppError("Wrong password", 401);
+    for (const candidate of result.rows) {
+      if (!candidate.password_hash || typeof candidate.password_hash !== "string") {
+        continue;
+      }
+      try {
+        if (await bcrypt.compare(password, candidate.password_hash)) {
+          user = candidate;
+          passwordMatches = true;
+          break;
+        }
+      } catch {
+        continue;
+      }
     }
-    if (!passwordMatches) {
+    if (!passwordMatches || !user) {
       throw new AppError("Wrong password", 401);
     }
 

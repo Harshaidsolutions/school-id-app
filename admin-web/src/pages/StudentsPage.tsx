@@ -22,13 +22,37 @@ import { authenticatedStudentPhotoUrl } from "../utils/studentPhotoSrc";
 
 type TabKey = "all" | "pending-photos" | "pending-data" | "captured";
 
-function columnLabel(field: FormFieldConfig): string {
-  if (field.key === "photo_id") return "Photo ID";
-  if (field.key === "student_name") return "Student Name";
-  const n = field.label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
-  if (n === "photoid" || n === "photonumber" || n === "photo") return "Photo ID";
-  if (n === "name" || n === "studentname" || n === "membername") return "Student Name";
-  return field.label;
+function normalizedFieldLabel(label: string): string {
+  return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function isIdentityColumn(field: FormFieldConfig): boolean {
+  if (field.key === "photo_id" || isPhotoExcelField(field)) return true;
+  const n = normalizedFieldLabel(field.label);
+  return n === "id" || n === "photoid" || n === "photonumber" || n === "photono";
+}
+
+function isNameColumn(field: FormFieldConfig): boolean {
+  if (field.key === "student_name") return true;
+  const n = normalizedFieldLabel(field.label);
+  return n === "name" || n === "studentname" || n === "membername";
+}
+
+function dedupeDisplayFields(fields: FormFieldConfig[]): FormFieldConfig[] {
+  let seenIdentity = false;
+  let seenName = false;
+  const out: FormFieldConfig[] = [];
+  for (const field of sortFormFields(fields).filter((item) => item.enabled)) {
+    if (isIdentityColumn(field)) {
+      if (seenIdentity) continue;
+      seenIdentity = true;
+    } else if (isNameColumn(field)) {
+      if (seenName) continue;
+      seenName = true;
+    }
+    out.push(field);
+  }
+  return out;
 }
 
 function recordFlags(student: Student, isInstitute: boolean) {
@@ -44,9 +68,18 @@ function recordFlags(student: Student, isInstitute: boolean) {
 }
 
 function StudentThumb({ student }: { student: Student }): ReactNode {
-  const [src, setSrc] = useState(student.photo_url ?? "");
+  const [src, setSrc] = useState("");
   useEffect(() => {
-    setSrc(student.photo_url ?? "");
+    let cancelled = false;
+    setSrc("");
+    if (!student.photo_url) return;
+    void authenticatedStudentPhotoUrl(student.id).then((url) => {
+      if (cancelled) return;
+      setSrc(url || student.photo_url || "");
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [student.id, student.photo_url]);
   if (!student.photo_url) {
     return (
@@ -55,17 +88,16 @@ function StudentThumb({ student }: { student: Student }): ReactNode {
       </div>
     );
   }
+  if (!src) {
+    return (
+      <div className="h-12 w-12 animate-pulse rounded-lg bg-content-bg ring-1 ring-border" />
+    );
+  }
   return (
     <img
-      src={src || student.photo_url}
+      src={src}
       alt={student.student_name ?? "Student"}
       className="h-12 w-12 rounded-lg object-cover ring-1 ring-border"
-      onError={() => {
-        if (src.startsWith("blob:")) return;
-        void authenticatedStudentPhotoUrl(student.id).then((url) => {
-          if (url) setSrc(url);
-        });
-      }}
     />
   );
 }
@@ -289,10 +321,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     );
   }
 
-  const enabledFields = useMemo(
-    () => sortFormFields(formFields).filter((f) => f.enabled),
-    [formFields]
-  );
+  const enabledFields = useMemo(() => dedupeDisplayFields(formFields), [formFields]);
 
   const tableColSpan = enabledFields.length + 3;
 
@@ -525,12 +554,11 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   }
 
   function fieldColumnClass(field: FormFieldConfig): string {
-    if (isPhotoExcelField(field)) return "col-photo";
+    if (isIdentityColumn(field)) return "col-photo";
     if (field.key === "class_section") return "col-class";
-    if (field.key === "student_name") return "col-name";
+    if (isNameColumn(field)) return "col-name";
     const n = field.label.trim().toLowerCase();
     if (n === "class" || n.includes("section")) return "col-class";
-    if (n === "name" || n.includes("student")) return "col-name";
     return "col-field";
   }
 
@@ -862,7 +890,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               <th className="col-sno">S.NO.</th>
               {enabledFields.map((field) => (
                 <th key={field.key} className={fieldColumnClass(field)}>
-                  {columnLabel(field)}
+                  {field.label}
                 </th>
               ))}
               <th className="col-captured">Captured</th>
@@ -894,7 +922,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   <td className="col-sno text-text-muted">{serial}</td>
                   {enabledFields.map((field) => (
                     <td key={field.key} className={fieldColumnClass(field)}>
-                      {isPhotoExcelField(field) ? (
+                      {isIdentityColumn(field) ? (
                         <div className="flex flex-col items-start gap-1">
                           <button
                             type="button"

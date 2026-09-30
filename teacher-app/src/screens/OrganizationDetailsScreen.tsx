@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import api, { getErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { useFormConfig } from "../hooks/useFormConfig";
 import { ErrorRetry, LoadingBlock } from "../components/ErrorRetry";
 import { IconChip } from "../components/IconChip";
 import { OrangeGradientHeader } from "../components/OrangeGradientHeader";
@@ -143,6 +144,8 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
   const { user } = useAuth();
   const userId = user?.id ?? "";
   const { colors } = useTheme();
+  const { fieldVisibility } = useFormConfig();
+  const showDetail = (key: string) => fieldVisibility[key] !== false;
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
@@ -216,8 +219,11 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
     const row = school;
     if (!row) return false;
     const year = row.establish_year ?? row.year ?? "";
-    return Boolean(row.phone?.trim() && row.address?.trim() && year.trim());
-  }, [school]);
+    const phoneOk = fieldVisibility.detail_phone === false || Boolean(row.phone?.trim());
+    const addressOk = fieldVisibility.detail_address === false || Boolean(row.address?.trim());
+    const yearOk = fieldVisibility.detail_year === false || Boolean(year.trim());
+    return phoneOk && addressOk && yearOk;
+  }, [fieldVisibility, school]);
 
   const currentSnapshot = useMemo(
     (): OrgFormSnapshot => ({
@@ -357,10 +363,13 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
   );
 
   useEffect(() => {
-    if (hasSavedSchoolInfo && phone.trim() && address.trim() && establishYear.trim()) {
+    const phoneReady = !showDetail("detail_phone") || Boolean(phone.trim());
+    const addressReady = !showDetail("detail_address") || Boolean(address.trim());
+    const yearReady = !showDetail("detail_year") || Boolean(establishYear.trim());
+    if (hasSavedSchoolInfo && phoneReady && addressReady && yearReady) {
       setSchoolInfoEditing(false);
     }
-  }, [hasSavedSchoolInfo]);
+  }, [address, establishYear, fieldVisibility, hasSavedSchoolInfo, phone]);
 
   const applyPendingRouteParams = useCallback(() => {
     if (pickerActiveRef.current) {
@@ -456,11 +465,14 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
   }, [applyPendingRouteParams]);
 
   function validateSchoolInfo(): string | null {
-    if (!phone.trim()) return "Phone Number 1 is required.";
-    if (!establishYear.trim() || !/^\d{4}$/.test(establishYear.trim())) {
+    if (showDetail("detail_phone") && !phone.trim()) return "Phone Number 1 is required.";
+    if (
+      showDetail("detail_year") &&
+      (!establishYear.trim() || !/^\d{4}$/.test(establishYear.trim()))
+    ) {
       return "School Establish Year is required (4-digit year).";
     }
-    if (!address.trim()) return "Full School Address is required.";
+    if (showDetail("detail_address") && !address.trim()) return "Full School Address is required.";
     return null;
   }
 
@@ -736,6 +748,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
         ]}
       >            <SectionHeader title="Upload Details" icon="cloud-upload" chipIndex={0} />
 
+            {showDetail("detail_signature") ? (
             <UploadRow
               colors={colors}
               chipIndex={0}
@@ -747,6 +760,8 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
               busy={uploading === "signature"}
               selectionPreview
             />
+            ) : null}
+            {showDetail("detail_logo") ? (
             <UploadRow
               colors={colors}
               chipIndex={1}
@@ -758,6 +773,8 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
               busy={uploading === "logo"}
               selectionPreview
             />
+            ) : null}
+            {showDetail("detail_organization_photo") ? (
             <UploadRow
               colors={colors}
               chipIndex={2}
@@ -769,6 +786,8 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
               busy={uploading === "organization"}
               selectionPreview
             />
+            ) : null}
+            {showDetail("detail_template") ? (
             <UploadRow
               colors={colors}
               chipIndex={3}
@@ -790,6 +809,8 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
               actionLabel="Select"
               selectionPreview
             />
+            ) : null}
+            {showDetail("detail_model") ? (
             <UploadRow
               colors={colors}
               chipIndex={4}
@@ -808,6 +829,8 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
               actionLabel="Select"
               selectionPreview
             />
+            ) : null}
+            {showDetail("detail_tags") ? (
             <UploadRow
               colors={colors}
               chipIndex={5}
@@ -827,6 +850,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
               selectionPreview
               last
             />
+            ) : null}
           </View>
 
           <View
@@ -842,11 +866,22 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
 
             {!schoolInfoEditing && hasSavedSchoolInfo ? (
               <View style={styles.readOnlyBlock}>
-                <ReadOnlyField colors={colors} label="Phone Number 1" value={phone} />
-                <ReadOnlyField colors={colors} label="Phone Number 2" value={phone2 || "—"} />
-                <ReadOnlyField colors={colors} label="School Code" value={schoolCode || "—"} />
-                <ReadOnlyField colors={colors} label="School Establish Year" value={establishYear} />
-                <ReadOnlyField colors={colors} label="Full School Address" value={address} multiline />
+                {showDetail("detail_phone") ? (
+                  <ReadOnlyField colors={colors} label="Phone Number 1" value={phone} />
+                ) : null}
+                {showDetail("detail_phone2") ? (
+                  <ReadOnlyField colors={colors} label="Phone Number 2" value={phone2 || "—"} />
+                ) : null}
+                {showDetail("detail_code") ? (
+                  <ReadOnlyField colors={colors} label="School Code" value={schoolCode || "—"} />
+                ) : null}
+                {showDetail("detail_year") ? (
+                  <ReadOnlyField colors={colors} label="School Establish Year" value={establishYear} />
+                ) : null}
+                {showDetail("detail_address") ? (
+                  <ReadOnlyField colors={colors} label="Full School Address" value={address} multiline />
+                ) : null}
+                {showDetail("detail_instructions") ? (
                 <ReadOnlyField
                   colors={colors}
                   label="Instructions"
@@ -854,6 +889,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
                   multiline
                   last
                 />
+                ) : null}
                 <Pressable
                   style={[styles.sectionEditBtn, { borderColor: colors.primaryOrange }]}
                   onPress={() => setSchoolInfoEditing(true)}
@@ -866,6 +902,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
               </View>
             ) : (
               <>
+            {showDetail("detail_phone") ? (
             <FormField colors={colors} label="Phone Number 1" icon="call" chipIndex={1}>
               <TextInput
                 style={[styles.input, { color: colors.text }]}
@@ -876,7 +913,9 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
                 placeholderTextColor={colors.textPlaceholder}
               />
             </FormField>
+            ) : null}
 
+            {showDetail("detail_phone2") ? (
             <FormField colors={colors} label="Phone Number 2" icon="call" chipIndex={0}>
               <TextInput
                 style={[styles.input, { color: colors.text }]}
@@ -887,7 +926,9 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
                 placeholderTextColor={colors.textPlaceholder}
               />
             </FormField>
+            ) : null}
 
+            {showDetail("detail_code") ? (
             <FormField colors={colors} label="School Code" icon="grid" chipIndex={3}>
               <TextInput
                 style={[styles.input, { color: colors.text }]}
@@ -898,7 +939,9 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
                 placeholderTextColor={colors.textPlaceholder}
               />
             </FormField>
+            ) : null}
 
+            {showDetail("detail_year") ? (
             <FormField
               colors={colors}
               label="School Establish Year"
@@ -917,7 +960,9 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
                 placeholderTextColor={colors.textPlaceholder}
               />
             </FormField>
+            ) : null}
 
+            {showDetail("detail_address") ? (
             <FormField
               colors={colors}
               label="Full School Address"
@@ -933,7 +978,9 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
                 placeholderTextColor={colors.textPlaceholder}
               />
             </FormField>
+            ) : null}
 
+            {showDetail("detail_instructions") ? (
             <FormField
               colors={colors}
               label="Instructions"
@@ -960,6 +1007,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
                 {instructions.length} / 1000
               </Text>
             </FormField>
+            ) : null}
               </>
             )}
           </View>

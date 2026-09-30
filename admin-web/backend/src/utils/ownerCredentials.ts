@@ -35,37 +35,101 @@ export const ownerPasswordSelect = (plainColumn: string): string => `
     NULLIF(TRIM(owner.password_plain), '')
   )`;
 
-import type { PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
+import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { AppError } from "../middleware/errorHandler";
 
-/** Username only. School and institute names are not part of this check. */
-export async function assertOwnerUsernameAvailable(
-  client: PoolClient,
-  username: string
+type Queryable = Pool | PoolClient;
+
+/**
+ * School and institute usernames may repeat.
+ * The same username with the same password may not.
+ */
+export async function assertOwnerPasswordAvailable(
+  client: Queryable,
+  username: string,
+  password: string,
+  exclude?: { schoolId?: string; instituteId?: string; userId?: string }
 ): Promise<void> {
-  const taken = await client.query(
-    `SELECT 1
-     FROM users
-     WHERE username IS NOT NULL AND lower(btrim(username)) = lower(btrim($1))
-     UNION ALL
-     SELECT 1
-     FROM schools
-     WHERE owner_username_plain IS NOT NULL
-       AND lower(btrim(owner_username_plain)) = lower(btrim($1))
-     UNION ALL
-     SELECT 1
-     FROM institutes
-     WHERE owner_username_plain IS NOT NULL
-       AND lower(btrim(owner_username_plain)) = lower(btrim($1))
-     LIMIT 1`,
-    [username]
+  const trimmedUser = username.trim();
+  const trimmedPassword = password;
+  if (!trimmedUser || !trimmedPassword) return;
+
+  const result = await client.query<{
+    password_plain: string | null;
+    password_hash: string | null;
+  }>(
+    `SELECT password_plain, password_hash
+     FROM (
+       SELECT owner_password_plain AS password_plain, NULL::text AS password_hash
+       FROM schools
+       WHERE owner_username_plain IS NOT NULL
+         AND lower(btrim(owner_username_plain)) = lower(btrim($1))
+         AND ($2::uuid IS NULL OR id <> $2::uuid)
+       UNION ALL
+       SELECT owner_password_plain, NULL::text
+       FROM institutes
+       WHERE owner_username_plain IS NOT NULL
+         AND lower(btrim(owner_username_plain)) = lower(btrim($1))
+         AND ($3::uuid IS NULL OR id <> $3::uuid)
+       UNION ALL
+       SELECT password_plain, password_hash
+       FROM users
+       WHERE username IS NOT NULL
+         AND lower(btrim(username)) = lower(btrim($1))
+         AND ($4::uuid IS NULL OR id <> $4::uuid)
+     ) accounts`,
+    [
+      trimmedUser,
+      exclude?.schoolId ?? null,
+      exclude?.instituteId ?? null,
+      exclude?.userId ?? null,
+    ]
   );
-  if (taken.rows[0]) {
-    throw new AppError(
-      "This username is already in use. Choose a different username.",
-      409
-    );
+
+  for (const row of result.rows) {
+    if (row.password_plain && row.password_plain === trimmedPassword) {
+      throw new AppError(
+        "This username already uses that password. Choose a different password.",
+        409
+      );
+    }
+    if (!row.password_plain && row.password_hash) {
+      const same = await bcrypt.compare(trimmedPassword, row.password_hash);
+      if (same) {
+        throw new AppError(
+          "This username already uses that password. Choose a different password.",
+          409
+        );
+      }
+    }
   }
+}
+
+/** Repeated usernames still need a unique email on the users table. */
+export async function allocateOwnerEmail(
+  client: Queryable,
+  preferredEmail: string
+): Promise<string> {
+  const preferred = preferredEmail.trim().toLowerCase();
+  const at = preferred.lastIndexOf("@");
+  const local = at > 0 ? preferred.slice(0, at) : preferred;
+  const domain = at > 0 ? preferred.slice(at + 1) : "teachers.local";
+  const taken = await client.query(`SELECT 1 FROM users WHERE lower(email) = lower($1) LIMIT 1`, [
+    preferred,
+  ]);
+  if (!taken.rows[0]) return preferred;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const candidate = `${local}+${crypto.randomBytes(4).toString("hex")}@${domain}`;
+    const exists = await client.query(
+      `SELECT 1 FROM users WHERE lower(email) = lower($1) LIMIT 1`,
+      [candidate]
+    );
+    if (!exists.rows[0]) return candidate;
+  }
+  throw new AppError("Could not create a login for this username. Try again.", 409);
 }
 
 /** Find the best owner user row for credential updates. */

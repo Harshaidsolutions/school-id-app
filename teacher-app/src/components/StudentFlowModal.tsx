@@ -74,7 +74,7 @@ export function StudentFlowModal({
     fromModal: true,
     onBeforeNavigate: onClose,
   });
-  const { fields: formFields, fieldVisibility, allowNumberEdit, allowRecordEdit } = useFormConfig();
+  const { fields: formFields, allowNumberEdit, allowRecordEdit } = useFormConfig();
 
   useEffect(() => {
     if (visible) {
@@ -128,7 +128,6 @@ export function StudentFlowModal({
   const canPrev = index > 0;
   const canNext = index < students.length - 1;
   const detailFields = getVisibleStudentFields(student, classSection, formFields, {
-    visibility: fieldVisibility,
     hideIdentity: !allowNumberEdit,
   });
 

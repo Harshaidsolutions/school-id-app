@@ -312,14 +312,42 @@ export function InstituteMembersPanel({
           })}
         </View>
         {tab === "pending-photos" || tab === "pending-data" ? (
-          <View style={{ flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.md, paddingBottom: spacing.sm }}>
-            <Pressable onPress={() => setTab("pending-photos")}>
-              <Text style={{ color: tab === "pending-photos" ? colors.brandGreen : colors.textMuted, fontFamily: fonts.semiBold }}>
+          <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: spacing.md, paddingBottom: spacing.sm }}>
+            <Pressable
+              onPress={() => setTab("pending-photos")}
+              style={{
+                flex: 1,
+                minHeight: 46,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: tab === "pending-photos" ? colors.brandGreen : colors.border,
+                backgroundColor: tab === "pending-photos" ? colors.brandGreen : colors.surface,
+                alignItems: "center",
+                justifyContent: "center",
+                paddingHorizontal: 8,
+                paddingVertical: 8,
+              }}
+            >
+              <Text style={{ color: tab === "pending-photos" ? "#FFFFFF" : colors.text, fontFamily: fonts.semiBold, fontSize: 15, textAlign: "center" }}>
                 Pending Photos ({pendingPhotoCount})
               </Text>
             </Pressable>
-            <Pressable onPress={() => setTab("pending-data")}>
-              <Text style={{ color: tab === "pending-data" ? colors.brandGreen : colors.textMuted, fontFamily: fonts.semiBold }}>
+            <Pressable
+              onPress={() => setTab("pending-data")}
+              style={{
+                flex: 1,
+                minHeight: 46,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: tab === "pending-data" ? colors.brandGreen : colors.border,
+                backgroundColor: tab === "pending-data" ? colors.brandGreen : colors.surface,
+                alignItems: "center",
+                justifyContent: "center",
+                paddingHorizontal: 8,
+                paddingVertical: 8,
+              }}
+            >
+              <Text style={{ color: tab === "pending-data" ? "#FFFFFF" : colors.text, fontFamily: fonts.semiBold, fontSize: 15, textAlign: "center" }}>
                 Pending Data ({pendingDataCount})
               </Text>
             </Pressable>

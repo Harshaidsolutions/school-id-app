@@ -75,6 +75,8 @@ import {
   listAdminNotifications,
   requestNotificationBulkDeleteOtp,
   listAllAdminNotifications,
+  incomingUnreadCount,
+  markIncomingNotificationsRead,
   requestNotificationDeleteOtp,
 } from "../controllers/notificationController";
 import { getDashboardSummary } from "../controllers/dashboardController";
@@ -171,6 +173,8 @@ router.post("/notifications/bulk-delete/request-otp", requestNotificationBulkDel
 router.post("/notifications/bulk-delete", bulkDeleteNotifications);
 router.post("/notifications", createNotification);
 router.get("/notifications", listAllAdminNotifications);
+router.get("/notifications/unread-count", incomingUnreadCount);
+router.post("/notifications/incoming/mark-read", markIncomingNotificationsRead);
 router.post("/notifications/:id/request-delete-otp", requestNotificationDeleteOtp);
 router.delete("/notifications/:id", deleteNotification);
 router.get("/notifications/:schoolId", listAdminNotifications);

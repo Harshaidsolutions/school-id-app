@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
@@ -55,16 +55,42 @@ type InstituteOrganization = OrganizationSelections & {
   show_captured_section?: boolean | null;
 };
 
+function DetailSwitch({
+  on,
+  disabled,
+  onToggle,
+}: {
+  on: boolean;
+  disabled?: boolean;
+  onToggle: (on: boolean) => void;
+}) {
+  return (
+    <label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-text-muted">
+      {on ? "ON" : "OFF"}
+      <input
+        type="checkbox"
+        role="switch"
+        checked={on}
+        disabled={disabled}
+        onChange={(e) => onToggle(e.target.checked)}
+        className="h-4 w-4"
+      />
+    </label>
+  );
+}
+
 function InfoRow({
   label,
   value,
   showWhenEmpty,
   emptyLabel = "-",
+  control,
 }: {
   label: string;
   value: string | null | undefined;
   showWhenEmpty?: boolean;
   emptyLabel?: string;
+  control?: ReactNode;
 }) {
   const display = value?.trim()
     ? value.trim()
@@ -72,9 +98,12 @@ function InfoRow({
       ? emptyLabel
       : "-";
   return (
-    <div className="border-b border-border px-5 py-3 last:border-b-0">
-      <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
-      <div className="mt-1 whitespace-pre-wrap text-sm text-text-navy">{display}</div>
+    <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
+      <div className="min-w-0">
+        <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
+        <div className="mt-1 whitespace-pre-wrap text-sm text-text-navy">{display}</div>
+      </div>
+      {control}
     </div>
   );
 }
@@ -84,23 +113,31 @@ function ImageBlock({
   url,
   caption,
   onPreview,
+  control,
 }: {
   label: string;
   url: string | null | undefined;
   caption?: string | null;
   onPreview: (label: string, url: string) => void;
+  control?: ReactNode;
 }) {
   if (!url?.trim()) {
     return (
-      <div className="border-b border-border px-5 py-3 last:border-b-0">
-        <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
-        <div className="mt-1 text-sm text-text-navy">-</div>
+      <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
+          <div className="mt-1 text-sm text-text-navy">-</div>
+        </div>
+        {control}
       </div>
     );
   }
   return (
     <div className="border-b border-border px-5 py-4 last:border-b-0">
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
+        {control}
+      </div>
       <button
         type="button"
         onClick={() => onPreview(label, url)}
@@ -127,24 +164,29 @@ function SelectionImageBlock({
   caption,
   emptyLabel = "-",
   onPreview,
+  control,
 }: {
   label: string;
   imageUrl?: string | null;
   caption?: string | null;
   emptyLabel?: string;
   onPreview: (label: string, url: string) => void;
+  control?: ReactNode;
 }) {
   const name = caption?.trim() ?? "";
   if (!imageUrl && !name) {
     return (
-      <div className="border-b border-border px-5 py-3 last:border-b-0">
-        <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
-        <div className="mt-1 text-sm text-text-navy">{emptyLabel}</div>
+      <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
+          <div className="mt-1 text-sm text-text-navy">{emptyLabel}</div>
+        </div>
+        {control}
       </div>
     );
   }
   if (!imageUrl) {
-    return <InfoRow label={label} value={name} />;
+    return <InfoRow label={label} value={name} control={control} />;
   }
   return (
     <ImageBlock
@@ -152,6 +194,7 @@ function SelectionImageBlock({
       url={imageUrl}
       caption={name || undefined}
       onPreview={onPreview}
+      control={control}
     />
   );
 }
@@ -159,23 +202,31 @@ function SelectionImageBlock({
 function TagSelectionsBlock({
   items,
   onPreview,
+  control,
 }: {
   items: TagSelectionItem[] | undefined;
   onPreview: (label: string, url: string) => void;
+  control?: ReactNode;
 }) {
   const withImages = (items ?? []).filter((item) => item.image_url);
   const namesOnly = (items ?? []).filter((item) => !item.image_url && item.name.trim());
   if (withImages.length === 0 && namesOnly.length === 0) {
     return (
-      <div className="border-b border-border px-5 py-3 last:border-b-0">
-        <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">Tags</div>
-        <div className="mt-1 text-sm text-text-navy">-</div>
+      <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">Tags</div>
+          <div className="mt-1 text-sm text-text-navy">-</div>
+        </div>
+        {control}
       </div>
     );
   }
   return (
     <div className="border-b border-border px-5 py-4 last:border-b-0">
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">Tags</div>
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">Tags</div>
+        {control}
+      </div>
       {withImages.length > 0 ? (
         <div className="flex flex-wrap gap-3">
           {withImages.map((item) => (
@@ -212,9 +263,15 @@ function TagSelectionsBlock({
 function OrganizationSelectionBlocks({
   org,
   onPreview,
+  modelControl,
+  tagsControl,
+  templateControl,
 }: {
   org: OrganizationSelections;
   onPreview: (label: string, url: string) => void;
+  modelControl?: ReactNode;
+  tagsControl?: ReactNode;
+  templateControl?: ReactNode;
 }) {
   return (
     <>
@@ -223,13 +280,15 @@ function OrganizationSelectionBlocks({
         imageUrl={org.model_image_url}
         caption={org.model}
         onPreview={onPreview}
+        control={modelControl}
       />
-      <TagSelectionsBlock items={org.tag_items} onPreview={onPreview} />
+      <TagSelectionsBlock items={org.tag_items} onPreview={onPreview} control={tagsControl} />
       <SelectionImageBlock
         label="Selected Template"
         imageUrl={org.template_image_url}
         caption={org.template_name}
         onPreview={onPreview}
+        control={templateControl}
       />
     </>
   );
@@ -250,6 +309,49 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
   const [school, setSchool] = useState<SchoolOrganization | null>(null);
   const [institute, setInstitute] = useState<InstituteOrganization | null>(null);
   const [preview, setPreview] = useState<{ label: string; url: string } | null>(null);
+  const [detailSaving, setDetailSaving] = useState(false);
+
+  const visibility =
+    (isInstitute ? institute?.field_visibility : school?.field_visibility) ?? {};
+
+  function detailSwitch(key: string) {
+    return (
+      <DetailSwitch
+        on={visibility[key] !== false}
+        disabled={detailSaving}
+        onToggle={(on) => void toggleDetail(key, on)}
+      />
+    );
+  }
+
+  async function toggleDetail(key: string, on: boolean) {
+    if (!orgId) return;
+    const next = { ...visibility, [key]: on };
+    const previousSchool = school;
+    const previousInstitute = institute;
+    if (isInstitute && institute) {
+      setInstitute({ ...institute, field_visibility: next });
+    } else if (school) {
+      setSchool({ ...school, field_visibility: next });
+    }
+    setDetailSaving(true);
+    setError(null);
+    try {
+      const path = isInstitute
+        ? `/admin/institutes/${orgId}/app-settings`
+        : `/admin/schools/${orgId}/app-settings`;
+      await api.patch(path, { field_visibility: next });
+    } catch (err) {
+      if (isInstitute) setInstitute(previousInstitute);
+      else setSchool(previousSchool);
+      if (axios.isAxiosError(err)) {
+        const body = err.response?.data as ApiErrorBody | undefined;
+        setError(body?.message ?? "Could not save this field.");
+      } else setError("Could not save this field.");
+    } finally {
+      setDetailSaving(false);
+    }
+  }
 
   useEffect(() => {
     if (!orgId) {
@@ -341,43 +443,51 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
           {isInstitute && institute ? (
             <>
               <InfoRow label="Institute Name" value={institute.name} />
-              <InfoRow label="Year" value={institute.year} />
-              <InfoRow label="Phone" value={institute.phone} />
-              <InfoRow label="Institute Code" value={institute.institute_code} />
-              <InfoRow label="Address" value={institute.address} />
-              <InfoRow label="Instructions" value={institute.instructions} />
+              <InfoRow label="Year" value={institute.year} control={detailSwitch("detail_year")} />
+              <InfoRow label="Phone" value={institute.phone} control={detailSwitch("detail_phone")} />
+              <InfoRow label="Institute Code" value={institute.institute_code} control={detailSwitch("detail_code")} />
+              <InfoRow label="Address" value={institute.address} control={detailSwitch("detail_address")} />
+              <InfoRow label="Instructions" value={institute.instructions} control={detailSwitch("detail_instructions")} />
               <OrganizationSelectionBlocks
                 org={institute}
                 onPreview={(l, u) => setPreview({ label: l, url: u })}
+                modelControl={detailSwitch("detail_model")}
+                tagsControl={detailSwitch("detail_tags")}
+                templateControl={detailSwitch("detail_template")}
               />
-              <ImageBlock label="Logo" url={institute.logo_url} onPreview={(l, u) => setPreview({ label: l, url: u })} />
-              <ImageBlock label="Signature" url={institute.signature_url} onPreview={(l, u) => setPreview({ label: l, url: u })} />
+              <ImageBlock label="Logo" url={institute.logo_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_logo")} />
+              <ImageBlock label="Signature" url={institute.signature_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_signature")} />
               <ImageBlock
                 label="Building / Organization Photo"
                 url={institute.organization_photo_url}
                 onPreview={(l, u) => setPreview({ label: l, url: u })}
+                control={detailSwitch("detail_organization_photo")}
               />
             </>
           ) : null}
           {!isInstitute && school ? (
             <>
               <InfoRow label="School Name" value={school.name} />
-              <InfoRow label="Year" value={school.year} />
-              <InfoRow label="Phone" value={school.phone} />
-              <InfoRow label="Secondary Phone" value={school.phone2} />
-              <InfoRow label="School Code" value={school.school_code} />
-              <InfoRow label="Address" value={school.address} />
-              <InfoRow label="Instructions" value={school.instructions} />
+              <InfoRow label="Year" value={school.year} control={detailSwitch("detail_year")} />
+              <InfoRow label="Phone" value={school.phone} control={detailSwitch("detail_phone")} />
+              <InfoRow label="Secondary Phone" value={school.phone2} control={detailSwitch("detail_phone2")} />
+              <InfoRow label="School Code" value={school.school_code} control={detailSwitch("detail_code")} />
+              <InfoRow label="Address" value={school.address} control={detailSwitch("detail_address")} />
+              <InfoRow label="Instructions" value={school.instructions} control={detailSwitch("detail_instructions")} />
               <OrganizationSelectionBlocks
                 org={school}
                 onPreview={(l, u) => setPreview({ label: l, url: u })}
+                modelControl={detailSwitch("detail_model")}
+                tagsControl={detailSwitch("detail_tags")}
+                templateControl={detailSwitch("detail_template")}
               />
-              <ImageBlock label="Logo" url={school.logo_url} onPreview={(l, u) => setPreview({ label: l, url: u })} />
-              <ImageBlock label="Signature" url={school.signature_url} onPreview={(l, u) => setPreview({ label: l, url: u })} />
+              <ImageBlock label="Logo" url={school.logo_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_logo")} />
+              <ImageBlock label="Signature" url={school.signature_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_signature")} />
               <ImageBlock
                 label="Building / Organization Photo"
                 url={school.organization_photo_url}
                 onPreview={(l, u) => setPreview({ label: l, url: u })}
+                control={detailSwitch("detail_organization_photo")}
               />
             </>
           ) : null}
@@ -391,9 +501,6 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
         <OrgAppSettings
           orgId={orgId}
           institute={isInstitute}
-          initialVisibility={
-            (isInstitute ? institute?.field_visibility : school?.field_visibility) ?? {}
-          }
           initialAllowNumberEdit={
             (isInstitute ? institute?.allow_number_edit : school?.allow_number_edit) !== false
           }

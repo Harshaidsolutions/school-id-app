@@ -87,10 +87,8 @@ export function EditStudentScreen({ navigation, route }: Props) {
 
   const { colors } = useTheme();
   const { showToast } = useToast();
-  const { fields: formFields, fieldVisibility, allowNumberEdit } = useFormConfig();
-  const displayFields = formFields.filter(
-    (field) => fieldVisibility[field.key] !== false
-  );
+  const { fields: formFields, allowNumberEdit } = useFormConfig();
+  const displayFields = formFields.filter((field) => field.enabled !== false);
 
   const insets = useSafeAreaInsets();
   const { scale } = useResponsiveLayout();

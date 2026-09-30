@@ -1,7 +1,11 @@
 import type { FormFieldConfig } from "../constants/formFields";
 import { fieldLabel, isFieldEnabled, sortFormFields } from "../constants/formFields";
 import type { TeacherStudent } from "../types";
-import { collapseSameIdentityFields, isIdentityAliasLabel } from "./identityFields";
+import {
+  collapseSameIdentityFields,
+  collapseSameNameFields,
+  isIdentityAliasLabel,
+} from "./identityFields";
 
 type FieldKey = keyof TeacherStudent | "class_section";
 
@@ -254,17 +258,6 @@ function fieldValue(
   return readFieldValue(student, String(field.key), classSection);
 }
 
-function consistentDisplayLabel(key: string, label: string): string {
-  const n = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
-  if (key === "photo_id" || n === "photoid" || n === "photonumber" || n === "photo") {
-    return "Photo ID";
-  }
-  if (key === "student_name" || n === "name" || n === "studentname" || n === "membername") {
-    return "Student Name";
-  }
-  return label;
-}
-
 function humanizeKey(key: string): string {
   return key
     .replace(/^dyn_/, "")
@@ -308,7 +301,7 @@ function withGeneratedIdentity(
   if (hasAlias || rows.some((row) => isIdentityAliasLabel(row.label) || row.key === "photo_id")) {
     return rows;
   }
-  return [...rows, { key: "photo_id", label: "Photo ID", value: generated }];
+  return [...rows, { key: "photo_id", label: "ID", value: generated }];
 }
 
 export function getVisibleStudentFields(
@@ -330,10 +323,7 @@ export function getVisibleStudentFields(
       seenKeys.add(field.key);
       rows.push({
         key: field.key,
-        label: consistentDisplayLabel(
-          field.key,
-          fieldLabel(formFields, field.key, field.label)
-        ),
+        label: fieldLabel(formFields, field.key, field.label),
         value:
           value != null && String(value).trim() !== ""
             ? String(value).trim()
@@ -341,7 +331,9 @@ export function getVisibleStudentFields(
       });
     }
     return filterDisplayedRows(
-      withGeneratedIdentity(collapseSameIdentityFields(rows), student, formFields),
+      collapseSameNameFields(
+        withGeneratedIdentity(collapseSameIdentityFields(rows), student, formFields)
+      ),
       options
     );
   }
@@ -350,12 +342,7 @@ export function getVisibleStudentFields(
     const raw = fieldValue(field, student, classSection);
     return {
       key: String(field.key),
-      label:
-        field.key === "photo_id"
-          ? "Photo ID"
-          : field.key === "student_name"
-            ? "Student Name"
-            : field.label,
+      label: field.label,
       value: raw != null && String(raw).trim() !== "" ? String(raw).trim() : "-",
     };
   });
@@ -365,10 +352,12 @@ export function getVisibleStudentFields(
     ? dynamic
     : [];
   return filterDisplayedRows(
-    withGeneratedIdentity(
-      collapseSameIdentityFields([...standard, ...dynamicWithEmpty]),
-      student,
-      formFields
+    collapseSameNameFields(
+      withGeneratedIdentity(
+        collapseSameIdentityFields([...standard, ...dynamicWithEmpty]),
+        student,
+        formFields
+      )
     ),
     options
   );
@@ -382,7 +371,6 @@ function filterDisplayedRows(
   }
 ): { key: string; label: string; value: string }[] {
   return rows.filter((row) => {
-    if (options?.visibility && options.visibility[row.key] === false) return false;
     if (
       options?.hideIdentity &&
       (row.key === "photo_id" || isIdentityAliasLabel(row.label))

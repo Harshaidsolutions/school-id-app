@@ -65,26 +65,26 @@ const PHOTO_EXAMPLES: {
   {
     ok: true,
     source: require("../../assets/instructions/instruction-photo-correct.jpg"),
-    title: "✓ Right photo",
-    caption: "Face should be clearly visible, centered, and evenly lit.",
+    title: "✓ Correct face position",
+    caption: "Keep the face centered and clearly visible.",
   },
   {
     ok: false,
     source: require("../../assets/instructions/instruction-photo-dark.jpg"),
-    title: "✕ Wrong photo",
+    title: "✕ Incorrect lighting",
     caption: "Do not take a photo when the face is too dark.",
   },
   {
     ok: false,
     source: require("../../assets/instructions/instruction-photo-backlight.jpg"),
-    title: "✕ Wrong photo",
-    caption: "Do not take photos with strong backlight.",
+    title: "✕ Incorrect lighting",
+    caption: "Avoid strong backlight.",
   },
   {
     ok: false,
     source: require("../../assets/instructions/instruction-photo-bad-framing.jpg"),
-    title: "✕ Wrong photo",
-    caption: "Do not cut off the face, stand too close, tilt the head, or use a blurry photo.",
+    title: "✕ Too far",
+    caption: "Do not capture the person from too far away.",
   },
 ];
 
@@ -254,9 +254,12 @@ export function InstructionsScreen(_props: Props) {
 
       >
 
-        <View style={{ marginBottom: 16 }}>
-          {PHOTO_EXAMPLES.map((example) => (
-            <View key={example.caption} style={{ marginBottom: 14 }}>
+        {PHOTO_EXAMPLES.map((example, i) => (
+          <View key={example.caption} style={styles.row}>
+            <View style={[styles.numberCircle, { backgroundColor: example.ok ? colors.brandGreen : colors.danger }]}>
+              <Text style={[styles.numberText, { color: "#FFFFFF" }]}>{i + 1}</Text>
+            </View>
+            <View style={styles.stepBody}>
               <Text
                 style={{
                   color: example.ok ? colors.brandGreen : colors.danger,
@@ -281,8 +284,8 @@ export function InstructionsScreen(_props: Props) {
                 {example.caption}
               </Text>
             </View>
-          ))}
-        </View>
+          </View>
+        ))}
 
         {steps.map((step, i) => (
 
@@ -302,7 +305,7 @@ export function InstructionsScreen(_props: Props) {
 
               <Text style={[styles.numberText, { color: "#FFFFFF" }]}>
 
-                {i + 1}
+                {PHOTO_EXAMPLES.length + i + 1}
 
               </Text>
 
@@ -325,22 +328,6 @@ export function InstructionsScreen(_props: Props) {
                 {step.text}
 
               </Text>
-
-              {step.linkUrl ? (
-                <View style={{ marginTop: 8 }}>
-                  <Text style={{ color: colors.brandGreen, fontFamily: fonts.headingSemiBold, marginBottom: 4 }}>
-                    ✓ Correct — face clear, centered, and evenly lit
-                  </Text>
-                  <Image
-                    source={{ uri: step.linkUrl }}
-                    style={{ width: "100%", height: 180, borderRadius: 8 }}
-                    resizeMode="contain"
-                  />
-                  <Text style={{ color: colors.danger, fontFamily: fonts.headingSemiBold, marginTop: 8 }}>
-                    ✕ Incorrect — too dark, too close, cut off, tilted, blurry, or blocked
-                  </Text>
-                </View>
-              ) : null}
 
               {step.linkUrl && step.linkLabel ? (
 

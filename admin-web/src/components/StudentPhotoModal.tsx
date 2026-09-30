@@ -70,9 +70,17 @@ export function StudentPhotoModal({
   }, [onClose, onNavigate, gallery, currentIndex, hasPrev, hasNext]);
 
   const photoUrl = student.photo_url;
-  const [src, setSrc] = useState(photoUrl ?? "");
+  const [src, setSrc] = useState("");
   useEffect(() => {
-    setSrc(photoUrl ?? "");
+    let cancelled = false;
+    setSrc("");
+    if (!photoUrl) return;
+    void authenticatedStudentPhotoUrl(student.id).then((url) => {
+      if (!cancelled) setSrc(url || photoUrl);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [student.id, photoUrl]);
   if (!photoUrl) return null;
 
@@ -134,17 +142,17 @@ export function StudentPhotoModal({
         )}
 
         <div className="overflow-hidden rounded-2xl bg-white shadow-xl">
+          {src ? (
           <img
-            src={src || photoUrl || ""}
+            src={src}
             alt={student.student_name ?? "Student"}
             className="block max-h-[75vh] w-full bg-content-bg object-contain"
-            onError={() => {
-              if (src.startsWith("blob:")) return;
-              void authenticatedStudentPhotoUrl(student.id).then((url) => {
-                if (url) setSrc(url);
-              });
-            }}
           />
+          ) : (
+            <div className="flex h-64 items-center justify-center bg-content-bg text-sm text-text-muted">
+              Loading photo…
+            </div>
+          )}
           {student.photo_captured_at ? (
             <div className="border-t border-border px-4 py-2 text-center text-xs text-text-muted">
               Captured:{" "}

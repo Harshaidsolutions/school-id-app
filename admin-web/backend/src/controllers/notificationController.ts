@@ -156,6 +156,65 @@ export async function listAllAdminNotifications(
   }
 }
 
+/** GET /admin/notifications/unread-count — parent admin bell badge */
+export async function incomingUnreadCount(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const seeAll = await adminSeesAllOrganizations(scope, req);
+    if (!seeAll) {
+      res.status(200).json({ status: "ok", unreadCount: 0 });
+      return;
+    }
+    const result = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+       FROM notifications n
+       WHERE n.audience = 'super_admin'
+         AND NOT EXISTS (
+           SELECT 1 FROM notification_reads r
+           WHERE r.notification_id = n.id AND r.user_id = $1
+         )`,
+      [scope.adminUserId]
+    );
+    res.status(200).json({
+      status: "ok",
+      unreadCount: result.rows[0]?.count ?? 0,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** POST /admin/notifications/incoming/mark-read */
+export async function markIncomingNotificationsRead(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const seeAll = await adminSeesAllOrganizations(scope, req);
+    if (!seeAll) {
+      res.status(200).json({ status: "ok" });
+      return;
+    }
+    await pool.query(
+      `INSERT INTO notification_reads (notification_id, user_id)
+       SELECT n.id, $1
+       FROM notifications n
+       WHERE n.audience = 'super_admin'
+       ON CONFLICT DO NOTHING`,
+      [scope.adminUserId]
+    );
+    res.status(200).json({ status: "ok" });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function listAdminNotifications(
   req: Request,
   res: Response,

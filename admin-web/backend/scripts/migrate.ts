@@ -726,6 +726,12 @@ async function migrate() {
     CREATE UNIQUE INDEX IF NOT EXISTS notifications_super_institute_created_uidx
       ON notifications (institute_id)
       WHERE audience = 'super_admin' AND institute_id IS NOT NULL;
+
+    -- School and institute usernames may repeat. Admin usernames stay unique.
+    DROP INDEX IF EXISTS users_username_lower_unique;
+    CREATE UNIQUE INDEX IF NOT EXISTS users_admin_username_lower_unique
+      ON users (lower(username))
+      WHERE username IS NOT NULL AND role = 'admin';
   `);
 
   console.log("Migration completed successfully.");

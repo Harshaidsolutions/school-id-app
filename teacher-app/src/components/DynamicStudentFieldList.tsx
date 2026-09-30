@@ -139,19 +139,6 @@ function effectiveKind(field: FormFieldConfig) {
 }
 
 function shownLabel(field: FormFieldConfig): string {
-  const n = normalizedLabel(field.label);
-  if (
-    field.key === "photo_id" ||
-    n === "photoid" ||
-    n === "photonumber" ||
-    n === "photo" ||
-    isIdentityAliasLabel(field.label)
-  ) {
-    return "Photo ID";
-  }
-  if (field.key === "student_name" || n === "name" || n === "studentname" || n === "membername") {
-    return "Student Name";
-  }
   return field.label;
 }
 
@@ -235,6 +222,11 @@ export function DynamicStudentFieldList({
 }: DynamicStudentFieldListProps) {
   const focus = focusProps(onInputFocus);
   const ordered = dedupeFormFields(formFields);
+  const configuredIdentityLabel =
+    ordered.find((field) => field.key === "photo_id" || isIdentityAliasLabel(field.label))?.label ||
+    "ID";
+  const configuredNameLabel =
+    ordered.find((field) => effectiveKind(field) === "student_name")?.label || "Name";
   const primaryParentKey = ordered.find((field) => effectiveKind(field) === "parent_name")?.key;
   const identityFields = ordered.filter((field) => isIdentityAliasLabel(field.label));
   const lockedIdentity = lockIdentityFields ? visibleLockedIdentity(identityFields, extraValues, photoId) : [];
@@ -257,7 +249,7 @@ export function DynamicStudentFieldList({
               </Field>
             ))
           ) : (
-            <Field label="Photo ID" colors={colors}>
+            <Field label={configuredIdentityLabel} colors={colors}>
               <TextInput
                 style={inputStyle}
                 value={photoId}
@@ -271,7 +263,7 @@ export function DynamicStudentFieldList({
         </>
       ) : null}
       {lockIdentityFields ? (
-        <Field label="Student Name" colors={colors}>
+        <Field label={configuredNameLabel} colors={colors}>
           <TextInput
             style={inputStyle}
             value={studentName}

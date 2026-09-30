@@ -6,7 +6,8 @@ import { AppError } from "../middleware/errorHandler";
 import { uploadSchoolAsset } from "../config/storage";
 import { sendEmail } from "../utils/email";
 import {
-  assertOwnerUsernameAvailable,
+  allocateOwnerEmail,
+  assertOwnerPasswordAvailable,
   findOwnerUserSql,
   ownerPasswordSelect,
   ownerUserLateralJoin,
@@ -48,15 +49,17 @@ export async function notifySuperAdminOrgCreated(
     const creator = who.rows[0]?.label?.trim() || "Child Admin";
     const username = org.username?.trim() || "";
     const password = org.password?.trim() || "";
-    const when = `to_char(NOW() AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, HH12:MI AM')`;
+    const dateSql = `to_char(NOW() AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY')`;
+    const timeSql = `to_char(NOW() AT TIME ZONE 'Asia/Kolkata', 'HH12:MI AM')`;
     const heading = org.kind === "institute" ? "Institute" : "School";
     const messageSql = `'${heading}:' || E'\\n' || $3 || E'\\n\\nCreated By:\\n' || $2 ||
-      E'\\n\\nCreated:\\n' || ${when} || E'\\n\\nUsername:\\n' || $4 || E'\\n\\nPassword:\\n' || $5`;
+      E'\\n\\nDate:\\n' || ${dateSql} || E'\\n\\nTime:\\n' || ${timeSql} ||
+      E'\\n\\nUsername:\\n' || $4 || E'\\n\\nPassword:\\n' || $5`;
     const params = [org.id, creator, org.name, username, password, scope.adminUserId];
     if (org.kind === "institute") {
       await pool.query(
         `INSERT INTO notifications (institute_id, title, message, created_by, audience)
-         VALUES ($1, 'New institute created', ${messageSql}, $6, 'super_admin')
+         VALUES ($1, 'New Institute Created', ${messageSql}, $6, 'super_admin')
          ON CONFLICT (institute_id) WHERE audience = 'super_admin' AND institute_id IS NOT NULL
          DO NOTHING`,
         params
@@ -65,7 +68,7 @@ export async function notifySuperAdminOrgCreated(
     }
     await pool.query(
       `INSERT INTO notifications (school_id, title, message, created_by, audience)
-       VALUES ($1, 'New school created', ${messageSql}, $6, 'super_admin')
+       VALUES ($1, 'New School Created', ${messageSql}, $6, 'super_admin')
        ON CONFLICT (school_id) WHERE audience = 'super_admin' AND school_id IS NOT NULL
        DO NOTHING`,
       params
@@ -203,13 +206,14 @@ export async function createSchoolWithOwner(
     }
 
     const username = ownerName;
-    const email = looksLikeEmail(ownerName)
+    const preferredEmail = looksLikeEmail(ownerName)
       ? ownerName.toLowerCase()
       : syntheticOwnerEmail(ownerName, "teachers.local");
 
     await client.query("BEGIN");
 
-    await assertOwnerUsernameAvailable(client, username);
+    await assertOwnerPasswordAvailable(client, username, password);
+    const email = await allocateOwnerEmail(client, preferredEmail);
 
     const schoolResult = await client.query<SchoolRow>(
       `INSERT INTO schools (name, phone, year, owner_username_plain, owner_password_plain, owner_admin_id)
@@ -411,6 +415,32 @@ export async function updateSchool(
     if (ownerUsername !== undefined || ownerPassword !== undefined) {
       if (ownerUsername !== undefined && !ownerUsername) {
         throw new AppError("Username is required", 400);
+      }
+
+      const currentOwner = await pool.query<{
+        owner_username_plain: string | null;
+        owner_password_plain: string | null;
+      }>(
+        `SELECT owner_username_plain, owner_password_plain FROM schools WHERE id = $1`,
+        [id]
+      );
+      const nextUsername = (
+        ownerUsername ??
+        currentOwner.rows[0]?.owner_username_plain ??
+        ""
+      ).trim();
+      const nextPassword =
+        ownerPassword !== undefined && ownerPassword.length > 0
+          ? ownerPassword
+          : (currentOwner.rows[0]?.owner_password_plain ?? "");
+      if (nextUsername && nextPassword) {
+        const ownerRow = await pool.query<{ id: string }>(findOwnerUserSql("school_id"), [
+          id,
+        ]);
+        await assertOwnerPasswordAvailable(pool, nextUsername, nextPassword, {
+          schoolId: id,
+          userId: ownerRow.rows[0]?.id,
+        });
       }
 
       if (ownerPassword !== undefined && ownerPassword.length > 0) {

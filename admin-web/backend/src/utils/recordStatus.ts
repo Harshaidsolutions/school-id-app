@@ -48,14 +48,9 @@ export function isNonDataField(field: { key: string; label?: string }): boolean 
 
 export function requiredDataFields(
   fields: FormFieldConfig[],
-  visibility?: Record<string, boolean> | null
+  _visibility?: Record<string, boolean> | null
 ): FormFieldConfig[] {
-  return fields.filter((field) => {
-    if (field.enabled === false) return false;
-    if (isNonDataField(field)) return false;
-    if (visibility && visibility[field.key] === false) return false;
-    return true;
-  });
+  return fields.filter((field) => field.enabled !== false && !isNonDataField(field));
 }
 
 export function hasAllRequiredFieldData(

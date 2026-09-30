@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import axios from "axios";
 import api from "../api/client";
+import { useAuth } from "../context/AuthContext";
 import { BulkActionBar, bulkDeleteMessage } from "../components/BulkActionBar";
 import { OtpConfirmModal } from "../components/OtpConfirmModal";
 import type {
@@ -19,6 +20,7 @@ type NotificationRow = NotificationItem & {
  * Notifications — compose and send to schools / institutes
  */
 export function NotificationsPage() {
+  const { user } = useAuth();
   const [schools, setSchools] = useState<School[]>([]);
   const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [selectedSchoolIds, setSelectedSchoolIds] = useState<Set<string>>(
@@ -56,6 +58,20 @@ export function NotificationsPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (user?.isSuperAdmin !== true) return;
+    void api.post("/admin/notifications/incoming/mark-read").catch(() => undefined);
+  }, [user?.isSuperAdmin, notifications.length]);
+
+  const incomingNotifications = useMemo(
+    () => notifications.filter((item) => item.audience === "super_admin"),
+    [notifications]
+  );
+  const sentNotifications = useMemo(
+    () => notifications.filter((item) => item.audience !== "super_admin"),
+    [notifications]
+  );
 
   useEffect(() => {
     void (async () => {
@@ -313,24 +329,48 @@ export function NotificationsPage() {
         </button>
       </form>
 
+      {user?.isSuperAdmin === true ? (
+        <>
+          <h2 className="mb-3 text-lg font-semibold text-text-navy">
+            Incoming Notifications
+          </h2>
+          <div className="mb-8 space-y-3">
+            {!loading && incomingNotifications.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-8 text-center text-sm text-text-muted">
+                No incoming school or institute notifications.
+              </div>
+            ) : null}
+            {incomingNotifications.map((n) => (
+              <div
+                key={n.id}
+                className="rounded-2xl border border-border/60 bg-white p-5 shadow-sm"
+              >
+                <div className="font-semibold text-text-navy">{n.title}</div>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-text">{n.message}</p>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : null}
+
       <h2 className="mb-3 text-lg font-semibold text-text-navy">
         Sent Notifications
       </h2>
-      {!loading && notifications.length > 0 ? (
+      {!loading && sentNotifications.length > 0 ? (
         <button type="button" className="btn-secondary mb-3" onClick={() => setBulkOpen(true)}>
           Bulk Delete
         </button>
       ) : null}
-      {bulkOpen && !loading && notifications.length > 0 ? (
+      {bulkOpen && !loading && sentNotifications.length > 0 ? (
         <BulkActionBar
-          selectedCount={notifications.filter((n) => selectedIds.has(n.id)).length}
-          allSelected={notifications.every((n) => selectedIds.has(n.id))}
+          selectedCount={sentNotifications.filter((n) => selectedIds.has(n.id)).length}
+          allSelected={sentNotifications.every((n) => selectedIds.has(n.id))}
           deleting={bulkDeleting}
           onToggleAll={() => {
             setSelectedIds((prev) => {
-              const all = notifications.every((n) => prev.has(n.id));
+              const all = sentNotifications.every((n) => prev.has(n.id));
               if (all) return new Set();
-              return new Set(notifications.map((n) => n.id));
+              return new Set(sentNotifications.map((n) => n.id));
             });
           }}
           onClear={() => {
@@ -347,12 +387,12 @@ export function NotificationsPage() {
         {loading && (
           <div className="text-sm text-text-muted">Loading…</div>
         )}
-        {!loading && notifications.length === 0 && (
+        {!loading && sentNotifications.length === 0 && (
           <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-10 text-center text-sm text-text-muted">
             No notifications sent yet. Compose one above to get started.
           </div>
         )}
-        {notifications.map((n) => (
+        {sentNotifications.map((n) => (
           <div
             key={n.id}
             className="rounded-2xl border border-border/60 bg-white p-5 shadow-sm"

@@ -56,10 +56,8 @@ export function AddStudentForm({
   const { scale, hp } = useResponsiveLayout();
   const photoSize = scale(140);
   const pickerMaxHeight = hp(38);
-  const { fields: formFields, fieldVisibility } = useFormConfig();
-  const displayFields = formFields.filter(
-    (field) => fieldVisibility[field.key] !== false
-  );
+  const { fields: formFields } = useFormConfig();
+  const displayFields = formFields.filter((field) => field.enabled !== false);
   const defaultClass =
     initialClass ?? getAssignedClassSection(user) ?? "";
 

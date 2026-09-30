@@ -8,6 +8,7 @@ import {
   STUDENT_PHOTOS_BUCKET,
   studentPhotoOrgId,
   studentPhotoPathFromUrl,
+  studentPhotoStoragePath,
 } from "../config/storage";
 import { loadFormConfigForOrg } from "./formConfigController";
 import {
@@ -465,10 +466,23 @@ export async function downloadStudentPhoto(
 
     const orgId = studentPhotoOrgId(student.school_id, student.institute_id);
     const storedPath = studentPhotoPathFromUrl(student.photo_url, orgId, studentId);
-    const fetched = storedPath
-      ? (await readBucketObject(STUDENT_PHOTOS_BUCKET, storedPath)) ??
-        (await fetchImageBytes(student.photo_url))
-      : await fetchImageBytes(student.photo_url);
+    const paths = new Set<string>();
+    if (storedPath) paths.add(storedPath);
+    if (student.school_id) paths.add(studentPhotoStoragePath(student.school_id, studentId));
+    if (student.institute_id) {
+      paths.add(studentPhotoStoragePath(student.institute_id, studentId));
+    }
+    let fetched: { bytes: Uint8Array | Buffer; contentType?: string } | null = null;
+    for (const path of paths) {
+      const object = await readBucketObject(STUDENT_PHOTOS_BUCKET, path);
+      if (object?.bytes?.length) {
+        fetched = object;
+        break;
+      }
+    }
+    if (!fetched?.bytes?.length) {
+      fetched = await fetchImageBytes(student.photo_url);
+    }
     if (!fetched?.bytes?.length) {
       throw new AppError("Could not download photo from storage", 502);
     }

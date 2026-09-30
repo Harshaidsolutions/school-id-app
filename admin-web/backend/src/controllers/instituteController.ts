@@ -15,7 +15,8 @@ import {
 } from "../utils/adminScope";
 import { notifySuperAdminOrgCreated } from "./schoolController";
 import {
-  assertOwnerUsernameAvailable,
+  allocateOwnerEmail,
+  assertOwnerPasswordAvailable,
   findOwnerUserSql,
   ownerPasswordSelect,
   ownerUserLateralJoin,
@@ -162,13 +163,14 @@ export async function createInstituteWithOwner(
     }
 
     const username = ownerName;
-    const email = looksLikeEmail(ownerName)
+    const preferredEmail = looksLikeEmail(ownerName)
       ? ownerName.toLowerCase()
       : syntheticOwnerEmail(ownerName);
 
     await client.query("BEGIN");
 
-    await assertOwnerUsernameAvailable(client, username);
+    await assertOwnerPasswordAvailable(client, username, password);
+    const email = await allocateOwnerEmail(client, preferredEmail);
 
     const instituteResult = await client.query<InstituteRow>(
       `INSERT INTO institutes (name, phone, year, owner_username_plain, owner_password_plain, owner_admin_id)
@@ -366,6 +368,33 @@ export async function updateInstitute(
     if (ownerUsername !== undefined || ownerPassword !== undefined) {
       if (ownerUsername !== undefined && !ownerUsername) {
         throw new AppError("Username is required", 400);
+      }
+
+      const currentOwner = await pool.query<{
+        owner_username_plain: string | null;
+        owner_password_plain: string | null;
+      }>(
+        `SELECT owner_username_plain, owner_password_plain FROM institutes WHERE id = $1`,
+        [id]
+      );
+      const nextUsername = (
+        ownerUsername ??
+        currentOwner.rows[0]?.owner_username_plain ??
+        ""
+      ).trim();
+      const nextPassword =
+        ownerPassword !== undefined && ownerPassword.length > 0
+          ? ownerPassword
+          : (currentOwner.rows[0]?.owner_password_plain ?? "");
+      if (nextUsername && nextPassword) {
+        const ownerRow = await pool.query<{ id: string }>(
+          findOwnerUserSql("institute_id"),
+          [id]
+        );
+        await assertOwnerPasswordAvailable(pool, nextUsername, nextPassword, {
+          instituteId: id,
+          userId: ownerRow.rows[0]?.id,
+        });
       }
 
       if (ownerPassword !== undefined && ownerPassword.length > 0) {
