@@ -269,7 +269,7 @@ function Page1({ nav }: { nav: NavProps }) {
       />
       <View style={styles.p1Top}>
         <AppIcon size={iconSize} style={{ marginBottom: spacing.md }} />
-        <BrandLockup variant="hero" title={BRAND.appName} showTagline={false} />
+        <BrandLockup variant="hero" title={BRAND.appName} showTagline={false} singleLine />
       </View>
 
       <OnboardingFooter accent="orange" nav={nav}>

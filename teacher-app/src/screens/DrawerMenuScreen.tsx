@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Alert,
+  Image,
   Linking,
   Modal,
   ScrollView,
@@ -26,6 +27,7 @@ import { fonts, textStyles, type as typeScale } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
 import { ABOUT_US_PARAS } from "../constants/about";
 import { APP_INSTRUCTIONS } from "../constants/instructions";
+import { PHOTO_EXAMPLES } from "./InstructionsScreen";
 import { TERMS_AND_CONDITIONS } from "../constants/terms";
 import {
   InfoModal,
@@ -35,7 +37,6 @@ import {
 import api from "../api/client";
 import {
   missingContact,
-  openBrandRefer,
   openBrandWhatsApp,
   useCustomerBrand,
 } from "../hooks/useCustomerBrand";
@@ -116,8 +117,9 @@ export function DrawerMenuScreen({ navigation }: Props) {
   async function openHelpSupport() {
     if (!ready) return;
     try {
-      if (childBrand) await openBrandWhatsApp(brand);
-      else await openWhatsApp(buildHelpSupportMessage(schoolName));
+      const message = buildHelpSupportMessage(schoolName);
+      if (childBrand) await openBrandWhatsApp(brand, message);
+      else await openWhatsApp(message);
     } catch (err) {
       Alert.alert(
         "WhatsApp",
@@ -129,8 +131,8 @@ export function DrawerMenuScreen({ navigation }: Props) {
   async function openReferUs() {
     if (!ready) return;
     try {
-      if (childBrand) await openBrandRefer(brand, schoolName);
-      else await Linking.openURL(REFER_WHATSAPP_CATALOG_LINK);
+      const text = encodeURIComponent("I want to refer this MySchool ID Card app");
+      await Linking.openURL(`${REFER_WHATSAPP_CATALOG_LINK}?text=${text}`);
     } catch (err) {
       Alert.alert(
         "WhatsApp",
@@ -339,6 +341,15 @@ export function DrawerMenuScreen({ navigation }: Props) {
           onClose={() => setInstructionsOpen(false)}
           colors={colors}
         >
+          {PHOTO_EXAMPLES.map((example) => (
+            <View key={example.caption} style={{ marginBottom: spacing.md }}>
+              <Text style={{ color: example.ok ? colors.brandGreen : colors.danger, fontFamily: fonts.semiBold, marginBottom: 6 }}>
+                {example.title}
+              </Text>
+              <Image source={example.source} resizeMode="contain" style={{ width: "100%", height: 180, borderRadius: 8 }} />
+              <Text style={{ marginTop: 6, color: colors.text }}>{example.caption}</Text>
+            </View>
+          ))}
           <InfoBulletList items={APP_INSTRUCTIONS} colors={colors} />
         </InfoModal>
         <InfoModal

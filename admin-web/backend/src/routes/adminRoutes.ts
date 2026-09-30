@@ -32,6 +32,7 @@ import {
   downloadSchoolPhotosZip,
   downloadInstitutePhotosZip,
   downloadStudentPhoto,
+  downloadStudentSignature,
   exportStudentsExcel,
   exportInstituteMembersExcel,
   listInstitutePhotoCaptureCounts,
@@ -209,6 +210,7 @@ router.post(
 router.delete("/students/:id/photo", deleteStudentPhotoAdmin);
 router.delete("/students/:id", deleteStudentAdmin);
 router.get("/students/:studentId/photo", downloadStudentPhoto);
+router.get("/students/:studentId/signature", downloadStudentSignature);
 router.get("/students/:schoolId/export", exportStudentsExcel);
 router.get("/students/:schoolId", listStudentsBySchool);
 

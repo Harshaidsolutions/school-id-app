@@ -442,7 +442,16 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
         <div className="centered-page-card mt-6 overflow-hidden">
           {isInstitute && institute ? (
             <>
-              <InfoRow label="Institute Name" value={institute.name} />
+              <InfoRow
+                label="Institute Name"
+                value={institute.name}
+                control={
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-text-muted">Required Details</span>
+                    {detailSwitch("required_details")}
+                  </div>
+                }
+              />
               <InfoRow label="Year" value={institute.year} control={detailSwitch("detail_year")} />
               <InfoRow label="Phone" value={institute.phone} control={detailSwitch("detail_phone")} />
               <InfoRow label="Institute Code" value={institute.institute_code} control={detailSwitch("detail_code")} />
@@ -467,7 +476,16 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
           ) : null}
           {!isInstitute && school ? (
             <>
-              <InfoRow label="School Name" value={school.name} />
+              <InfoRow
+                label="School Name"
+                value={school.name}
+                control={
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-text-muted">Required Details</span>
+                    {detailSwitch("required_details")}
+                  </div>
+                }
+              />
               <InfoRow label="Year" value={school.year} control={detailSwitch("detail_year")} />
               <InfoRow label="Phone" value={school.phone} control={detailSwitch("detail_phone")} />
               <InfoRow label="Secondary Phone" value={school.phone2} control={detailSwitch("detail_phone2")} />

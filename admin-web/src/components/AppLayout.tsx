@@ -176,6 +176,16 @@ function parseNoticeDetails(message: string): { label: string; value: string }[]
   return rows;
 }
 
+function noticeHeadline(
+  title: string,
+  details: { label: string; value: string }[]
+): string {
+  if (!/^new (school|institute) created$/i.test(title)) return title;
+  const who = details.find((row) => row.label === "Created By")?.value?.trim();
+  const kind = /institute/i.test(title) ? "Institute" : "School";
+  return who ? `${who} created a new ${kind}` : title;
+}
+
 export function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -525,7 +535,7 @@ export function AppLayout() {
                                 className="flex min-w-0 flex-1 items-start justify-between gap-3 text-left"
                                 onClick={() => void openIncomingNotice(notice)}
                               >
-                                <span className="text-sm font-semibold text-text-navy">{notice.title}</span>
+                                <span className="text-sm font-semibold text-text-navy">{noticeHeadline(notice.title, details)}</span>
                                 <span className="shrink-0 text-xs text-text-muted">
                                   {notice.created_at
                                     ? new Date(notice.created_at).toLocaleString()

@@ -236,11 +236,17 @@ export async function listInstitutes(
     const scope = await requireAdminScope(req);
     const year =
       typeof req.query.year === "string" ? req.query.year.trim() : "";
+    const createdOn =
+      typeof req.query.createdOn === "string" ? req.query.createdOn.trim() : "";
     const filters: string[] = [];
     const values: unknown[] = [];
     if (year) {
       filters.push(`i.year = $${values.length + 1}`);
       values.push(year);
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(createdOn)) {
+      filters.push(`(i.created_at AT TIME ZONE 'Asia/Kolkata')::date = $${values.length + 1}::date`);
+      values.push(createdOn);
     }
     values.push(scope.adminUserId);
     const ownerParam = values.length;

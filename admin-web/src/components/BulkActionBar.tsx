@@ -36,7 +36,7 @@ export function BulkModeButtons({
         onClick={onConfirm}
         disabled={selectedCount === 0 || deleting}
       >
-        {deleting ? "Deleting…" : `Bulk Delete Selected (${selectedCount})`}
+        {deleting ? "Deleting…" : "Bulk Delete"}
       </button>
     </>
   );

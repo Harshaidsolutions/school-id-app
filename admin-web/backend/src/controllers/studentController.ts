@@ -46,6 +46,34 @@ import {
 import { Student, StudentRowInput } from "../types/student";
 import { assertNumberEditAllowed, withPendingFlags } from "../utils/recordStatus";
 
+function deleteFilterSql(
+  body: Record<string, unknown> | undefined,
+  startIndex: number
+): { sql: string; values: unknown[] } {
+  const values: unknown[] = [];
+  const parts: string[] = [];
+  const date = typeof body?.date === "string" ? body.date.trim() : "";
+  const category = typeof body?.classSection === "string" ? body.classSection.trim() : "";
+  const dataScope = typeof body?.dataScope === "string" ? body.dataScope.trim() : "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    values.push(date);
+    parts.push(
+      `COALESCE((photo_captured_at AT TIME ZONE 'UTC')::date, (updated_at AT TIME ZONE 'UTC')::date) = $${startIndex + values.length - 1}::date`
+    );
+  }
+  if (category) {
+    values.push(category);
+    parts.push(`class_section = $${startIndex + values.length - 1}`);
+  }
+  if (dataScope === "captured") {
+    parts.push(`photo_url IS NOT NULL AND btrim(photo_url) <> ''`);
+  }
+  if (dataScope === "uncaptured") {
+    parts.push(`(photo_url IS NULL OR btrim(photo_url) = '')`);
+  }
+  return { sql: parts.length ? ` AND ${parts.join(" AND ")}` : "", values };
+}
+
 const STUDENT_SELECT = `
   id, school_id, institute_id, class_section, roll_no, student_name, parent_name, parent_phone,
   address, photo_id, photo_url, photo_captured_at, signature_url, status, import_batch_id, printed_at, created_at, updated_at,
@@ -750,7 +778,29 @@ export async function listStudentsAdmin(
       values
     );
 
-    const students = await withPendingFlags(result.rows);
+    const photoFilter =
+      typeof req.query.photo === "string" ? req.query.photo.trim() : "";
+    const pendingDataFilter =
+      typeof req.query.pendingData === "string" ? req.query.pendingData.trim() : "";
+    const capturedOn =
+      typeof req.query.capturedOn === "string" ? req.query.capturedOn.trim() : "";
+    const category =
+      typeof req.query.category === "string" ? req.query.category.trim() : "";
+    let students = await withPendingFlags(result.rows);
+    if (photoFilter === "captured") students = students.filter((row) => !row.pending_photo);
+    if (photoFilter === "missing") students = students.filter((row) => row.pending_photo);
+    if (pendingDataFilter === "yes") students = students.filter((row) => row.pending_data);
+    if (pendingDataFilter === "no") students = students.filter((row) => !row.pending_data);
+    if (category) {
+      students = students.filter((row) => (row.class_section ?? "") === category);
+    }
+    if (capturedOn) {
+      students = students.filter((row) => {
+        const raw = row.photo_captured_at;
+        if (!raw) return false;
+        return new Date(raw).toISOString().slice(0, 10) === capturedOn;
+      });
+    }
     res.status(200).json({
       status: "ok",
       count: students.length,
@@ -1013,6 +1063,7 @@ export async function deleteSchoolExcelData(
     if (!schoolId) throw new AppError("School id is required", 400);
 
     const otp = String(req.body?.otp ?? "").trim();
+    const filter = deleteFilterSql(req.body as Record<string, unknown>, 2);
     await client.query("BEGIN");
 
     await verifyAdminActionOtp({
@@ -1023,8 +1074,8 @@ export async function deleteSchoolExcelData(
     });
 
     const students = await client.query<{ id: string; photo_url: string | null }>(
-      `SELECT id, photo_url FROM students WHERE school_id = $1 FOR UPDATE`,
-      [schoolId]
+      `SELECT id, photo_url FROM students WHERE school_id = $1${filter.sql} FOR UPDATE`,
+      [schoolId, ...filter.values]
     );
 
     for (const row of students.rows) {
@@ -1033,7 +1084,10 @@ export async function deleteSchoolExcelData(
       }
     }
 
-    await client.query(`DELETE FROM students WHERE school_id = $1`, [schoolId]);
+    await client.query(
+      `DELETE FROM students WHERE school_id = $1${filter.sql}`,
+      [schoolId, ...filter.values]
+    );
     await client.query("COMMIT");
 
     res.status(200).json({
@@ -1103,6 +1157,7 @@ export async function deleteInstituteExcelData(
     if (!instituteId) throw new AppError("Institute id is required", 400);
 
     const otp = String(req.body?.otp ?? "").trim();
+    const filter = deleteFilterSql(req.body as Record<string, unknown>, 2);
     await client.query("BEGIN");
 
     await verifyAdminActionOtp({
@@ -1113,11 +1168,14 @@ export async function deleteInstituteExcelData(
     });
 
     const students = await client.query<{ id: string }>(
-      `SELECT id FROM students WHERE institute_id = $1 FOR UPDATE`,
-      [instituteId]
+      `SELECT id FROM students WHERE institute_id = $1${filter.sql} FOR UPDATE`,
+      [instituteId, ...filter.values]
     );
 
-    await client.query(`DELETE FROM students WHERE institute_id = $1`, [instituteId]);
+    await client.query(
+      `DELETE FROM students WHERE institute_id = $1${filter.sql}`,
+      [instituteId, ...filter.values]
+    );
     await client.query("COMMIT");
 
     res.status(200).json({
@@ -1187,6 +1245,7 @@ export async function deleteSchoolPhotosData(
     if (!schoolId) throw new AppError("School id is required", 400);
 
     const otp = String(req.body?.otp ?? "").trim();
+    const filter = deleteFilterSql(req.body as Record<string, unknown>, 2);
     await client.query("BEGIN");
 
     await verifyAdminActionOtp({
@@ -1197,8 +1256,8 @@ export async function deleteSchoolPhotosData(
     });
 
     const students = await client.query<{ id: string; photo_url: string | null }>(
-      `SELECT id, photo_url FROM students WHERE school_id = $1 AND photo_url IS NOT NULL FOR UPDATE`,
-      [schoolId]
+      `SELECT id, photo_url FROM students WHERE school_id = $1 AND photo_url IS NOT NULL${filter.sql} FOR UPDATE`,
+      [schoolId, ...filter.values]
     );
 
     for (const row of students.rows) {
@@ -1209,8 +1268,8 @@ export async function deleteSchoolPhotosData(
 
     await client.query(
       `UPDATE students SET photo_url = NULL, status = 'pending', updated_at = NOW()
-       WHERE school_id = $1 AND photo_url IS NOT NULL`,
-      [schoolId]
+       WHERE school_id = $1 AND photo_url IS NOT NULL${filter.sql}`,
+      [schoolId, ...filter.values]
     );
 
     await client.query("COMMIT");
@@ -1282,6 +1341,7 @@ export async function deleteInstitutePhotosData(
     if (!instituteId) throw new AppError("Institute id is required", 400);
 
     const otp = String(req.body?.otp ?? "").trim();
+    const filter = deleteFilterSql(req.body as Record<string, unknown>, 2);
     await client.query("BEGIN");
 
     await verifyAdminActionOtp({
@@ -1298,9 +1358,9 @@ export async function deleteInstitutePhotosData(
     }>(
       `SELECT id, photo_url, school_id
        FROM students
-       WHERE institute_id = $1 AND photo_url IS NOT NULL
+       WHERE institute_id = $1 AND photo_url IS NOT NULL${filter.sql}
        FOR UPDATE`,
-      [instituteId]
+      [instituteId, ...filter.values]
     );
 
     for (const row of students.rows) {
@@ -1312,8 +1372,8 @@ export async function deleteInstitutePhotosData(
 
     await client.query(
       `UPDATE students SET photo_url = NULL, status = 'pending', updated_at = NOW()
-       WHERE institute_id = $1 AND photo_url IS NOT NULL`,
-      [instituteId]
+       WHERE institute_id = $1 AND photo_url IS NOT NULL${filter.sql}`,
+      [instituteId, ...filter.values]
     );
 
     await client.query("COMMIT");

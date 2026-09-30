@@ -14,6 +14,7 @@ import {
   uploadStudentPhotoToStorage,
 } from "../config/storage";
 import { loadFormConfigForOrg } from "./formConfigController";
+import { withSignatureUploadField } from "../constants/formFields";
 import { parseExtraFields } from "../utils/studentFieldAccess";
 import {
   assertStudentBelongsToOrg,
@@ -36,8 +37,8 @@ import {
   identityFields,
 } from "../utils/addSerial";
 import {
-  assertNumberEditAllowed,
   assertRecordEditAllowed,
+  requestedIdentityChange,
   hasAllRequiredFieldData,
   hasCapturedPhoto,
   loadRequiredDataContext,
@@ -199,7 +200,9 @@ export async function getTeacherFormConfig(
     }
     const schoolId = req.user.schoolId ?? undefined;
     const instituteId = req.user.instituteId ?? undefined;
-    const fields = await loadFormConfigForOrg({ schoolId, instituteId });
+    const fields = withSignatureUploadField(
+      await loadFormConfigForOrg({ schoolId, instituteId })
+    );
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.status(200).json({ status: "ok", fields });
   } catch (error) {
@@ -552,39 +555,47 @@ export async function uploadStudentPhoto(
       });
     }
 
-    const photoUrl = await uploadStudentPhotoToStorage(
-      orgId,
-      student.id,
-      req.file
-    );
-
-    const instituteId = student.institute_id;
-    const instituteCapture = Boolean(instituteId);
-    const schoolId = student.school_id;
-
     const client = await pool.connect();
     let updatedStudent: TeacherStudentRow | undefined;
     try {
       await client.query("BEGIN");
+      const locked = await client.query<TeacherStudentRow>(
+        `SELECT ${TEACHER_STUDENT_SELECT} FROM students WHERE id = $1 FOR UPDATE`,
+        [student.id]
+      );
+      const current = locked.rows[0];
+      if (!current) throw new AppError("Student not found", 404);
+      assertStudentBelongsToOrg(req.user, current);
+      if (!isInstituteStaff(req.user)) {
+        assertTeacherScope(req.user, {
+          schoolId: current.school_id!,
+          classSection: current.class_section,
+        });
+      }
+
+      const photoUrl = await uploadStudentPhotoToStorage(orgId, current.id, req.file);
+      const instituteId = current.institute_id;
+      const instituteCapture = Boolean(instituteId);
+      const schoolId = current.school_id;
 
       const orgFields = await loadFormConfigForOrg({
-        schoolId: student.school_id,
-        instituteId: student.institute_id,
+        schoolId: current.school_id,
+        instituteId: current.institute_id,
       });
       const keepUploadedIdentity = identityFields(orgFields).length > 0;
 
       let capturePhotoId: string | null = null;
       if (keepUploadedIdentity) {
-        capturePhotoId = student.photo_id?.trim() || null;
+        capturePhotoId = current.photo_id?.trim() || null;
       } else if (instituteCapture && instituteId) {
-        if (isInstituteCapturePhotoId(student.photo_id)) {
-          capturePhotoId = student.photo_id!.trim();
+        if (isInstituteCapturePhotoId(current.photo_id)) {
+          capturePhotoId = current.photo_id!.trim();
         } else {
           capturePhotoId = await allocateInstitutePhotoId(client, instituteId);
         }
       } else if (schoolId) {
-        if (isSchoolCapturePhotoId(student.photo_id)) {
-          capturePhotoId = student.photo_id!.trim();
+        if (isSchoolCapturePhotoId(current.photo_id)) {
+          capturePhotoId = current.photo_id!.trim();
         } else {
           capturePhotoId = await allocateSchoolPhotoId(client, schoolId);
         }
@@ -608,8 +619,8 @@ export async function uploadStudentPhoto(
              WHERE id = $2
              RETURNING ${TEACHER_STUDENT_SELECT}`,
         capturePhotoId
-          ? [photoUrl, capturePhotoId, student.id]
-          : [photoUrl, student.id]
+          ? [photoUrl, capturePhotoId, current.id]
+          : [photoUrl, current.id]
       );
 
       updatedStudent = updated.rows[0];
@@ -660,6 +671,15 @@ export async function uploadMemberSignature(
     const orgId = student.institute_id ?? student.school_id;
     if (!orgId) {
       throw new AppError("Student is not assigned to an organization", 400);
+    }
+
+    const formFields = await loadFormConfigForOrg({
+      schoolId: student.school_id,
+      instituteId: student.institute_id,
+    });
+    const signatureField = formFields.find((field) => field.key === "signature_upload");
+    if (!signatureField?.enabled) {
+      throw new AppError("Signature upload is turned off for this organization", 403);
     }
 
     const signatureUrl = await uploadMemberSignatureToStorage(
@@ -728,12 +748,20 @@ export async function updateTeacherStudent(
       institute: Boolean(student.institute_id && !student.school_id),
       record: student as unknown as Record<string, unknown>,
     });
-    await assertNumberEditAllowed(
-      student.school_id,
-      student.institute_id,
-      req.body as Record<string, unknown>,
-      student.photo_id
+    if (
+      requestedIdentityChange(req.body as Record<string, unknown>, student.photo_id)
+    ) {
+      throw new AppError("Photo ID cannot be changed", 400);
+    }
+    const requestedName = [req.body.student_name, req.body.studentName, req.body.name].find(
+      (value) => value !== undefined && value !== null
     );
+    if (
+      requestedName !== undefined &&
+      String(requestedName).trim() !== (student.student_name ?? "").trim()
+    ) {
+      throw new AppError("Name cannot be changed", 400);
+    }
 
     const studentName = student.student_name;
     if (!studentName) {

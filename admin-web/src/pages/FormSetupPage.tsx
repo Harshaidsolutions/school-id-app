@@ -291,7 +291,7 @@ export function FormSetupPage() {
     const idx = indexForRowId(fields, rowId);
     if (idx < 0) return;
     const target = fields[idx];
-    if (target && !isManualFormField(target)) return;
+    if (target && (!isManualFormField(target) || target.key === "signature_upload")) return;
     reorderFields(fields.filter((_, i) => i !== idx));
     setEditingKey((current) => (current === rowId ? null : current));
   }

@@ -111,11 +111,12 @@ export function matchesExportScope(
   scope: string,
   ctx: RequiredDataContext
 ): boolean {
-  if (scope !== "pending" && scope !== "captured") return true;
   const photo = hasCapturedPhoto(row.photo_url == null ? "" : String(row.photo_url));
   const complete = hasAllRequiredFieldData(row, ctx.fields, ctx.visibility, ctx.institute);
-  if (scope === "pending") return !photo || !complete;
-  return photo && complete;
+  if (scope === "pending" || scope === "uncaptured") return !photo;
+  if (scope === "captured") return photo;
+  if (scope === "captured-pending-data") return photo && !complete;
+  return true;
 }
 
 export async function withPendingFlags<

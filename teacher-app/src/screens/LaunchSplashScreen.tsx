@@ -88,6 +88,7 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
             variant="splash"
             title={BRAND.appName}
             showTagline={false}
+            singleLine
             style={{ marginTop: scale(12) }}
           />
         </Animated.View>

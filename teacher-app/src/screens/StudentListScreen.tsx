@@ -46,13 +46,12 @@ import { gridItemWidth } from "../theme/responsive";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
 import { useFormConfig } from "../hooks/useFormConfig";
 import {
-  studentFullyCaptured,
   studentHasPhoto,
   studentPendingData,
 } from "../utils/recordStatus";
 
 type Props = NativeStackScreenProps<RootStackParamList, "StudentList">;
-type TabKey = "all" | "pending-photos" | "pending-data" | "captured";
+type TabKey = "all" | "pending" | "captured" | "pending-data";
 
 const NUM_COLS = 2;
 
@@ -150,27 +149,22 @@ export function StudentListScreen({ navigation, route }: Props) {
     }, [classSection, loadStudents, navigation, openStudentId, patchStudent, photoBusy])
   );
 
-  const pendingPhotoCount = useMemo(
-    () => students.filter((s) => !studentHasPhoto(s)).length,
-    [students]
-  );
   const pendingDataCount = useMemo(
     () => students.filter((s) => studentPendingData(s, false)).length,
     [students]
   );
   const capturedCount = useMemo(
-    () => students.filter((s) => studentFullyCaptured(s, false)).length,
+    () => students.filter((s) => studentHasPhoto(s)).length,
     [students]
   );
   const pendingCount = useMemo(
-    () =>
-      students.filter((s) => !studentHasPhoto(s) || studentPendingData(s, false)).length,
+    () => students.filter((s) => !studentHasPhoto(s)).length,
     [students]
   );
   const tabs: { key: TabKey; label: string; color: string; count: number }[] = [
     { key: "all", label: "All", color: colors.brandGreen, count: students.length },
     {
-      key: "pending-photos",
+      key: "pending",
       label: "Pending",
       color: colors.brandGreen,
       count: pendingCount,
@@ -185,10 +179,16 @@ export function StudentListScreen({ navigation, route }: Props) {
           },
         ]
       : []),
+    {
+      key: "pending-data",
+      label: "Pending Data",
+      color: colors.brandGreen,
+      count: pendingDataCount,
+    },
   ];
 
   const filtered = useMemo(() => {
-    if (tab === "pending-photos") {
+    if (tab === "pending") {
       return students.filter((s) => !studentHasPhoto(s));
     }
     if (tab === "pending-data") {
@@ -196,7 +196,7 @@ export function StudentListScreen({ navigation, route }: Props) {
     }
     if (tab === "captured" && showCapturedSection) {
       return students
-        .filter((s) => studentFullyCaptured(s, false))
+        .filter((s) => studentHasPhoto(s))
         .sort((a, b) => {
           const aTs = Date.parse(a.photo_captured_at ?? "") || 0;
           const bTs = Date.parse(b.photo_captured_at ?? "") || 0;
@@ -211,7 +211,7 @@ export function StudentListScreen({ navigation, route }: Props) {
     const idx = filtered.findIndex((s) => s.id === student.id);
     const safeIdx = idx >= 0 ? idx : 0;
 
-    if (tab === "pending-photos" && !studentHasPhoto(student)) {
+    if (tab === "pending" && !studentHasPhoto(student)) {
       setPendingPhotoStudent(student);
       return;
     }
@@ -311,10 +311,7 @@ export function StudentListScreen({ navigation, route }: Props) {
 
       <View style={styles.tabs}>
         {tabs.map((t) => {
-          const active =
-            t.key === "pending-photos"
-              ? tab === "pending-photos" || tab === "pending-data"
-              : tab === t.key;
+          const active = tab === t.key;
           return (
             <Pressable
               key={t.key}
@@ -343,48 +340,6 @@ export function StudentListScreen({ navigation, route }: Props) {
           );
         })}
       </View>
-      {tab === "pending-photos" || tab === "pending-data" ? (
-        <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: spacing.md, paddingBottom: spacing.sm }}>
-          <Pressable
-            onPress={() => setTab("pending-photos")}
-            style={{
-              flex: 1,
-              minHeight: 46,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: tab === "pending-photos" ? colors.brandGreen : colors.border,
-              backgroundColor: tab === "pending-photos" ? colors.brandGreen : colors.surface,
-              alignItems: "center",
-              justifyContent: "center",
-              paddingHorizontal: 8,
-              paddingVertical: 8,
-            }}
-          >
-            <Text style={{ color: tab === "pending-photos" ? "#FFFFFF" : colors.text, fontFamily: fonts.semiBold, fontSize: 15, textAlign: "center" }}>
-              Pending Photos ({pendingPhotoCount})
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setTab("pending-data")}
-            style={{
-              flex: 1,
-              minHeight: 46,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: tab === "pending-data" ? colors.brandGreen : colors.border,
-              backgroundColor: tab === "pending-data" ? colors.brandGreen : colors.surface,
-              alignItems: "center",
-              justifyContent: "center",
-              paddingHorizontal: 8,
-              paddingVertical: 8,
-            }}
-          >
-            <Text style={{ color: tab === "pending-data" ? "#FFFFFF" : colors.text, fontFamily: fonts.semiBold, fontSize: 15, textAlign: "center" }}>
-              Pending Data ({pendingDataCount})
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
 
       <FlatList
         data={filtered}
@@ -414,7 +369,7 @@ export function StudentListScreen({ navigation, route }: Props) {
           <Text style={[styles.empty, { color: colors.textMuted }]}>
             {students.length === 0
               ? "No students in this class yet."
-              : tab === "pending-photos"
+              : tab === "pending"
                 ? "No students are waiting for a photo."
                 : tab === "pending-data"
                   ? "No students are missing required data."
@@ -429,7 +384,7 @@ export function StudentListScreen({ navigation, route }: Props) {
         students={filtered}
         initialIndex={flowIndex}
         classSection={classSection}
-        photoCaptureEnabled={tab === "pending-photos"}
+        photoCaptureEnabled={tab === "pending"}
         onClose={() => setFlowVisible(false)}
         navigation={navigation}
       />

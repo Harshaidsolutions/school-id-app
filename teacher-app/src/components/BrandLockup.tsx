@@ -29,6 +29,8 @@ type Props = {
   harshaColor?: string;
   solutionsColor?: string;
   taglineColor?: string;
+  /** Keep a customer title on one line. Used by splash, welcome, and login. */
+  singleLine?: boolean;
 };
 
 const BRAND_MIN = { harsha: 18, solutions: 12, tag: 11 } as const;
@@ -76,6 +78,7 @@ export function BrandLockup({
   harshaColor,
   solutionsColor,
   taglineColor,
+  singleLine = false,
 }: Props) {
   const { width: screenW } = useWindowDimensions();
   const lineW = wp(
@@ -190,9 +193,9 @@ export function BrandLockup({
               lineHeight: scaleFont(sizes.harsha, harshaMin, undefined, screenW) * 1.15,
             },
           ]}
-          numberOfLines={2}
+          numberOfLines={singleLine ? 1 : 2}
           adjustsFontSizeToFit
-          minimumFontScale={0.45}
+          minimumFontScale={singleLine ? 0.55 : 0.45}
         >
           {title}
         </Text>

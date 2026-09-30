@@ -27,6 +27,22 @@ export const DEFAULT_FORM_FIELDS: FormFieldConfig[] = [
 
 export const FORM_FIELD_KEYS = DEFAULT_FORM_FIELDS.map((f) => f.key);
 
+export const SIGNATURE_UPLOAD_KEY = "signature_upload";
+
+export function withSignatureUploadField(fields: FormFieldConfig[]): FormFieldConfig[] {
+  if (fields.some((field) => field.key === SIGNATURE_UPLOAD_KEY)) return fields;
+  return [
+    ...fields,
+    {
+      key: SIGNATURE_UPLOAD_KEY,
+      label: "Signature Upload",
+      enabled: false,
+      source: "manual",
+      displayOrder: fields.length,
+    },
+  ];
+}
+
 export {
   inferFormFieldsFromExcelHeaders,
   inferFormFieldsFromExcelHeadersWithFallback,

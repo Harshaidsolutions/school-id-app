@@ -12,6 +12,8 @@ export interface Student {
   address: string | null;
   photo_id: string | null;
   photo_url: string | null;
+  photo_captured_at?: string | Date | null;
+  signature_url?: string | null;
   status: string | null;
   import_batch_id: string | null;
   printed_at: Date | null;

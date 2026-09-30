@@ -29,6 +29,7 @@ export interface Student {
   address: string | null;
   photo_id: string | null;
   photo_url: string | null;
+  signature_url?: string | null;
   photo_captured_at?: string | null;
   pending_photo?: boolean;
   pending_data?: boolean;

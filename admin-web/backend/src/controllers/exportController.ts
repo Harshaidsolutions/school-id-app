@@ -6,6 +6,7 @@ import {
   fetchImageBytes,
   readBucketObject,
   STUDENT_PHOTOS_BUCKET,
+  memberSignatureStoragePath,
   studentPhotoOrgId,
   studentPhotoPathFromUrl,
   studentPhotoStoragePath,
@@ -18,6 +19,7 @@ import {
 import {
   assertInstituteOwnedByAdmin,
   assertSchoolOwnedByAdmin,
+  assertStudentOwnedByAdmin,
   requireAdminScope,
 } from "../utils/adminScope";
 import { loadRequiredDataContext, matchesExportScope } from "../utils/recordStatus";
@@ -36,6 +38,18 @@ function extensionFromContentType(contentType: string | undefined): string {
   if (ct.includes("webp")) return ".webp";
   if (ct.includes("jpeg") || ct.includes("jpg")) return ".jpg";
   return ".jpg";
+}
+
+function rowMatchesExportExtras(
+  row: Record<string, string | null>,
+  captureDate: string,
+  category: string
+): boolean {
+  if (category && (row.class_section ?? "") !== category) return false;
+  if (!captureDate) return true;
+  const raw = row.photo_captured_at;
+  if (!raw || !row.photo_url) return false;
+  return new Date(raw).toISOString().slice(0, 10) === captureDate;
 }
 
 function schoolFilenameSlug(name: string): string {
@@ -81,30 +95,40 @@ async function downloadOrgPhotosZip(
 
     const captureDate =
       typeof req.query.date === "string" ? req.query.date.trim() : "";
+    const category =
+      typeof req.query.classSection === "string" ? req.query.classSection.trim() : "";
+    const asset =
+      typeof req.query.asset === "string" ? req.query.asset.trim() : "photo";
+    const urlColumn = asset === "signature" ? "signature_url" : "photo_url";
 
     const whereOrg = schoolId ? "school_id = $1" : "institute_id = $1";
+    const values: unknown[] = [orgId];
+    const extra: string[] = [];
+    if (captureDate) {
+      values.push(captureDate);
+      const dateExpr =
+        asset === "signature"
+          ? `(updated_at AT TIME ZONE 'UTC')::date`
+          : `COALESCE((photo_captured_at AT TIME ZONE 'UTC')::date, (updated_at AT TIME ZONE 'UTC')::date)`;
+      extra.push(`AND ${dateExpr} = $${values.length}::date`);
+    }
+    if (category) {
+      values.push(category);
+      extra.push(`AND class_section = $${values.length}`);
+    }
     const students = await pool.query<{
       photo_id: string | null;
       photo_url: string | null;
     }>(
-      captureDate
-        ? `SELECT photo_id, photo_url
-           FROM students
-           WHERE ${whereOrg}
-             AND photo_url IS NOT NULL
-             AND status IN ('captured', 'printed')
-             AND COALESCE(
-                   (photo_captured_at AT TIME ZONE 'UTC')::date,
-                   (updated_at AT TIME ZONE 'UTC')::date
-                 ) = $2::date
-           ORDER BY photo_id ASC NULLS LAST`
-        : `SELECT photo_id, photo_url
-           FROM students
-           WHERE ${whereOrg}
-             AND photo_url IS NOT NULL
-             AND status IN ('captured', 'printed')
-           ORDER BY photo_id ASC NULLS LAST`,
-      captureDate ? [orgId, captureDate] : [orgId]
+      `SELECT photo_id, ${urlColumn} AS photo_url
+       FROM students
+       WHERE ${whereOrg}
+         AND ${urlColumn} IS NOT NULL
+         AND btrim(${urlColumn}) <> ''
+         ${asset === "signature" ? "" : "AND status IN ('captured', 'printed')"}
+         ${extra.join("\n         ")}
+       ORDER BY photo_id ASC NULLS LAST`,
+      values
     );
 
     if (students.rows.length === 0) {
@@ -151,7 +175,7 @@ async function downloadOrgPhotosZip(
       );
     }
 
-    const filename = `${schoolFilenameSlug(org.rows[0].name)}_photos.zip`;
+    const filename = `${schoolFilenameSlug(org.rows[0].name)}_${asset === "signature" ? "signatures" : "photos"}.zip`;
     res.setHeader("Content-Type", "application/zip");
     res.setHeader(
       "Content-Disposition",
@@ -242,7 +266,41 @@ async function listPhotoCaptureCounts(
     for (const row of result.rows) {
       if (row.capture_date) counts[row.capture_date] = row.photo_count;
     }
-    res.status(200).json({ status: "ok", counts });
+    const categories = await pool.query<{ name: string | null; photo_count: number }>(
+      `SELECT COALESCE(NULLIF(btrim(class_section), ''), 'Unassigned') AS name,
+              COUNT(*)::int AS photo_count
+       FROM students
+       WHERE ${whereOrg}
+         AND photo_url IS NOT NULL
+         AND btrim(photo_url) <> ''
+       GROUP BY 1
+       ORDER BY 1`,
+      [orgId]
+    );
+    const signatureDates = await pool.query<{ capture_date: string; photo_count: number }>(
+      `SELECT to_char((updated_at AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS capture_date,
+              COUNT(*)::int AS photo_count
+       FROM students
+       WHERE ${whereOrg}
+         AND signature_url IS NOT NULL
+         AND btrim(signature_url) <> ''
+       GROUP BY 1
+       ORDER BY 1`,
+      [orgId]
+    );
+    const signatureCounts: Record<string, number> = {};
+    for (const row of signatureDates.rows) {
+      if (row.capture_date) signatureCounts[row.capture_date] = row.photo_count;
+    }
+    res.status(200).json({
+      status: "ok",
+      counts,
+      categories: categories.rows.map((row) => ({
+        name: row.name ?? "Unassigned",
+        count: row.photo_count,
+      })),
+      signatureCounts,
+    });
   } catch (error) {
     next(error);
   }
@@ -291,8 +349,8 @@ export async function exportStudentsExcel(
     await assertSchoolOwnedByAdmin(scope, schoolId);
     const exportScope =
       typeof req.query.scope === "string" ? req.query.scope.trim() : "all";
-    if (!["all", "pending", "captured"].includes(exportScope)) {
-      throw new AppError("scope must be all, pending, or captured", 400);
+    if (!["all", "pending", "captured", "uncaptured", "captured-pending-data"].includes(exportScope)) {
+      throw new AppError("scope is not supported", 400);
     }
 
     const school = await pool.query<{ name: string }>(
@@ -303,18 +361,25 @@ export async function exportStudentsExcel(
       throw new AppError("School not found", 404);
     }
 
+    const captureDate =
+      typeof req.query.date === "string" ? req.query.date.trim() : "";
+    const category =
+      typeof req.query.classSection === "string" ? req.query.classSection.trim() : "";
     const dataCtx = await loadRequiredDataContext(schoolId, null);
     const result = await pool.query<Record<string, string | null>>(
       `SELECT photo_id, class_section, student_name, parent_name, parent_phone,
               address, roll_no, dob::text AS dob, gender, blood_group,
-              custom_1, custom_2, custom_3, extra_fields, field_labels, photo_url, status
+              custom_1, custom_2, custom_3, extra_fields, field_labels, photo_url,
+              photo_captured_at::text AS photo_captured_at, status
        FROM students
        WHERE school_id = $1
        ORDER BY class_section ASC, roll_no ASC NULLS LAST, student_name ASC`,
       [schoolId]
     );
-    const scopedRows = result.rows.filter((row) =>
-      matchesExportScope(row as unknown as Record<string, unknown>, exportScope, dataCtx)
+    const scopedRows = result.rows.filter(
+      (row) =>
+        matchesExportScope(row as unknown as Record<string, unknown>, exportScope, dataCtx) &&
+        rowMatchesExportExtras(row, captureDate, category)
     );
 
     const formFields = await loadFormConfigForOrg({ schoolId });
@@ -368,8 +433,8 @@ export async function exportInstituteMembersExcel(
     await assertInstituteOwnedByAdmin(scope, instituteId);
     const exportScope =
       typeof req.query.scope === "string" ? req.query.scope.trim() : "all";
-    if (!["all", "pending", "captured"].includes(exportScope)) {
-      throw new AppError("scope must be all, pending, or captured", 400);
+    if (!["all", "pending", "captured", "uncaptured", "captured-pending-data"].includes(exportScope)) {
+      throw new AppError("scope is not supported", 400);
     }
 
     const institute = await pool.query<{ name: string }>(
@@ -380,18 +445,25 @@ export async function exportInstituteMembersExcel(
       throw new AppError("Institute not found", 404);
     }
 
+    const captureDate =
+      typeof req.query.date === "string" ? req.query.date.trim() : "";
+    const category =
+      typeof req.query.classSection === "string" ? req.query.classSection.trim() : "";
     const dataCtx = await loadRequiredDataContext(null, instituteId);
     const result = await pool.query<Record<string, string | null>>(
       `SELECT photo_id, class_section, student_name, parent_name, parent_phone,
               address, roll_no, dob::text AS dob, gender, blood_group,
-              custom_1, custom_2, custom_3, extra_fields, field_labels, photo_url, status
+              custom_1, custom_2, custom_3, extra_fields, field_labels, photo_url,
+              photo_captured_at::text AS photo_captured_at, status
        FROM students
        WHERE institute_id = $1
        ORDER BY class_section ASC, roll_no ASC NULLS LAST, student_name ASC`,
       [instituteId]
     );
-    const scopedRows = result.rows.filter((row) =>
-      matchesExportScope(row as unknown as Record<string, unknown>, exportScope, dataCtx)
+    const scopedRows = result.rows.filter(
+      (row) =>
+        matchesExportScope(row as unknown as Record<string, unknown>, exportScope, dataCtx) &&
+        rowMatchesExportExtras(row, captureDate, category)
     );
 
     const formFields = await loadFormConfigForOrg({ instituteId });
@@ -460,6 +532,7 @@ export async function downloadStudentPhoto(
     if (!student) {
       throw new AppError("Student not found", 404);
     }
+    await assertStudentOwnedByAdmin(await requireAdminScope(req), student);
     if (!student.photo_url) {
       throw new AppError("No photo captured for this student", 404);
     }
@@ -499,6 +572,55 @@ export async function downloadStudentPhoto(
       fetched.contentType || "application/octet-stream"
     );
     res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+    res.status(200).send(Buffer.from(fetched.bytes));
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** GET /admin/students/:studentId/signature */
+export async function downloadStudentSignature(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const studentId =
+      typeof req.params.studentId === "string" ? req.params.studentId.trim() : "";
+    if (!studentId) throw new AppError("Student id is required", 400);
+    const result = await pool.query<{
+      photo_id: string | null;
+      signature_url: string | null;
+      school_id: string | null;
+      institute_id: string | null;
+    }>(
+      `SELECT photo_id, signature_url, school_id, institute_id FROM students WHERE id = $1 LIMIT 1`,
+      [studentId]
+    );
+    const student = result.rows[0];
+    if (!student) throw new AppError("Student not found", 404);
+    await assertStudentOwnedByAdmin(await requireAdminScope(req), student);
+    if (!student.signature_url) throw new AppError("No signature uploaded for this record", 404);
+    const orgId = studentPhotoOrgId(student.school_id, student.institute_id);
+    let fetched: { bytes: Uint8Array | Buffer; contentType?: string } | null = null;
+    if (orgId) {
+      for (const ext of ["jpg", "png"] as const) {
+        const object = await readBucketObject(
+          STUDENT_PHOTOS_BUCKET,
+          memberSignatureStoragePath(orgId, studentId, ext)
+        );
+        if (object?.bytes?.length) {
+          fetched = object;
+          break;
+        }
+      }
+    }
+    if (!fetched?.bytes?.length) fetched = await fetchImageBytes(student.signature_url);
+    if (!fetched?.bytes?.length) throw new AppError("Could not download signature from storage", 502);
+    const ext = extensionFromContentType(fetched.contentType);
+    const base = sanitizePhotoIdFilename(student.photo_id || studentId);
+    res.setHeader("Content-Type", fetched.contentType || "image/jpeg");
+    res.setHeader("Content-Disposition", `inline; filename="${base}${ext}"`);
     res.status(200).send(Buffer.from(fetched.bytes));
   } catch (error) {
     next(error);

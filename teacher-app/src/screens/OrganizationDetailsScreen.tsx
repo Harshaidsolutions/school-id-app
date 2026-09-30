@@ -1024,16 +1024,29 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
       <OrangeGradientHeader
         title="REQUIRED DETAILS"
         subtitle="Only Principal can Upload this form"
-        subtitleLines={2}
+        subtitleLines={1}
         onBack={() => navigation.goBack()}
       />
 
-      {Platform.OS === "ios" ? (
-        <KeyboardAvoidingView style={styles.flex} behavior="padding">
-          {formScroll}
-        </KeyboardAvoidingView>
+      {showDetail("required_details") ? (
+        Platform.OS === "ios" ? (
+          <KeyboardAvoidingView style={styles.flex} behavior="padding">
+            {formScroll}
+          </KeyboardAvoidingView>
+        ) : (
+          formScroll
+        )
       ) : (
-        formScroll
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.lg }}>
+          <Text
+            style={{ color: colors.text, fontFamily: fonts.semiBold, fontSize: typeScale.body, textAlign: "center" }}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
+            Please contact the admin to upload required details.
+          </Text>
+        </View>
       )}
 
       {isDirty ? (

@@ -74,7 +74,12 @@ export function OrangeGradientHeader({
             {title}
           </Text>
           {subtitle ? (
-            <Text style={styles.subtitle} numberOfLines={subtitleLines}>
+            <Text
+              style={styles.subtitle}
+              numberOfLines={subtitleLines}
+              adjustsFontSizeToFit={subtitleLines === 1}
+              minimumFontScale={0.75}
+            >
               {subtitle}
             </Text>
           ) : null}

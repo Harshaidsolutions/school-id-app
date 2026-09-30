@@ -19,3 +19,21 @@ export async function authenticatedStudentPhotoUrl(
     return null;
   }
 }
+
+export async function authenticatedStudentSignatureUrl(
+  studentId: string
+): Promise<string | null> {
+  const key = `sig:${studentId}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  try {
+    const { data } = await api.get(`/admin/students/${studentId}/signature`, {
+      responseType: "blob",
+    });
+    const url = URL.createObjectURL(data as Blob);
+    cache.set(key, url);
+    return url;
+  } catch {
+    return null;
+  }
+}

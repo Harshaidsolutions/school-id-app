@@ -6,7 +6,7 @@ import { StudentPhotoModal } from "../components/StudentPhotoModal";
 import { EditStudentModal } from "../components/EditStudentModal";
 import { DeleteStudentChoiceModal } from "../components/DeleteStudentChoiceModal";
 import { AddStudentModal } from "../components/AddStudentModal";
-import { DeleteOptionsModal } from "../components/DeleteOptionsModal";
+import { DeleteOptionsModal, type DeleteJob } from "../components/DeleteOptionsModal";
 import { BulkUploadModal } from "../components/BulkUploadModal";
 import { DownloadPhotosModal } from "../components/DownloadPhotosModal";
 import { BulkModeButtons } from "../components/BulkActionBar";
@@ -19,9 +19,9 @@ import {
   studentFieldDisplay,
   type FormFieldConfig,
 } from "../constants/formFields";
-import { authenticatedStudentPhotoUrl } from "../utils/studentPhotoSrc";
+import { authenticatedStudentPhotoUrl, authenticatedStudentSignatureUrl } from "../utils/studentPhotoSrc";
 
-type TabKey = "all" | "pending-photos" | "pending-data" | "captured";
+type TabKey = "all" | "pending" | "captured" | "pending-data";
 
 function normalizedFieldLabel(label: string): string {
   return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -103,6 +103,30 @@ function StudentThumb({ student }: { student: Student }): ReactNode {
   );
 }
 
+function SignatureThumb({ student }: { student: Student }): ReactNode {
+  const [src, setSrc] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    setSrc("");
+    if (!student.signature_url) return;
+    void authenticatedStudentSignatureUrl(student.id).then((url) => {
+      if (!cancelled && url) setSrc(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [student.id, student.signature_url]);
+  if (!student.signature_url || !src) return null;
+  return (
+    <img
+      src={src}
+      alt="Signature"
+      title="Signature"
+      className="h-8 w-16 rounded bg-white object-contain ring-1 ring-border"
+    />
+  );
+}
+
 async function downloadAuthenticatedFile(
   urlPath: string,
   fallbackName: string
@@ -152,6 +176,15 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [confirmDeleteDataStudent, setConfirmDeleteDataStudent] =
     useState<Student | null>(null);
   const [photoCounts, setPhotoCounts] = useState<Record<string, number>>({});
+  const [photoCategories, setPhotoCategories] = useState<{ name: string; count: number }[]>([]);
+  const [signatureCounts, setSignatureCounts] = useState<Record<string, number>>({});
+  const [showSignatureDownload, setShowSignatureDownload] = useState(false);
+  const [deleteJob, setDeleteJob] = useState<DeleteJob | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [photoFilter, setPhotoFilter] = useState("");
+  const [pendingDataFilter, setPendingDataFilter] = useState("");
+  const [capturedOn, setCapturedOn] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [showDeletePhotosOtp, setShowDeletePhotosOtp] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showDeleteOptions, setShowDeleteOptions] = useState(false);
@@ -248,6 +281,10 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         const params: Record<string, string> = {};
         if (isInstitute && instituteId) params.instituteId = instituteId;
         else if (schoolId) params.schoolId = schoolId;
+        if (photoFilter) params.photo = photoFilter;
+        if (pendingDataFilter) params.pendingData = pendingDataFilter;
+        if (capturedOn) params.capturedOn = capturedOn;
+        if (categoryFilter) params.category = categoryFilter;
         const { data } = await api.get<StudentsResponse>("/admin/students", {
           params,
         });
@@ -267,7 +304,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     return () => {
       cancelled = true;
     };
-  }, [schoolId, instituteId, isInstitute]);
+  }, [schoolId, instituteId, isInstitute, photoFilter, pendingDataFilter, capturedOn, categoryFilter]);
 
   useEffect(() => {
     if (!orgId) {
@@ -326,7 +363,10 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     );
   }
 
-  const enabledFields = useMemo(() => dedupeDisplayFields(formFields), [formFields]);
+  const enabledFields = useMemo(
+    () => dedupeDisplayFields(formFields).filter((field) => field.key !== "signature_upload"),
+    [formFields]
+  );
 
   const tableColSpan = enabledFields.length + 3 + (selecting && isDetailView ? 1 : 0);
 
@@ -346,9 +386,9 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     const q = search.trim().toLowerCase();
     return students.filter((s) => {
       const { photo, dataMissing } = recordFlags(s, isInstitute);
-      if (tab === "pending-photos" && photo) return false;
+      if (tab === "pending" && photo) return false;
       if (tab === "pending-data" && !dataMissing) return false;
-      if (tab === "captured" && !(photo && !dataMissing)) return false;
+      if (tab === "captured" && !photo) return false;
       if (classFilter && s.class_section !== classFilter) return false;
       if (q) {
         const hay = [
@@ -369,21 +409,18 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   }, [students, tab, classFilter, search, isInstitute]);
 
   const counts = useMemo(() => {
-    let pendingPhotos = 0;
-    let pendingData = 0;
     let pending = 0;
+    let pendingData = 0;
     let captured = 0;
     for (const s of students) {
       const { photo, dataMissing } = recordFlags(s, isInstitute);
-      if (!photo) pendingPhotos += 1;
+      if (!photo) pending += 1;
       if (dataMissing) pendingData += 1;
-      if (!photo || dataMissing) pending += 1;
-      if (photo && !dataMissing) captured += 1;
+      if (photo) captured += 1;
     }
     return {
       all: students.length,
       pending,
-      "pending-photos": pendingPhotos,
       "pending-data": pendingData,
       captured,
     };
@@ -435,7 +472,10 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     }
   }
 
-  async function handleDownloadExcel(scope: "all" | "pending" | "captured" = "all") {
+  async function handleDownloadExcel(
+    scope: "all" | "pending" | "captured" | "uncaptured" | "captured-pending-data" = "all",
+    extra?: { date?: string; classSection?: string }
+  ) {
     if (!orgId) {
       setError(isInstitute ? "Open an institute to download Excel." : "Select a school before downloading Excel.");
       return;
@@ -443,9 +483,12 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     setExportingExcel(true);
     setError(null);
     try {
+      const query = new URLSearchParams({ scope });
+      if (extra?.date) query.set("date", extra.date);
+      if (extra?.classSection) query.set("classSection", extra.classSection);
       const path = isInstitute
-        ? `/admin/institutes/${instituteId}/export-members?scope=${scope}`
-        : `/admin/students/${schoolId}/export?scope=${scope}`;
+        ? `/admin/institutes/${instituteId}/export-members?${query.toString()}`
+        : `/admin/students/${schoolId}/export?${query.toString()}`;
       const filename = isInstitute ? `members-${scope}.xlsx` : `students-${scope}.xlsx`;
       await downloadAuthenticatedFile(path, filename);
     } catch (err) {
@@ -535,15 +578,68 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   }
 
   async function handleDeletePhotosConfirmed(otp: string) {
-    if (!orgId) return;
-    const url = isInstitute
-      ? `/admin/institutes/${instituteId}/photos`
-      : `/admin/schools/${schoolId}/photos`;
-    await api.delete(url, { data: { otp } });
-    setStudents((prev) =>
-      prev.map((s) => ({ ...s, photo_url: null, status: "pending" }))
-    );
+    if (!orgId || !deleteJob) return;
+    const url = deleteJob.kind === "data"
+      ? isInstitute
+        ? `/admin/institutes/${instituteId}/students`
+        : `/admin/schools/${schoolId}/students`
+      : isInstitute
+        ? `/admin/institutes/${instituteId}/photos`
+        : `/admin/schools/${schoolId}/photos`;
+    await api.delete(url, {
+      data: {
+        otp,
+        date: deleteJob.date,
+        classSection: deleteJob.classSection,
+        dataScope: deleteJob.dataScope,
+      },
+    });
+    const params: Record<string, string> = isInstitute
+      ? { instituteId: orgId }
+      : { schoolId: orgId };
+    const { data } = await api.get<StudentsResponse>("/admin/students", { params });
+    setStudents(data.students);
+    setDeleteJob(null);
     setShowDeletePhotosOtp(false);
+  }
+
+  async function handleDownloadPhotosByCategory(name: string) {
+    if (!orgId) return;
+    setExportingPhotos(true);
+    setError(null);
+    try {
+      const base = isInstitute
+        ? `/admin/institutes/${instituteId}/download-photos`
+        : `/admin/schools/${schoolId}/download-photos`;
+      await downloadAuthenticatedFile(
+        `${base}?classSection=${encodeURIComponent(name)}`,
+        `photos_${name}.zip`
+      );
+      setShowDownloadPhotosModal(false);
+    } catch {
+      setError("Failed to download photos for that category.");
+    } finally {
+      setExportingPhotos(false);
+    }
+  }
+
+  async function handleDownloadSignatures(date?: string) {
+    if (!orgId) return;
+    setExportingPhotos(true);
+    setError(null);
+    try {
+      const base = isInstitute
+        ? `/admin/institutes/${instituteId}/download-photos`
+        : `/admin/schools/${schoolId}/download-photos`;
+      const query = new URLSearchParams({ asset: "signature" });
+      if (date) query.set("date", date);
+      await downloadAuthenticatedFile(`${base}?${query.toString()}`, date ? `signatures_${date}.zip` : "signatures.zip");
+      setShowSignatureDownload(false);
+    } catch {
+      setError("Failed to download signatures.");
+    } finally {
+      setExportingPhotos(false);
+    }
   }
 
   function isCaptured(student: Student) {
@@ -630,8 +726,10 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   {(
                     [
                       ["all", "All Excel"],
-                      ["pending", "Pending Excel"],
-                      ["captured", "Captured Excel"],
+                      ["captured", "Captured Photos Excel"],
+                      ["pending", "Pending Photos Excel"],
+                      ["captured-pending-data", "Captured Photos - Pending Data"],
+                      ["uncaptured", "Uncaptured Data"],
                     ] as const
                   ).map(([scope, label]) => (
                     <button
@@ -646,6 +744,32 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                       {label}
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-navy hover:bg-content-bg"
+                    onClick={() => {
+                      const date = window.prompt("Capture date (YYYY-MM-DD)");
+                      if (!date) return;
+                      setExcelMenuOpen(false);
+                      void handleDownloadExcel("captured", { date });
+                    }}
+                  >
+                    Date-wise Captured Data
+                  </button>
+                  <button
+                    type="button"
+                    className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-navy hover:bg-content-bg"
+                    onClick={() => {
+                      const classSection = window.prompt(
+                        isInstitute ? "Group or designation" : "Class, group, or designation"
+                      );
+                      if (!classSection) return;
+                      setExcelMenuOpen(false);
+                      void handleDownloadExcel("all", { classSection });
+                    }}
+                  >
+                    Class / Group / Designation
+                  </button>
                 </div>
               ) : null}
             </div>
@@ -659,13 +783,42 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   ? `/admin/institutes/${instituteId}/photo-capture-counts`
                   : `/admin/schools/${schoolId}/photo-capture-counts`;
                 void api
-                  .get<{ counts: Record<string, number> }>(path)
-                  .then(({ data }) => setPhotoCounts(data.counts ?? {}))
-                  .catch(() => setPhotoCounts({}));
+                  .get<{
+                    counts: Record<string, number>;
+                    categories?: { name: string; count: number }[];
+                    signatureCounts?: Record<string, number>;
+                  }>(path)
+                  .then(({ data }) => {
+                    setPhotoCounts(data.counts ?? {});
+                    setPhotoCategories(data.categories ?? []);
+                    setSignatureCounts(data.signatureCounts ?? {});
+                  })
+                  .catch(() => {
+                    setPhotoCounts({});
+                    setPhotoCategories([]);
+                    setSignatureCounts({});
+                  });
               }}
               className="detail-toolbar-btn"
             >
               Download Photos
+            </button>
+            <button
+              type="button"
+              disabled={!orgId}
+              onClick={() => {
+                setShowSignatureDownload(true);
+                const path = isInstitute
+                  ? `/admin/institutes/${instituteId}/photo-capture-counts`
+                  : `/admin/schools/${schoolId}/photo-capture-counts`;
+                void api
+                  .get<{ signatureCounts?: Record<string, number> }>(path)
+                  .then(({ data }) => setSignatureCounts(data.signatureCounts ?? {}))
+                  .catch(() => setSignatureCounts({}));
+              }}
+              className="detail-toolbar-btn"
+            >
+              Download Signatures
             </button>
 
             <button
@@ -706,25 +859,17 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               {(
                 [
                   { key: "all" as const, label: "All", count: counts.all },
-                  {
-                    key: "pending" as const,
-                    label: "Pending",
-                    count: counts.pending,
-                  },
+                  { key: "pending" as const, label: "Pending", count: counts.pending },
                   { key: "captured" as const, label: "Captured", count: counts.captured },
+                  { key: "pending-data" as const, label: "Pending Data", count: counts["pending-data"] },
                 ]
               ).map((t) => {
-                const active =
-                  t.key === "pending"
-                    ? tab === "pending-photos" || tab === "pending-data"
-                    : tab === t.key;
+                const active = tab === t.key;
                 return (
                   <button
                     key={t.key}
                     type="button"
-                    onClick={() =>
-                      setTab(t.key === "pending" ? "pending-photos" : t.key)
-                    }
+                    onClick={() => setTab(t.key)}
                     className={`detail-toolbar-status-tab ${
                       active ? "detail-toolbar-status-tab-active" : "detail-toolbar-status-tab-idle"
                     }`}
@@ -749,6 +894,9 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   className="input-field w-full pl-10 text-sm"
                 />
               </div>
+              <button type="button" className="btn-secondary shrink-0" onClick={() => setFilterOpen((open) => !open)}>
+                Filter
+              </button>
               {selecting || filtered.length > 0 ? (
                 <div className="bulk-inline-actions">
                   <BulkModeButtons
@@ -794,25 +942,52 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               {isInstitute ? "Add Member" : "Add Student"}
             </button>
           </div>
+          {filterOpen ? (
+            <div className="mt-3 grid gap-2 rounded-xl border border-border bg-white p-3 sm:grid-cols-4">
+              <label className="text-xs font-medium text-text-navy">
+                Capture date
+                <input type="date" value={capturedOn} onChange={(e) => setCapturedOn(e.target.value)} className="input-field mt-1" />
+              </label>
+              <label className="text-xs font-medium text-text-navy">
+                {isInstitute ? "Group / Designation" : "Class / Section"}
+                <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="input-field mt-1">
+                  <option value="">All</option>
+                  {classOptions.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-medium text-text-navy">
+                Photo
+                <select value={photoFilter} onChange={(e) => setPhotoFilter(e.target.value)} className="input-field mt-1">
+                  <option value="">All</option>
+                  <option value="captured">Captured</option>
+                  <option value="missing">Uncaptured</option>
+                </select>
+              </label>
+              <label className="text-xs font-medium text-text-navy">
+                Required data
+                <select value={pendingDataFilter} onChange={(e) => setPendingDataFilter(e.target.value)} className="input-field mt-1">
+                  <option value="">All</option>
+                  <option value="yes">Pending Data</option>
+                  <option value="no">Data complete</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                className="btn-secondary sm:col-span-4"
+                onClick={() => {
+                  setCapturedOn("");
+                  setCategoryFilter("");
+                  setPhotoFilter("");
+                  setPendingDataFilter("");
+                }}
+              >
+                Clear filters
+              </button>
+            </div>
+          ) : null}
         </div>
-        {tab === "pending-photos" || tab === "pending-data" ? (
-          <div className="pending-choice-grid">
-            <button
-              type="button"
-              onClick={() => setTab("pending-photos")}
-              className={`pending-choice-btn ${tab === "pending-photos" ? "pending-choice-btn-active" : ""}`}
-            >
-              Pending Photos ({counts["pending-photos"]})
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("pending-data")}
-              className={`pending-choice-btn ${tab === "pending-data" ? "pending-choice-btn-active" : ""}`}
-            >
-              Pending Data ({counts["pending-data"]})
-            </button>
-          </div>
-        ) : null}
         </>
       ) : !isDetailView ? (
         <>
@@ -820,8 +995,9 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             {(
               [
                 { key: "all", label: "All", count: counts.all },
-                { key: "pending-photos", label: "Pending", count: counts.pending },
+                { key: "pending", label: "Pending", count: counts.pending },
                 { key: "captured", label: "Captured", count: counts.captured },
+                { key: "pending-data", label: "Pending Data", count: counts["pending-data"] },
               ] as const
             ).map((t) => (
               <button
@@ -1000,6 +1176,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                           >
                             <StudentThumb student={student} />
                           </button>
+                          <SignatureThumb student={student} />
                           <span className="max-w-[4.5rem] truncate text-[10px] font-medium text-text-muted">
                             {studentFieldDisplay(student, field.key, field.label)}
                           </span>
@@ -1142,8 +1319,10 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
 
       {showDeleteOptions && orgId && (
         <DeleteOptionsModal
+          classOptions={classOptions}
           onClose={() => setShowDeleteOptions(false)}
-          onDeletePhotos={() => {
+          onChoose={(job) => {
+            setDeleteJob(job);
             setShowDeleteOptions(false);
             setShowDeletePhotosOtp(true);
           }}
@@ -1155,9 +1334,22 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
           schoolCreatedAt={orgCreatedAt}
           downloadingAll={exportingPhotos}
           photoCounts={photoCounts}
+          categories={photoCategories}
           onClose={() => setShowDownloadPhotosModal(false)}
           onDownloadAll={() => void handleDownloadAllPhotos()}
           onDownloadByDate={(date) => void handleDownloadPhotosByDate(date)}
+          onDownloadByCategory={(name) => void handleDownloadPhotosByCategory(name)}
+        />
+      )}
+      {showSignatureDownload && orgId && (
+        <DownloadPhotosModal
+          title="Download Signatures"
+          schoolCreatedAt={orgCreatedAt}
+          downloadingAll={exportingPhotos}
+          photoCounts={signatureCounts}
+          onClose={() => setShowSignatureDownload(false)}
+          onDownloadAll={() => void handleDownloadSignatures()}
+          onDownloadByDate={(date) => void handleDownloadSignatures(date)}
         />
       )}
 
@@ -1205,16 +1397,20 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         />
       )}
 
-      {showDeletePhotosOtp && orgId && (
+      {showDeletePhotosOtp && orgId && deleteJob && (
         <OtpConfirmModal
-          title="Delete all photos"
-          description={`Remove all captured photos for ${selectedSchoolName ?? (isInstitute ? "this institute" : "this school")}. Student records will remain.`}
-          confirmLabel="Delete All Photos"
+          title={deleteJob.label}
+          description={`${deleteJob.label} for ${selectedSchoolName ?? (isInstitute ? "this institute" : "this school")}. This cannot be undone.`}
+          confirmLabel={deleteJob.label}
           onClose={() => setShowDeletePhotosOtp(false)}
           onRequestOtp={async () => {
-            const url = isInstitute
-              ? `/admin/institutes/${instituteId}/request-delete-photos-otp`
-              : `/admin/schools/${schoolId}/request-delete-photos-otp`;
+            const url = deleteJob.kind === "data"
+              ? isInstitute
+                ? `/admin/institutes/${instituteId}/request-delete-excel-otp`
+                : `/admin/schools/${schoolId}/request-delete-excel-otp`
+              : isInstitute
+                ? `/admin/institutes/${instituteId}/request-delete-photos-otp`
+                : `/admin/schools/${schoolId}/request-delete-photos-otp`;
             const { data } = await api.post<{ message?: string; devOtp?: string }>(url);
             return { message: data.message, devOtp: data.devOtp };
           }}

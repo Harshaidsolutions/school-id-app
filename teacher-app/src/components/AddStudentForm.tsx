@@ -57,7 +57,12 @@ export function AddStudentForm({
   const photoSize = scale(140);
   const pickerMaxHeight = hp(38);
   const { fields: formFields } = useFormConfig();
-  const displayFields = formFields.filter((field) => field.enabled !== false);
+  const displayFields = formFields.filter(
+    (field) => field.enabled !== false && field.key !== "signature_upload"
+  );
+  const showSignature = formFields.some(
+    (field) => field.key === "signature_upload" && field.enabled !== false
+  );
   const defaultClass =
     initialClass ?? getAssignedClassSection(user) ?? "";
 
@@ -287,6 +292,7 @@ export function AddStudentForm({
         </View>
       ) : null}
 
+      {showSignature ? (
       <View style={styles.photoSection}>
           <Text style={[styles.label, { color: colors.text }]}>Signature</Text>
           <Pressable
@@ -310,8 +316,13 @@ export function AddStudentForm({
             ) : (
               <View style={styles.photoPlaceholder}>
                 <Ionicons name="create-outline" size={28} color={colors.textMuted} />
-                <Text style={[styles.signatureHint, { color: colors.textMuted }]}>
-                  Tap to capture or choose a signature
+                <Text
+                  style={[styles.signatureHint, { color: colors.textMuted }]}
+                  numberOfLines={2}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
+                >
+                  Tap to capture or choose signature
                 </Text>
               </View>
             )}
@@ -324,6 +335,7 @@ export function AddStudentForm({
             </Pressable>
           ) : null}
         </View>
+      ) : null}
 
       <DynamicStudentFieldList
         formFields={displayFields}

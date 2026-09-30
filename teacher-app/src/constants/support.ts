@@ -20,7 +20,7 @@ export const REFER_WHATSAPP_CATALOG_LINK =
 
 /** Opens WhatsApp chat without prefilled body text. */
 export function buildHelpSupportMessage(_schoolName?: string): string {
-  return "";
+  return "I need help with My School ID Card.";
 }
 
 export function buildReferMessage(schoolName: string): string {
@@ -30,5 +30,5 @@ export function buildReferMessage(schoolName: string): string {
 
 /** Refer Us uses the catalog wa.me link directly — no prefilled share text. */
 export function buildReferShareMessage(_catalogLink?: string): string {
-  return "";
+  return "I want to refer this MySchool ID Card app";
 }

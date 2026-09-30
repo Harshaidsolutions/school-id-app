@@ -220,6 +220,7 @@ export function isDynamicFieldKey(key: string): boolean {
 
 export function isKnownFieldKey(key: string): boolean {
   return (
+    key === "signature_upload" ||
     (CANONICAL_FIELD_KEYS as readonly string[]).includes(key) ||
     isDynamicFieldKey(key)
   );

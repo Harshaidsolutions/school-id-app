@@ -87,8 +87,13 @@ export function EditStudentScreen({ navigation, route }: Props) {
 
   const { colors } = useTheme();
   const { showToast } = useToast();
-  const { fields: formFields, allowNumberEdit } = useFormConfig();
-  const displayFields = formFields.filter((field) => field.enabled !== false);
+  const { fields: formFields } = useFormConfig();
+  const displayFields = formFields.filter(
+    (field) => field.enabled !== false && field.key !== "signature_upload"
+  );
+  const showSignature = formFields.some(
+    (field) => field.key === "signature_upload" && field.enabled !== false
+  );
 
   const insets = useSafeAreaInsets();
   const { scale } = useResponsiveLayout();
@@ -143,6 +148,7 @@ export function EditStudentScreen({ navigation, route }: Props) {
   const [saving, setSaving] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
+  const [signatureUri, setSignatureUri] = useState<string | null>(student.signature_url ?? null);
   const [savedStudent, setSavedStudent] = useState<TeacherStudent | null>(null);
 
   useEffect(() => {
@@ -171,6 +177,34 @@ export function EditStudentScreen({ navigation, route }: Props) {
     }
   }
 
+  async function handleSignaturePick() {
+    if (!showSignature || photoBusy || saving) return;
+    const uri = await pickStudentPhotoForFormUpload("gallery");
+    if (!uri) return;
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("signature", {
+        uri,
+        name: `${currentStudent.id}-signature.jpg`,
+        type: "image/jpeg",
+      } as unknown as Blob);
+      const { data } = await api.post<{ student: TeacherStudent }>(
+        `/teacher/students/${currentStudent.id}/signature`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      setSignatureUri(data.student.signature_url ?? uri);
+      setCurrentStudent(data.student);
+      showToast("Signature updated.");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to upload signature."));
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
   async function handleSave() {
     const payload = buildTeacherStudentPayload(formFields, {
       firstName,
@@ -188,14 +222,15 @@ export function EditStudentScreen({ navigation, route }: Props) {
       custom3,
       extraValues,
     });
-    if (!allowNumberEdit) {
-      delete payload.photo_id;
-      const extra = payload.extra_fields;
-      if (extra && typeof extra === "object") {
-        const rec = extra as Record<string, unknown>;
-        delete rec.photo_id;
-        delete rec.photoId;
-      }
+    delete payload.photo_id;
+    payload.student_name = currentStudent.student_name ?? "";
+    const extra = payload.extra_fields;
+    if (extra && typeof extra === "object") {
+      const rec = extra as Record<string, unknown>;
+      delete rec.photo_id;
+      delete rec.photoId;
+      delete rec.student_name;
+      delete rec.studentName;
     }
 
     const student_name = String(payload.student_name ?? "").trim();
@@ -364,12 +399,25 @@ export function EditStudentScreen({ navigation, route }: Props) {
 
 
 
+            {showSignature ? (
+              <Pressable onPress={() => void handleSignaturePick()} disabled={photoBusy || saving} style={{ marginBottom: 12 }}>
+                <Text style={{ color: colors.text, fontFamily: fonts.semiBold, marginBottom: 6 }}>Signature</Text>
+                {signatureUri ? (
+                  <Image source={{ uri: signatureUri }} style={{ width: "100%", height: 88 }} resizeMode="contain" />
+                ) : (
+                  <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75} style={{ color: colors.textMuted }}>
+                    Tap to capture or choose signature
+                  </Text>
+                )}
+              </Pressable>
+            ) : null}
+
             <DynamicStudentFieldList
               formFields={displayFields}
               colors={colors}
               inputStyle={inputStyle}
               lockIdentityFields
-              hideNumberField={!allowNumberEdit}
+              hideNumberField={false}
               photoId={currentStudent.photo_id ?? ""}
               studentName={currentStudent.student_name ?? ""}
               firstName={firstName}

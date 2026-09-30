@@ -132,6 +132,7 @@ export function LoginScreen(_props: Props) {
               variant="hero"
               title={BRAND.appName}
               showTagline={false}
+              singleLine
               style={{ marginTop: spacing.sm }}
             />
 

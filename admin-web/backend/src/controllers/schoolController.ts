@@ -68,7 +68,7 @@ export async function notifySuperAdminOrgCreated(
     if (org.kind === "institute") {
       await pool.query(
         `INSERT INTO notifications (institute_id, title, message, created_by, audience)
-         VALUES ($1, 'New Institute Created', ${messageSql}, $6, 'super_admin')
+         VALUES ($1, $2 || ' created a new Institute', ${messageSql}, $6, 'super_admin')
          ON CONFLICT (institute_id) WHERE audience = 'super_admin' AND institute_id IS NOT NULL
          DO NOTHING`,
         params
@@ -77,7 +77,7 @@ export async function notifySuperAdminOrgCreated(
     }
     await pool.query(
       `INSERT INTO notifications (school_id, title, message, created_by, audience)
-       VALUES ($1, 'New School Created', ${messageSql}, $6, 'super_admin')
+       VALUES ($1, $2 || ' created a new School', ${messageSql}, $6, 'super_admin')
        ON CONFLICT (school_id) WHERE audience = 'super_admin' AND school_id IS NOT NULL
        DO NOTHING`,
       params
@@ -283,11 +283,17 @@ export async function listSchools(
     const scope = await requireAdminScope(req);
     const year =
       typeof req.query.year === "string" ? req.query.year.trim() : "";
+    const createdOn =
+      typeof req.query.createdOn === "string" ? req.query.createdOn.trim() : "";
     const filters: string[] = [];
     const values: unknown[] = [];
     if (year) {
       filters.push(`s.year = $${values.length + 1}`);
       values.push(year);
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(createdOn)) {
+      filters.push(`(s.created_at AT TIME ZONE 'Asia/Kolkata')::date = $${values.length + 1}::date`);
+      values.push(createdOn);
     }
     values.push(scope.adminUserId);
     const ownerParam = values.length;

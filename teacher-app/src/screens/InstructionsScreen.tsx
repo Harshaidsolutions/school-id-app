@@ -1,7 +1,5 @@
 import {
 
-  Image,
-
   Linking,
 
   Modal,
@@ -56,7 +54,7 @@ import {
 
 import { SAMPLE_PHOTO_URL } from "./InstructionsScreen.constants";
 
-const PHOTO_EXAMPLES: {
+export const PHOTO_EXAMPLES: {
   ok: boolean;
   source: number;
   title: string;
@@ -254,39 +252,6 @@ export function InstructionsScreen(_props: Props) {
 
       >
 
-        {PHOTO_EXAMPLES.map((example, i) => (
-          <View key={example.caption} style={styles.row}>
-            <View style={[styles.numberCircle, { backgroundColor: example.ok ? colors.brandGreen : colors.danger }]}>
-              <Text style={[styles.numberText, { color: "#FFFFFF" }]}>{i + 1}</Text>
-            </View>
-            <View style={styles.stepBody}>
-              <Text
-                style={{
-                  color: example.ok ? colors.brandGreen : colors.danger,
-                  fontFamily: fonts.headingSemiBold,
-                  marginBottom: 6,
-                }}
-              >
-                {example.title}
-              </Text>
-              <Image
-                source={example.source}
-                resizeMode="contain"
-                style={{ width: "100%", height: 220, borderRadius: 8, backgroundColor: colors.surface }}
-              />
-              <Text
-                style={{
-                  marginTop: 6,
-                  color: colors.text,
-                  fontFamily: stepFontFamily,
-                }}
-              >
-                {example.caption}
-              </Text>
-            </View>
-          </View>
-        ))}
-
         {steps.map((step, i) => (
 
           <View key={`${lang}-${i}`} style={styles.row}>
@@ -305,7 +270,7 @@ export function InstructionsScreen(_props: Props) {
 
               <Text style={[styles.numberText, { color: "#FFFFFF" }]}>
 
-                {PHOTO_EXAMPLES.length + i + 1}
+                {i + 1}
 
               </Text>
 

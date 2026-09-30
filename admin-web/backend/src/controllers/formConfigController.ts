@@ -9,6 +9,7 @@ import {
   inferFormFieldsFromStudentRows,
   sortFormFields,
   withSequentialDisplayOrder,
+  withSignatureUploadField,
 } from "../constants/formFields";
 import { isKnownFieldKey } from "../utils/excelSchema";
 import {
@@ -509,9 +510,16 @@ export async function getFormConfig(
       }
     }
 
+    const withSignature = withSignatureUploadField(fields);
+    if (withSignature.length !== fields.length) {
+      fields = withSignature;
+      if (fields.length > 1 || studentCount > 0 || importBatchCount > 0) {
+        await persistFormConfigFields({ schoolId, instituteId }, fields);
+      }
+    }
     res.status(200).json({
       status: "ok",
-      configured: fields.length > 0,
+      configured: fields.some((field) => field.key !== "signature_upload") || fields.length > 0,
       studentCount,
       importBatchCount,
       fields: sortFormFields(fields),
@@ -580,7 +588,7 @@ export async function putFormConfig(
       instituteId: instituteId ?? undefined,
     });
 
-    let normalized = withSequentialDisplayOrder(
+    let normalized = withSignatureUploadField(withSequentialDisplayOrder(
       fields
         .map((f) => {
           const colIndex = (f as { colIndex?: number }).colIndex;
@@ -600,7 +608,7 @@ export async function putFormConfig(
           };
         })
         .filter((f) => f.key && f.label && isKnownFieldKey(f.key))
-    );
+    ));
 
     if (normalized.length === 0) {
       throw new AppError("At least one valid field is required", 400);
@@ -657,7 +665,7 @@ export async function loadFormConfigForOrg(options: {
     schoolId: schoolId ?? undefined,
     instituteId: instituteId ?? undefined,
   });
-  if (fields.length > 0) return fields;
+  if (fields.length > 0) return withSignatureUploadField(fields);
 
   const hasData = await orgHasImportedData({
     schoolId: schoolId ?? undefined,

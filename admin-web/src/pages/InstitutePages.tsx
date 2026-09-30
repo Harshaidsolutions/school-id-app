@@ -25,14 +25,16 @@ export function InstituteListPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [otpOpen, setOtpOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [createdOn, setCreatedOn] = useState("");
 
-  async function loadInstitutes() {
+  async function loadInstitutes(created = createdOn) {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api.get<{ institutes?: Institute[] }>(
-        "/admin/institutes"
-      );
+      const { data } = await api.get<{ institutes?: Institute[] }>("/admin/institutes", {
+        params: created ? { createdOn: created } : undefined,
+      });
       setInstitutes(Array.isArray(data.institutes) ? data.institutes : []);
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -137,6 +139,9 @@ export function InstituteListPage() {
         }
         actions={
           <>
+            <button type="button" className="btn-secondary shrink-0" onClick={() => setFilterOpen((open) => !open)}>
+              Filter
+            </button>
             {selecting || filtered.length > 0 ? (
               <BulkModeButtons
                 selecting={selecting}
@@ -162,6 +167,33 @@ export function InstituteListPage() {
           </>
         }
       />
+
+      {filterOpen ? (
+        <div className="mb-4 flex flex-wrap items-end gap-2 rounded-xl border border-border bg-white p-3">
+          <label className="text-xs font-medium text-text-navy">
+            Created date
+            <input
+              type="date"
+              value={createdOn}
+              onChange={(e) => {
+                setCreatedOn(e.target.value);
+                void loadInstitutes(e.target.value);
+              }}
+              className="input-field mt-1"
+            />
+          </label>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              setCreatedOn("");
+              void loadInstitutes("");
+            }}
+          >
+            Clear filters
+          </button>
+        </div>
+      ) : null}
 
       {error && <div className="mb-4 alert-error">{error}</div>}
 

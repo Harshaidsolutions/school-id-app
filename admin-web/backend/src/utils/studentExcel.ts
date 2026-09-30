@@ -340,7 +340,7 @@ export function validateStudentRows(
 export function buildExportHeaders(
   formFields: FormFieldConfig[]
 ): { label: string; key: string }[] {
-  const enabled = formFields.filter((f) => f.enabled);
+  const enabled = formFields.filter((f) => f.enabled && f.key !== "signature_upload");
   const orderOf = (f: FormFieldConfig, index: number): number => {
     if (typeof f.displayOrder === "number") return f.displayOrder;
     const idx = (f as { colIndex?: number }).colIndex;
