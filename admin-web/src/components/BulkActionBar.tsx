@@ -29,9 +29,9 @@ export function BulkActionBar({
       </span>
       <button
         type="button"
-        className="text-sm text-text-muted hover:underline"
+        className="btn-secondary px-3 py-1.5 text-sm"
         onClick={onClear}
-        disabled={selectedCount === 0 || deleting}
+        disabled={deleting}
       >
         Cancel
       </button>

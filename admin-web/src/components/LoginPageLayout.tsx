@@ -28,7 +28,7 @@ export function LoginPageLayout({
   onTitlePress?: () => void;
 }) {
   return (
-    <div className="login-shell relative flex min-h-[100dvh] flex-col overflow-x-hidden">
+    <div className="login-shell relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden">
       <svg
         className="pointer-events-none absolute bottom-0 left-0 z-0 w-full"
         style={{ height: "clamp(88px, 16vh, 180px)" }}
@@ -41,7 +41,7 @@ export function LoginPageLayout({
         <path d="M0 160 C350 110 600 170 850 130 C1100 90 1250 160 1440 140 L1440 220 L0 220 Z" fill="#2563EB" opacity="0.92" />
       </svg>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[1400px] flex-1 items-center justify-center overflow-y-auto px-[clamp(0.75rem,3vw,2rem)] py-[clamp(0.75rem,2vh,1.5rem)] pb-[clamp(5.5rem,12vh,8rem)]">
+      <div className="relative z-10 mx-auto flex h-full w-full max-w-[1400px] items-center justify-center overflow-hidden px-[clamp(0.75rem,3vw,1.5rem)] py-[clamp(0.5rem,1.5vh,1rem)]">
         <div
           className={
             appBrand
@@ -62,13 +62,13 @@ export function LoginPageLayout({
                 : "flex w-full items-center justify-center md:max-w-[min(100%,26rem)] md:justify-end"
             }
           >
-            <div className="w-full rounded-2xl border border-border/70 bg-white px-[clamp(1.25rem,2.5vw,1.75rem)] py-[clamp(1.5rem,3vh,2rem)] shadow-[0_8px_40px_rgba(15,23,42,0.07)]">
+            <div className="max-h-[calc(100dvh-1.5rem)] w-full overflow-y-auto rounded-2xl border border-border/70 bg-white px-[clamp(1.25rem,2.5vw,1.75rem)] py-[clamp(0.85rem,2vh,1.35rem)] shadow-[0_8px_40px_rgba(15,23,42,0.07)]">
               {appBrand ? (
                 <div className="mb-4 flex flex-col items-center text-center">
                   <img
                     src="/app-logo.png"
                     alt="My School ID Card"
-                    className="h-[clamp(4.25rem,16vh,7.5rem)] w-auto object-contain"
+                    className="h-[clamp(3.25rem,12vh,5.5rem)] w-auto object-contain"
                   />
                   <p className="mt-2 text-lg font-bold text-text-navy">My School ID Card</p>
                 </div>
@@ -92,8 +92,8 @@ export function LoginPageLayout({
                 </h1>
               )}
 
-              <div className="mt-6">{children}</div>
-              {footer ? <div className="mt-5">{footer}</div> : null}
+              <div className="mt-3">{children}</div>
+              {footer ? <div className="mt-3">{footer}</div> : null}
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { Student } from "../types";
+import { authenticatedStudentPhotoUrl } from "../utils/studentPhotoSrc";
 
 const VIEWER_BODY_CLASS = "student-photo-viewer-open";
 
@@ -69,6 +70,10 @@ export function StudentPhotoModal({
   }, [onClose, onNavigate, gallery, currentIndex, hasPrev, hasNext]);
 
   const photoUrl = student.photo_url;
+  const [src, setSrc] = useState(photoUrl ?? "");
+  useEffect(() => {
+    setSrc(photoUrl ?? "");
+  }, [student.id, photoUrl]);
   if (!photoUrl) return null;
 
   function goPrev(e: MouseEvent<HTMLButtonElement>) {
@@ -130,9 +135,15 @@ export function StudentPhotoModal({
 
         <div className="overflow-hidden rounded-2xl bg-white shadow-xl">
           <img
-            src={photoUrl}
+            src={src || photoUrl || ""}
             alt={student.student_name ?? "Student"}
             className="block max-h-[75vh] w-full bg-content-bg object-contain"
+            onError={() => {
+              if (src.startsWith("blob:")) return;
+              void authenticatedStudentPhotoUrl(student.id).then((url) => {
+                if (url) setSrc(url);
+              });
+            }}
           />
           {student.photo_captured_at ? (
             <div className="border-t border-border px-4 py-2 text-center text-xs text-text-muted">

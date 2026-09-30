@@ -56,6 +56,38 @@ import {
 
 import { SAMPLE_PHOTO_URL } from "./InstructionsScreen.constants";
 
+const PHOTO_EXAMPLES: {
+  ok: boolean;
+  source: number;
+  title: string;
+  caption: string;
+}[] = [
+  {
+    ok: true,
+    source: require("../../assets/instructions/instruction-photo-correct.jpg"),
+    title: "✓ Right photo",
+    caption: "Face should be clearly visible, centered, and evenly lit.",
+  },
+  {
+    ok: false,
+    source: require("../../assets/instructions/instruction-photo-dark.jpg"),
+    title: "✕ Wrong photo",
+    caption: "Do not take a photo when the face is too dark.",
+  },
+  {
+    ok: false,
+    source: require("../../assets/instructions/instruction-photo-backlight.jpg"),
+    title: "✕ Wrong photo",
+    caption: "Do not take photos with strong backlight.",
+  },
+  {
+    ok: false,
+    source: require("../../assets/instructions/instruction-photo-bad-framing.jpg"),
+    title: "✕ Wrong photo",
+    caption: "Do not cut off the face, stand too close, tilt the head, or use a blurry photo.",
+  },
+];
+
 
 
 type Props = NativeStackScreenProps<RootStackParamList, "Instructions">;
@@ -221,6 +253,36 @@ export function InstructionsScreen(_props: Props) {
         showsVerticalScrollIndicator={false}
 
       >
+
+        <View style={{ marginBottom: 16 }}>
+          {PHOTO_EXAMPLES.map((example) => (
+            <View key={example.caption} style={{ marginBottom: 14 }}>
+              <Text
+                style={{
+                  color: example.ok ? colors.brandGreen : colors.danger,
+                  fontFamily: fonts.headingSemiBold,
+                  marginBottom: 6,
+                }}
+              >
+                {example.title}
+              </Text>
+              <Image
+                source={example.source}
+                resizeMode="contain"
+                style={{ width: "100%", height: 220, borderRadius: 8, backgroundColor: colors.surface }}
+              />
+              <Text
+                style={{
+                  marginTop: 6,
+                  color: colors.text,
+                  fontFamily: stepFontFamily,
+                }}
+              >
+                {example.caption}
+              </Text>
+            </View>
+          ))}
+        </View>
 
         {steps.map((step, i) => (
 

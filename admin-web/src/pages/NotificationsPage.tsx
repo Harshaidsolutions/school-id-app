@@ -390,7 +390,7 @@ export function NotificationsPage() {
                 </button>
               </div>
             </div>
-            <p className="mt-2 line-clamp-3 text-sm text-text-muted whitespace-pre-wrap">
+            <p className="mt-2 whitespace-pre-wrap text-sm text-text-muted">
               {n.message}
             </p>
             <div className="mt-3 text-xs font-medium text-accent-blue">

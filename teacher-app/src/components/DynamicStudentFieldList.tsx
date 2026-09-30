@@ -111,6 +111,72 @@ export type DynamicStudentFieldListProps = {
   onInputFocus?: (nativeTarget: number) => void;
 };
 
+const SINGLETON_KINDS = new Set([
+  "student_name",
+  "class_section",
+  "roll_no",
+  "dob",
+  "gender",
+  "blood_group",
+  "parent_phone",
+  "address",
+  "custom_1",
+  "custom_2",
+  "custom_3",
+  "photo",
+]);
+
+function normalizedLabel(label: string): string {
+  return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function effectiveKind(field: FormFieldConfig) {
+  if (/^fld_\d+$/.test(field.key) || field.key.startsWith("dyn_")) {
+    const byLabel = resolveFieldLabelKind(field);
+    if (byLabel !== "generic") return byLabel;
+  }
+  return resolveFieldKind(field);
+}
+
+function shownLabel(field: FormFieldConfig): string {
+  const n = normalizedLabel(field.label);
+  if (
+    field.key === "photo_id" ||
+    n === "photoid" ||
+    n === "photonumber" ||
+    n === "photo" ||
+    isIdentityAliasLabel(field.label)
+  ) {
+    return "Photo ID";
+  }
+  if (field.key === "student_name" || n === "name" || n === "studentname" || n === "membername") {
+    return "Student Name";
+  }
+  return field.label;
+}
+
+/** One control per configured field. Excel and default copies of the same field collapse. */
+function dedupeFormFields(fields: FormFieldConfig[]): FormFieldConfig[] {
+  const seenKeys = new Set<string>();
+  const seenLabels = new Set<string>();
+  const seenKinds = new Set<string>();
+  const out: FormFieldConfig[] = [];
+  for (const field of sortFormFields(fields).filter((item) => item.enabled)) {
+    if (seenKeys.has(field.key)) continue;
+    const label = normalizedLabel(field.label);
+    if (label && seenLabels.has(label)) continue;
+    const kind = effectiveKind(field);
+    if (SINGLETON_KINDS.has(kind)) {
+      if (seenKinds.has(kind)) continue;
+      seenKinds.add(kind);
+    }
+    seenKeys.add(field.key);
+    if (label) seenLabels.add(label);
+    out.push(field);
+  }
+  return out;
+}
+
 function focusProps(onInputFocus?: (nativeTarget: number) => void) {
   return onInputFocus
     ? {
@@ -168,7 +234,8 @@ export function DynamicStudentFieldList({
   onInputFocus,
 }: DynamicStudentFieldListProps) {
   const focus = focusProps(onInputFocus);
-  const ordered = sortFormFields(formFields).filter((f) => f.enabled);
+  const ordered = dedupeFormFields(formFields);
+  const primaryParentKey = ordered.find((field) => effectiveKind(field) === "parent_name")?.key;
   const identityFields = ordered.filter((field) => isIdentityAliasLabel(field.label));
   const lockedIdentity = lockIdentityFields ? visibleLockedIdentity(identityFields, extraValues, photoId) : [];
 
@@ -178,7 +245,7 @@ export function DynamicStudentFieldList({
         <>
           {lockedIdentity.length > 0 ? (
             lockedIdentity.map((field) => (
-              <Field key={field.key} label={field.label} colors={colors}>
+              <Field key={field.key} label={shownLabel(field)} colors={colors}>
                 <TextInput
                   style={inputStyle}
                   value={lockedIdentityValue(field.key, extraValues, photoId)}
@@ -204,7 +271,7 @@ export function DynamicStudentFieldList({
         </>
       ) : null}
       {lockIdentityFields ? (
-        <Field label="Name" colors={colors}>
+        <Field label="Student Name" colors={colors}>
           <TextInput
             style={inputStyle}
             value={studentName}
@@ -216,8 +283,9 @@ export function DynamicStudentFieldList({
         </Field>
       ) : null}
       {ordered.map((field) => {
-        const kind = resolveFieldKind(field);
+        const kind = effectiveKind(field);
         const labelKind = resolveFieldLabelKind(field);
+        const label = shownLabel(field);
         if (
           (kind === "photo" || labelKind === "photo") &&
           !isIdentityAliasLabel(field.label)
@@ -263,7 +331,7 @@ export function DynamicStudentFieldList({
           const locked = lockedClassSection?.trim();
           if (locked) {
             return (
-              <Field key={field.key} label={field.label} colors={colors} required={classRequired}>
+              <Field key={field.key} label={label} colors={colors} required={classRequired}>
                 <View style={[inputStyle, { justifyContent: "center" }]}>
                   <Text style={{ color: colors.text }} numberOfLines={1}>
                     {locked}
@@ -274,7 +342,7 @@ export function DynamicStudentFieldList({
           }
           if (classInputMode === "picker" && onClassSectionPress) {
             return (
-              <Field key={field.key} label={field.label} colors={colors} required={classRequired}>
+              <Field key={field.key} label={label} colors={colors} required={classRequired}>
                 <Pressable
                   style={[inputStyle, { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }]}
                   onPress={onClassSectionPress}
@@ -291,7 +359,7 @@ export function DynamicStudentFieldList({
             );
           }
           return (
-            <Field key={field.key} label={field.label} colors={colors} required={classRequired}>
+            <Field key={field.key} label={label} colors={colors} required={classRequired}>
               <TextInput
                 style={inputStyle}
                 value={classSection}
@@ -308,7 +376,7 @@ export function DynamicStudentFieldList({
 
         if (kind === "roll_no") {
           return (
-            <Field key={field.key} label={field.label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors}>
               <TextInput
                 style={inputStyle}
                 value={rollNo}
@@ -324,7 +392,7 @@ export function DynamicStudentFieldList({
           return (
             <StudentDobField
               key={field.key}
-              label={field.label}
+              label={label}
               colors={colors}
               inputStyle={inputStyle}
               value={dob}
@@ -337,7 +405,7 @@ export function DynamicStudentFieldList({
           return (
             <StudentGenderField
               key={field.key}
-              label={field.label}
+              label={label}
               colors={colors}
               inputStyle={inputStyle}
               value={gender}
@@ -350,7 +418,7 @@ export function DynamicStudentFieldList({
           return (
             <StudentBloodGroupField
               key={field.key}
-              label={field.label}
+              label={label}
               colors={colors}
               inputStyle={inputStyle}
               value={bloodGroup}
@@ -360,12 +428,17 @@ export function DynamicStudentFieldList({
         }
 
         if (kind === "parent_name") {
+          const primary = field.key === primaryParentKey;
           return (
-            <Field key={field.key} label={field.label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors}>
               <TextInput
                 style={inputStyle}
-                value={parentName}
-                onChangeText={onParentNameChange}
+                value={primary ? parentName : (extraValues[field.key] ?? "")}
+                onChangeText={
+                  primary
+                    ? onParentNameChange
+                    : (value) => onExtraChange?.(field.key, value)
+                }
                 placeholderTextColor={colors.textSubtle}
                 autoCapitalize="words"
                 {...focus}
@@ -378,7 +451,7 @@ export function DynamicStudentFieldList({
           return (
             <Field
               key={field.key}
-              label={field.label}
+              label={label}
               colors={colors}
               required={parentPhoneTenDigits}
             >
@@ -403,7 +476,7 @@ export function DynamicStudentFieldList({
 
         if (kind === "address") {
           return (
-            <Field key={field.key} label={field.label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors}>
               <TextInput
                 style={[inputStyle, { minHeight: 72, textAlignVertical: "top" }]}
                 value={address}
@@ -418,7 +491,7 @@ export function DynamicStudentFieldList({
 
         if (kind === "custom_1") {
           return (
-            <Field key={field.key} label={field.label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors}>
               <TextInput
                 style={inputStyle}
                 value={custom1}
@@ -432,7 +505,7 @@ export function DynamicStudentFieldList({
 
         if (kind === "custom_2") {
           return (
-            <Field key={field.key} label={field.label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors}>
               <TextInput
                 style={inputStyle}
                 value={custom2}
@@ -446,7 +519,7 @@ export function DynamicStudentFieldList({
 
         if (kind === "custom_3") {
           return (
-            <Field key={field.key} label={field.label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors}>
               <TextInput
                 style={inputStyle}
                 value={custom3}
@@ -459,7 +532,7 @@ export function DynamicStudentFieldList({
         }
 
         return (
-          <Field key={field.key} label={field.label} colors={colors}>
+          <Field key={field.key} label={label} colors={colors}>
             <TextInput
               style={inputStyle}
               value={extraValues[field.key] ?? ""}

@@ -38,8 +38,10 @@ import {
 import {
   assertNumberEditAllowed,
   assertRecordEditAllowed,
+  hasAllRequiredFieldData,
   hasCapturedPhoto,
-  hasCompleteRequiredData,
+  loadRequiredDataContext,
+  type RequiredDataContext,
 } from "../utils/recordStatus";
 
 async function insertTeacherStudent(
@@ -132,8 +134,18 @@ function optionalBodyString(
   return undefined;
 }
 
-function toStudentJson(row: TeacherStudentRow) {
+function toStudentJson(row: TeacherStudentRow, ctx?: RequiredDataContext) {
   const extraFields = parseExtraFields(row.extra_fields);
+  const institute = Boolean(row.institute_id) && !row.school_id;
+  const dataComplete = ctx
+    ? hasAllRequiredFieldData(
+        row as unknown as Record<string, unknown>,
+        ctx.fields,
+        ctx.visibility,
+        institute
+      )
+    : Boolean(row.student_name?.trim()) &&
+      (institute || Boolean(row.class_section?.trim()));
   const fieldLabels =
     row.field_labels && typeof row.field_labels === "object"
       ? row.field_labels
@@ -160,19 +172,20 @@ function toStudentJson(row: TeacherStudentRow) {
     extra_fields: Object.keys(extraFields).length ? extraFields : null,
     field_labels: fieldLabels,
     pending_photo: !hasCapturedPhoto(row.photo_url),
-    pending_data: !hasCompleteRequiredData({
-      studentName: row.student_name,
-      classSection: row.class_section,
-      institute: Boolean(row.institute_id),
-    }),
-    fully_captured:
-      hasCapturedPhoto(row.photo_url) &&
-      hasCompleteRequiredData({
-        studentName: row.student_name,
-        classSection: row.class_section,
-        institute: Boolean(row.institute_id),
-      }),
+    pending_data: !dataComplete,
+    fully_captured: hasCapturedPhoto(row.photo_url) && dataComplete,
   };
+}
+
+async function presentStudent(row: TeacherStudentRow) {
+  const ctx = await loadRequiredDataContext(row.school_id, row.institute_id);
+  return toStudentJson(row, ctx);
+}
+
+async function presentStudents(rows: TeacherStudentRow[]) {
+  if (rows.length === 0) return [];
+  const ctx = await loadRequiredDataContext(rows[0].school_id, rows[0].institute_id);
+  return rows.map((row) => toStudentJson(row, ctx));
 }
 
 export async function getTeacherFormConfig(
@@ -218,7 +231,7 @@ export async function listTeacherStudents(
       res.status(200).json({
         status: "ok",
         count: result.rows.length,
-        students: result.rows.map(toStudentJson),
+        students: await presentStudents(result.rows),
       });
       return;
     }
@@ -245,7 +258,7 @@ export async function listTeacherStudents(
         res.status(200).json({
           status: "ok",
           count: result.rows.length,
-          students: result.rows.map(toStudentJson),
+          students: await presentStudents(result.rows),
         });
         return;
       }
@@ -273,7 +286,7 @@ export async function listTeacherStudents(
     res.status(200).json({
       status: "ok",
       count: result.rows.length,
-      students: result.rows.map(toStudentJson),
+      students: await presentStudents(result.rows),
     });
   } catch (error) {
     next(error);
@@ -394,7 +407,7 @@ export async function createTeacherStudent(
 
       res.status(201).json({
         status: "ok",
-        student: toStudentJson(student),
+        student: await presentStudent(student),
       });
       return;
     }
@@ -486,7 +499,7 @@ export async function createTeacherStudent(
 
     res.status(201).json({
       status: "ok",
-      student: toStudentJson(student),
+      student: await presentStudent(student),
     });
   } catch (error) {
     next(error);
@@ -614,7 +627,7 @@ export async function uploadStudentPhoto(
 
     res.status(200).json({
       status: "ok",
-      student: toStudentJson(updatedStudent),
+      student: await presentStudent(updatedStudent),
     });
   } catch (error) {
     next(error);
@@ -663,7 +676,7 @@ export async function uploadMemberSignature(
     );
     const row = updated.rows[0];
     if (!row) throw new AppError("Failed to save signature", 500);
-    res.status(200).json({ status: "ok", student: toStudentJson(row) });
+    res.status(200).json({ status: "ok", student: await presentStudent(row) });
   } catch (error) {
     next(error);
   }
@@ -713,6 +726,7 @@ export async function updateTeacherStudent(
       studentName: student.student_name,
       classSection: student.class_section,
       institute: Boolean(student.institute_id && !student.school_id),
+      record: student as unknown as Record<string, unknown>,
     });
     await assertNumberEditAllowed(
       student.school_id,
@@ -945,7 +959,7 @@ export async function deleteStudentPhoto(
 
     res.status(200).json({
       status: "ok",
-      student: toStudentJson(updatedStudent),
+      student: await presentStudent(updatedStudent),
     });
   } catch (error) {
     next(error);

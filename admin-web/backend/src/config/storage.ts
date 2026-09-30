@@ -1,5 +1,6 @@
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadBucketCommand,
   PutObjectCommand,
   S3Client,
@@ -212,6 +213,33 @@ export function studentPhotoPathFromUrl(
 
 export async function deleteStudentPhotoByPath(path: string): Promise<void> {
   await deleteFromBucket(STUDENT_PHOTOS_BUCKET, path);
+}
+
+/** Read a stored object with server credentials. Public URLs are often blocked. */
+export async function readBucketObject(
+  folder: string,
+  path: string
+): Promise<{ bytes: Uint8Array; contentType: string } | null> {
+  try {
+    const client = getS3Client();
+    const bucket = getBucketName();
+    const result = await client.send(
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: objectKey(folder, path),
+      })
+    );
+    if (!result.Body) return null;
+    const bytes = await result.Body.transformToByteArray();
+    return {
+      bytes,
+      contentType: result.ContentType ?? "image/jpeg",
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`S3 read failed (${folder}/${path}): ${message}`);
+    return null;
+  }
 }
 
 export async function fetchImageBytes(

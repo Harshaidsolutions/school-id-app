@@ -569,6 +569,18 @@
     @apply cursor-pointer text-left text-text-muted hover:text-button-blue;
   }
 
+  .pending-choice-grid {
+    @apply mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2;
+  }
+
+  .pending-choice-btn {
+    @apply flex min-h-14 w-full items-center justify-center rounded-xl border border-border bg-white px-4 py-3 text-center text-base font-semibold text-text-navy transition hover:bg-content-bg;
+  }
+
+  .pending-choice-btn-active {
+    @apply border-button-blue bg-button-blue text-white hover:bg-button-blue-hover;
+  }
+
   .detail-toolbar-btn-placeholder {
     @apply pointer-events-none select-none border-dashed border-border/70 bg-surface-muted text-text-muted;
   }

@@ -2,7 +2,13 @@ import { Request, Response, NextFunction } from "express";
 import * as XLSX from "xlsx";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
-import { fetchImageBytes } from "../config/storage";
+import {
+  fetchImageBytes,
+  readBucketObject,
+  STUDENT_PHOTOS_BUCKET,
+  studentPhotoOrgId,
+  studentPhotoPathFromUrl,
+} from "../config/storage";
 import { loadFormConfigForOrg } from "./formConfigController";
 import {
   buildExportHeaders,
@@ -13,7 +19,7 @@ import {
   assertSchoolOwnedByAdmin,
   requireAdminScope,
 } from "../utils/adminScope";
-import { excelScopeClause } from "../utils/recordStatus";
+import { loadRequiredDataContext, matchesExportScope } from "../utils/recordStatus";
 
 function sanitizePhotoIdFilename(photoId: string): string {
   const cleaned = photoId
@@ -296,21 +302,25 @@ export async function exportStudentsExcel(
       throw new AppError("School not found", 404);
     }
 
+    const dataCtx = await loadRequiredDataContext(schoolId, null);
     const result = await pool.query<Record<string, string | null>>(
       `SELECT photo_id, class_section, student_name, parent_name, parent_phone,
               address, roll_no, dob::text AS dob, gender, blood_group,
-              custom_1, custom_2, custom_3, extra_fields, status
+              custom_1, custom_2, custom_3, extra_fields, field_labels, photo_url, status
        FROM students
-       WHERE school_id = $1${excelScopeClause(exportScope, false)}
+       WHERE school_id = $1
        ORDER BY class_section ASC, roll_no ASC NULLS LAST, student_name ASC`,
       [schoolId]
+    );
+    const scopedRows = result.rows.filter((row) =>
+      matchesExportScope(row as unknown as Record<string, unknown>, exportScope, dataCtx)
     );
 
     const formFields = await loadFormConfigForOrg({ schoolId });
     const exportColumns = buildExportHeaders(formFields);
     const header = exportColumns.map((c) => c.label);
 
-    const rows = result.rows.map((s) =>
+    const rows = scopedRows.map((s) =>
       exportColumns.map((col) => studentFieldValue(s, col.key, col.label))
     );
 
@@ -369,20 +379,24 @@ export async function exportInstituteMembersExcel(
       throw new AppError("Institute not found", 404);
     }
 
+    const dataCtx = await loadRequiredDataContext(null, instituteId);
     const result = await pool.query<Record<string, string | null>>(
       `SELECT photo_id, class_section, student_name, parent_name, parent_phone,
               address, roll_no, dob::text AS dob, gender, blood_group,
-              custom_1, custom_2, custom_3, extra_fields, status
+              custom_1, custom_2, custom_3, extra_fields, field_labels, photo_url, status
        FROM students
-       WHERE institute_id = $1${excelScopeClause(exportScope, true)}
+       WHERE institute_id = $1
        ORDER BY class_section ASC, roll_no ASC NULLS LAST, student_name ASC`,
       [instituteId]
+    );
+    const scopedRows = result.rows.filter((row) =>
+      matchesExportScope(row as unknown as Record<string, unknown>, exportScope, dataCtx)
     );
 
     const formFields = await loadFormConfigForOrg({ instituteId });
     const exportColumns = buildExportHeaders(formFields);
     const header = exportColumns.map((c) => c.label);
-    const rows = result.rows.map((s) =>
+    const rows = scopedRows.map((s) =>
       exportColumns.map((col) => studentFieldValue(s, col.key, col.label))
     );
 
@@ -431,8 +445,10 @@ export async function downloadStudentPhoto(
       student_name: string | null;
       photo_id: string | null;
       photo_url: string | null;
+      school_id: string | null;
+      institute_id: string | null;
     }>(
-      `SELECT student_name, photo_id, photo_url
+      `SELECT student_name, photo_id, photo_url, school_id, institute_id
        FROM students
        WHERE id = $1
        LIMIT 1`,
@@ -447,7 +463,12 @@ export async function downloadStudentPhoto(
       throw new AppError("No photo captured for this student", 404);
     }
 
-    const fetched = await fetchImageBytes(student.photo_url);
+    const orgId = studentPhotoOrgId(student.school_id, student.institute_id);
+    const storedPath = studentPhotoPathFromUrl(student.photo_url, orgId, studentId);
+    const fetched = storedPath
+      ? (await readBucketObject(STUDENT_PHOTOS_BUCKET, storedPath)) ??
+        (await fetchImageBytes(student.photo_url))
+      : await fetchImageBytes(student.photo_url);
     if (!fetched?.bytes?.length) {
       throw new AppError("Could not download photo from storage", 502);
     }
@@ -463,10 +484,7 @@ export async function downloadStudentPhoto(
       "Content-Type",
       fetched.contentType || "application/octet-stream"
     );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${filename}"`
-    );
+    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
     res.status(200).send(Buffer.from(fetched.bytes));
   } catch (error) {
     next(error);

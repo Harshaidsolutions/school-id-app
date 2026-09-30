@@ -197,7 +197,7 @@ export function AppLayout() {
               <img
                 src={user.photoUrl}
                 alt=""
-                className="mb-2 h-16 w-16 rounded-full object-cover"
+                className="mb-2 h-16 w-16 rounded-lg bg-white object-contain"
               />
             ) : null}
             <div className="text-text-muted">Hi</div>

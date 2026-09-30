@@ -26,6 +26,8 @@ export function AddStudentScreen({ navigation, route }: Props) {
         <KeyboardAwareFormScrollView
           scrollRef={scrollRef}
           contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          persistentScrollbar={false}
         >
           <AddStudentForm
             classSection={classSection}

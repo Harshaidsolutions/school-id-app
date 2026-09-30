@@ -294,9 +294,8 @@ export function AddStudentForm({
           <Pressable
             style={[
               styles.photoArea,
+              styles.signatureArea,
               {
-                width: photoSize,
-                height: photoSize * 0.55,
                 borderColor: colors.border,
                 backgroundColor: colors.inputBg,
               },
@@ -313,7 +312,7 @@ export function AddStudentForm({
             ) : (
               <View style={styles.photoPlaceholder}>
                 <Ionicons name="create-outline" size={28} color={colors.textMuted} />
-                <Text style={[styles.photoHint, { color: colors.textMuted }]}>
+                <Text style={[styles.signatureHint, { color: colors.textMuted }]}>
                   Tap to capture or choose a signature
                 </Text>
               </View>
@@ -521,6 +520,19 @@ const styles = StyleSheet.create({
   photoHint: {
     fontFamily: fonts.regular,
     fontSize: typeScale.xs,
+    textAlign: "center",
+  },
+  signatureArea: {
+    alignSelf: "stretch",
+    width: "100%",
+    minHeight: 88,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  signatureHint: {
+    fontFamily: fonts.regular,
+    fontSize: typeScale.rowTitle,
+    lineHeight: typeScale.rowTitle + 4,
     textAlign: "center",
   },
   label: {

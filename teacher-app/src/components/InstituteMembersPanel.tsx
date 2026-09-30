@@ -402,6 +402,8 @@ export function InstituteMembersPanel({
             <KeyboardAwareFormScrollView
               scrollRef={addScrollRef}
               contentContainerStyle={styles.addModalScroll}
+              showsVerticalScrollIndicator={false}
+              persistentScrollbar={false}
             >
               {addModalVisible ? (
                 <AddStudentForm

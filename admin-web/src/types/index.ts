@@ -30,6 +30,9 @@ export interface Student {
   photo_id: string | null;
   photo_url: string | null;
   photo_captured_at?: string | null;
+  pending_photo?: boolean;
+  pending_data?: boolean;
+  fully_captured?: boolean;
   status: string | null;
   custom_1?: string | null;
   custom_2?: string | null;

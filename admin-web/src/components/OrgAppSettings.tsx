@@ -4,9 +4,6 @@ import api from "../api/client";
 import type { ApiErrorBody } from "../types";
 import type { FormFieldConfig } from "../constants/formFields";
 
-const LOCKED_SCHOOL = new Set(["student_name", "class_section"]);
-const LOCKED_INSTITUTE = new Set(["student_name"]);
-
 export function OrgAppSettings({
   orgId,
   institute,
@@ -54,8 +51,6 @@ export function OrgAppSettings({
     };
   }, [orgId, institute]);
 
-  const locked = institute ? LOCKED_INSTITUTE : LOCKED_SCHOOL;
-
   async function save(next: {
     visibility: Record<string, boolean>;
     allowNumberEdit: boolean;
@@ -87,7 +82,6 @@ export function OrgAppSettings({
   }
 
   function toggleField(key: string, on: boolean) {
-    if (locked.has(key)) return;
     const next = { ...visibility, [key]: on };
     setVisibility(next);
     void save({ visibility: next, allowNumberEdit, allowRecordEdit, showCaptured });
@@ -100,38 +94,26 @@ export function OrgAppSettings({
   return (
     <div className="centered-page-card mt-6 overflow-hidden">
       <div className="border-b border-border px-5 py-4">
-        <h2 className="text-base font-semibold text-text-navy">
-          {institute ? "Institute app fields" : "School app fields"}
-        </h2>
-        <p className="mt-1 text-sm text-text-muted">
-          Turn a field off to hide it in the app. Existing data stays saved and
-          appears again when the field is turned back on.
-        </p>
+        <h2 className="text-base font-semibold text-text-navy">Required Details</h2>
       </div>
       {error ? <div className="alert-error mx-5 mt-3">{error}</div> : null}
       {saved ? <div className="alert-success mx-5 mt-3">{saved}</div> : null}
       <div className="divide-y divide-border">
         {rows.map((field) => {
           const on = visibility[field.key] !== false;
-          const required = locked.has(field.key);
           return (
             <label
               key={field.key}
               className="flex items-center justify-between gap-3 px-5 py-3 text-sm"
             >
-              <span className="font-medium text-text-navy">
-                {field.label}
-                {required ? (
-                  <span className="ml-2 text-xs font-normal text-text-muted">Required</span>
-                ) : null}
-              </span>
+              <span className="font-medium text-text-navy">{field.label}</span>
               <span className="flex items-center gap-2 text-text-muted">
                 {on ? "ON" : "OFF"}
                 <input
                   type="checkbox"
                   role="switch"
                   checked={on}
-                  disabled={required || saving}
+                  disabled={saving}
                   onChange={(e) => toggleField(field.key, e.target.checked)}
                   className="h-4 w-4"
                 />
@@ -140,12 +122,7 @@ export function OrgAppSettings({
           );
         })}
         <label className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
-          <span>
-            <span className="block font-medium text-text-navy">Edit Form</span>
-            <span className="text-xs text-text-muted">
-              Off hides Edit Form in the app and the server rejects changes to complete records. Pending data can still be filled in.
-            </span>
-          </span>
+          <span className="font-medium text-text-navy">Edit Form</span>
           <span className="flex items-center gap-2 text-text-muted">
             {allowRecordEdit ? "ON" : "OFF"}
             <input
@@ -163,12 +140,7 @@ export function OrgAppSettings({
           </span>
         </label>
         <label className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
-          <span>
-            <span className="block font-medium text-text-navy">Captured Section</span>
-            <span className="text-xs text-text-muted">
-              Off hides complete captured records from the Captured section. Pending Data still shows incomplete records.
-            </span>
-          </span>
+          <span className="font-medium text-text-navy">Captured Section</span>
           <span className="flex items-center gap-2 text-text-muted">
             {showCaptured ? "ON" : "OFF"}
             <input

@@ -133,9 +133,6 @@ export function SchoolListPage() {
       />
 
       {error && <div className="mb-4 alert-error">{error}</div>}
-      <p className="mb-3 text-xs text-text-muted">
-        On Android, screenshots and screen recording are blocked together. If either switch is off, both are blocked for that school.
-      </p>
 
       <div className="card list-table-scroll school-list-table-panel admin-scroll-panel">
         <table className="list-data-table">

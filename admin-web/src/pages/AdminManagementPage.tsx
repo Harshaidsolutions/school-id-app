@@ -356,7 +356,7 @@ export function AdminManagementPage() {
           <div className="sm:col-span-2 text-sm">
             <span className="mb-1.5 block font-medium text-text-navy">Profile photo</span>
             {createPhotoPreview ? (
-              <img src={createPhotoPreview} alt="" className="mb-2 h-16 w-16 rounded-full object-cover" />
+              <img src={createPhotoPreview} alt="" className="mb-2 h-16 w-16 rounded-lg bg-white object-contain" />
             ) : null}
             <input
               type="file"
@@ -568,9 +568,9 @@ export function AdminManagementPage() {
               <div className="text-sm">
                 <span className="mb-1.5 block font-medium text-text-navy">Profile photo</span>
                 {editPhotoPreview ? (
-                  <img src={editPhotoPreview} alt="" className="mb-2 h-16 w-16 rounded-full object-cover" />
+                  <img src={editPhotoPreview} alt="" className="mb-2 h-16 w-16 rounded-lg bg-white object-contain" />
                 ) : editTarget.photo_url && !removeEditPhoto ? (
-                  <img src={editTarget.photo_url} alt="" className="mb-2 h-16 w-16 rounded-full object-cover" />
+                  <img src={editTarget.photo_url} alt="" className="mb-2 h-16 w-16 rounded-lg bg-white object-contain" />
                 ) : null}
                 <label className="relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy">
                   {editPhoto ? editPhoto.name : "Choose File"}

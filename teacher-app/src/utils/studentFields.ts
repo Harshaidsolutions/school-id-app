@@ -254,6 +254,17 @@ function fieldValue(
   return readFieldValue(student, String(field.key), classSection);
 }
 
+function consistentDisplayLabel(key: string, label: string): string {
+  const n = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+  if (key === "photo_id" || n === "photoid" || n === "photonumber" || n === "photo") {
+    return "Photo ID";
+  }
+  if (key === "student_name" || n === "name" || n === "studentname" || n === "membername") {
+    return "Student Name";
+  }
+  return label;
+}
+
 function humanizeKey(key: string): string {
   return key
     .replace(/^dyn_/, "")
@@ -319,7 +330,10 @@ export function getVisibleStudentFields(
       seenKeys.add(field.key);
       rows.push({
         key: field.key,
-        label: fieldLabel(formFields, field.key, field.label),
+        label: consistentDisplayLabel(
+          field.key,
+          fieldLabel(formFields, field.key, field.label)
+        ),
         value:
           value != null && String(value).trim() !== ""
             ? String(value).trim()

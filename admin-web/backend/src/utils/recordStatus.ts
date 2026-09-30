@@ -1,5 +1,8 @@
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
+import type { FormFieldConfig } from "../constants/formFields";
+import { loadFormConfigForOrg } from "../controllers/formConfigController";
+import { getStudentFieldValue } from "./studentFieldAccess";
 
 export function hasCapturedPhoto(photoUrl: string | null | undefined): boolean {
   return Boolean(photoUrl && photoUrl.trim());
@@ -16,6 +19,150 @@ export function hasCompleteRequiredData(input: {
     return false;
   }
   return true;
+}
+
+export type RequiredDataContext = {
+  fields: FormFieldConfig[];
+  visibility: Record<string, boolean>;
+  institute: boolean;
+};
+
+function visibilityMap(raw: unknown): Record<string, boolean> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, boolean> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof value === "boolean") out[key] = value;
+  }
+  return out;
+}
+
+/** Photo and photo identity are not "pending data". Every other enabled field is. */
+export function isNonDataField(field: { key: string; label?: string }): boolean {
+  if (field.key === "photo" || field.key === "photo_id" || field.key === "signature") {
+    return true;
+  }
+  const n = (field.label ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+  if (!n || n === "signature") return n === "signature";
+  return n.includes("photo") && !n.includes("url");
+}
+
+export function requiredDataFields(
+  fields: FormFieldConfig[],
+  visibility?: Record<string, boolean> | null
+): FormFieldConfig[] {
+  return fields.filter((field) => {
+    if (field.enabled === false) return false;
+    if (isNonDataField(field)) return false;
+    if (visibility && visibility[field.key] === false) return false;
+    return true;
+  });
+}
+
+export function hasAllRequiredFieldData(
+  record: Record<string, unknown>,
+  fields: FormFieldConfig[],
+  visibility: Record<string, boolean> | null | undefined,
+  institute: boolean
+): boolean {
+  const required = requiredDataFields(fields, visibility);
+  if (required.length === 0) {
+    return hasCompleteRequiredData({
+      studentName: record.student_name == null ? "" : String(record.student_name),
+      classSection: record.class_section == null ? "" : String(record.class_section),
+      institute,
+    });
+  }
+  for (const field of required) {
+    const value = getStudentFieldValue(
+      record as { extra_fields?: Record<string, string | null> | null },
+      field.key,
+      { fieldLabel: field.label }
+    );
+    if (!value.trim()) return false;
+  }
+  return true;
+}
+
+export async function loadRequiredDataContext(
+  schoolId: string | null | undefined,
+  instituteId: string | null | undefined
+): Promise<RequiredDataContext> {
+  const institute = Boolean(instituteId) && !schoolId;
+  const fields = await loadFormConfigForOrg({
+    schoolId: schoolId ?? undefined,
+    instituteId: instituteId ?? undefined,
+  });
+  let visibility: Record<string, boolean> = {};
+  if (institute && instituteId) {
+    const row = await pool.query<{ field_visibility: unknown }>(
+      `SELECT COALESCE(field_visibility, '{}'::jsonb) AS field_visibility
+       FROM institutes WHERE id = $1 LIMIT 1`,
+      [instituteId]
+    );
+    visibility = visibilityMap(row.rows[0]?.field_visibility);
+  } else if (schoolId) {
+    const row = await pool.query<{ field_visibility: unknown }>(
+      `SELECT COALESCE(field_visibility, '{}'::jsonb) AS field_visibility
+       FROM schools WHERE id = $1 LIMIT 1`,
+      [schoolId]
+    );
+    visibility = visibilityMap(row.rows[0]?.field_visibility);
+  }
+  return { fields, visibility, institute };
+}
+
+export function matchesExportScope(
+  row: Record<string, unknown>,
+  scope: string,
+  ctx: RequiredDataContext
+): boolean {
+  if (scope !== "pending" && scope !== "captured") return true;
+  const photo = hasCapturedPhoto(row.photo_url == null ? "" : String(row.photo_url));
+  const complete = hasAllRequiredFieldData(row, ctx.fields, ctx.visibility, ctx.institute);
+  if (scope === "pending") return !photo || !complete;
+  return photo && complete;
+}
+
+export async function withPendingFlags<
+  T extends {
+    school_id?: string | null;
+    institute_id?: string | null;
+    photo_url?: string | null;
+  },
+>(
+  rows: T[]
+): Promise<
+  Array<T & { pending_photo: boolean; pending_data: boolean; fully_captured: boolean }>
+> {
+  const cache = new Map<string, RequiredDataContext>();
+  const out: Array<
+    T & { pending_photo: boolean; pending_data: boolean; fully_captured: boolean }
+  > = [];
+  for (const row of rows) {
+    const schoolId = row.school_id ?? null;
+    const instituteId = row.institute_id ?? null;
+    const key = `${schoolId ?? ""}|${instituteId ?? ""}`;
+    let ctx = cache.get(key);
+    if (!ctx) {
+      ctx = await loadRequiredDataContext(schoolId, instituteId);
+      cache.set(key, ctx);
+    }
+    const institute = Boolean(instituteId) && !schoolId;
+    const photo = hasCapturedPhoto(row.photo_url);
+    const complete = hasAllRequiredFieldData(
+      row as unknown as Record<string, unknown>,
+      ctx.fields,
+      ctx.visibility,
+      institute
+    );
+    out.push({
+      ...row,
+      pending_photo: !photo,
+      pending_data: !complete,
+      fully_captured: photo && complete,
+    });
+  }
+  return out;
 }
 
 export function excelScopeClause(scope: string, institute: boolean): string {
@@ -103,9 +250,16 @@ export async function assertRecordEditAllowed(
     studentName: string | null | undefined;
     classSection: string | null | undefined;
     institute: boolean;
+    record?: Record<string, unknown>;
   }
 ): Promise<void> {
-  if (!hasCompleteRequiredData(current)) return;
+  const ctx = await loadRequiredDataContext(schoolId, instituteId);
+  const record =
+    current.record ?? {
+      student_name: current.studentName,
+      class_section: current.classSection,
+    };
+  if (!hasAllRequiredFieldData(record, ctx.fields, ctx.visibility, current.institute)) return;
   const allowed = await orgAllowsRecordEdit(schoolId, instituteId);
   if (!allowed) {
     throw new AppError("Editing is turned off for this organization", 403);
@@ -125,28 +279,20 @@ export async function assertNumberEditAllowed(
   }
 }
 
-const LOCKED_SCHOOL_FIELDS = new Set(["student_name", "class_section"]);
-const LOCKED_INSTITUTE_FIELDS = new Set(["student_name"]);
-
 export function sanitizeFieldVisibility(
   raw: unknown,
-  institute: boolean
+  _institute: boolean
 ): Record<string, boolean> {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new AppError("field_visibility must be an object", 400);
   }
-  const locked = institute ? LOCKED_INSTITUTE_FIELDS : LOCKED_SCHOOL_FIELDS;
   const next: Record<string, boolean> = {};
   for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
     if (!/^[a-zA-Z0-9_]{1,64}$/.test(key)) continue;
     if (typeof value !== "boolean") {
       throw new AppError(`Visibility for ${key} must be true or false`, 400);
     }
-    if (locked.has(key) && value === false) {
-      throw new AppError("Required fields cannot be hidden", 400);
-    }
     next[key] = value;
   }
-  for (const key of locked) next[key] = true;
   return next;
 }

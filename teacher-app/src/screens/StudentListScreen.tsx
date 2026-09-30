@@ -434,6 +434,8 @@ export function StudentListScreen({ navigation, route }: Props) {
             <KeyboardAwareFormScrollView
               scrollRef={addScrollRef}
               contentContainerStyle={styles.addModalScroll}
+              showsVerticalScrollIndicator={false}
+              persistentScrollbar={false}
             >
               {addModalVisible ? (
                 <AddStudentForm

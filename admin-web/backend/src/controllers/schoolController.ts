@@ -49,25 +49,26 @@ export async function notifySuperAdminOrgCreated(
     const username = org.username?.trim() || "";
     const password = org.password?.trim() || "";
     const when = `to_char(NOW() AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, HH12:MI AM')`;
-    const kindLabel = org.kind === "institute" ? "institute" : "school";
-    const messageSql = `$2 || ' created ' || $3 || ' "' || $4 || '" on ' || ${when} ||
-      '. Username: ' || $5 || '. Password: ' || $6 || '.'`;
+    const heading = org.kind === "institute" ? "Institute" : "School";
+    const messageSql = `'${heading}:' || E'\\n' || $3 || E'\\n\\nCreated By:\\n' || $2 ||
+      E'\\n\\nCreated:\\n' || ${when} || E'\\n\\nUsername:\\n' || $4 || E'\\n\\nPassword:\\n' || $5`;
+    const params = [org.id, creator, org.name, username, password, scope.adminUserId];
     if (org.kind === "institute") {
       await pool.query(
         `INSERT INTO notifications (institute_id, title, message, created_by, audience)
-         VALUES ($1, 'New institute created', ${messageSql}, $7, 'super_admin')
+         VALUES ($1, 'New institute created', ${messageSql}, $6, 'super_admin')
          ON CONFLICT (institute_id) WHERE audience = 'super_admin' AND institute_id IS NOT NULL
          DO NOTHING`,
-        [org.id, creator, kindLabel, org.name, username, password, scope.adminUserId]
+        params
       );
       return;
     }
     await pool.query(
       `INSERT INTO notifications (school_id, title, message, created_by, audience)
-       VALUES ($1, 'New school created', ${messageSql}, $7, 'super_admin')
+       VALUES ($1, 'New school created', ${messageSql}, $6, 'super_admin')
        ON CONFLICT (school_id) WHERE audience = 'super_admin' AND school_id IS NOT NULL
        DO NOTHING`,
-      [org.id, creator, kindLabel, org.name, username, password, scope.adminUserId]
+      params
     );
   } catch (error) {
     console.error("[org-create] super admin notification failed", error);

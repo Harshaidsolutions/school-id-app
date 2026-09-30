@@ -38,7 +38,7 @@ import {
   requireAdminScope,
 } from "../utils/adminScope";
 import { Student, StudentRowInput } from "../types/student";
-import { assertNumberEditAllowed } from "../utils/recordStatus";
+import { assertNumberEditAllowed, withPendingFlags } from "../utils/recordStatus";
 
 const STUDENT_SELECT = `
   id, school_id, institute_id, class_section, roll_no, student_name, parent_name, parent_phone,
@@ -665,10 +665,11 @@ export async function listStudentsBySchool(
       values
     );
 
+    const students = await withPendingFlags(result.rows);
     res.status(200).json({
       status: "ok",
-      count: result.rows.length,
-      students: result.rows,
+      count: students.length,
+      students,
     });
   } catch (error) {
     next(error);
@@ -728,10 +729,11 @@ export async function listStudentsAdmin(
       values
     );
 
+    const students = await withPendingFlags(result.rows);
     res.status(200).json({
       status: "ok",
-      count: result.rows.length,
-      students: result.rows,
+      count: students.length,
+      students,
     });
   } catch (error) {
     next(error);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import api, { getAuthToken } from "../api/client";
@@ -18,8 +18,57 @@ import {
   studentFieldDisplay,
   type FormFieldConfig,
 } from "../constants/formFields";
+import { authenticatedStudentPhotoUrl } from "../utils/studentPhotoSrc";
 
 type TabKey = "all" | "pending-photos" | "pending-data" | "captured";
+
+function columnLabel(field: FormFieldConfig): string {
+  if (field.key === "photo_id") return "Photo ID";
+  if (field.key === "student_name") return "Student Name";
+  const n = field.label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+  if (n === "photoid" || n === "photonumber" || n === "photo") return "Photo ID";
+  if (n === "name" || n === "studentname" || n === "membername") return "Student Name";
+  return field.label;
+}
+
+function recordFlags(student: Student, isInstitute: boolean) {
+  const photo =
+    typeof student.pending_photo === "boolean"
+      ? !student.pending_photo
+      : Boolean(student.photo_url?.trim());
+  const dataMissing =
+    typeof student.pending_data === "boolean"
+      ? student.pending_data
+      : !student.student_name?.trim() || (!isInstitute && !student.class_section?.trim());
+  return { photo, dataMissing };
+}
+
+function StudentThumb({ student }: { student: Student }): ReactNode {
+  const [src, setSrc] = useState(student.photo_url ?? "");
+  useEffect(() => {
+    setSrc(student.photo_url ?? "");
+  }, [student.id, student.photo_url]);
+  if (!student.photo_url) {
+    return (
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-content-bg text-xs font-semibold text-text-muted">
+        {initials(student.student_name)}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src || student.photo_url}
+      alt={student.student_name ?? "Student"}
+      className="h-12 w-12 rounded-lg object-cover ring-1 ring-border"
+      onError={() => {
+        if (src.startsWith("blob:")) return;
+        void authenticatedStudentPhotoUrl(student.id).then((url) => {
+          if (url) setSrc(url);
+        });
+      }}
+    />
+  );
+}
 
 async function downloadAuthenticatedFile(
   urlPath: string,
@@ -262,9 +311,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return students.filter((s) => {
-      const photo = Boolean(s.photo_url?.trim());
-      const dataMissing =
-        !s.student_name?.trim() || (!isInstitute && !s.class_section?.trim());
+      const { photo, dataMissing } = recordFlags(s, isInstitute);
       if (tab === "pending-photos" && photo) return false;
       if (tab === "pending-data" && !dataMissing) return false;
       if (tab === "captured" && !(photo && !dataMissing)) return false;
@@ -293,9 +340,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     let pending = 0;
     let captured = 0;
     for (const s of students) {
-      const photo = Boolean(s.photo_url?.trim());
-      const dataMissing =
-        !s.student_name?.trim() || (!isInstitute && !s.class_section?.trim());
+      const { photo, dataMissing } = recordFlags(s, isInstitute);
       if (!photo) pendingPhotos += 1;
       if (dataMissing) pendingData += 1;
       if (!photo || dataMissing) pending += 1;
@@ -695,18 +740,18 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
           </div>
         </div>
         {tab === "pending-photos" || tab === "pending-data" ? (
-          <div className="mt-2 flex gap-2">
+          <div className="pending-choice-grid">
             <button
               type="button"
               onClick={() => setTab("pending-photos")}
-              className={`detail-toolbar-btn w-auto px-3 ${tab === "pending-photos" ? "detail-toolbar-btn-primary" : ""}`}
+              className={`pending-choice-btn ${tab === "pending-photos" ? "pending-choice-btn-active" : ""}`}
             >
               Pending Photos ({counts["pending-photos"]})
             </button>
             <button
               type="button"
               onClick={() => setTab("pending-data")}
-              className={`detail-toolbar-btn w-auto px-3 ${tab === "pending-data" ? "detail-toolbar-btn-primary" : ""}`}
+              className={`pending-choice-btn ${tab === "pending-data" ? "pending-choice-btn-active" : ""}`}
             >
               Pending Data ({counts["pending-data"]})
             </button>
@@ -817,11 +862,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               <th className="col-sno">S.NO.</th>
               {enabledFields.map((field) => (
                 <th key={field.key} className={fieldColumnClass(field)}>
-                  {field.key === "photo_id"
-                    ? "Photo ID"
-                    : field.key === "student_name"
-                      ? "Student Name"
-                      : field.label}
+                  {columnLabel(field)}
                 </th>
               ))}
               <th className="col-captured">Captured</th>
@@ -863,30 +904,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                             className="shrink-0"
                             title={student.photo_url ? "View photo" : "No photo captured"}
                           >
-                            {student.photo_url ? (
-                              <img
-                                src={student.photo_url}
-                                alt={student.student_name ?? "Student"}
-                                className="h-12 w-12 rounded-lg object-cover ring-1 ring-border"
-                                onError={(event) => {
-                                  const img = event.currentTarget;
-                                  if (img.dataset.auth === "1") return;
-                                  img.dataset.auth = "1";
-                                  void api
-                                    .get(`/admin/students/${student.id}/photo`, {
-                                      responseType: "blob",
-                                    })
-                                    .then(({ data }) => {
-                                      img.src = URL.createObjectURL(data as Blob);
-                                    })
-                                    .catch(() => undefined);
-                                }}
-                              />
-                            ) : (
-                              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-content-bg text-xs font-semibold text-text-muted">
-                                {initials(student.student_name)}
-                              </div>
-                            )}
+                            <StudentThumb student={student} />
                           </button>
                           <span className="max-w-[4.5rem] truncate text-[10px] font-medium text-text-muted">
                             {studentFieldDisplay(student, field.key, field.label)}
