@@ -156,6 +156,24 @@ function SignatureThumb({ student }: { student: Student }): ReactNode {
   );
 }
 
+async function downloadErrorMessage(err: unknown, fallback: string): Promise<string> {
+  if (err instanceof Error && !axios.isAxiosError(err) && err.message) {
+    return err.message;
+  }
+  if (!axios.isAxiosError(err)) return fallback;
+  const data = err.response?.data;
+  if (data instanceof Blob) {
+    try {
+      const parsed = JSON.parse(await data.text()) as ApiErrorBody;
+      if (parsed.message) return parsed.message;
+    } catch {
+      return fallback;
+    }
+  }
+  const body = data as ApiErrorBody | undefined;
+  return body?.message || fallback;
+}
+
 async function downloadAuthenticatedFile(
   urlPath: string,
   fallbackName: string
@@ -171,7 +189,22 @@ async function downloadAuthenticatedFile(
   const match = disposition?.match(/filename="?([^"]+)"?/i);
   if (match?.[1]) filename = match[1];
 
-  const blob = new Blob([res.data]);
+  const blob = res.data instanceof Blob ? res.data : new Blob([res.data]);
+  if (blob.size === 0) {
+    throw new Error("The download was empty.");
+  }
+  const type = blob.type || String(res.headers["content-type"] ?? "");
+  if (type.includes("application/json") || type.includes("text/plain")) {
+    let message = "Download failed.";
+    try {
+      const parsed = JSON.parse(await blob.text()) as { message?: string };
+      if (parsed.message) message = parsed.message;
+    } catch {
+      message = "Download failed.";
+    }
+    throw new Error(message);
+  }
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -179,7 +212,7 @@ async function downloadAuthenticatedFile(
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute" }) {
@@ -516,10 +549,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         `${student.photo_id ?? student.student_name ?? "photo"}.jpg`
       );
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const body = err.response?.data as ApiErrorBody | undefined;
-        setError(body?.message ?? "Failed to download photo.");
-      } else setError("Failed to download photo.");
+      setError(await downloadErrorMessage(err, "Failed to download photo."));
     } finally {
       setDownloadingPhotoId(null);
     }
@@ -546,10 +576,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       const filename = isInstitute ? `members-${scope}.xlsx` : `students-${scope}.xlsx`;
       await downloadAuthenticatedFile(path, filename);
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const body = err.response?.data as ApiErrorBody | undefined;
-        setError(body?.message ?? "Failed to download Excel.");
-      } else setError("Failed to download Excel.");
+      setError(await downloadErrorMessage(err, "Failed to download Excel."));
     } finally {
       setExportingExcel(false);
     }
@@ -587,22 +614,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       await downloadAuthenticatedFile(`${base}${suffix}`, `${name}.zip`);
       setShowDownloadPhotosModal(false);
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        let message = "Failed to download files.";
-        const data = err.response?.data;
-        if (data instanceof Blob) {
-          try {
-            const parsed = JSON.parse(await data.text()) as ApiErrorBody;
-            if (parsed.message) message = parsed.message;
-          } catch {
-            // keep default
-          }
-        } else {
-          const body = data as ApiErrorBody | undefined;
-          if (body?.message) message = body.message;
-        }
-        setError(message);
-      } else setError("Failed to download files.");
+      setError(await downloadErrorMessage(err, "Failed to download files."));
     } finally {
       setExportingPhotos(false);
     }

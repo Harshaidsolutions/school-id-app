@@ -32,6 +32,60 @@ function sanitizePhotoIdFilename(photoId: string): string {
   return cleaned || "unknown";
 }
 
+function excelFileBytes(workbook: XLSX.WorkBook): Buffer {
+  const output = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as
+    | Buffer
+    | Uint8Array;
+  const bytes = Buffer.isBuffer(output) ? output : Buffer.from(output);
+  if (!bytes.length) {
+    throw new AppError("Excel file could not be created", 500);
+  }
+  return bytes;
+}
+
+function sendExcel(res: Response, bytes: Buffer, filename: string): void {
+  res.status(200);
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.setHeader("Content-Length", String(bytes.length));
+  res.send(bytes);
+}
+
+async function loadOrgImageBytes(options: {
+  url: string;
+  orgIds: string[];
+  studentId: string;
+  asset: string;
+}): Promise<{ bytes: Uint8Array; contentType: string } | null> {
+  const orgIds = [...new Set(options.orgIds.filter(Boolean))];
+  if (options.asset === "signature") {
+    for (const orgId of orgIds) {
+      for (const ext of ["jpg", "png"] as const) {
+        const object = await readBucketObject(
+          STUDENT_PHOTOS_BUCKET,
+          memberSignatureStoragePath(orgId, options.studentId, ext)
+        );
+        if (object?.bytes?.length) return object;
+      }
+    }
+  } else {
+    const paths = new Set<string>();
+    for (const orgId of orgIds) {
+      const fromUrl = studentPhotoPathFromUrl(options.url, orgId, options.studentId);
+      if (fromUrl) paths.add(fromUrl);
+      paths.add(studentPhotoStoragePath(orgId, options.studentId));
+    }
+    for (const path of paths) {
+      const object = await readBucketObject(STUDENT_PHOTOS_BUCKET, path);
+      if (object?.bytes?.length) return object;
+    }
+  }
+  return fetchImageBytes(options.url);
+}
+
 function extensionFromContentType(contentType: string | undefined): string {
   const ct = (contentType ?? "").toLowerCase();
   if (ct.includes("png")) return ".png";
@@ -54,7 +108,12 @@ function rowMatchesExportExtras(
         row.extra_fields && typeof row.extra_fields === "object"
           ? (row.extra_fields as Record<string, unknown>)
           : {};
-      if (String(extras[fieldKey] ?? "") !== category) return false;
+      const extraValue = String(extras[fieldKey] ?? "").trim();
+      if (extraValue) {
+        if (extraValue !== category) return false;
+      } else if (String(row.class_section ?? "").trim() !== category) {
+        return false;
+      }
     }
   }
   if (!captureDate) return true;
@@ -155,22 +214,29 @@ async function downloadOrgPhotosZip(
       values.push(fieldKey);
       const keyIndex = values.length;
       values.push(category);
-      extra.push(`AND extra_fields->>$${keyIndex} = $${values.length}`);
+      const valueIndex = values.length;
+      extra.push(
+        `AND (btrim(COALESCE(extra_fields->>$${keyIndex}, '')) = $${valueIndex} OR (btrim(COALESCE(extra_fields->>$${keyIndex}, '')) = '' AND btrim(COALESCE(class_section, '')) = $${valueIndex}))`
+      );
     } else if (category) {
       values.push(category);
       extra.push(`AND class_section = $${values.length}`);
     }
     const students = await pool.query<{
+      id: string;
       photo_id: string | null;
+      student_name: string | null;
+      school_id: string | null;
+      institute_id: string | null;
       photo_url: string | null;
     }>(
-      `SELECT photo_id, ${urlColumn} AS photo_url
+      `SELECT id, photo_id, student_name, school_id, institute_id, ${urlColumn} AS photo_url
        FROM students
        WHERE ${whereOrg}
          AND ${urlColumn} IS NOT NULL
          AND btrim(${urlColumn}) <> ''
          ${extra.join("\n         ")}
-       ORDER BY photo_id ASC NULLS LAST`,
+       ORDER BY photo_id ASC NULLS LAST, student_name ASC`,
       values
     );
 
@@ -186,20 +252,28 @@ async function downloadOrgPhotosZip(
     type ZipEntry = { name: string; bytes: Buffer };
     const entries: ZipEntry[] = [];
     const usedNames = new Set<string>();
+    const missing: string[] = [];
 
     for (const row of students.rows) {
-      if (!row.photo_url || !row.photo_id) continue;
-
-      const fetched = await fetchImageBytes(row.photo_url);
+      if (!row.photo_url) continue;
+      const recordOrgId = studentPhotoOrgId(row.school_id, row.institute_id);
+      const fetched = await loadOrgImageBytes({
+        url: row.photo_url,
+        orgIds: [recordOrgId ?? "", row.school_id ?? "", row.institute_id ?? "", orgId],
+        studentId: row.id,
+        asset,
+      });
       if (!fetched?.bytes?.length) {
+        const label = row.photo_id || row.student_name || row.id;
+        missing.push(label);
         console.warn(
-          `[download-photos] Skipping photo_id=${row.photo_id}: empty fetch`
+          `[download-photos] Skipping student=${row.id}: stored image was not readable`
         );
         continue;
       }
 
       const ext = extensionFromContentType(fetched.contentType);
-      let base = sanitizePhotoIdFilename(row.photo_id);
+      let base = sanitizePhotoIdFilename(row.photo_id || row.student_name || row.id);
       if (/\.(jpe?g|png|webp)$/i.test(base)) {
         base = base.replace(/\.(jpe?g|png|webp)$/i, "");
       }
@@ -215,9 +289,18 @@ async function downloadOrgPhotosZip(
 
     if (entries.length === 0) {
       throw new AppError(
-        "Could not download any photo files from storage",
+        `Found ${students.rows.length} matching records, but none of the stored image files could be read.`,
         404
       );
+    }
+    if (missing.length > 0) {
+      entries.push({
+        name: "missing-files.txt",
+        bytes: Buffer.from(
+          `These records matched the download, but the image file could not be read:\n${missing.join("\n")}\n`,
+          "utf8"
+        ),
+      });
     }
 
     const filename = `${schoolFilenameSlug(org.rows[0].name)}_${asset === "signature" ? "signatures" : "photos"}.zip`;
@@ -432,6 +515,9 @@ export async function exportStudentsExcel(
         matchesExportScope(row, exportScope, dataCtx) &&
         rowMatchesExportExtras(row, captureDate, category, fieldKey)
     );
+    if (scopedRows.length === 0) {
+      throw new AppError("No records match this download.", 404);
+    }
 
     const formFields = await loadFormConfigForOrg({ schoolId });
     const exportColumns = buildExportHeaders(formFields);
@@ -447,21 +533,9 @@ export async function exportStudentsExcel(
     const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, sheet, "Students");
-    const buffer = XLSX.write(workbook, {
-      type: "buffer",
-      bookType: "xlsx",
-    }) as Buffer;
-
+    const bytes = excelFileBytes(workbook);
     const filename = `${schoolFilenameSlug(school.rows[0].name)}_students_${exportScope}.xlsx`;
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${filename}"`
-    );
-    res.status(200).send(buffer);
+    sendExcel(res, bytes, filename);
   } catch (error) {
     next(error);
   }
@@ -521,6 +595,9 @@ export async function exportInstituteMembersExcel(
         matchesExportScope(row, exportScope, dataCtx) &&
         rowMatchesExportExtras(row, captureDate, category, fieldKey)
     );
+    if (scopedRows.length === 0) {
+      throw new AppError("No records match this download.", 404);
+    }
 
     const formFields = await loadFormConfigForOrg({ instituteId });
     const exportColumns = buildExportHeaders(formFields);
@@ -535,21 +612,9 @@ export async function exportInstituteMembersExcel(
     const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, sheet, "Members");
-    const buffer = XLSX.write(workbook, {
-      type: "buffer",
-      bookType: "xlsx",
-    }) as Buffer;
-
+    const bytes = excelFileBytes(workbook);
     const filename = `${schoolFilenameSlug(institute.rows[0].name)}_members_${exportScope}.xlsx`;
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${filename}"`
-    );
-    res.status(200).send(buffer);
+    sendExcel(res, bytes, filename);
   } catch (error) {
     next(error);
   }

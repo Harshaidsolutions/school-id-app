@@ -37,6 +37,46 @@ type EditForm = {
   password: string;
 };
 
+function ProfilePhotoField({
+  previewUrl,
+  fileName,
+  onSelect,
+  onClear,
+}: {
+  previewUrl: string | null;
+  fileName: string | null;
+  onSelect: (file: File | null) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="text-sm">
+      <span className="mb-1.5 block font-medium text-text-navy">Profile photo</span>
+      {previewUrl ? (
+        <img
+          src={previewUrl}
+          alt="Profile photo"
+          className="mb-2 h-auto max-h-28 w-auto max-w-full rounded-lg bg-white object-contain"
+        />
+      ) : null}
+      <label className="relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy">
+        Choose File
+        <input
+          type="file"
+          accept="image/jpeg,image/png"
+          className="absolute inset-0 cursor-pointer opacity-0"
+          onChange={(event) => onSelect(event.target.files?.[0] ?? null)}
+        />
+      </label>
+      {fileName ? <p className="mt-1 text-xs text-text-muted">Selected: {fileName}</p> : null}
+      {previewUrl ? (
+        <button type="button" className="mt-1 block text-xs text-danger" onClick={onClear}>
+          Remove photo
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function AdminManagementPage() {
   const { user } = useAuth();
   const [admins, setAdmins] = useState<ManagedAdmin[]>([]);
@@ -128,9 +168,7 @@ export function AdminManagementPage() {
       if (createPhoto) {
         const body = new FormData();
         body.append("photo", createPhoto);
-        await api.post(`/admin/managed-admins/${created.data.admin.id}/photo`, body, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await api.post(`/admin/managed-admins/${created.data.admin.id}/photo`, body);
       }
       setCreatePhoto(null);
       setForm({
@@ -194,9 +232,7 @@ export function AdminManagementPage() {
         const body = new FormData();
         if (editPhoto) body.append("photo", editPhoto);
         if (removeEditPhoto) body.append("remove", "true");
-        await api.post(`/admin/managed-admins/${editTarget.id}/photo`, body, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await api.post(`/admin/managed-admins/${editTarget.id}/photo`, body);
       }
       setEditPhoto(null);
       setRemoveEditPhoto(false);
@@ -353,21 +389,13 @@ export function AdminManagementPage() {
             minLength={8}
             autoComplete="new-password"
           />
-          <div className="sm:col-span-2 text-sm">
-            <span className="mb-1.5 block font-medium text-text-navy">Profile photo</span>
-            {createPhotoPreview ? (
-              <img src={createPhotoPreview} alt="" className="mb-2 h-16 w-16 rounded-lg bg-white object-contain" />
-            ) : null}
-            <input
-              type="file"
-              accept="image/jpeg,image/png"
-              onChange={(e) => setCreatePhoto(e.target.files?.[0] ?? null)}
+          <div className="sm:col-span-2">
+            <ProfilePhotoField
+              previewUrl={createPhotoPreview}
+              fileName={createPhoto?.name ?? null}
+              onSelect={setCreatePhoto}
+              onClear={() => setCreatePhoto(null)}
             />
-            {createPhoto ? (
-              <button type="button" className="mt-1 block text-xs text-danger" onClick={() => setCreatePhoto(null)}>
-                Remove photo
-              </button>
-            ) : null}
           </div>
         </div>
         <div className="flex gap-2">
@@ -565,36 +593,21 @@ export function AdminManagementPage() {
                 minLength={8}
                 autoComplete="new-password"
               />
-              <div className="text-sm">
-                <span className="mb-1.5 block font-medium text-text-navy">Profile photo</span>
-                {editPhotoPreview ? (
-                  <img src={editPhotoPreview} alt="" className="mb-2 h-16 w-16 rounded-lg bg-white object-contain" />
-                ) : editTarget.photo_url && !removeEditPhoto ? (
-                  <img src={editTarget.photo_url} alt="" className="mb-2 h-16 w-16 rounded-lg bg-white object-contain" />
-                ) : null}
-                <label className="relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy">
-                  {editPhoto ? editPhoto.name : "Choose File"}
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png"
-                    className="absolute inset-0 cursor-pointer opacity-0"
-                    onChange={(e) => {
-                      setEditPhoto(e.target.files?.[0] ?? null);
-                      setRemoveEditPhoto(false);
-                    }}
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="mt-1 block text-xs text-danger"
-                  onClick={() => {
-                    setEditPhoto(null);
-                    setRemoveEditPhoto(true);
-                  }}
-                >
-                  Remove photo
-                </button>
-              </div>
+              <ProfilePhotoField
+                previewUrl={
+                  editPhotoPreview ??
+                  (editTarget.photo_url && !removeEditPhoto ? editTarget.photo_url : null)
+                }
+                fileName={editPhoto?.name ?? null}
+                onSelect={(file) => {
+                  setEditPhoto(file);
+                  setRemoveEditPhoto(false);
+                }}
+                onClear={() => {
+                  setEditPhoto(null);
+                  setRemoveEditPhoto(true);
+                }}
+              />
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button

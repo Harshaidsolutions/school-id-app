@@ -74,7 +74,9 @@ function deleteFilterSql(
     values.push(fieldKey, category);
     const keyParam = startIndex + values.length - 2;
     const valueParam = startIndex + values.length - 1;
-    parts.push(`extra_fields->>$${keyParam} = $${valueParam}`);
+    parts.push(
+      `(btrim(COALESCE(extra_fields->>$${keyParam}, '')) = $${valueParam} OR (btrim(COALESCE(extra_fields->>$${keyParam}, '')) = '' AND btrim(COALESCE(class_section, '')) = $${valueParam}))`
+    );
   } else if (category) {
     values.push(category);
     parts.push(`class_section = $${startIndex + values.length - 1}`);
