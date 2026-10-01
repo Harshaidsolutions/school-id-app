@@ -9,6 +9,11 @@ import {
   verifyAdminActionOtp,
 } from "../utils/adminOtp";
 import { routeParam } from "../utils/routeParams";
+import {
+  ownerPasswordSelect,
+  ownerUserLateralJoin,
+  ownerUsernameSelect,
+} from "../utils/ownerCredentials";
 
 const SALT_ROUNDS = 10;
 
@@ -533,6 +538,13 @@ export async function setManagedAdminActive(
 
 const CAPTURED_PHOTO = `LOWER(COALESCE(st.status, '')) IN ('captured', 'printed')`;
 
+function withRecoverablePassword<T extends { password?: unknown }>(row: T): T {
+  const password = typeof row.password === "string" ? row.password.trim() : "";
+  const recoverable =
+    password && !/^\$2[aby]\$\d{2}\$/.test(password) ? password : null;
+  return { ...row, password: recoverable };
+}
+
 export async function getManagedAdminOverview(
   req: Request,
   res: Response,
@@ -560,11 +572,14 @@ export async function getManagedAdminOverview(
         `SELECT s.id, s.name, s.created_at, COALESCE(s.is_active, true) AS is_active,
                 COUNT(st.id)::int AS people_count,
                 COUNT(st.id) FILTER (WHERE ${CAPTURED_PHOTO})::int AS captured_photos,
-                COUNT(st.id) FILTER (WHERE NOT (${CAPTURED_PHOTO}))::int AS pending_photos
+                COUNT(st.id) FILTER (WHERE NOT (${CAPTURED_PHOTO}))::int AS pending_photos,
+                ${ownerUsernameSelect("s.owner_username_plain")} AS username,
+                ${ownerPasswordSelect("s.owner_password_plain")} AS password
          FROM schools s
          LEFT JOIN students st ON st.school_id = s.id
+         ${ownerUserLateralJoin("s", "school_id")}
          WHERE s.owner_admin_id = $1
-         GROUP BY s.id
+         GROUP BY s.id, owner.username, owner.email, owner.password_plain
          ORDER BY lower(s.name) ASC`,
         [id]
       ),
@@ -572,11 +587,14 @@ export async function getManagedAdminOverview(
         `SELECT i.id, i.name, i.created_at, COALESCE(i.is_active, true) AS is_active,
                 COUNT(st.id)::int AS people_count,
                 COUNT(st.id) FILTER (WHERE ${CAPTURED_PHOTO})::int AS captured_photos,
-                COUNT(st.id) FILTER (WHERE NOT (${CAPTURED_PHOTO}))::int AS pending_photos
+                COUNT(st.id) FILTER (WHERE NOT (${CAPTURED_PHOTO}))::int AS pending_photos,
+                ${ownerUsernameSelect("i.owner_username_plain")} AS username,
+                ${ownerPasswordSelect("i.owner_password_plain")} AS password
          FROM institutes i
          LEFT JOIN students st ON st.institute_id = i.id
+         ${ownerUserLateralJoin("i", "institute_id")}
          WHERE i.owner_admin_id = $1
-         GROUP BY i.id
+         GROUP BY i.id, owner.username, owner.email, owner.password_plain
          ORDER BY lower(i.name) ASC`,
         [id]
       ),
@@ -585,8 +603,8 @@ export async function getManagedAdminOverview(
     res.status(200).json({
       status: "ok",
       admin: admin.rows[0],
-      schools: schools.rows,
-      institutes: institutes.rows,
+      schools: schools.rows.map(withRecoverablePassword),
+      institutes: institutes.rows.map(withRecoverablePassword),
     });
   } catch (error) {
     next(error);

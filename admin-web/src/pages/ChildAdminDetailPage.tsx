@@ -21,6 +21,8 @@ type AdminRow = {
 type OrgRow = {
   id: string;
   name: string;
+  username: string | null;
+  password: string | null;
   created_at: string | null;
   is_active: boolean;
   people_count: number;
@@ -42,11 +44,56 @@ function formatCreated(value: string | null): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("en-IN", {
+  return date.toLocaleString("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Kolkata",
   });
+}
+
+function PasswordValue({ value }: { value: string | null }) {
+  const [shown, setShown] = useState(false);
+  const password = value?.trim() ?? "";
+  if (!password) return <>—</>;
+  return (
+    <span className="inline-flex max-w-full items-center gap-1.5">
+      <span className={shown ? "break-all font-mono text-xs" : "font-mono text-xs tracking-wider"}>
+        {shown ? password : "••••••••"}
+      </span>
+      <button
+        type="button"
+        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border text-text-navy"
+        aria-label={shown ? "Hide password" : "Show password"}
+        onClick={() => setShown((open) => !open)}
+      >
+        {shown ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
+    </span>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="2.5" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+      <path d="M3 3l18 18" />
+      <path d="M10.6 10.6a2.5 2.5 0 0 0 3.5 3.5" />
+      <path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.4 18.4 0 0 1-4.1 4.8" />
+      <path d="M6.1 6.1C3.8 7.8 2 12 2 12s3.5 6 10 6c1.5 0 2.9-.3 4.1-.8" />
+    </svg>
+  );
 }
 
 function OrgTable({
@@ -63,38 +110,46 @@ function OrgTable({
       <h2 className="border-b border-border px-4 py-3 font-semibold text-text-navy">
         {title}: {rows.length}
       </h2>
-      <table className="list-data-table w-full">
-        <thead>
-          <tr>
-            <th className="px-3 py-2 text-left">Name</th>
-            <th className="px-3 py-2 text-left">{peopleLabel}</th>
-            <th className="px-3 py-2 text-left">Created</th>
-            <th className="px-3 py-2 text-left">Status</th>
-            <th className="px-3 py-2 text-left">Captured Photos</th>
-            <th className="px-3 py-2 text-left">Pending Photos</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length === 0 ? (
+      <div className="overflow-x-auto">
+        <table className="list-data-table w-full">
+          <thead>
             <tr>
-              <td colSpan={6} className="px-3 py-6 text-center text-text-muted">
-                None yet.
-              </td>
+              <th className="px-3 py-2 text-left">Name</th>
+              <th className="px-3 py-2 text-left">Username</th>
+              <th className="px-3 py-2 text-left">Password</th>
+              <th className="px-3 py-2 text-left">{peopleLabel}</th>
+              <th className="px-3 py-2 text-left">Created</th>
+              <th className="px-3 py-2 text-left">Status</th>
+              <th className="px-3 py-2 text-left">Captured Photos</th>
+              <th className="px-3 py-2 text-left">Pending Photos</th>
             </tr>
-          ) : (
-            rows.map((row) => (
-              <tr key={row.id} className="border-t border-border">
-                <td className="px-3 py-2">{row.name}</td>
-                <td className="px-3 py-2">{row.people_count}</td>
-                <td className="px-3 py-2">{formatCreated(row.created_at)}</td>
-                <td className="px-3 py-2">{row.is_active ? "Active" : "Inactive"}</td>
-                <td className="px-3 py-2">{row.captured_photos}</td>
-                <td className="px-3 py-2">{row.pending_photos}</td>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-3 py-6 text-center text-text-muted">
+                  None yet.
+                </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              rows.map((row) => (
+                <tr key={row.id} className="border-t border-border">
+                  <td className="px-3 py-2">{row.name}</td>
+                  <td className="px-3 py-2">{row.username?.trim() || "—"}</td>
+                  <td className="px-3 py-2">
+                    <PasswordValue value={row.password} />
+                  </td>
+                  <td className="px-3 py-2">{row.people_count}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{formatCreated(row.created_at)}</td>
+                  <td className="px-3 py-2">{row.is_active ? "Active" : "Inactive"}</td>
+                  <td className="px-3 py-2">{row.captured_photos}</td>
+                  <td className="px-3 py-2">{row.pending_photos}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
