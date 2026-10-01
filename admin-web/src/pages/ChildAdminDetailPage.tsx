@@ -55,47 +55,6 @@ function formatCreated(value: string | null): string {
   });
 }
 
-function PasswordValue({ value }: { value: string | null }) {
-  const [shown, setShown] = useState(false);
-  const password = value?.trim() ?? "";
-  if (!password) return <>—</>;
-  return (
-    <span className="inline-flex max-w-full items-center gap-1.5">
-      <span className={shown ? "break-all font-mono text-xs" : "font-mono text-xs tracking-wider"}>
-        {shown ? password : "••••••••"}
-      </span>
-      <button
-        type="button"
-        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border text-text-navy"
-        aria-label={shown ? "Hide password" : "Show password"}
-        onClick={() => setShown((open) => !open)}
-      >
-        {shown ? <EyeOffIcon /> : <EyeIcon />}
-      </button>
-    </span>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
-      <circle cx="12" cy="12" r="2.5" />
-    </svg>
-  );
-}
-
-function EyeOffIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-      <path d="M3 3l18 18" />
-      <path d="M10.6 10.6a2.5 2.5 0 0 0 3.5 3.5" />
-      <path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.4 18.4 0 0 1-4.1 4.8" />
-      <path d="M6.1 6.1C3.8 7.8 2 12 2 12s3.5 6 10 6c1.5 0 2.9-.3 4.1-.8" />
-    </svg>
-  );
-}
-
 function OrgTable({
   title,
   peopleLabel,
@@ -136,8 +95,8 @@ function OrgTable({
                 <tr key={row.id} className="border-t border-border">
                   <td className="px-3 py-2">{row.name}</td>
                   <td className="px-3 py-2">{row.username?.trim() || "—"}</td>
-                  <td className="px-3 py-2">
-                    <PasswordValue value={row.password} />
+                  <td className="px-3 py-2 font-mono text-xs break-all">
+                    {row.password?.trim() || "—"}
                   </td>
                   <td className="px-3 py-2">{row.people_count}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{formatCreated(row.created_at)}</td>
