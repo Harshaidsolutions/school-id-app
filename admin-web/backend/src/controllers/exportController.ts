@@ -133,7 +133,12 @@ async function downloadOrgPhotosZip(
       typeof req.query.fieldKey === "string" ? req.query.fieldKey.trim() : "";
     const asset =
       typeof req.query.asset === "string" ? req.query.asset.trim() : "photo";
+    const photoScope =
+      typeof req.query.scope === "string" ? req.query.scope.trim() : "all";
     const urlColumn = asset === "signature" ? "signature_url" : "photo_url";
+    if (asset !== "signature" && photoScope === "pending") {
+      throw new AppError("Pending records do not have photos to download", 404);
+    }
 
     const whereOrg = schoolId ? "school_id = $1" : "institute_id = $1";
     const values: unknown[] = [orgId];
@@ -164,7 +169,6 @@ async function downloadOrgPhotosZip(
        WHERE ${whereOrg}
          AND ${urlColumn} IS NOT NULL
          AND btrim(${urlColumn}) <> ''
-         ${asset === "signature" ? "" : "AND status IN ('captured', 'printed')"}
          ${extra.join("\n         ")}
        ORDER BY photo_id ASC NULLS LAST`,
       values

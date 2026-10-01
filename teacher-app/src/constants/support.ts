@@ -28,7 +28,7 @@ export function buildReferMessage(schoolName: string): string {
   return `I would like to refer a new school from My School ID Card.\n#${name}`;
 }
 
-/** Refer Us uses the catalog wa.me link directly — no prefilled share text. */
+/** Message the current user sends to someone else. The catalog link is the text, not the chat target. */
 export function buildReferShareMessage(_catalogLink?: string): string {
-  return "I want to refer this MySchool ID card app";
+  return `I want to refer this MySchool ID card app\n\n${REFER_WHATSAPP_CATALOG_LINK}`;
 }

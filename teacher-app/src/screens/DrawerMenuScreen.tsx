@@ -41,7 +41,7 @@ import {
   useCustomerBrand,
 } from "../hooks/useCustomerBrand";
 import {
-  REFER_WHATSAPP_CATALOG_LINK,
+  buildReferShareMessage,
   SOCIAL_FACEBOOK,
   SOCIAL_INSTAGRAM,
   SOCIAL_YOUTUBE,
@@ -49,7 +49,7 @@ import {
   SUPPORT_WEBSITE,
   buildHelpSupportMessage,
 } from "../constants/support";
-import { openWhatsApp } from "../utils/whatsappBusiness";
+import { openWhatsApp, openWhatsAppShare } from "../utils/whatsappBusiness";
 
 type Props = NativeStackScreenProps<RootStackParamList, "DrawerMenu">;
 
@@ -131,8 +131,7 @@ export function DrawerMenuScreen({ navigation }: Props) {
   async function openReferUs() {
     if (!ready) return;
     try {
-      const text = encodeURIComponent("I want to refer this MySchool ID card app");
-      await Linking.openURL(`${REFER_WHATSAPP_CATALOG_LINK}?text=${text}`);
+      await openWhatsAppShare(buildReferShareMessage());
     } catch (err) {
       Alert.alert(
         "WhatsApp",

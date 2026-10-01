@@ -64,6 +64,18 @@ export function configuredCategoryFields(fields: FormFieldConfig[]): ConfiguredC
   return out;
 }
 
+export function wiseActionLabel(action: "DOWNLOAD" | "DELETE", label: string): string {
+  return `${action} ${label.trim().toUpperCase()}-WISE`;
+}
+
+export function allValuesLabel(label: string): string {
+  const trimmed = label.trim();
+  if (/^class$/i.test(trimmed)) return "All Classes";
+  if (/^group$/i.test(trimmed)) return "All Groups";
+  if (/^designation$/i.test(trimmed)) return "All Designations";
+  return `All ${trimmed}`;
+}
+
 export function findClassField(fields: FormFieldConfig[]): FormFieldConfig | undefined {
   return fields.find((f) => {
     const n = normalizeLabel(f.label);

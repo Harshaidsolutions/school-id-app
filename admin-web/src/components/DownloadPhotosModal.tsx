@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { allValuesLabel, wiseActionLabel } from "../utils/formFieldHelpers";
 
 export type CountOption = { name: string; count: number; key?: string };
 export type CategoryField = { label: string; key: string; options: CountOption[] };
 
-type Step = "menu" | "dates" | "signature-dates" | "kind" | "value";
+type Step = "menu" | "dates" | "signature-dates" | "value" | "status";
+type PhotoScope = "all" | "pending" | "captured";
 
 function dayLabel(iso: string): string {
   const [year, month, day] = iso.slice(0, 10).split("-");
@@ -29,11 +31,13 @@ export function DownloadPhotosModal({
     date?: string;
     classSection?: string;
     fieldKey?: string;
+    scope?: PhotoScope;
   }) => void;
 }) {
   const [step, setStep] = useState<Step>("menu");
   const [fieldIndex, setFieldIndex] = useState(0);
   const [selected, setSelected] = useState("");
+  const [photoScope, setPhotoScope] = useState<PhotoScope>("all");
 
   const activeField = categoryFields[fieldIndex] ?? categoryFields[0];
   const options = activeField?.options ?? [];
@@ -42,23 +46,20 @@ export function DownloadPhotosModal({
   const signatureDates = Object.entries(signatureCounts).sort(([a], [b]) => b.localeCompare(a));
 
   function back() {
-    if (step === "value" && categoryFields.length > 1) {
-      setSelected("");
-      setStep("kind");
+    if (step === "status") {
+      setStep("value");
       return;
     }
     setStep("menu");
     setSelected("");
+    setPhotoScope("all");
   }
 
-  function openCategory() {
+  function openField(index: number) {
+    setFieldIndex(index);
     setSelected("");
-    if (categoryFields.length === 1) {
-      setFieldIndex(0);
-      setStep("value");
-      return;
-    }
-    setStep("kind");
+    setPhotoScope("all");
+    setStep("value");
   }
 
   return (
@@ -77,13 +78,14 @@ export function DownloadPhotosModal({
             <MenuButton label="Date-wise Photos" onClick={() => setStep("dates")} disabled={downloading} />
             <MenuButton label="All Signatures" onClick={() => onDownload({ asset: "signature" })} disabled={downloading} />
             <MenuButton label="Date-wise Signatures" onClick={() => setStep("signature-dates")} disabled={downloading} />
-            {categoryFields.length > 0 ? (
+            {categoryFields.map((field, index) => (
               <MenuButton
-                label={categoryFields.length === 1 ? categoryFields[0].label : "By field"}
-                onClick={openCategory}
+                key={field.key}
+                label={wiseActionLabel("DOWNLOAD", field.label)}
+                onClick={() => openField(index)}
                 disabled={downloading}
               />
-            ) : null}
+            ))}
             <button type="button" className="btn-secondary mt-2 w-full" onClick={onClose}>
               Cancel
             </button>
@@ -106,27 +108,6 @@ export function DownloadPhotosModal({
           />
         ) : null}
 
-        {step === "kind" ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-text-navy">Choose a type</p>
-            {categoryFields.map((item, index) => (
-              <MenuButton
-                key={item.key}
-                label={item.label}
-                disabled={downloading}
-                onClick={() => {
-                  setFieldIndex(index);
-                  setSelected("");
-                  setStep("value");
-                }}
-              />
-            ))}
-            <button type="button" className="btn-secondary mt-2 w-full" onClick={back}>
-              Back
-            </button>
-          </div>
-        ) : null}
-
         {step === "value" ? (
           <div className="space-y-3">
             <label className="block text-sm font-medium text-text-navy">
@@ -134,12 +115,14 @@ export function DownloadPhotosModal({
               <select
                 value={selected}
                 onChange={(event) => setSelected(event.target.value)}
-                className="input-field mt-1"
+                className="input-field mt-1 w-full"
               >
                 <option value="">Choose…</option>
+                <option value="__all__">{allValuesLabel(activeField?.label ?? "Field")}</option>
                 {options.map((item) => (
                   <option key={item.name} value={item.name}>
-                    {item.name} — {item.count} Photos
+                    {item.name}
+                    {item.count ? ` — ${item.count} Photos` : ""}
                   </option>
                 ))}
               </select>
@@ -147,12 +130,41 @@ export function DownloadPhotosModal({
             <button
               type="button"
               className="btn-primary w-full disabled:opacity-50"
-              disabled={downloading || !selectedOption || selectedOption.count === 0}
+              disabled={downloading || !selected}
+              onClick={() => setStep("status")}
+            >
+              Next
+            </button>
+            <button type="button" className="btn-secondary w-full" onClick={back}>
+              Back
+            </button>
+          </div>
+        ) : null}
+
+        {step === "status" ? (
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-text-navy">
+              Download Type
+              <select
+                value={photoScope}
+                onChange={(event) => setPhotoScope(event.target.value as PhotoScope)}
+                className="input-field mt-1 w-full"
+              >
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="captured">Captured</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="btn-primary w-full disabled:opacity-50"
+              disabled={downloading}
               onClick={() =>
                 onDownload({
                   asset: "photo",
-                  classSection: selected,
-                  fieldKey: selectedOption?.key || activeField?.key,
+                  classSection: selected === "__all__" ? undefined : selected,
+                  fieldKey: selected === "__all__" ? undefined : selectedOption?.key || activeField?.key,
+                  scope: photoScope,
                 })
               }
             >

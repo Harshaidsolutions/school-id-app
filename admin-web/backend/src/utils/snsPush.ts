@@ -115,34 +115,23 @@ export async function deleteSnsEndpoint(endpointArn: string): Promise<void> {
 function buildGcmMessage(payload: SnsPushPayload): string {
   const data = payload.data ?? {};
   const imageUrl = payload.imageUrl?.trim() || "";
+  // Data-only so the app receives the message in the foreground, background, and
+  // when it is closed, then builds the system notification itself. Legacy FCM
+  // notification payloads do not put an image on the Android system tray.
   const dataStrings: Record<string, string> = {
     title: payload.title,
-    body: payload.body,
+    message: payload.body,
+    channelId: ANDROID_CHANNEL_ID,
+    sound: "default",
   };
-  if (imageUrl) dataStrings.imageUrl = imageUrl;
+  if (imageUrl) {
+    dataStrings.imageUrl = imageUrl;
+    dataStrings.image = imageUrl;
+  }
   for (const [key, value] of Object.entries(data)) {
     dataStrings[key] = String(value);
   }
-  const notification: Record<string, string> = {
-    title: payload.title,
-    body: payload.body,
-    sound: "default",
-  };
-  if (imageUrl) notification.image = imageUrl;
-  const androidNotification: Record<string, string | boolean> = {
-    channel_id: ANDROID_CHANNEL_ID,
-    sound: "default",
-    default_vibrate_timings: true,
-    visibility: "public",
-    notification_priority: "PRIORITY_HIGH",
-  };
-  if (imageUrl) androidNotification.image = imageUrl;
   return JSON.stringify({
-    notification,
-    android: {
-      priority: "high",
-      notification: androidNotification,
-    },
     data: dataStrings,
     priority: "high",
   });

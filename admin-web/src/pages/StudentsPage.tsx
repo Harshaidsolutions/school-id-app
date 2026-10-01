@@ -14,7 +14,7 @@ import { BulkModeButtons } from "../components/BulkActionBar";
 import { OtpConfirmModal } from "../components/OtpConfirmModal";
 import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
 import type { ApiErrorBody, NamedCount, RecordFacets, School, Student, StudentsResponse } from "../types";
-import { configuredCategoryFields } from "../utils/formFieldHelpers";
+import { allValuesLabel, configuredCategoryFields, wiseActionLabel } from "../utils/formFieldHelpers";
 import {
   isPhotoExcelField,
   sortFormFields,
@@ -217,8 +217,9 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [capturedOn, setCapturedOn] = useState("");
   const [groupFilter, setGroupFilter] = useState("");
   const [designationFilter, setDesignationFilter] = useState("");
-  const [excelStep, setExcelStep] = useState<"menu" | "date" | "kind" | "value">("menu");
+  const [excelStep, setExcelStep] = useState<"menu" | "date" | "value" | "status">("menu");
   const [excelFieldIndex, setExcelFieldIndex] = useState(0);
+  const [excelStatus, setExcelStatus] = useState<"all" | "pending" | "captured">("all");
   const [excelValue, setExcelValue] = useState("");
   const [showDeletePhotosOtp, setShowDeletePhotosOtp] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
@@ -559,6 +560,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     date?: string;
     classSection?: string;
     fieldKey?: string;
+    scope?: "all" | "pending" | "captured";
   }) {
     if (!orgId) {
       setError(
@@ -579,6 +581,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       if (job.date) query.set("date", job.date);
       if (job.classSection) query.set("classSection", job.classSection);
       if (job.fieldKey) query.set("fieldKey", job.fieldKey);
+      if (job.scope) query.set("scope", job.scope);
       const suffix = query.toString() ? `?${query.toString()}` : "";
       const name = job.asset === "signature" ? "signatures" : "photos";
       await downloadAuthenticatedFile(`${base}${suffix}`, `${name}.zip`);
@@ -741,13 +744,14 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   setExcelMenuOpen((open) => !open);
                   setExcelStep("menu");
                   setExcelValue("");
+                  setExcelStatus("all");
                 }}
                 className="detail-toolbar-btn"
               >
                 {exportingExcel ? "Exporting…" : "Download Excel"}
               </button>
               {excelMenuOpen ? (
-                <div className="absolute left-0 top-full z-30 mt-1 w-64 rounded-lg border border-border bg-white p-1.5 shadow-lg">
+                <div className="absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-white p-1.5 shadow-lg">
                   {excelStep === "menu" ? (
                     <>
                       {(
@@ -778,23 +782,36 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                       >
                         Date-wise Captured Data
                       </button>
-                      {categoryFields.length > 0 ? (
+                      {categoryFields.length === 1 ? (
                         <button
                           type="button"
-                          className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
+                          className="block w-full whitespace-normal rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
                           onClick={() => {
+                            setExcelFieldIndex(0);
                             setExcelValue("");
-                            if (categoryFields.length === 1) {
-                              setExcelFieldIndex(0);
-                              setExcelStep("value");
-                              return;
-                            }
-                            setExcelStep("kind");
+                            setExcelStatus("all");
+                            setExcelStep("value");
                           }}
                         >
-                          {categoryFields.length === 1 ? categoryFields[0].label : "By field"}
+                          {wiseActionLabel("DOWNLOAD", categoryFields[0].label)}
                         </button>
-                      ) : null}
+                      ) : (
+                        categoryFields.map((field, index) => (
+                          <button
+                            key={field.key}
+                            type="button"
+                            className="block w-full whitespace-normal rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
+                            onClick={() => {
+                              setExcelFieldIndex(index);
+                              setExcelValue("");
+                              setExcelStatus("all");
+                              setExcelStep("value");
+                            }}
+                          >
+                            {wiseActionLabel("DOWNLOAD", field.label)}
+                          </button>
+                        ))
+                      )}
                     </>
                   ) : null}
                   {excelStep === "date" ? (
@@ -827,27 +844,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                       </button>
                     </div>
                   ) : null}
-                  {excelStep === "kind" ? (
-                    <div className="space-y-1 p-1">
-                      {categoryFields.map((field, index) => (
-                        <button
-                          key={field.key}
-                          type="button"
-                          className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
-                          onClick={() => {
-                            setExcelFieldIndex(index);
-                            setExcelValue("");
-                            setExcelStep("value");
-                          }}
-                        >
-                          {field.label}
-                        </button>
-                      ))}
-                      <button type="button" className="btn-secondary w-full" onClick={() => setExcelStep("menu")}>
-                        Back
-                      </button>
-                    </div>
-                  ) : null}
                   {excelStep === "value" ? (
                     <div className="space-y-2 p-1">
                       <label className="block text-xs font-medium text-text-navy">
@@ -855,9 +851,12 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                         <select
                           value={excelValue}
                           onChange={(event) => setExcelValue(event.target.value)}
-                          className="input-field mt-1 text-sm"
+                          className="input-field mt-1 w-full text-sm"
                         >
                           <option value="">Choose…</option>
+                          <option value="__all__">
+                            {allValuesLabel(categoryFields[excelFieldIndex]?.label ?? "Field")}
+                          </option>
                           {categoryFields[excelFieldIndex]?.options.map((item) => (
                             <option key={item.name} value={item.name}>
                               {item.name}
@@ -869,23 +868,49 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                         type="button"
                         className="btn-primary w-full disabled:opacity-50"
                         disabled={!excelValue}
+                        onClick={() => setExcelStep("status")}
+                      >
+                        Next
+                      </button>
+                      <button type="button" className="btn-secondary w-full" onClick={() => setExcelStep("menu")}>
+                        Back
+                      </button>
+                    </div>
+                  ) : null}
+                  {excelStep === "status" ? (
+                    <div className="space-y-2 p-1">
+                      <label className="block text-xs font-medium text-text-navy">
+                        Download Type
+                        <select
+                          value={excelStatus}
+                          onChange={(event) =>
+                            setExcelStatus(event.target.value as "all" | "pending" | "captured")
+                          }
+                          className="input-field mt-1 w-full text-sm"
+                        >
+                          <option value="all">All</option>
+                          <option value="pending">Pending</option>
+                          <option value="captured">Captured</option>
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        className="btn-primary w-full"
                         onClick={() => {
                           const field = categoryFields[excelFieldIndex];
                           const option = field?.options.find((item) => item.name === excelValue);
                           setExcelMenuOpen(false);
-                          void handleDownloadExcel("all", {
-                            classSection: excelValue,
-                            fieldKey: option?.key || field?.key,
-                          });
+                          void handleDownloadExcel(excelStatus, excelValue === "__all__"
+                            ? undefined
+                            : {
+                                classSection: excelValue,
+                                fieldKey: option?.key || field?.key,
+                              });
                         }}
                       >
-                        Download
+                        Download Excel
                       </button>
-                      <button
-                        type="button"
-                        className="btn-secondary w-full"
-                        onClick={() => setExcelStep(categoryFields.length > 1 ? "kind" : "menu")}
-                      >
+                      <button type="button" className="btn-secondary w-full" onClick={() => setExcelStep("value")}>
                         Back
                       </button>
                     </div>

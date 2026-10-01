@@ -29,9 +29,7 @@ if (!fs.existsSync(file)) {
 }
 
 const source = fs.readFileSync(file, "utf8");
-if (source.includes("BigPictureStyle()")) {
-  process.exit(0);
-}
+if (!source.includes("BigPictureStyle()")) {
 
 const target = `    if (notificationContent.containsImage()) {
       val bitmap = notificationContent.getImage(context)
@@ -76,5 +74,62 @@ if (!next.includes("fun scaleForNotification") && next.includes(marker)) {
   next = next.replace(marker, `${helper}\n${marker}`);
 }
 
-fs.writeFileSync(file, next);
-console.log("[patch-notification-image] enabled Android big-picture notifications");
+  fs.writeFileSync(file, next);
+  console.log("[patch-notification-image] enabled Android big-picture notifications");
+}
+
+const contentFile = path.join(
+  __dirname,
+  "..",
+  "node_modules",
+  "expo-notifications",
+  "android",
+  "src",
+  "main",
+  "java",
+  "expo",
+  "modules",
+  "notifications",
+  "notifications",
+  "model",
+  "RemoteNotificationContent.kt"
+);
+
+if (!fs.existsSync(contentFile)) {
+  console.log("[patch-notification-image] remote notification content not found");
+  process.exit(0);
+}
+
+const content = fs.readFileSync(contentFile, "utf8");
+if (!content.includes("notificationImageUri")) {
+  const imageTarget = `  override suspend fun getImage(context: Context): Bitmap? {
+    val uri = remoteMessage.notification?.imageUrl
+    return uri?.let { downloadImage(it) }
+  }
+
+  override fun containsImage(): Boolean {
+    return remoteMessage.notification?.imageUrl != null
+  }`;
+  const imageReplacement = `  override suspend fun getImage(context: Context): Bitmap? {
+    val uri = notificationImageUri()
+    return uri?.let { downloadImage(it) }
+  }
+
+  override fun containsImage(): Boolean {
+    return notificationImageUri() != null
+  }
+
+  private fun notificationImageUri(): android.net.Uri? {
+    remoteMessage.notification?.imageUrl?.let { return it }
+    val raw = remoteMessage.data["imageUrl"] ?: remoteMessage.data["image"]
+    val trimmed = raw?.trim().orEmpty()
+    if (trimmed.isEmpty()) return null
+    return runCatching { android.net.Uri.parse(trimmed) }.getOrNull()
+  }`;
+  if (!content.includes(imageTarget)) {
+    console.warn("[patch-notification-image] expected image lookup was not found");
+  } else {
+    fs.writeFileSync(contentFile, content.replace(imageTarget, imageReplacement));
+    console.log("[patch-notification-image] remote notifications read the image URL");
+  }
+}
