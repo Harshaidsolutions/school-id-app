@@ -64,12 +64,11 @@ export function LoginPageLayout({
           >
             <div className="max-h-[calc(100dvh-1.5rem)] w-full overflow-y-auto rounded-2xl border border-border/70 bg-white px-[clamp(1.25rem,2.5vw,1.75rem)] py-[clamp(0.85rem,2vh,1.35rem)] shadow-[0_8px_40px_rgba(15,23,42,0.07)]">
               {appBrand ? (
-                <div className="mb-4 flex w-full flex-col items-center overflow-visible px-2 text-center">
+                <div className="mb-4 flex w-full flex-col items-center overflow-visible px-1 text-center">
                   <img
                     src="/app-logo.png"
                     alt="My School ID Card"
-                    className="block h-auto w-[7.5rem] max-w-full shrink-0 object-contain"
-                    style={{ aspectRatio: "281 / 355" }}
+                    className="block h-auto max-h-[min(24vh,8.75rem)] w-auto max-w-full object-contain"
                   />
                   <p className="mt-2 text-lg font-bold text-text-navy">My School ID Card</p>
                 </div>
