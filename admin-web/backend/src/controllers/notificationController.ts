@@ -1,5 +1,7 @@
+import { randomUUID } from "crypto";
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
+import { STUDENT_PHOTOS_BUCKET, uploadBufferToBucket } from "../config/storage";
 import { AppError } from "../middleware/errorHandler";
 import {
   requestAdminActionOtp,
@@ -49,8 +51,22 @@ export async function createNotification(
     }
     if (!title) throw new AppError("title is required", 400);
     if (!message) throw new AppError("message is required", 400);
+    if (req.file && req.file.size > 2 * 1024 * 1024) {
+      throw new AppError("Notification image must be 2 MB or smaller", 400);
+    }
 
     const scope = await requireAdminScope(req);
+    const orgId = schoolId || instituteId;
+    let imageUrl: string | null = null;
+    if (req.file) {
+      const ext = req.file.mimetype.includes("png") ? "png" : "jpg";
+      imageUrl = await uploadBufferToBucket(
+        STUDENT_PHOTOS_BUCKET,
+        `notifications/${orgId}/${randomUUID()}.${ext}`,
+        req.file.buffer,
+        req.file.mimetype
+      );
+    }
 
     if (schoolId) {
       const school = await pool.query(`SELECT id FROM schools WHERE id = $1`, [
@@ -60,10 +76,10 @@ export async function createNotification(
       await assertSchoolOwnedByAdmin(scope, schoolId);
 
       const inserted = await pool.query<NotificationRow>(
-        `INSERT INTO notifications (school_id, title, message, created_by)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO notifications (school_id, title, message, image_url, created_by)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING *`,
-        [schoolId, title, message, req.user.userId]
+        [schoolId, title, message, imageUrl, req.user.userId]
       );
 
       const notification = inserted.rows[0];
@@ -91,10 +107,10 @@ export async function createNotification(
     await assertInstituteOwnedByAdmin(scope, instituteId);
 
     const inserted = await pool.query<NotificationRow>(
-      `INSERT INTO notifications (institute_id, title, message, created_by)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO notifications (institute_id, title, message, image_url, created_by)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [instituteId, title, message, req.user.userId]
+      [instituteId, title, message, imageUrl, req.user.userId]
     );
 
     const notification = inserted.rows[0];

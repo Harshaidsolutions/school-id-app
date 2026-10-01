@@ -728,6 +728,7 @@ async function migrate() {
     ALTER TABLE students ADD COLUMN IF NOT EXISTS signature_url TEXT;
     ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS video_url TEXT;
     ALTER TABLE notifications ADD COLUMN IF NOT EXISTS audience TEXT NOT NULL DEFAULT 'org';
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS image_url TEXT;
     CREATE UNIQUE INDEX IF NOT EXISTS notifications_super_school_created_uidx
       ON notifications (school_id)
       WHERE audience = 'super_admin' AND school_id IS NOT NULL;

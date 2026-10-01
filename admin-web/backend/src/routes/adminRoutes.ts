@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authMiddleware, requireRole } from "../middleware/auth";
 import {
   uploadExcel,
+  uploadImage,
   uploadSchoolAssets,
   uploadStudentPhoto,
   uploadTemplateImageField,
@@ -182,7 +183,7 @@ router.delete("/templates/:id", deleteTemplate);
 // Notifications
 router.post("/notifications/bulk-delete/request-otp", requestNotificationBulkDeleteOtp);
 router.post("/notifications/bulk-delete", bulkDeleteNotifications);
-router.post("/notifications", createNotification);
+router.post("/notifications", uploadImage.single("image"), createNotification);
 router.get("/notifications", listAllAdminNotifications);
 router.get("/notifications/unread-count", incomingUnreadCount);
 router.post("/notifications/incoming/mark-read", markIncomingNotificationsRead);

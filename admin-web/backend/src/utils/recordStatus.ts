@@ -292,3 +292,101 @@ export function sanitizeFieldVisibility(
   }
   return next;
 }
+
+export type NamedCount = { name: string; count: number; key: string };
+
+function fieldKind(key: string, label: string): "class" | "group" | "designation" | null {
+  const text = `${label} ${key}`.toLowerCase().replace(/[^a-z0-9]+/g, " ");
+  if (/\bdesignation\b/.test(text)) return "designation";
+  if (/\bgroup\b/.test(text)) return "group";
+  if (key === "class_section" || /\b(class|section|grade)\b/.test(text)) return "class";
+  return null;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+export function collectRecordFacets(
+  rows: Array<{
+    class_section?: string | null;
+    extra_fields?: unknown;
+    field_labels?: unknown;
+    photo_url?: string | null;
+    photo_captured_at?: string | Date | null;
+    updated_at?: string | Date | null;
+  }>
+): {
+  classes: NamedCount[];
+  groups: NamedCount[];
+  designations: NamedCount[];
+  captureDates: NamedCount[];
+} {
+  const buckets = {
+    class: new Map<string, { count: number; key: string }>(),
+    group: new Map<string, { count: number; key: string }>(),
+    designation: new Map<string, { count: number; key: string }>(),
+  };
+  const dates = new Map<string, number>();
+
+  for (const row of rows) {
+    const hasPhoto = Boolean(row.photo_url?.trim());
+    const labels = asRecord(row.field_labels);
+    const extras = asRecord(row.extra_fields);
+    const values: Array<{ key: string; label: string; value: string }> = [];
+    if (row.class_section?.trim()) {
+      values.push({ key: "class_section", label: "Class", value: row.class_section.trim() });
+    }
+    for (const [key, raw] of Object.entries(extras)) {
+      const value = raw == null ? "" : String(raw).trim();
+      if (!value) continue;
+      const label = labels[key] == null ? key : String(labels[key]);
+      values.push({ key, label, value });
+    }
+    for (const item of values) {
+      const kind = fieldKind(item.key, item.label);
+      if (!kind) continue;
+      const current = buckets[kind].get(item.value) ?? { count: 0, key: item.key };
+      if (hasPhoto) current.count += 1;
+      buckets[kind].set(item.value, current);
+    }
+    if (hasPhoto) {
+      const raw = row.photo_captured_at ?? row.updated_at;
+      const parsed = raw ? new Date(raw) : null;
+      if (parsed && !Number.isNaN(parsed.getTime())) {
+        const day = parsed.toISOString().slice(0, 10);
+        dates.set(day, (dates.get(day) ?? 0) + 1);
+      }
+    }
+  }
+
+  const toList = (map: Map<string, { count: number; key: string }>): NamedCount[] =>
+    [...map.entries()]
+      .map(([name, item]) => ({ name, count: item.count, key: item.key }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    classes: toList(buckets.class),
+    groups: toList(buckets.group),
+    designations: toList(buckets.designation),
+    captureDates: [...dates.entries()]
+      .map(([name, count]) => ({ name, count, key: "capture_date" }))
+      .sort((a, b) => b.name.localeCompare(a.name)),
+  };
+}
+
+export function extraFieldValue(
+  row: { extra_fields?: unknown; field_labels?: unknown },
+  kind: "group" | "designation"
+): string | null {
+  const labels = asRecord(row.field_labels);
+  const extras = asRecord(row.extra_fields);
+  for (const [key, raw] of Object.entries(extras)) {
+    const label = labels[key] == null ? key : String(labels[key]);
+    if (fieldKind(key, label) !== kind) continue;
+    const value = raw == null ? "" : String(raw).trim();
+    if (value) return value;
+  }
+  return null;
+}

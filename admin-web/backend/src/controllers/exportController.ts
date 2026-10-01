@@ -22,7 +22,7 @@ import {
   assertStudentOwnedByAdmin,
   requireAdminScope,
 } from "../utils/adminScope";
-import { loadRequiredDataContext, matchesExportScope } from "../utils/recordStatus";
+import { loadRequiredDataContext, matchesExportScope, collectRecordFacets } from "../utils/recordStatus";
 
 function sanitizePhotoIdFilename(photoId: string): string {
   const cleaned = photoId
@@ -41,15 +41,47 @@ function extensionFromContentType(contentType: string | undefined): string {
 }
 
 function rowMatchesExportExtras(
-  row: Record<string, string | null>,
+  row: Record<string, unknown>,
   captureDate: string,
-  category: string
+  category: string,
+  fieldKey: string
 ): boolean {
-  if (category && (row.class_section ?? "") !== category) return false;
+  if (category) {
+    if (!fieldKey || fieldKey === "class_section") {
+      if (String(row.class_section ?? "") !== category) return false;
+    } else {
+      const extras =
+        row.extra_fields && typeof row.extra_fields === "object"
+          ? (row.extra_fields as Record<string, unknown>)
+          : {};
+      if (String(extras[fieldKey] ?? "") !== category) return false;
+    }
+  }
   if (!captureDate) return true;
   const raw = row.photo_captured_at;
   if (!raw || !row.photo_url) return false;
-  return new Date(raw).toISOString().slice(0, 10) === captureDate;
+  return new Date(String(raw)).toISOString().slice(0, 10) === captureDate;
+}
+
+function createdExcelParts(raw: unknown): [string, string] {
+  if (!raw) return ["", ""];
+  const parsed = new Date(String(raw));
+  if (Number.isNaN(parsed.getTime())) return ["", ""];
+  const date = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
+    .format(parsed)
+    .replace(/\//g, "-");
+  const time = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(parsed);
+  return [date, time];
 }
 
 function schoolFilenameSlug(name: string): string {
@@ -97,6 +129,8 @@ async function downloadOrgPhotosZip(
       typeof req.query.date === "string" ? req.query.date.trim() : "";
     const category =
       typeof req.query.classSection === "string" ? req.query.classSection.trim() : "";
+    const fieldKey =
+      typeof req.query.fieldKey === "string" ? req.query.fieldKey.trim() : "";
     const asset =
       typeof req.query.asset === "string" ? req.query.asset.trim() : "photo";
     const urlColumn = asset === "signature" ? "signature_url" : "photo_url";
@@ -109,10 +143,15 @@ async function downloadOrgPhotosZip(
       const dateExpr =
         asset === "signature"
           ? `(updated_at AT TIME ZONE 'UTC')::date`
-          : `COALESCE((photo_captured_at AT TIME ZONE 'UTC')::date, (updated_at AT TIME ZONE 'UTC')::date)`;
+          : `(photo_captured_at AT TIME ZONE 'UTC')::date`;
       extra.push(`AND ${dateExpr} = $${values.length}::date`);
     }
-    if (category) {
+    if (category && fieldKey && fieldKey !== "class_section" && /^[a-zA-Z0-9_]+$/.test(fieldKey)) {
+      values.push(fieldKey);
+      const keyIndex = values.length;
+      values.push(category);
+      extra.push(`AND extra_fields->>$${keyIndex} = $${values.length}`);
+    } else if (category) {
       values.push(category);
       extra.push(`AND class_section = $${values.length}`);
     }
@@ -133,7 +172,9 @@ async function downloadOrgPhotosZip(
 
     if (students.rows.length === 0) {
       throw new AppError(
-        "No captured photos available for this organization",
+        asset === "signature"
+          ? "No signatures available for this organization"
+          : "No captured photos available for this organization",
         404
       );
     }
@@ -266,17 +307,21 @@ async function listPhotoCaptureCounts(
     for (const row of result.rows) {
       if (row.capture_date) counts[row.capture_date] = row.photo_count;
     }
-    const categories = await pool.query<{ name: string | null; photo_count: number }>(
-      `SELECT COALESCE(NULLIF(btrim(class_section), ''), 'Unassigned') AS name,
-              COUNT(*)::int AS photo_count
+    const facetRows = await pool.query<{
+      class_section: string | null;
+      extra_fields: unknown;
+      field_labels: unknown;
+      photo_url: string | null;
+      photo_captured_at: string | null;
+      updated_at: string | null;
+    }>(
+      `SELECT class_section, extra_fields, field_labels, photo_url,
+              photo_captured_at, updated_at
        FROM students
-       WHERE ${whereOrg}
-         AND photo_url IS NOT NULL
-         AND btrim(photo_url) <> ''
-       GROUP BY 1
-       ORDER BY 1`,
+       WHERE ${whereOrg}`,
       [orgId]
     );
+    const facets = collectRecordFacets(facetRows.rows);
     const signatureDates = await pool.query<{ capture_date: string; photo_count: number }>(
       `SELECT to_char((updated_at AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS capture_date,
               COUNT(*)::int AS photo_count
@@ -295,10 +340,10 @@ async function listPhotoCaptureCounts(
     res.status(200).json({
       status: "ok",
       counts,
-      categories: categories.rows.map((row) => ({
-        name: row.name ?? "Unassigned",
-        count: row.photo_count,
-      })),
+      categories: facets.classes,
+      classes: facets.classes,
+      groups: facets.groups,
+      designations: facets.designations,
       signatureCounts,
     });
   } catch (error) {
@@ -365,12 +410,14 @@ export async function exportStudentsExcel(
       typeof req.query.date === "string" ? req.query.date.trim() : "";
     const category =
       typeof req.query.classSection === "string" ? req.query.classSection.trim() : "";
+    const fieldKey =
+      typeof req.query.fieldKey === "string" ? req.query.fieldKey.trim() : "";
     const dataCtx = await loadRequiredDataContext(schoolId, null);
-    const result = await pool.query<Record<string, string | null>>(
+    const result = await pool.query<Record<string, unknown>>(
       `SELECT photo_id, class_section, student_name, parent_name, parent_phone,
               address, roll_no, dob::text AS dob, gender, blood_group,
               custom_1, custom_2, custom_3, extra_fields, field_labels, photo_url,
-              photo_captured_at::text AS photo_captured_at, status
+              photo_captured_at::text AS photo_captured_at, created_at::text AS created_at, status
        FROM students
        WHERE school_id = $1
        ORDER BY class_section ASC, roll_no ASC NULLS LAST, student_name ASC`,
@@ -378,17 +425,20 @@ export async function exportStudentsExcel(
     );
     const scopedRows = result.rows.filter(
       (row) =>
-        matchesExportScope(row as unknown as Record<string, unknown>, exportScope, dataCtx) &&
-        rowMatchesExportExtras(row, captureDate, category)
+        matchesExportScope(row, exportScope, dataCtx) &&
+        rowMatchesExportExtras(row, captureDate, category, fieldKey)
     );
 
     const formFields = await loadFormConfigForOrg({ schoolId });
     const exportColumns = buildExportHeaders(formFields);
-    const header = exportColumns.map((c) => c.label);
+    const header = [...exportColumns.map((c) => c.label), "Created Date", "Created Time"];
 
-    const rows = scopedRows.map((s) =>
-      exportColumns.map((col) => studentFieldValue(s, col.key, col.label))
-    );
+    const rows = scopedRows.map((s) => [
+      ...exportColumns.map((col) =>
+        studentFieldValue(s as Record<string, string | null>, col.key, col.label)
+      ),
+      ...createdExcelParts(s.created_at),
+    ]);
 
     const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
     const workbook = XLSX.utils.book_new();
@@ -449,12 +499,14 @@ export async function exportInstituteMembersExcel(
       typeof req.query.date === "string" ? req.query.date.trim() : "";
     const category =
       typeof req.query.classSection === "string" ? req.query.classSection.trim() : "";
+    const fieldKey =
+      typeof req.query.fieldKey === "string" ? req.query.fieldKey.trim() : "";
     const dataCtx = await loadRequiredDataContext(null, instituteId);
-    const result = await pool.query<Record<string, string | null>>(
+    const result = await pool.query<Record<string, unknown>>(
       `SELECT photo_id, class_section, student_name, parent_name, parent_phone,
               address, roll_no, dob::text AS dob, gender, blood_group,
               custom_1, custom_2, custom_3, extra_fields, field_labels, photo_url,
-              photo_captured_at::text AS photo_captured_at, status
+              photo_captured_at::text AS photo_captured_at, created_at::text AS created_at, status
        FROM students
        WHERE institute_id = $1
        ORDER BY class_section ASC, roll_no ASC NULLS LAST, student_name ASC`,
@@ -462,16 +514,19 @@ export async function exportInstituteMembersExcel(
     );
     const scopedRows = result.rows.filter(
       (row) =>
-        matchesExportScope(row as unknown as Record<string, unknown>, exportScope, dataCtx) &&
-        rowMatchesExportExtras(row, captureDate, category)
+        matchesExportScope(row, exportScope, dataCtx) &&
+        rowMatchesExportExtras(row, captureDate, category, fieldKey)
     );
 
     const formFields = await loadFormConfigForOrg({ instituteId });
     const exportColumns = buildExportHeaders(formFields);
-    const header = exportColumns.map((c) => c.label);
-    const rows = scopedRows.map((s) =>
-      exportColumns.map((col) => studentFieldValue(s, col.key, col.label))
-    );
+    const header = [...exportColumns.map((c) => c.label), "Created Date", "Created Time"];
+    const rows = scopedRows.map((s) => [
+      ...exportColumns.map((col) =>
+        studentFieldValue(s as Record<string, string | null>, col.key, col.label)
+      ),
+      ...createdExcelParts(s.created_at),
+    ]);
 
     const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
     const workbook = XLSX.utils.book_new();

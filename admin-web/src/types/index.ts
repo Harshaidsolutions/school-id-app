@@ -50,10 +50,24 @@ export interface Student {
   updated_at: string | null;
 }
 
+export interface NamedCount {
+  name: string;
+  count: number;
+  key: string;
+}
+
+export interface RecordFacets {
+  classes: NamedCount[];
+  groups: NamedCount[];
+  designations: NamedCount[];
+  captureDates: NamedCount[];
+}
+
 export interface StudentsResponse {
   status: string;
   count: number;
   students: Student[];
+  facets?: RecordFacets;
 }
 
 export interface BulkUploadSuccess {
@@ -183,6 +197,7 @@ export interface NotificationItem {
   institute_id?: string | null;
   title: string;
   message: string;
+  image_url?: string | null;
   created_by: string | null;
   created_at: string | null;
   audience?: string | null;

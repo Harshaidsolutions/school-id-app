@@ -25,15 +25,13 @@ export function SchoolListPage() {
   const [otpOpen, setOtpOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [createdOn, setCreatedOn] = useState("");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
-  async function loadSchools(created = createdOn) {
+  async function loadSchools() {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api.get<{ schools?: School[] }>("/admin/schools", {
-        params: created ? { createdOn: created } : undefined,
-      });
+      const { data } = await api.get<{ schools?: School[] }>("/admin/schools");
       setSchools(Array.isArray(data.schools) ? data.schools : []);
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -51,14 +49,21 @@ export function SchoolListPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return schools;
-    return schools.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        (s.owner_username ?? "").toLowerCase().includes(q) ||
-        (s.phone ?? "").toLowerCase().includes(q)
-    );
-  }, [schools, search]);
+    const list = (q
+      ? schools.filter(
+          (s) =>
+            s.name.toLowerCase().includes(q) ||
+            (s.owner_username ?? "").toLowerCase().includes(q) ||
+            (s.phone ?? "").toLowerCase().includes(q)
+        )
+      : [...schools]
+    ).sort((a, b) => {
+      const at = new Date(a.created_at ?? 0).getTime();
+      const bt = new Date(b.created_at ?? 0).getTime();
+      return sortOrder === "oldest" ? at - bt : bt - at;
+    });
+    return list;
+  }, [schools, search, sortOrder]);
 
   async function toggleActive(school: School) {
     const next = !(school.is_active !== false);
@@ -164,27 +169,23 @@ export function SchoolListPage() {
       />
 
       {filterOpen ? (
-        <div className="mb-4 flex flex-wrap items-end gap-2 rounded-xl border border-border bg-white p-3">
-          <label className="text-xs font-medium text-text-navy">
-            Created date
-            <input
-              type="date"
-              value={createdOn}
-              onChange={(e) => {
-                setCreatedOn(e.target.value);
-                void loadSchools(e.target.value);
-              }}
-              className="input-field mt-1"
-            />
-          </label>
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-3">
+          <span className="text-xs font-medium text-text-navy">Sort</span>
           <button
             type="button"
-            className="btn-secondary"
-            onClick={() => {
-              setCreatedOn("");
-              void loadSchools("");
-            }}
+            className={sortOrder === "newest" ? "btn-primary" : "btn-secondary"}
+            onClick={() => setSortOrder("newest")}
           >
+            Newest
+          </button>
+          <button
+            type="button"
+            className={sortOrder === "oldest" ? "btn-primary" : "btn-secondary"}
+            onClick={() => setSortOrder("oldest")}
+          >
+            Oldest
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => setSortOrder("newest")}>
             Clear filters
           </button>
         </div>

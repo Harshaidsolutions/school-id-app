@@ -35,6 +35,8 @@ export function NotificationsPage() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,25 +141,32 @@ export function NotificationsPage() {
 
     setSending(true);
     try {
+      const sendOne = (target: { schoolId?: string; instituteId?: string }) => {
+        if (!imageFile) {
+          return api.post("/admin/notifications", {
+            ...target,
+            title: title.trim(),
+            message: description.trim(),
+          });
+        }
+        const body = new FormData();
+        if (target.schoolId) body.set("schoolId", target.schoolId);
+        if (target.instituteId) body.set("instituteId", target.instituteId);
+        body.set("title", title.trim());
+        body.set("message", description.trim());
+        body.set("image", imageFile);
+        return api.post("/admin/notifications", body);
+      };
       await Promise.all([
-        ...schoolTargets.map((schoolId) =>
-          api.post("/admin/notifications", {
-            schoolId,
-            title: title.trim(),
-            message: description.trim(),
-          })
-        ),
-        ...instituteTargets.map((instituteId) =>
-          api.post("/admin/notifications", {
-            instituteId,
-            title: title.trim(),
-            message: description.trim(),
-          })
-        ),
+        ...schoolTargets.map((schoolId) => sendOne({ schoolId })),
+        ...instituteTargets.map((instituteId) => sendOne({ instituteId })),
       ]);
 
       setTitle("");
       setDescription("");
+      setImageFile(null);
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      setImagePreview(null);
       setSelectedSchoolIds(new Set());
       setSelectedInstituteIds(new Set());
 
@@ -223,6 +232,38 @@ export function NotificationsPage() {
             onChange={(e) => setDescription(e.target.value)}
             className="input-field resize-y"
           />
+        </label>
+
+        <label className="block text-sm">
+          <span className="mb-1.5 block font-medium text-text-navy">Image (optional)</span>
+          <input
+            key={imageFile ? imageFile.name : "no-image"}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="input-field"
+            onChange={(event) => {
+              const file = event.target.files?.[0] ?? null;
+              if (imagePreview) URL.revokeObjectURL(imagePreview);
+              setImageFile(file);
+              setImagePreview(file ? URL.createObjectURL(file) : null);
+            }}
+          />
+          {imagePreview ? (
+            <div className="mt-2 flex items-start gap-3">
+              <img src={imagePreview} alt="" className="max-h-32 max-w-full rounded-lg object-contain" />
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  if (imagePreview) URL.revokeObjectURL(imagePreview);
+                  setImageFile(null);
+                  setImagePreview(null);
+                }}
+              >
+                Remove image
+              </button>
+            </div>
+          ) : null}
         </label>
 
         <div>
@@ -405,6 +446,9 @@ export function NotificationsPage() {
             <p className="mt-2 whitespace-pre-wrap text-sm text-text-muted">
               {n.message}
             </p>
+            {n.image_url ? (
+              <img src={n.image_url} alt="" className="mt-3 max-h-40 max-w-full rounded-lg object-contain" />
+            ) : null}
             <div className="mt-3 text-xs font-medium text-accent-blue">
               {targetLabel(n)}
             </div>

@@ -42,6 +42,7 @@ import { uploadStudentPhoto } from "../utils/uploadStudentPhoto";
 import { scrollToFocusedInput } from "../utils/scrollToFocusedInput";
 import { useFormConfig } from "../hooks/useFormConfig";
 import {
+  studentFullyCaptured,
   studentHasPhoto,
   studentPendingData,
 } from "../utils/recordStatus";
@@ -49,7 +50,7 @@ import {
 const INSTITUTE_CACHE_KEY = "__institute__";
 const NUM_COLS = 2;
 
-type TabKey = "all" | "pending" | "captured" | "pending-data";
+type TabKey = "all" | "pending-photos" | "pending-data" | "captured";
 
 type Props = {
   colors: AppColors;
@@ -123,23 +124,26 @@ export function InstituteMembersPanel({
     }, [loadMembers, photoBusy])
   );
 
+  const pendingPhotoCount = useMemo(
+    () => students.filter((s) => !studentHasPhoto(s)).length,
+    [students]
+  );
   const pendingDataCount = useMemo(
     () => students.filter((s) => studentPendingData(s, true)).length,
     [students]
   );
   const capturedCount = useMemo(
-    () => students.filter((s) => studentHasPhoto(s)).length,
+    () => students.filter((s) => studentFullyCaptured(s, true)).length,
     [students]
   );
-
   const pendingCount = useMemo(
-    () => students.filter((s) => !studentHasPhoto(s)).length,
+    () => students.filter((s) => !studentHasPhoto(s) || studentPendingData(s, true)).length,
     [students]
   );
   const tabs: { key: TabKey; label: string; color: string; count: number }[] = [
     { key: "all", label: "All", color: colors.brandGreen, count: students.length },
     {
-      key: "pending",
+      key: "pending-photos",
       label: "Pending",
       color: colors.brandGreen,
       count: pendingCount,
@@ -154,16 +158,10 @@ export function InstituteMembersPanel({
           },
         ]
       : []),
-    {
-      key: "pending-data",
-      label: "Pending Data",
-      color: colors.brandGreen,
-      count: pendingDataCount,
-    },
   ];
 
   const filtered = useMemo(() => {
-    if (tab === "pending") {
+    if (tab === "pending-photos") {
       return students.filter((s) => !studentHasPhoto(s));
     }
     if (tab === "pending-data") {
@@ -171,7 +169,7 @@ export function InstituteMembersPanel({
     }
     if (tab === "captured" && showCapturedSection) {
       return students
-        .filter((s) => studentHasPhoto(s))
+        .filter((s) => studentFullyCaptured(s, true))
         .sort((a, b) => {
           const aTs = Date.parse(a.photo_captured_at ?? "") || 0;
           const bTs = Date.parse(b.photo_captured_at ?? "") || 0;
@@ -185,7 +183,7 @@ export function InstituteMembersPanel({
   const openMember = useCallback(
     (student: TeacherStudent) => {
       const idx = filtered.findIndex((s) => s.id === student.id);
-      if (tab === "pending" && !studentHasPhoto(student)) {
+      if (tab === "pending-photos" && !studentHasPhoto(student)) {
         setPendingPhotoStudent(student);
         return;
       }
@@ -308,6 +306,48 @@ export function InstituteMembersPanel({
             );
           })}
         </View>
+        {tab === "pending-photos" || tab === "pending-data" ? (
+          <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: spacing.md, paddingBottom: spacing.sm }}>
+            <Pressable
+              onPress={() => setTab("pending-photos")}
+              style={{
+                flex: 1,
+                minHeight: 46,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: tab === "pending-photos" ? colors.brandGreen : colors.border,
+                backgroundColor: tab === "pending-photos" ? colors.brandGreen : colors.surface,
+                alignItems: "center",
+                justifyContent: "center",
+                paddingHorizontal: 8,
+                paddingVertical: 8,
+              }}
+            >
+              <Text style={{ color: tab === "pending-photos" ? "#FFFFFF" : colors.text, fontFamily: fonts.semiBold, fontSize: 15, textAlign: "center" }}>
+                Pending Photos ({pendingPhotoCount})
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setTab("pending-data")}
+              style={{
+                flex: 1,
+                minHeight: 46,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: tab === "pending-data" ? colors.brandGreen : colors.border,
+                backgroundColor: tab === "pending-data" ? colors.brandGreen : colors.surface,
+                alignItems: "center",
+                justifyContent: "center",
+                paddingHorizontal: 8,
+                paddingVertical: 8,
+              }}
+            >
+              <Text style={{ color: tab === "pending-data" ? "#FFFFFF" : colors.text, fontFamily: fonts.semiBold, fontSize: 15, textAlign: "center" }}>
+                Pending Data ({pendingDataCount})
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
 
       <FlatList
@@ -337,7 +377,7 @@ export function InstituteMembersPanel({
           <Text style={[styles.empty, { color: colors.textMuted }]}>
             {students.length === 0
               ? "No members yet. Tap Add Member to get started."
-              : tab === "pending"
+              : tab === "pending-photos"
                 ? "No members are waiting for a photo."
                 : tab === "pending-data"
                   ? "No members are missing required data."
@@ -352,7 +392,7 @@ export function InstituteMembersPanel({
         students={filtered}
         initialIndex={flowIndex}
         classSection=""
-        photoCaptureEnabled={tab === "pending"}
+        photoCaptureEnabled={tab === "pending-photos"}
         onClose={() => setFlowVisible(false)}
         navigation={navigation}
       />

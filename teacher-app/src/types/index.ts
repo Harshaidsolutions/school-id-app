@@ -93,6 +93,7 @@ export interface NotificationItem {
   school_id: string | null;
   title: string;
   message: string;
+  image_url?: string | null;
   created_by: string | null;
   created_at: string | null;
   is_read?: boolean;

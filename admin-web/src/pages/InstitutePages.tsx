@@ -26,15 +26,13 @@ export function InstituteListPage() {
   const [otpOpen, setOtpOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [createdOn, setCreatedOn] = useState("");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
-  async function loadInstitutes(created = createdOn) {
+  async function loadInstitutes() {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api.get<{ institutes?: Institute[] }>("/admin/institutes", {
-        params: created ? { createdOn: created } : undefined,
-      });
+      const { data } = await api.get<{ institutes?: Institute[] }>("/admin/institutes");
       setInstitutes(Array.isArray(data.institutes) ? data.institutes : []);
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -52,14 +50,21 @@ export function InstituteListPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return institutes;
-    return institutes.filter(
-      (item) =>
-        item.name.toLowerCase().includes(q) ||
-        (item.owner_username ?? "").toLowerCase().includes(q) ||
-        (item.phone ?? "").toLowerCase().includes(q)
-    );
-  }, [institutes, search]);
+    const list = (q
+      ? institutes.filter(
+          (item) =>
+            item.name.toLowerCase().includes(q) ||
+            (item.owner_username ?? "").toLowerCase().includes(q) ||
+            (item.phone ?? "").toLowerCase().includes(q)
+        )
+      : [...institutes]
+    ).sort((a, b) => {
+      const at = new Date(a.created_at ?? 0).getTime();
+      const bt = new Date(b.created_at ?? 0).getTime();
+      return sortOrder === "oldest" ? at - bt : bt - at;
+    });
+    return list;
+  }, [institutes, search, sortOrder]);
 
   async function toggleActive(institute: Institute) {
     const next = !(institute.is_active !== false);
@@ -169,27 +174,23 @@ export function InstituteListPage() {
       />
 
       {filterOpen ? (
-        <div className="mb-4 flex flex-wrap items-end gap-2 rounded-xl border border-border bg-white p-3">
-          <label className="text-xs font-medium text-text-navy">
-            Created date
-            <input
-              type="date"
-              value={createdOn}
-              onChange={(e) => {
-                setCreatedOn(e.target.value);
-                void loadInstitutes(e.target.value);
-              }}
-              className="input-field mt-1"
-            />
-          </label>
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-3">
+          <span className="text-xs font-medium text-text-navy">Sort</span>
           <button
             type="button"
-            className="btn-secondary"
-            onClick={() => {
-              setCreatedOn("");
-              void loadInstitutes("");
-            }}
+            className={sortOrder === "newest" ? "btn-primary" : "btn-secondary"}
+            onClick={() => setSortOrder("newest")}
           >
+            Newest
+          </button>
+          <button
+            type="button"
+            className={sortOrder === "oldest" ? "btn-primary" : "btn-secondary"}
+            onClick={() => setSortOrder("oldest")}
+          >
+            Oldest
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => setSortOrder("newest")}>
             Clear filters
           </button>
         </div>

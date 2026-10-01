@@ -80,6 +80,7 @@ export interface NotificationRow {
   institute_id?: string | null;
   title: string;
   message: string;
+  image_url?: string | null;
   created_by: string | null;
   created_at: Date | null;
 }

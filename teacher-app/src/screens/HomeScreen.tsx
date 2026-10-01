@@ -32,7 +32,7 @@ import {
   openBrandWhatsApp,
   useCustomerBrand,
 } from "../hooks/useCustomerBrand";
-import { buildHelpSupportMessage, SUPPORT_PHONE } from "../constants/support";
+import { SUPPORT_PHONE } from "../constants/support";
 import { openWhatsApp } from "../utils/whatsappBusiness";
 import { HOME_PRODUCTS } from "../constants/products";
 import { BEST_SCHOOLS } from "../constants/schools";
@@ -339,7 +339,7 @@ export function HomeScreen() {
           onPress={() => {
             if (!ready) return;
             if (!childBrand) {
-              void openWhatsApp(buildHelpSupportMessage("Your School")).catch(() => undefined);
+              void openWhatsApp("").catch(() => undefined);
               return;
             }
             void openBrandWhatsApp(brand).catch(() => missingContact());

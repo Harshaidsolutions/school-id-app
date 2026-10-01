@@ -180,10 +180,12 @@ function noticeHeadline(
   title: string,
   details: { label: string; value: string }[]
 ): string {
-  if (!/^new (school|institute) created$/i.test(title)) return title;
-  const who = details.find((row) => row.label === "Created By")?.value?.trim();
-  const kind = /institute/i.test(title) ? "Institute" : "School";
-  return who ? `${who} created a new ${kind}` : title;
+  const named = title.match(/^(.*) created a new (school|institute)$/i);
+  if (named?.[1]?.trim()) return named[1].trim();
+  if (/^new (school|institute) created$/i.test(title)) {
+    return details.find((row) => row.label === "Created By")?.value?.trim() || title;
+  }
+  return title;
 }
 
 export function AppLayout() {

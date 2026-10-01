@@ -400,16 +400,44 @@ export function EditStudentScreen({ navigation, route }: Props) {
 
 
             {showSignature ? (
-              <Pressable onPress={() => void handleSignaturePick()} disabled={photoBusy || saving} style={{ marginBottom: 12 }}>
+              <View style={{ marginBottom: 12 }}>
                 <Text style={{ color: colors.text, fontFamily: fonts.semiBold, marginBottom: 6 }}>Signature</Text>
-                {signatureUri ? (
-                  <Image source={{ uri: signatureUri }} style={{ width: "100%", height: 88 }} resizeMode="contain" />
-                ) : (
-                  <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75} style={{ color: colors.textMuted }}>
-                    Tap to capture or choose signature
-                  </Text>
-                )}
-              </Pressable>
+                <Pressable
+                  onPress={() => void handleSignaturePick()}
+                  disabled={photoBusy || saving}
+                  style={{
+                    alignSelf: "stretch",
+                    width: "100%",
+                    minHeight: 88,
+                    paddingVertical: 12,
+                    paddingHorizontal: 12,
+                    borderWidth: 1.5,
+                    borderRadius: radius.md,
+                    borderStyle: "dashed",
+                    borderColor: colors.border,
+                    backgroundColor: colors.inputBg,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                  }}
+                >
+                  {signatureUri ? (
+                    <Image source={{ uri: signatureUri }} style={{ width: "100%", height: 88 }} resizeMode="contain" />
+                  ) : (
+                    <View style={{ alignItems: "center", paddingHorizontal: 8 }}>
+                      <Ionicons name="create-outline" size={28} color={colors.textMuted} />
+                      <Text
+                        numberOfLines={2}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.75}
+                        style={{ color: colors.textMuted, textAlign: "center", marginTop: 6, fontFamily: fonts.regular }}
+                      >
+                        Tap to capture or choose signature
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              </View>
             ) : null}
 
             <DynamicStudentFieldList

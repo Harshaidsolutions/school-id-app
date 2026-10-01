@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
+  Image,
   Modal,
   RefreshControl,
   ScrollView,
@@ -99,6 +100,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<NotificationItem | null>(null);
+  const [hiddenImages, setHiddenImages] = useState<Set<string>>(new Set());
 
   const migrateLegacyHiddenNotifications = useCallback(async () => {
     try {
@@ -359,6 +361,20 @@ export function NotificationsScreen({ navigation, route }: Props) {
                 >
                   {item.message}
                 </Text>
+                {item.image_url && !hiddenImages.has(item.id) ? (
+                  <Image
+                    source={{ uri: item.image_url }}
+                    style={styles.noticeImage}
+                    resizeMode="contain"
+                    onError={() =>
+                      setHiddenImages((prev) => {
+                        const next = new Set(prev);
+                        next.add(item.id);
+                        return next;
+                      })
+                    }
+                  />
+                ) : null}
               </View>
               <Pressable
                 onPress={() => confirmDeleteOne(item.id)}
@@ -441,6 +457,20 @@ export function NotificationsScreen({ navigation, route }: Props) {
               <Text style={[styles.modalBody, { color: colors.textBody }]}>
                 {detailItem?.message}
               </Text>
+              {detailItem?.image_url && !hiddenImages.has(detailItem.id) ? (
+                <Image
+                  source={{ uri: detailItem.image_url }}
+                  style={styles.modalImage}
+                  resizeMode="contain"
+                  onError={() =>
+                    setHiddenImages((prev) => {
+                      const next = new Set(prev);
+                      next.add(detailItem.id);
+                      return next;
+                    })
+                  }
+                />
+              ) : null}
             </ScrollView>
             <Pressable
               style={[styles.modalCloseBtn, { backgroundColor: colors.brandGreen }]}
@@ -490,6 +520,19 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     fontSize: typeScale.rowTitle,
+  },
+  noticeImage: {
+    width: "100%",
+    height: 140,
+    marginTop: 8,
+    borderRadius: 8,
+    backgroundColor: "transparent",
+  },
+  modalImage: {
+    width: "100%",
+    height: 180,
+    marginTop: 12,
+    borderRadius: 8,
   },
   message: {
     marginTop: spacing.xxs / 2,

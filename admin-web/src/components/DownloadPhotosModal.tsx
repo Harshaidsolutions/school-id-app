@@ -1,158 +1,230 @@
-import { useMemo, useState } from "react";
-import { calendarDaysFromCreated } from "../utils/calendarDays";
-import { formatCalendarDate } from "../utils/formatCalendarDate";
+import { useState } from "react";
 
-type Step = "choose" | "date-wise" | "category";
+export type CountOption = { name: string; count: number; key?: string };
+
+type Step = "menu" | "dates" | "signature-dates" | "kind" | "value";
+
+function dayLabel(iso: string): string {
+  const [year, month, day] = iso.slice(0, 10).split("-");
+  if (!year || !month || !day) return iso;
+  return `${day}-${month}-${year}`;
+}
 
 export function DownloadPhotosModal({
-  schoolCreatedAt,
-  downloadingAll,
+  downloading,
   photoCounts,
-  categories,
-  title = "Download Photos",
+  signatureCounts,
+  classes,
+  groups,
+  designations,
   onClose,
-  onDownloadAll,
-  onDownloadByDate,
-  onDownloadByCategory,
+  onDownload,
 }: {
-  schoolCreatedAt: string | null;
-  downloadingAll: boolean;
-  photoCounts?: Record<string, number>;
-  categories?: { name: string; count: number }[];
-  title?: string;
+  downloading: boolean;
+  photoCounts: Record<string, number>;
+  signatureCounts: Record<string, number>;
+  classes: CountOption[];
+  groups: CountOption[];
+  designations: CountOption[];
   onClose: () => void;
-  onDownloadAll: () => void;
-  onDownloadByDate: (date: string) => void;
-  onDownloadByCategory?: (name: string) => void;
+  onDownload: (job: {
+    asset: "photo" | "signature";
+    date?: string;
+    classSection?: string;
+    fieldKey?: string;
+  }) => void;
 }) {
-  const [step, setStep] = useState<Step>("choose");
-  const [selectedDate, setSelectedDate] = useState("");
+  const [step, setStep] = useState<Step>("menu");
+  const [kind, setKind] = useState<"class" | "group" | "designation" | "">("");
+  const [selected, setSelected] = useState("");
 
-  const dateOptions = useMemo(
-    () => calendarDaysFromCreated(schoolCreatedAt),
-    [schoolCreatedAt]
-  );
+  const kinds = [
+    classes.length ? { id: "class" as const, label: "Class" } : null,
+    groups.length ? { id: "group" as const, label: "Group" } : null,
+    designations.length ? { id: "designation" as const, label: "Designation" } : null,
+  ].filter((item): item is { id: "class" | "group" | "designation"; label: string } => Boolean(item));
+
+  const options =
+    kind === "group" ? groups : kind === "designation" ? designations : classes;
+  const selectedOption = options.find((item) => item.name === selected);
+  const photoDates = Object.entries(photoCounts).sort(([a], [b]) => b.localeCompare(a));
+  const signatureDates = Object.entries(signatureCounts).sort(([a], [b]) => b.localeCompare(a));
+
+  function back() {
+    if (step === "value") {
+      setSelected("");
+      setStep("kind");
+      return;
+    }
+    setStep("menu");
+    setKind("");
+    setSelected("");
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-text-navy">{title}</h2>
+      <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-bold text-text-navy">Download Photos</h2>
           <button type="button" onClick={onClose} className="text-text-muted hover:text-text-navy" aria-label="Close">
             ×
           </button>
         </div>
 
-        {step === "choose" ? (
-          <>
-            <p className="text-sm text-text-muted">Choose how you want to download photos.</p>
-            <div className="mt-5 space-y-3">
-              <button
-                type="button"
-                disabled={downloadingAll}
-                onClick={onDownloadAll}
-                className="w-full rounded-xl border border-border bg-white px-4 py-3 text-left hover:bg-content-bg disabled:opacity-50"
-              >
-                <div className="font-semibold text-text-navy">
-                  {downloadingAll ? "Preparing download…" : "Download All Photos"}
-                </div>
-                <div className="mt-0.5 text-xs text-text-muted">
-                  Download every captured photo for this school as a ZIP file.
-                </div>
-              </button>
-              <button
-                type="button"
-                disabled={downloadingAll}
-                onClick={() => setStep("date-wise")}
-                className="w-full rounded-xl border border-border bg-white px-4 py-3 text-left hover:bg-content-bg disabled:opacity-50"
-              >
-                <div className="font-semibold text-text-navy">Download Date-Wise</div>
-                <div className="mt-0.5 text-xs text-text-muted">
-                  Pick a date and download files captured or uploaded on that day.
-                </div>
-              </button>
-              {onDownloadByCategory ? (
-                <button
-                  type="button"
-                  disabled={downloadingAll}
-                  onClick={() => setStep("category")}
-                  className="w-full rounded-xl border border-border bg-white px-4 py-3 text-left hover:bg-content-bg disabled:opacity-50"
-                >
-                  <div className="font-semibold text-text-navy">Class / Group / Designation</div>
-                  <div className="mt-0.5 text-xs text-text-muted">
-                    Download photos for one category. A count of 0 cannot be downloaded.
-                  </div>
-                </button>
-              ) : null}
-            </div>
-          </>
-        ) : step === "category" ? (
-          <>
-            <button type="button" onClick={() => setStep("choose")} className="mb-3 text-sm text-button-blue hover:underline">
-              ← Back
+        {step === "menu" ? (
+          <div className="space-y-2">
+            <MenuButton label="All Photos" onClick={() => onDownload({ asset: "photo" })} disabled={downloading} />
+            <MenuButton label="Date-wise Photos" onClick={() => setStep("dates")} disabled={downloading} />
+            <MenuButton label="All Signatures" onClick={() => onDownload({ asset: "signature" })} disabled={downloading} />
+            <MenuButton label="Date-wise Signatures" onClick={() => setStep("signature-dates")} disabled={downloading} />
+            <MenuButton label="Class / Group / Designation" onClick={() => setStep("kind")} disabled={downloading || kinds.length === 0} />
+            <button type="button" className="btn-secondary mt-2 w-full" onClick={onClose}>
+              Cancel
             </button>
-            <div className="max-h-64 space-y-2 overflow-y-auto">
-              {(categories ?? []).map((row) => (
-                <button
-                  key={row.name}
-                  type="button"
-                  disabled={row.count === 0 || downloadingAll}
-                  onClick={() => onDownloadByCategory?.(row.name)}
-                  className="flex w-full items-center justify-between rounded-xl border border-border px-4 py-3 text-left disabled:opacity-50"
-                >
-                  <span className="font-semibold text-text-navy">{row.name}</span>
-                  <span className="text-sm text-text-muted">{row.count}</span>
-                </button>
-              ))}
-              {(categories ?? []).length === 0 ? (
-                <p className="text-sm text-text-muted">No categories with photos.</p>
-              ) : null}
-            </div>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => {
-                setStep("choose");
-                setSelectedDate("");
-              }}
-              className="mb-3 text-sm text-button-blue hover:underline"
-            >
-              ← Back
+          </div>
+        ) : null}
+
+        {step === "dates" || step === "signature-dates" ? (
+          <DateList
+            title={step === "dates" ? "Date-wise Photos" : "Date-wise Signatures"}
+            noun={step === "dates" ? "Photos" : "Signatures"}
+            dates={step === "dates" ? photoDates : signatureDates}
+            downloading={downloading}
+            onBack={back}
+            onDownload={(date) =>
+              onDownload({
+                asset: step === "dates" ? "photo" : "signature",
+                date,
+              })
+            }
+          />
+        ) : null}
+
+        {step === "kind" ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-text-navy">Choose a type</p>
+            {kinds.map((item) => (
+              <MenuButton
+                key={item.id}
+                label={item.label}
+                disabled={downloading}
+                onClick={() => {
+                  setKind(item.id);
+                  setSelected("");
+                  setStep("value");
+                }}
+              />
+            ))}
+            <button type="button" className="btn-secondary mt-2 w-full" onClick={back}>
+              Back
             </button>
-            <label className="block text-sm">
-              <span className="mb-1.5 block font-medium text-text-navy">Select date</span>
+          </div>
+        ) : null}
+
+        {step === "value" ? (
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-text-navy">
+              {kind === "group" ? "Group" : kind === "designation" ? "Designation" : "Class"}
               <select
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="input-field"
+                value={selected}
+                onChange={(event) => setSelected(event.target.value)}
+                className="input-field mt-1"
               >
-                <option value="">Choose a date…</option>
-                {dateOptions.map((d) => (
-                  <option key={d} value={d}>
-                    {formatCalendarDate(d)} — {photoCounts?.[d] ?? 0} Photos
+                <option value="">Choose…</option>
+                {options.map((item) => (
+                  <option key={item.name} value={item.name}>
+                    {item.name} — {item.count} Photos
                   </option>
                 ))}
               </select>
             </label>
             <button
               type="button"
-              disabled={!selectedDate || downloadingAll || (photoCounts?.[selectedDate] ?? 0) === 0}
-              onClick={() => selectedDate && onDownloadByDate(selectedDate)}
-              className="btn-primary mt-4 w-full disabled:opacity-50"
+              className="btn-primary w-full disabled:opacity-50"
+              disabled={downloading || !selectedOption || selectedOption.count === 0}
+              onClick={() =>
+                onDownload({
+                  asset: "photo",
+                  classSection: selected,
+                  fieldKey: selectedOption?.key || (kind === "class" ? "class_section" : undefined),
+                })
+              }
             >
-              {downloadingAll ? "Downloading…" : "Download photos for selected date"}
+              {downloading ? "Preparing…" : "Download"}
             </button>
-          </>
-        )}
-
-        <div className="mt-5 flex justify-end">
-          <button type="button" onClick={onClose} className="btn-secondary">
-            Cancel
-          </button>
-        </div>
+            <button type="button" className="btn-secondary w-full" onClick={back}>
+              Back
+            </button>
+          </div>
+        ) : null}
       </div>
+    </div>
+  );
+}
+
+function MenuButton({
+  label,
+  onClick,
+  disabled,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="w-full rounded-xl border border-border bg-white px-4 py-3 text-left text-sm font-semibold text-text-navy hover:bg-content-bg disabled:opacity-50"
+    >
+      {label}
+    </button>
+  );
+}
+
+function DateList({
+  title,
+  noun,
+  dates,
+  downloading,
+  onBack,
+  onDownload,
+}: {
+  title: string;
+  noun: string;
+  dates: [string, number][];
+  downloading: boolean;
+  onBack: () => void;
+  onDownload: (date: string) => void;
+}) {
+  const [selected, setSelected] = useState("");
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-medium text-text-navy">{title}</p>
+      {dates.length === 0 ? (
+        <p className="text-sm text-text-muted">No dates with files are available.</p>
+      ) : (
+        <select value={selected} onChange={(event) => setSelected(event.target.value)} className="input-field">
+          <option value="">Choose a date</option>
+          {dates.map(([date, count]) => (
+            <option key={date} value={date} disabled={count === 0}>
+              {dayLabel(date)} — {count} {noun}
+            </option>
+          ))}
+        </select>
+      )}
+      <button
+        type="button"
+        className="btn-primary w-full disabled:opacity-50"
+        disabled={downloading || !selected}
+        onClick={() => onDownload(selected)}
+      >
+        {downloading ? "Preparing…" : "Download"}
+      </button>
+      <button type="button" className="btn-secondary w-full" onClick={onBack}>
+        Back
+      </button>
     </div>
   );
 }

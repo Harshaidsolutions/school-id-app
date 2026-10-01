@@ -30,5 +30,5 @@ export function buildReferMessage(schoolName: string): string {
 
 /** Refer Us uses the catalog wa.me link directly — no prefilled share text. */
 export function buildReferShareMessage(_catalogLink?: string): string {
-  return "I want to refer this MySchool ID Card app";
+  return "I want to refer this MySchool ID card app";
 }

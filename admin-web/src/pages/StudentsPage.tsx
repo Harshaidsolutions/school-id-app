@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import api, { getAuthToken } from "../api/client";
@@ -12,7 +13,7 @@ import { DownloadPhotosModal } from "../components/DownloadPhotosModal";
 import { BulkModeButtons } from "../components/BulkActionBar";
 import { OtpConfirmModal } from "../components/OtpConfirmModal";
 import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
-import type { ApiErrorBody, Institute, School, Student, StudentsResponse } from "../types";
+import type { ApiErrorBody, NamedCount, RecordFacets, School, Student, StudentsResponse } from "../types";
 import {
   isPhotoExcelField,
   sortFormFields,
@@ -37,6 +38,33 @@ function isNameColumn(field: FormFieldConfig): boolean {
   if (field.key === "student_name") return true;
   const n = normalizedFieldLabel(field.label);
   return n === "name" || n === "studentname" || n === "membername";
+}
+
+function formatCreated(value: string | null): { date: string; time: string } | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const date = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
+    .format(parsed)
+    .replace(/\//g, "-");
+  const time = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(parsed);
+  return { date, time };
+}
+
+function dayLabel(iso: string): string {
+  const [year, month, day] = iso.slice(0, 10).split("-");
+  if (!year || !month || !day) return iso;
+  return `${day}-${month}-${year}`;
 }
 
 function dedupeDisplayFields(fields: FormFieldConfig[]): FormFieldConfig[] {
@@ -159,7 +187,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [searchParams] = useSearchParams();
   const isInstitute = mode === "institute";
   const [schools, setSchools] = useState<School[]>([]);
-  const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [schoolId, setSchoolId] = useState(searchParams.get("schoolId") ?? "");
   const [instituteId, setInstituteId] = useState(searchParams.get("instituteId") ?? "");
   const [students, setStudents] = useState<Student[]>([]);
@@ -176,15 +203,22 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [confirmDeleteDataStudent, setConfirmDeleteDataStudent] =
     useState<Student | null>(null);
   const [photoCounts, setPhotoCounts] = useState<Record<string, number>>({});
-  const [photoCategories, setPhotoCategories] = useState<{ name: string; count: number }[]>([]);
   const [signatureCounts, setSignatureCounts] = useState<Record<string, number>>({});
-  const [showSignatureDownload, setShowSignatureDownload] = useState(false);
+  const [photoClasses, setPhotoClasses] = useState<NamedCount[]>([]);
+  const [photoGroups, setPhotoGroups] = useState<NamedCount[]>([]);
+  const [photoDesignations, setPhotoDesignations] = useState<NamedCount[]>([]);
+  const [facets, setFacets] = useState<RecordFacets | null>(null);
   const [deleteJob, setDeleteJob] = useState<DeleteJob | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
   const [photoFilter, setPhotoFilter] = useState("");
   const [pendingDataFilter, setPendingDataFilter] = useState("");
   const [capturedOn, setCapturedOn] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [groupFilter, setGroupFilter] = useState("");
+  const [designationFilter, setDesignationFilter] = useState("");
+  const [excelStep, setExcelStep] = useState<"menu" | "date" | "kind" | "value">("menu");
+  const [excelKind, setExcelKind] = useState<"class" | "group" | "designation" | "">("");
+  const [excelValue, setExcelValue] = useState("");
   const [showDeletePhotosOtp, setShowDeletePhotosOtp] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showDeleteOptions, setShowDeleteOptions] = useState(false);
@@ -211,18 +245,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     if (!schoolId) return null;
     return schools.find((s) => s.id === schoolId)?.name ?? null;
   }, [schools, schoolId, searchParams, isInstitute]);
-
-  const schoolCreatedAt = useMemo(() => {
-    if (!schoolId) return null;
-    return schools.find((s) => s.id === schoolId)?.created_at ?? null;
-  }, [schools, schoolId]);
-
-  const instituteCreatedAt = useMemo(() => {
-    if (!instituteId) return null;
-    return institutes.find((i) => i.id === instituteId)?.created_at ?? null;
-  }, [institutes, instituteId]);
-
-  const orgCreatedAt = isInstitute ? instituteCreatedAt : schoolCreatedAt;
 
   const showSchoolPicker = !isInstitute && !searchParams.get("schoolId");
   const isDetailView = isInstitute
@@ -266,13 +288,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   }, [isInstitute]);
 
   useEffect(() => {
-    if (!isInstitute) return;
-    void api.get<{ institutes: Institute[] }>("/admin/institutes").then((res) => {
-      setInstitutes(res.data.institutes);
-    });
-  }, [isInstitute]);
-
-  useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
@@ -281,14 +296,19 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         const params: Record<string, string> = {};
         if (isInstitute && instituteId) params.instituteId = instituteId;
         else if (schoolId) params.schoolId = schoolId;
-        if (photoFilter) params.photo = photoFilter;
+        if (classFilter) params.classSection = classFilter;
+        if (photoFilter) params.photo = photoFilter === "uncaptured" ? "missing" : photoFilter;
         if (pendingDataFilter) params.pendingData = pendingDataFilter;
         if (capturedOn) params.capturedOn = capturedOn;
-        if (categoryFilter) params.category = categoryFilter;
+        if (groupFilter) params.group = groupFilter;
+        if (designationFilter) params.designation = designationFilter;
         const { data } = await api.get<StudentsResponse>("/admin/students", {
           params,
         });
-        if (!cancelled) setStudents(data.students);
+        if (!cancelled) {
+          setStudents(data.students);
+          if (data.facets) setFacets(data.facets);
+        }
       } catch (err) {
         if (!cancelled) {
           if (axios.isAxiosError(err)) {
@@ -304,7 +324,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     return () => {
       cancelled = true;
     };
-  }, [schoolId, instituteId, isInstitute, photoFilter, pendingDataFilter, capturedOn, categoryFilter]);
+  }, [schoolId, instituteId, isInstitute, classFilter, photoFilter, pendingDataFilter, capturedOn, groupFilter, designationFilter]);
 
   useEffect(() => {
     if (!orgId) {
@@ -368,27 +388,23 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     [formFields]
   );
 
-  const tableColSpan = enabledFields.length + 3 + (selecting && isDetailView ? 1 : 0);
+  const tableColSpan = enabledFields.length + 4 + (selecting && isDetailView ? 1 : 0);
 
-  const classOptions = useMemo(
-    () =>
-      [
-        ...new Set(
-          students
-            .map((s) => s.class_section)
-            .filter((c): c is string => Boolean(c))
-        ),
-      ].sort(),
-    [students]
-  );
+  const classOptions = useMemo(() => {
+    const fromFacets = facets?.classes.map((item) => item.name) ?? [];
+    if (fromFacets.length) return fromFacets;
+    return [
+      ...new Set(students.map((s) => s.class_section).filter((c): c is string => Boolean(c))),
+    ].sort();
+  }, [facets, students]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return students.filter((s) => {
       const { photo, dataMissing } = recordFlags(s, isInstitute);
-      if (tab === "pending" && photo) return false;
+      if (!photoFilter && tab === "pending" && photo) return false;
       if (tab === "pending-data" && !dataMissing) return false;
-      if (tab === "captured" && !photo) return false;
+      if (!photoFilter && tab === "captured" && !photo) return false;
       if (classFilter && s.class_section !== classFilter) return false;
       if (q) {
         const hay = [
@@ -406,7 +422,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       }
       return true;
     });
-  }, [students, tab, classFilter, search, isInstitute]);
+  }, [students, tab, classFilter, photoFilter, search, isInstitute]);
 
   const counts = useMemo(() => {
     let pending = 0;
@@ -474,7 +490,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
 
   async function handleDownloadExcel(
     scope: "all" | "pending" | "captured" | "uncaptured" | "captured-pending-data" = "all",
-    extra?: { date?: string; classSection?: string }
+    extra?: { date?: string; classSection?: string; fieldKey?: string }
   ) {
     if (!orgId) {
       setError(isInstitute ? "Open an institute to download Excel." : "Select a school before downloading Excel.");
@@ -486,6 +502,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       const query = new URLSearchParams({ scope });
       if (extra?.date) query.set("date", extra.date);
       if (extra?.classSection) query.set("classSection", extra.classSection);
+      if (extra?.fieldKey) query.set("fieldKey", extra.fieldKey);
       const path = isInstitute
         ? `/admin/institutes/${instituteId}/export-members?${query.toString()}`
         : `/admin/students/${schoolId}/export?${query.toString()}`;
@@ -501,7 +518,12 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     }
   }
 
-  async function handleDownloadAllPhotos() {
+  async function handleDownloadAssets(job: {
+    asset: "photo" | "signature";
+    date?: string;
+    classSection?: string;
+    fieldKey?: string;
+  }) {
     if (!orgId) {
       setError(
         isInstitute
@@ -513,55 +535,25 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     setExportingPhotos(true);
     setError(null);
     try {
-      const path = isInstitute
-        ? `/admin/institutes/${instituteId}/download-photos`
-        : `/admin/schools/${schoolId}/download-photos`;
-      await downloadAuthenticatedFile(path, "photos.zip");
-      setShowDownloadPhotosModal(false);
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        let message = "Failed to download photos.";
-        const data = err.response?.data;
-        if (data instanceof Blob) {
-          try {
-            const text = await data.text();
-            const parsed = JSON.parse(text) as ApiErrorBody;
-            if (parsed.message) message = parsed.message;
-          } catch {
-            // keep default
-          }
-        } else {
-          const body = data as ApiErrorBody | undefined;
-          if (body?.message) message = body.message;
-        }
-        setError(message);
-      } else setError("Failed to download photos.");
-    } finally {
-      setExportingPhotos(false);
-    }
-  }
-
-  async function handleDownloadPhotosByDate(date: string) {
-    if (!orgId) return;
-    setExportingPhotos(true);
-    setError(null);
-    try {
       const base = isInstitute
         ? `/admin/institutes/${instituteId}/download-photos`
         : `/admin/schools/${schoolId}/download-photos`;
-      await downloadAuthenticatedFile(
-        `${base}?date=${encodeURIComponent(date)}`,
-        `photos_${date}.zip`
-      );
+      const query = new URLSearchParams();
+      if (job.asset === "signature") query.set("asset", "signature");
+      if (job.date) query.set("date", job.date);
+      if (job.classSection) query.set("classSection", job.classSection);
+      if (job.fieldKey) query.set("fieldKey", job.fieldKey);
+      const suffix = query.toString() ? `?${query.toString()}` : "";
+      const name = job.asset === "signature" ? "signatures" : "photos";
+      await downloadAuthenticatedFile(`${base}${suffix}`, `${name}.zip`);
       setShowDownloadPhotosModal(false);
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        let message = "Failed to download photos.";
+        let message = "Failed to download files.";
         const data = err.response?.data;
         if (data instanceof Blob) {
           try {
-            const text = await data.text();
-            const parsed = JSON.parse(text) as ApiErrorBody;
+            const parsed = JSON.parse(await data.text()) as ApiErrorBody;
             if (parsed.message) message = parsed.message;
           } catch {
             // keep default
@@ -571,7 +563,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
           if (body?.message) message = body.message;
         }
         setError(message);
-      } else setError("Failed to download photos.");
+      } else setError("Failed to download files.");
     } finally {
       setExportingPhotos(false);
     }
@@ -591,7 +583,9 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         otp,
         date: deleteJob.date,
         classSection: deleteJob.classSection,
+        fieldKey: deleteJob.fieldKey,
         dataScope: deleteJob.dataScope,
+        asset: deleteJob.kind === "photos" ? "photos" : undefined,
       },
     });
     const params: Record<string, string> = isInstitute
@@ -603,43 +597,34 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     setShowDeletePhotosOtp(false);
   }
 
-  async function handleDownloadPhotosByCategory(name: string) {
+  function loadCaptureCounts() {
     if (!orgId) return;
-    setExportingPhotos(true);
-    setError(null);
-    try {
-      const base = isInstitute
-        ? `/admin/institutes/${instituteId}/download-photos`
-        : `/admin/schools/${schoolId}/download-photos`;
-      await downloadAuthenticatedFile(
-        `${base}?classSection=${encodeURIComponent(name)}`,
-        `photos_${name}.zip`
-      );
-      setShowDownloadPhotosModal(false);
-    } catch {
-      setError("Failed to download photos for that category.");
-    } finally {
-      setExportingPhotos(false);
-    }
-  }
-
-  async function handleDownloadSignatures(date?: string) {
-    if (!orgId) return;
-    setExportingPhotos(true);
-    setError(null);
-    try {
-      const base = isInstitute
-        ? `/admin/institutes/${instituteId}/download-photos`
-        : `/admin/schools/${schoolId}/download-photos`;
-      const query = new URLSearchParams({ asset: "signature" });
-      if (date) query.set("date", date);
-      await downloadAuthenticatedFile(`${base}?${query.toString()}`, date ? `signatures_${date}.zip` : "signatures.zip");
-      setShowSignatureDownload(false);
-    } catch {
-      setError("Failed to download signatures.");
-    } finally {
-      setExportingPhotos(false);
-    }
+    const path = isInstitute
+      ? `/admin/institutes/${instituteId}/photo-capture-counts`
+      : `/admin/schools/${schoolId}/photo-capture-counts`;
+    void api
+      .get<{
+        counts: Record<string, number>;
+        classes?: NamedCount[];
+        groups?: NamedCount[];
+        designations?: NamedCount[];
+        categories?: NamedCount[];
+        signatureCounts?: Record<string, number>;
+      }>(path)
+      .then(({ data }) => {
+        setPhotoCounts(data.counts ?? {});
+        setPhotoClasses(data.classes ?? data.categories ?? []);
+        setPhotoGroups(data.groups ?? []);
+        setPhotoDesignations(data.designations ?? []);
+        setSignatureCounts(data.signatureCounts ?? {});
+      })
+      .catch(() => {
+        setPhotoCounts({});
+        setPhotoClasses([]);
+        setPhotoGroups([]);
+        setPhotoDesignations([]);
+        setSignatureCounts({});
+      });
   }
 
   function isCaptured(student: Student) {
@@ -674,7 +659,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       {isDetailView && (
         <Link
           to={isInstitute ? "/institutes" : "/schools"}
-          className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-button-blue hover:underline"
+          className="mb-4 inline-flex w-fit max-w-full shrink-0 items-center gap-1.5 self-start text-sm font-semibold text-button-blue hover:underline"
         >
           ← Back to {isInstitute ? "Institutes" : "Schools"}
         </Link>
@@ -716,60 +701,168 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               <button
                 type="button"
                 disabled={!orgId || exportingExcel}
-                onClick={() => setExcelMenuOpen((open) => !open)}
+                onClick={() => {
+                  setExcelMenuOpen((open) => !open);
+                  setExcelStep("menu");
+                  setExcelKind("");
+                  setExcelValue("");
+                }}
                 className="detail-toolbar-btn"
               >
                 {exportingExcel ? "Exporting…" : "Download Excel"}
               </button>
               {excelMenuOpen ? (
-                <div className="absolute left-0 top-full z-30 mt-1 w-full min-w-[9.5rem] rounded-lg border border-border bg-white p-1.5 shadow-lg">
-                  {(
-                    [
-                      ["all", "All Excel"],
-                      ["captured", "Captured Photos Excel"],
-                      ["pending", "Pending Photos Excel"],
-                      ["captured-pending-data", "Captured Photos - Pending Data"],
-                      ["uncaptured", "Uncaptured Data"],
-                    ] as const
-                  ).map(([scope, label]) => (
-                    <button
-                      key={scope}
-                      type="button"
-                      className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-navy hover:bg-content-bg"
-                      onClick={() => {
-                        setExcelMenuOpen(false);
-                        void handleDownloadExcel(scope);
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-navy hover:bg-content-bg"
-                    onClick={() => {
-                      const date = window.prompt("Capture date (YYYY-MM-DD)");
-                      if (!date) return;
-                      setExcelMenuOpen(false);
-                      void handleDownloadExcel("captured", { date });
-                    }}
-                  >
-                    Date-wise Captured Data
-                  </button>
-                  <button
-                    type="button"
-                    className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-navy hover:bg-content-bg"
-                    onClick={() => {
-                      const classSection = window.prompt(
-                        isInstitute ? "Group or designation" : "Class, group, or designation"
-                      );
-                      if (!classSection) return;
-                      setExcelMenuOpen(false);
-                      void handleDownloadExcel("all", { classSection });
-                    }}
-                  >
-                    Class / Group / Designation
-                  </button>
+                <div className="absolute left-0 top-full z-30 mt-1 w-64 rounded-lg border border-border bg-white p-1.5 shadow-lg">
+                  {excelStep === "menu" ? (
+                    <>
+                      {(
+                        [
+                          ["all", "All Excel"],
+                          ["captured", "Captured Photos Excel"],
+                          ["pending", "Pending Photos Excel"],
+                          ["captured-pending-data", "Captured Photos – Pending Data"],
+                          ["uncaptured", "Uncaptured Data"],
+                        ] as const
+                      ).map(([scope, label]) => (
+                        <button
+                          key={scope}
+                          type="button"
+                          className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
+                          onClick={() => {
+                            setExcelMenuOpen(false);
+                            void handleDownloadExcel(scope);
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
+                        onClick={() => setExcelStep("date")}
+                      >
+                        Date-wise Captured Data
+                      </button>
+                      <button
+                        type="button"
+                        className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
+                        onClick={() => {
+                          setExcelKind("");
+                          setExcelValue("");
+                          setExcelStep("kind");
+                        }}
+                      >
+                        Class / Group / Designation
+                      </button>
+                    </>
+                  ) : null}
+                  {excelStep === "date" ? (
+                    <div className="space-y-2 p-1">
+                      <select
+                        value={excelValue}
+                        onChange={(event) => setExcelValue(event.target.value)}
+                        className="input-field text-sm"
+                      >
+                        <option value="">Choose a date</option>
+                        {(facets?.captureDates ?? []).map((item) => (
+                          <option key={item.name} value={item.name}>
+                            {dayLabel(item.name)} — {item.count} Photos
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="btn-primary w-full disabled:opacity-50"
+                        disabled={!excelValue}
+                        onClick={() => {
+                          setExcelMenuOpen(false);
+                          void handleDownloadExcel("captured", { date: excelValue });
+                        }}
+                      >
+                        Download
+                      </button>
+                      <button type="button" className="btn-secondary w-full" onClick={() => setExcelStep("menu")}>
+                        Back
+                      </button>
+                    </div>
+                  ) : null}
+                  {excelStep === "kind" ? (
+                    <div className="space-y-1 p-1">
+                      {(
+                        [
+                          facets?.classes.length ? ["class", "Class"] : null,
+                          facets?.groups.length ? ["group", "Group"] : null,
+                          facets?.designations.length ? ["designation", "Designation"] : null,
+                        ] as Array<[string, string] | null>
+                      )
+                        .filter((item): item is [string, string] => Boolean(item))
+                        .map(([id, label]) => (
+                          <button
+                            key={id}
+                            type="button"
+                            className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
+                            onClick={() => {
+                              setExcelKind(id as "class" | "group" | "designation");
+                              setExcelValue("");
+                              setExcelStep("value");
+                            }}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      <button type="button" className="btn-secondary w-full" onClick={() => setExcelStep("menu")}>
+                        Back
+                      </button>
+                    </div>
+                  ) : null}
+                  {excelStep === "value" ? (
+                    <div className="space-y-2 p-1">
+                      <label className="block text-xs font-medium text-text-navy">
+                        {excelKind === "group" ? "Group" : excelKind === "designation" ? "Designation" : "Class"}
+                        <select
+                          value={excelValue}
+                          onChange={(event) => setExcelValue(event.target.value)}
+                          className="input-field mt-1 text-sm"
+                        >
+                          <option value="">Choose…</option>
+                          {(excelKind === "group"
+                            ? facets?.groups
+                            : excelKind === "designation"
+                              ? facets?.designations
+                              : facets?.classes
+                          )?.map((item) => (
+                            <option key={item.name} value={item.name}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        className="btn-primary w-full disabled:opacity-50"
+                        disabled={!excelValue}
+                        onClick={() => {
+                          const list =
+                            excelKind === "group"
+                              ? facets?.groups
+                              : excelKind === "designation"
+                                ? facets?.designations
+                                : facets?.classes;
+                          const option = list?.find((item) => item.name === excelValue);
+                          setExcelMenuOpen(false);
+                          void handleDownloadExcel("all", {
+                            classSection: excelValue,
+                            fieldKey: option?.key || "class_section",
+                          });
+                        }}
+                      >
+                        Download
+                      </button>
+                      <button type="button" className="btn-secondary w-full" onClick={() => setExcelStep("kind")}>
+                        Back
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -779,48 +872,12 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               disabled={!orgId}
               onClick={() => {
                 setShowDownloadPhotosModal(true);
-                const path = isInstitute
-                  ? `/admin/institutes/${instituteId}/photo-capture-counts`
-                  : `/admin/schools/${schoolId}/photo-capture-counts`;
-                void api
-                  .get<{
-                    counts: Record<string, number>;
-                    categories?: { name: string; count: number }[];
-                    signatureCounts?: Record<string, number>;
-                  }>(path)
-                  .then(({ data }) => {
-                    setPhotoCounts(data.counts ?? {});
-                    setPhotoCategories(data.categories ?? []);
-                    setSignatureCounts(data.signatureCounts ?? {});
-                  })
-                  .catch(() => {
-                    setPhotoCounts({});
-                    setPhotoCategories([]);
-                    setSignatureCounts({});
-                  });
+                loadCaptureCounts();
               }}
               className="detail-toolbar-btn"
             >
               Download Photos
             </button>
-            <button
-              type="button"
-              disabled={!orgId}
-              onClick={() => {
-                setShowSignatureDownload(true);
-                const path = isInstitute
-                  ? `/admin/institutes/${instituteId}/photo-capture-counts`
-                  : `/admin/schools/${schoolId}/photo-capture-counts`;
-                void api
-                  .get<{ signatureCounts?: Record<string, number> }>(path)
-                  .then(({ data }) => setSignatureCounts(data.signatureCounts ?? {}))
-                  .catch(() => setSignatureCounts({}));
-              }}
-              className="detail-toolbar-btn"
-            >
-              Download Signatures
-            </button>
-
             <button
               type="button"
               disabled={!orgId}
@@ -843,7 +900,10 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             <button
               type="button"
               disabled={!orgId}
-              onClick={() => setShowDeleteOptions(true)}
+              onClick={() => {
+                setShowDeleteOptions(true);
+                loadCaptureCounts();
+              }}
               className="detail-toolbar-btn"
             >
               Delete Options
@@ -894,7 +954,12 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   className="input-field w-full pl-10 text-sm"
                 />
               </div>
-              <button type="button" className="btn-secondary shrink-0" onClick={() => setFilterOpen((open) => !open)}>
+              <button
+                ref={filterButtonRef}
+                type="button"
+                className="btn-secondary shrink-0"
+                onClick={() => setFilterOpen((open) => !open)}
+              >
                 Filter
               </button>
               {selecting || filtered.length > 0 ? (
@@ -942,51 +1007,36 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               {isInstitute ? "Add Member" : "Add Student"}
             </button>
           </div>
-          {filterOpen ? (
-            <div className="mt-3 grid gap-2 rounded-xl border border-border bg-white p-3 sm:grid-cols-4">
-              <label className="text-xs font-medium text-text-navy">
-                Capture date
-                <input type="date" value={capturedOn} onChange={(e) => setCapturedOn(e.target.value)} className="input-field mt-1" />
-              </label>
-              <label className="text-xs font-medium text-text-navy">
-                {isInstitute ? "Group / Designation" : "Class / Section"}
-                <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="input-field mt-1">
-                  <option value="">All</option>
-                  {classOptions.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs font-medium text-text-navy">
-                Photo
-                <select value={photoFilter} onChange={(e) => setPhotoFilter(e.target.value)} className="input-field mt-1">
-                  <option value="">All</option>
-                  <option value="captured">Captured</option>
-                  <option value="missing">Uncaptured</option>
-                </select>
-              </label>
-              <label className="text-xs font-medium text-text-navy">
-                Required data
-                <select value={pendingDataFilter} onChange={(e) => setPendingDataFilter(e.target.value)} className="input-field mt-1">
-                  <option value="">All</option>
-                  <option value="yes">Pending Data</option>
-                  <option value="no">Data complete</option>
-                </select>
-              </label>
-              <button
-                type="button"
-                className="btn-secondary sm:col-span-4"
-                onClick={() => {
-                  setCapturedOn("");
-                  setCategoryFilter("");
-                  setPhotoFilter("");
-                  setPendingDataFilter("");
-                }}
-              >
-                Clear filters
-              </button>
-            </div>
-          ) : null}
+          {filterOpen
+            ? createPortal(
+                <StudentFilterPanel
+                  anchor={filterButtonRef.current}
+                  onClose={() => setFilterOpen(false)}
+                  capturedOn={capturedOn}
+                  setCapturedOn={setCapturedOn}
+                  classFilter={classFilter}
+                  setClassFilter={setClassFilter}
+                  groupFilter={groupFilter}
+                  setGroupFilter={setGroupFilter}
+                  designationFilter={designationFilter}
+                  setDesignationFilter={setDesignationFilter}
+                  photoFilter={photoFilter}
+                  setPhotoFilter={setPhotoFilter}
+                  pendingDataFilter={pendingDataFilter}
+                  setPendingDataFilter={setPendingDataFilter}
+                  facets={facets}
+                  onClear={() => {
+                    setCapturedOn("");
+                    setClassFilter("");
+                    setGroupFilter("");
+                    setDesignationFilter("");
+                    setPhotoFilter("");
+                    setPendingDataFilter("");
+                  }}
+                />,
+                document.body
+              )
+            : null}
         </div>
         </>
       ) : !isDetailView ? (
@@ -1118,6 +1168,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                 </th>
               ))}
               <th className="col-captured">Captured</th>
+              <th className="col-field">Created</th>
               <th className="col-actions">Actions</th>
             </tr>
           </thead>
@@ -1211,6 +1262,19 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                         <ClockIcon />
                       </span>
                     )}
+                  </td>
+                  <td className="col-field">
+                    {(() => {
+                      const created = formatCreated(student.created_at);
+                      if (!created) return "—";
+                      return (
+                        <span className="block whitespace-normal text-xs leading-4 text-text">
+                          {created.date}
+                          <br />
+                          {created.time}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="col-actions">
                     <div className="flex items-center justify-end gap-0.5">
@@ -1319,7 +1383,10 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
 
       {showDeleteOptions && orgId && (
         <DeleteOptionsModal
-          classOptions={classOptions}
+          photoCounts={photoCounts}
+          classes={photoClasses.length ? photoClasses : (facets?.classes ?? [])}
+          groups={photoGroups.length ? photoGroups : (facets?.groups ?? [])}
+          designations={photoDesignations.length ? photoDesignations : (facets?.designations ?? [])}
           onClose={() => setShowDeleteOptions(false)}
           onChoose={(job) => {
             setDeleteJob(job);
@@ -1331,25 +1398,14 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
 
       {showDownloadPhotosModal && orgId && (
         <DownloadPhotosModal
-          schoolCreatedAt={orgCreatedAt}
-          downloadingAll={exportingPhotos}
+          downloading={exportingPhotos}
           photoCounts={photoCounts}
-          categories={photoCategories}
+          signatureCounts={signatureCounts}
+          classes={photoClasses}
+          groups={photoGroups}
+          designations={photoDesignations}
           onClose={() => setShowDownloadPhotosModal(false)}
-          onDownloadAll={() => void handleDownloadAllPhotos()}
-          onDownloadByDate={(date) => void handleDownloadPhotosByDate(date)}
-          onDownloadByCategory={(name) => void handleDownloadPhotosByCategory(name)}
-        />
-      )}
-      {showSignatureDownload && orgId && (
-        <DownloadPhotosModal
-          title="Download Signatures"
-          schoolCreatedAt={orgCreatedAt}
-          downloadingAll={exportingPhotos}
-          photoCounts={signatureCounts}
-          onClose={() => setShowSignatureDownload(false)}
-          onDownloadAll={() => void handleDownloadSignatures()}
-          onDownloadByDate={(date) => void handleDownloadSignatures(date)}
+          onDownload={(job) => void handleDownloadAssets(job)}
         />
       )}
 
@@ -1513,5 +1569,157 @@ function TrashIcon() {
     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
     </svg>
+  );
+}
+
+function StudentFilterPanel({
+  anchor,
+  onClose,
+  capturedOn,
+  setCapturedOn,
+  classFilter,
+  setClassFilter,
+  groupFilter,
+  setGroupFilter,
+  designationFilter,
+  setDesignationFilter,
+  photoFilter,
+  setPhotoFilter,
+  pendingDataFilter,
+  setPendingDataFilter,
+  facets,
+  onClear,
+}: {
+  anchor: HTMLElement | null;
+  onClose: () => void;
+  capturedOn: string;
+  setCapturedOn: (value: string) => void;
+  classFilter: string;
+  setClassFilter: (value: string) => void;
+  groupFilter: string;
+  setGroupFilter: (value: string) => void;
+  designationFilter: string;
+  setDesignationFilter: (value: string) => void;
+  photoFilter: string;
+  setPhotoFilter: (value: string) => void;
+  pendingDataFilter: string;
+  setPendingDataFilter: (value: string) => void;
+  facets: RecordFacets | null;
+  onClear: () => void;
+}) {
+  const [box, setBox] = useState({ top: 0, left: 0, width: 360 });
+
+  useEffect(() => {
+    function place() {
+      if (!anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      const width = Math.min(560, Math.max(280, window.innerWidth - 16));
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+      const top = Math.min(rect.bottom + 8, window.innerHeight - 16);
+      setBox({ top, left, width });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [anchor]);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    function onDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (anchor?.contains(target)) return;
+      if (document.getElementById("student-filter-panel")?.contains(target)) return;
+      onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [anchor, onClose]);
+
+  if (!anchor) return null;
+
+  return (
+    <div
+      id="student-filter-panel"
+      className="rounded-xl border border-border bg-white p-3 shadow-xl"
+      style={{ position: "fixed", top: box.top, left: box.left, width: box.width, zIndex: 60, maxHeight: "70vh", overflow: "auto" }}
+    >
+      <div className="flex flex-wrap items-end gap-2">
+        <FilterSelect label="Capture date" value={capturedOn} onChange={setCapturedOn}>
+          {(facets?.captureDates ?? []).map((item) => (
+            <option key={item.name} value={item.name}>
+              {dayLabel(item.name)} — {item.count} Photos
+            </option>
+          ))}
+        </FilterSelect>
+        <FilterSelect label="Class" value={classFilter} onChange={setClassFilter}>
+          {(facets?.classes ?? []).map((item) => (
+            <option key={item.name} value={item.name}>
+              {item.name}
+            </option>
+          ))}
+        </FilterSelect>
+        {facets?.groups.length ? (
+          <FilterSelect label="Group" value={groupFilter} onChange={setGroupFilter}>
+            {facets.groups.map((item) => (
+              <option key={item.name} value={item.name}>
+                {item.name}
+              </option>
+            ))}
+          </FilterSelect>
+        ) : null}
+        {facets?.designations.length ? (
+          <FilterSelect label="Designation" value={designationFilter} onChange={setDesignationFilter}>
+            {facets.designations.map((item) => (
+              <option key={item.name} value={item.name}>
+                {item.name}
+              </option>
+            ))}
+          </FilterSelect>
+        ) : null}
+        <FilterSelect label="Photo" value={photoFilter} onChange={setPhotoFilter}>
+          <option value="captured">Captured</option>
+          <option value="uncaptured">Uncaptured</option>
+        </FilterSelect>
+        <FilterSelect label="Required data" value={pendingDataFilter} onChange={setPendingDataFilter}>
+          <option value="yes">Pending</option>
+          <option value="no">Complete</option>
+        </FilterSelect>
+        <button type="button" className="btn-secondary" onClick={onClear}>
+          Clear Filters
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+}) {
+  return (
+    <label className="min-w-[9.5rem] flex-1 text-xs font-medium text-text-navy">
+      {label}
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="input-field mt-1">
+        <option value="">All</option>
+        {children}
+      </select>
+    </label>
   );
 }

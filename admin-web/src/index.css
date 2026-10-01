@@ -482,7 +482,13 @@
     @apply grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6;
   }
 
-  .detail-page-shell {
+  .detail-page-shell > a {
+  align-self: flex-start;
+  width: fit-content;
+  flex: 0 0 auto;
+}
+
+.detail-page-shell {
     @apply min-w-0 w-full max-w-full box-border;
   }
 

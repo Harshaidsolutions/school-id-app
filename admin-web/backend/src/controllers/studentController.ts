@@ -44,7 +44,12 @@ import {
   requireAdminScope,
 } from "../utils/adminScope";
 import { Student, StudentRowInput } from "../types/student";
-import { assertNumberEditAllowed, withPendingFlags } from "../utils/recordStatus";
+import {
+  assertNumberEditAllowed,
+  collectRecordFacets,
+  extraFieldValue,
+  withPendingFlags,
+} from "../utils/recordStatus";
 
 function deleteFilterSql(
   body: Record<string, unknown> | undefined,
@@ -54,14 +59,22 @@ function deleteFilterSql(
   const parts: string[] = [];
   const date = typeof body?.date === "string" ? body.date.trim() : "";
   const category = typeof body?.classSection === "string" ? body.classSection.trim() : "";
+  const fieldKey = typeof body?.fieldKey === "string" ? body.fieldKey.trim() : "";
   const dataScope = typeof body?.dataScope === "string" ? body.dataScope.trim() : "";
+  const photosOnly = body?.asset === "photos";
   if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     values.push(date);
-    parts.push(
-      `COALESCE((photo_captured_at AT TIME ZONE 'UTC')::date, (updated_at AT TIME ZONE 'UTC')::date) = $${startIndex + values.length - 1}::date`
-    );
+    const dateSql = photosOnly
+      ? `(photo_captured_at AT TIME ZONE 'UTC')::date = $${startIndex + values.length - 1}::date`
+      : `COALESCE((photo_captured_at AT TIME ZONE 'UTC')::date, (updated_at AT TIME ZONE 'UTC')::date) = $${startIndex + values.length - 1}::date`;
+    parts.push(dateSql);
   }
-  if (category) {
+  if (category && fieldKey && fieldKey !== "class_section" && /^[a-zA-Z0-9_]+$/.test(fieldKey)) {
+    values.push(fieldKey, category);
+    const keyParam = startIndex + values.length - 2;
+    const valueParam = startIndex + values.length - 1;
+    parts.push(`extra_fields->>$${keyParam} = $${valueParam}`);
+  } else if (category) {
     values.push(category);
     parts.push(`class_section = $${startIndex + values.length - 1}`);
   }
@@ -759,10 +772,6 @@ export async function listStudentsAdmin(
         OR EXISTS (SELECT 1 FROM institutes i WHERE i.id = students.institute_id AND ${instituteOwner})
       )`);
     }
-    if (classFilter) {
-      values.push(classFilter);
-      conditions.push(`class_section = $${values.length}`);
-    }
     if (statusFilter) {
       values.push(statusFilter);
       conditions.push(`status = $${values.length}`);
@@ -786,13 +795,34 @@ export async function listStudentsAdmin(
       typeof req.query.capturedOn === "string" ? req.query.capturedOn.trim() : "";
     const category =
       typeof req.query.category === "string" ? req.query.category.trim() : "";
-    let students = await withPendingFlags(result.rows);
-    if (photoFilter === "captured") students = students.filter((row) => !row.pending_photo);
-    if (photoFilter === "missing") students = students.filter((row) => row.pending_photo);
-    if (pendingDataFilter === "yes") students = students.filter((row) => row.pending_data);
-    if (pendingDataFilter === "no") students = students.filter((row) => !row.pending_data);
+    const group = typeof req.query.group === "string" ? req.query.group.trim() : "";
+    const designation =
+      typeof req.query.designation === "string" ? req.query.designation.trim() : "";
+    const flagged = await withPendingFlags(result.rows);
+    const facets = collectRecordFacets(flagged);
+    let students = flagged;
+    if (photoFilter === "captured") {
+      students = students.filter((row) => Boolean(row.photo_url?.trim()));
+    } else if (photoFilter === "missing" || photoFilter === "uncaptured") {
+      students = students.filter((row) => !row.photo_url?.trim());
+    }
+    if (pendingDataFilter === "yes") {
+      students = students.filter((row) => row.pending_data);
+    }
+    if (pendingDataFilter === "no") {
+      students = students.filter((row) => !row.pending_data);
+    }
+    if (classFilter) {
+      students = students.filter((row) => (row.class_section ?? "") === classFilter);
+    }
     if (category) {
       students = students.filter((row) => (row.class_section ?? "") === category);
+    }
+    if (group) {
+      students = students.filter((row) => extraFieldValue(row, "group") === group);
+    }
+    if (designation) {
+      students = students.filter((row) => extraFieldValue(row, "designation") === designation);
     }
     if (capturedOn) {
       students = students.filter((row) => {
@@ -805,6 +835,7 @@ export async function listStudentsAdmin(
       status: "ok",
       count: students.length,
       students,
+      facets,
     });
   } catch (error) {
     next(error);

@@ -131,7 +131,7 @@ export function DrawerMenuScreen({ navigation }: Props) {
   async function openReferUs() {
     if (!ready) return;
     try {
-      const text = encodeURIComponent("I want to refer this MySchool ID Card app");
+      const text = encodeURIComponent("I want to refer this MySchool ID card app");
       await Linking.openURL(`${REFER_WHATSAPP_CATALOG_LINK}?text=${text}`);
     } catch (err) {
       Alert.alert(
