@@ -64,8 +64,18 @@ export function configuredCategoryFields(fields: FormFieldConfig[]): ConfiguredC
   return out;
 }
 
+function titleCaseLabel(label: string): string {
+  return label
+    .trim()
+    .toLowerCase()
+    .replace(/(^|[^a-z0-9])([a-z])/g, (_match, separator: string, letter: string) => {
+      return `${separator}${letter.toUpperCase()}`;
+    });
+}
+
 export function wiseActionLabel(action: "DOWNLOAD" | "DELETE", label: string): string {
-  return `${action} ${label.trim().toUpperCase()}-WISE`;
+  const verb = action === "DELETE" ? "Delete" : "Download";
+  return `${verb} ${titleCaseLabel(label)}-wise`;
 }
 
 export function allValuesLabel(label: string): string {

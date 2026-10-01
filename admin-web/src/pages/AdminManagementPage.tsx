@@ -42,12 +42,25 @@ function ProfilePhotoField({
   fileName,
   onSelect,
   onClear,
+  inlineActions = false,
 }: {
   previewUrl: string | null;
   fileName: string | null;
   onSelect: (file: File | null) => void;
   onClear: () => void;
+  inlineActions?: boolean;
 }) {
+  const chooseFile = (
+    <label className="relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy">
+      Choose File
+      <input
+        type="file"
+        accept="image/jpeg,image/png"
+        className="absolute inset-0 cursor-pointer opacity-0"
+        onChange={(event) => onSelect(event.target.files?.[0] ?? null)}
+      />
+    </label>
+  );
   return (
     <div className="text-sm">
       <span className="mb-1.5 block font-medium text-text-navy">Profile photo</span>
@@ -58,17 +71,24 @@ function ProfilePhotoField({
           className="mb-2 h-auto max-h-28 w-auto max-w-full rounded-lg bg-white object-contain"
         />
       ) : null}
-      <label className="relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy">
-        Choose File
-        <input
-          type="file"
-          accept="image/jpeg,image/png"
-          className="absolute inset-0 cursor-pointer opacity-0"
-          onChange={(event) => onSelect(event.target.files?.[0] ?? null)}
-        />
-      </label>
+      {inlineActions ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-[8.5rem] flex-1 sm:flex-none">{chooseFile}</div>
+          {previewUrl ? (
+            <button
+              type="button"
+              className="inline-flex h-10 min-w-[8.5rem] flex-1 items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy sm:flex-none"
+              onClick={onClear}
+            >
+              Remove
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        chooseFile
+      )}
       {fileName ? <p className="mt-1 text-xs text-text-muted">Selected: {fileName}</p> : null}
-      {previewUrl ? (
+      {!inlineActions && previewUrl ? (
         <button type="button" className="mt-1 block text-xs text-danger" onClick={onClear}>
           Remove photo
         </button>
@@ -594,6 +614,7 @@ export function AdminManagementPage() {
                 autoComplete="new-password"
               />
               <ProfilePhotoField
+                inlineActions
                 previewUrl={
                   editPhotoPreview ??
                   (editTarget.photo_url && !removeEditPhoto ? editTarget.photo_url : null)
