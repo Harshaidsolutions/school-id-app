@@ -800,8 +800,8 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               Delete Options
             </button>
 
-            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-toolbar-span-2" aria-hidden />
-            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder" aria-hidden />
+            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-toolbar-long-slot" aria-hidden />
+            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-toolbar-short-slot" aria-hidden />
           </div>
 
           <div className="detail-toolbar-row2">
