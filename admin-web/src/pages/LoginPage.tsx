@@ -36,7 +36,12 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [contacts, setContacts] = useState<{ phone: string | null; whatsapp: string | null }>({
+  const [contacts, setContacts] = useState<{
+    email: string | null;
+    phone: string | null;
+    whatsapp: string | null;
+  }>({
+    email: null,
     phone: null,
     whatsapp: null,
   });
@@ -44,10 +49,16 @@ export function LoginPage() {
   useEffect(() => {
     let cancelled = false;
     void api
-      .get<{ phone: string | null; whatsapp: string | null }>("/auth/support-contacts")
+      .get<{ email?: string | null; phone: string | null; whatsapp: string | null }>(
+        "/auth/support-contacts"
+      )
       .then(({ data }) => {
         if (!cancelled) {
-          setContacts({ phone: data.phone ?? null, whatsapp: data.whatsapp ?? null });
+          setContacts({
+            email: data.email ?? null,
+            phone: data.phone ?? null,
+            whatsapp: data.whatsapp ?? null,
+          });
         }
       })
       .catch(() => undefined);
@@ -90,10 +101,16 @@ export function LoginPage() {
   return (
     <LoginPageLayout
       appBrand
+      brandAccent
+      titleClassName="text-[#4CAF50]"
       title="Welcome Admin"
       onTitlePress={() => navigate("/forgot-password")}
       footer={
-        <SuperAdminContacts phone={contacts.phone} whatsapp={contacts.whatsapp} />
+        <SuperAdminContacts
+          email={contacts.email}
+          phone={contacts.phone}
+          whatsapp={contacts.whatsapp}
+        />
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -172,31 +189,47 @@ function waDigits(value: string): string {
   return digits;
 }
 
+function formatWhatsApp(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 10) return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+  if (digits.length === 12 && digits.startsWith("91")) {
+    const local = digits.slice(2);
+    return `+91 ${local.slice(0, 5)} ${local.slice(5)}`;
+  }
+  const trimmed = value.trim();
+  return trimmed.startsWith("+") ? trimmed : `+${digits || trimmed}`;
+}
+
 function SuperAdminContacts({
+  email,
   phone,
   whatsapp,
 }: {
+  email: string | null;
   phone: string | null;
   whatsapp: string | null;
 }) {
-  const call = phone?.trim() || null;
-  const chat = whatsapp?.trim() || call;
-  if (!call && !chat) return null;
+  const chat = whatsapp?.trim() || phone?.trim() || null;
+  const mail = email?.trim() || null;
+  if (!chat && !mail) return null;
   return (
-    <div className="flex flex-col items-center gap-2 text-sm">
+    <div className="flex w-full flex-col items-center gap-1 text-center text-sm leading-snug">
       {chat ? (
         <a
-          className="font-semibold text-button-blue hover:underline"
+          className="max-w-full break-words font-medium text-button-blue hover:underline"
           href={`https://wa.me/${waDigits(chat)}`}
           target="_blank"
           rel="noreferrer"
         >
-          WhatsApp {chat}
+          WhatsApp: {formatWhatsApp(chat)}
         </a>
       ) : null}
-      {call ? (
-        <a className="font-semibold text-button-blue hover:underline" href={`tel:${call}`}>
-          Phone {call}
+      {mail ? (
+        <a
+          className="max-w-full break-all font-medium text-button-blue hover:underline"
+          href={`mailto:${mail}`}
+        >
+          Email: {mail}
         </a>
       ) : null}
     </div>

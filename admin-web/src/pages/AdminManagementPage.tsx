@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
@@ -37,6 +37,23 @@ type EditForm = {
   password: string;
 };
 
+function FieldLabel({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <label className={className ?? "block"}>
+      <span className="mb-1 block text-sm font-medium text-text-navy">{label}</span>
+      {children}
+    </label>
+  );
+}
+
 function ProfilePhotoField({
   previewUrl,
   fileName,
@@ -63,7 +80,7 @@ function ProfilePhotoField({
   );
   return (
     <div className="text-sm">
-      <span className="mb-1.5 block font-medium text-text-navy">Profile photo</span>
+      <span className="mb-1.5 block font-medium text-text-navy">Profile Photo</span>
       {previewUrl ? (
         <img
           src={previewUrl}
@@ -326,89 +343,109 @@ export function AdminManagementPage() {
       <form onSubmit={(e) => void handleCreate(e)} className="card space-y-3 p-4">
         <h2 className="font-semibold text-text-navy">Create Admin</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <input
-            className="input-field"
-            placeholder="Admin name"
-            value={form.displayName}
-            onChange={(e) => setForm({ ...form, displayName: e.target.value })}
-            required
-          />
-          <input
-            className="input-field"
-            placeholder="Username"
-            value={form.username}
-            onChange={(e) => setForm({ ...form, username: e.target.value })}
-            required
-          />
-          <input
-            className="input-field"
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-          />
-          <input
-            className="input-field"
-            placeholder="Phone (10 digits)"
-            value={form.phone}
-            maxLength={10}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                phone: e.target.value.replace(/\D/g, "").slice(0, 10),
-              })
-            }
-            required
-          />
-          <input
-            className="input-field"
-            placeholder="WhatsApp number"
-            required
-            minLength={10}
-            value={form.whatsapp}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                whatsapp: e.target.value.replace(/\D/g, "").slice(0, 15),
-              })
-            }
-          />
-          <input
-            className="input-field"
-            placeholder="Facebook URL (optional)"
-            value={form.facebook}
-            onChange={(e) => setForm({ ...form, facebook: e.target.value })}
-          />
-          <input
-            className="input-field"
-            placeholder="Instagram URL (optional)"
-            value={form.instagram}
-            onChange={(e) => setForm({ ...form, instagram: e.target.value })}
-          />
-          <input
-            className="input-field"
-            placeholder="YouTube URL (optional)"
-            value={form.youtube}
-            onChange={(e) => setForm({ ...form, youtube: e.target.value })}
-          />
-          <textarea
-            className="input-field sm:col-span-2"
-            placeholder="About Us (optional)"
-            rows={3}
-            value={form.aboutUs}
-            onChange={(e) => setForm({ ...form, aboutUs: e.target.value })}
-          />
-          <input
-            className="input-field sm:col-span-2"
-            type="text"
-            placeholder="Password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required
-            minLength={8}
-            autoComplete="new-password"
-          />
+          <FieldLabel label="Admin Name">
+            <input
+              className="input-field w-full"
+              placeholder="Admin name"
+              value={form.displayName}
+              onChange={(e) => setForm({ ...form, displayName: e.target.value })}
+              required
+            />
+          </FieldLabel>
+          <FieldLabel label="Username">
+            <input
+              className="input-field w-full"
+              placeholder="Username"
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              required
+            />
+          </FieldLabel>
+          <FieldLabel label="Email">
+            <input
+              className="input-field w-full"
+              type="email"
+              placeholder="Email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
+          </FieldLabel>
+          <FieldLabel label="Phone">
+            <input
+              className="input-field w-full"
+              placeholder="Phone (10 digits)"
+              value={form.phone}
+              maxLength={10}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  phone: e.target.value.replace(/\D/g, "").slice(0, 10),
+                })
+              }
+              required
+            />
+          </FieldLabel>
+          <FieldLabel label="WhatsApp">
+            <input
+              className="input-field w-full"
+              placeholder="WhatsApp number"
+              required
+              minLength={10}
+              value={form.whatsapp}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  whatsapp: e.target.value.replace(/\D/g, "").slice(0, 15),
+                })
+              }
+            />
+          </FieldLabel>
+          <FieldLabel label="Facebook">
+            <input
+              className="input-field w-full"
+              placeholder="Facebook URL (optional)"
+              value={form.facebook}
+              onChange={(e) => setForm({ ...form, facebook: e.target.value })}
+            />
+          </FieldLabel>
+          <FieldLabel label="Instagram">
+            <input
+              className="input-field w-full"
+              placeholder="Instagram URL (optional)"
+              value={form.instagram}
+              onChange={(e) => setForm({ ...form, instagram: e.target.value })}
+            />
+          </FieldLabel>
+          <FieldLabel label="YouTube">
+            <input
+              className="input-field w-full"
+              placeholder="YouTube URL (optional)"
+              value={form.youtube}
+              onChange={(e) => setForm({ ...form, youtube: e.target.value })}
+            />
+          </FieldLabel>
+          <FieldLabel label="About Us" className="block sm:col-span-2">
+            <textarea
+              className="input-field w-full"
+              placeholder="About Us (optional)"
+              rows={3}
+              value={form.aboutUs}
+              onChange={(e) => setForm({ ...form, aboutUs: e.target.value })}
+            />
+          </FieldLabel>
+          <FieldLabel label="Password" className="block sm:col-span-2">
+            <input
+              className="input-field w-full"
+              type="text"
+              placeholder="Password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
+          </FieldLabel>
           <div className="sm:col-span-2">
             <ProfilePhotoField
               previewUrl={createPhotoPreview}
@@ -522,97 +559,117 @@ export function AdminManagementPage() {
           >
             <h2 className="text-lg font-bold text-text-navy">Edit Admin</h2>
             <div className="mt-4 space-y-3">
-              <input
-                className="input-field w-full"
-                value={editForm.displayName}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, displayName: e.target.value })
-                }
-                placeholder="Admin name"
-                required
-              />
-              <input
-                className="input-field w-full"
-                value={editForm.username}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, username: e.target.value })
-                }
-                placeholder="Username"
-                required
-              />
-              <input
-                className="input-field w-full"
-                type="email"
-                value={editForm.email}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, email: e.target.value })
-                }
-                placeholder="Email"
-                required
-              />
-              <input
-                className="input-field w-full"
-                value={editForm.phone}
-                maxLength={10}
-                onChange={(e) =>
-                  setEditForm({
-                    ...editForm,
-                    phone: e.target.value.replace(/\D/g, "").slice(0, 10),
-                  })
-                }
-                placeholder="Phone"
-                required
-              />
-              <input
-                className="input-field w-full"
-                value={editForm.whatsapp}
-                required
-                minLength={10}
-                maxLength={15}
-                onChange={(e) =>
-                  setEditForm({
-                    ...editForm,
-                    whatsapp: e.target.value.replace(/\D/g, "").slice(0, 15),
-                  })
-                }
-                placeholder="WhatsApp number"
-              />
-              <input
-                className="input-field w-full"
-                value={editForm.facebook}
-                onChange={(e) => setEditForm({ ...editForm, facebook: e.target.value })}
-                placeholder="Facebook URL (optional)"
-              />
-              <input
-                className="input-field w-full"
-                value={editForm.instagram}
-                onChange={(e) => setEditForm({ ...editForm, instagram: e.target.value })}
-                placeholder="Instagram URL (optional)"
-              />
-              <input
-                className="input-field w-full"
-                value={editForm.youtube}
-                onChange={(e) => setEditForm({ ...editForm, youtube: e.target.value })}
-                placeholder="YouTube URL (optional)"
-              />
-              <textarea
-                className="input-field w-full"
-                rows={3}
-                value={editForm.aboutUs}
-                onChange={(e) => setEditForm({ ...editForm, aboutUs: e.target.value })}
-                placeholder="About Us (optional)"
-              />
-              <input
-                className="input-field w-full"
-                type="text"
-                value={editForm.password}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, password: e.target.value })
-                }
-                placeholder="New password (optional, OTP required if set)"
-                minLength={8}
-                autoComplete="new-password"
-              />
+              <FieldLabel label="Admin Name">
+                <input
+                  className="input-field w-full"
+                  value={editForm.displayName}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, displayName: e.target.value })
+                  }
+                  placeholder="Admin name"
+                  required
+                />
+              </FieldLabel>
+              <FieldLabel label="Username">
+                <input
+                  className="input-field w-full"
+                  value={editForm.username}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, username: e.target.value })
+                  }
+                  placeholder="Username"
+                  required
+                />
+              </FieldLabel>
+              <FieldLabel label="Email">
+                <input
+                  className="input-field w-full"
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, email: e.target.value })
+                  }
+                  placeholder="Email"
+                  required
+                />
+              </FieldLabel>
+              <FieldLabel label="Phone">
+                <input
+                  className="input-field w-full"
+                  value={editForm.phone}
+                  maxLength={10}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      phone: e.target.value.replace(/\D/g, "").slice(0, 10),
+                    })
+                  }
+                  placeholder="Phone"
+                  required
+                />
+              </FieldLabel>
+              <FieldLabel label="WhatsApp">
+                <input
+                  className="input-field w-full"
+                  value={editForm.whatsapp}
+                  required
+                  minLength={10}
+                  maxLength={15}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      whatsapp: e.target.value.replace(/\D/g, "").slice(0, 15),
+                    })
+                  }
+                  placeholder="WhatsApp number"
+                />
+              </FieldLabel>
+              <FieldLabel label="Facebook">
+                <input
+                  className="input-field w-full"
+                  value={editForm.facebook}
+                  onChange={(e) => setEditForm({ ...editForm, facebook: e.target.value })}
+                  placeholder="Facebook URL (optional)"
+                />
+              </FieldLabel>
+              <FieldLabel label="Instagram">
+                <input
+                  className="input-field w-full"
+                  value={editForm.instagram}
+                  onChange={(e) => setEditForm({ ...editForm, instagram: e.target.value })}
+                  placeholder="Instagram URL (optional)"
+                />
+              </FieldLabel>
+              <FieldLabel label="YouTube">
+                <input
+                  className="input-field w-full"
+                  value={editForm.youtube}
+                  onChange={(e) => setEditForm({ ...editForm, youtube: e.target.value })}
+                  placeholder="YouTube URL (optional)"
+                />
+              </FieldLabel>
+              <FieldLabel label="About Us">
+                <textarea
+                  className="input-field w-full"
+                  rows={3}
+                  value={editForm.aboutUs}
+                  onChange={(e) => setEditForm({ ...editForm, aboutUs: e.target.value })}
+                  placeholder="About Us (optional)"
+                />
+              </FieldLabel>
+              <FieldLabel label="Password">
+                <input
+                  className="input-field w-full"
+                  type="text"
+                  value={editForm.password}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, password: e.target.value })
+                  }
+                  placeholder="New password (optional, OTP required if set)"
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+              </FieldLabel>
               <ProfilePhotoField
                 inlineActions
                 previewUrl={

@@ -20,12 +20,16 @@ export function LoginPageLayout({
   footer,
   appBrand = false,
   onTitlePress,
+  brandAccent = false,
+  titleClassName,
 }: {
   title: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
   appBrand?: boolean;
   onTitlePress?: () => void;
+  brandAccent?: boolean;
+  titleClassName?: string;
 }) {
   return (
     <div className="login-shell relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden">
@@ -70,7 +74,20 @@ export function LoginPageLayout({
                     alt="My School ID Card"
                     className="block h-auto max-h-[min(24vh,8.75rem)] w-auto max-w-full object-contain"
                   />
-                  <p className="mt-2 text-lg font-bold text-text-navy">My School ID Card</p>
+                  <p
+                    className={
+                      brandAccent
+                        ? "mt-1.5 text-xl font-bold leading-tight text-[#F97316]"
+                        : "mt-2 text-lg font-bold text-text-navy"
+                    }
+                  >
+                    My School ID Card
+                  </p>
+                  {brandAccent ? (
+                    <p className="mt-1 text-xs font-medium leading-tight text-text-muted">
+                      Get Your Identity Here..
+                    </p>
+                  ) : null}
                 </div>
               ) : (
                 <div className="mb-5 flex flex-col items-center justify-center md:hidden">
@@ -82,12 +99,14 @@ export function LoginPageLayout({
                 <button
                   type="button"
                   onClick={onTitlePress}
-                  className="m-0 block w-full cursor-pointer border-0 bg-transparent p-0 text-center text-[clamp(1.125rem,2vw,1.375rem)] font-bold leading-tight text-text-navy no-underline hover:no-underline"
+                  className={`m-0 block w-full cursor-pointer border-0 bg-transparent p-0 text-center text-[clamp(1.125rem,2vw,1.375rem)] font-bold leading-tight no-underline hover:no-underline ${titleClassName ?? "text-text-navy"}`}
                 >
                   {title}
                 </button>
               ) : (
-                <h1 className="text-center text-[clamp(1.125rem,2vw,1.375rem)] font-bold text-text-navy">
+                <h1
+                  className={`text-center text-[clamp(1.125rem,2vw,1.375rem)] font-bold ${titleClassName ?? "text-text-navy"}`}
+                >
                   {title}
                 </h1>
               )}
