@@ -1,17 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import api from "../api/client";
-import {
-  DEFAULT_FORM_FIELDS,
-  sortFormFields,
-  type FormFieldConfig,
-} from "../constants/formFields";
+import { sortFormFields, type FormFieldConfig } from "../constants/formFields";
 
 export function useFormConfig(options?: { refreshOnFocus?: boolean }) {
   const refreshOnFocus = options?.refreshOnFocus !== false;
-  const [fields, setFields] = useState<FormFieldConfig[]>(
-    DEFAULT_FORM_FIELDS.filter((f) => f.enabled)
-  );
+  const [fields, setFields] = useState<FormFieldConfig[]>([]);
   const [fieldVisibility, setFieldVisibility] = useState<Record<string, boolean>>(
     {}
   );
@@ -20,18 +14,17 @@ export function useFormConfig(options?: { refreshOnFocus?: boolean }) {
   const [showCapturedSection, setShowCapturedSection] = useState(true);
   const [loading, setLoading] = useState(true);
 
+  const requestSeq = useRef(0);
   const reload = useCallback(async (silent = false) => {
+    const seq = ++requestSeq.current;
     if (!silent) setLoading(true);
     try {
       const formResult = await api.get<{ fields: FormFieldConfig[] }>(
         "/teacher/form-config"
       );
+      if (seq !== requestSeq.current) return;
       const data = formResult.data;
-      if (data.fields?.length) {
-        setFields(sortFormFields(data.fields));
-      } else {
-        setFields([]);
-      }
+      setFields(sortFormFields(data.fields ?? []));
       try {
         const orgResult = await api.get<{
           school?: {
@@ -53,9 +46,9 @@ export function useFormConfig(options?: { refreshOnFocus?: boolean }) {
         setShowCapturedSection(true);
       }
     } catch {
-      setFields(DEFAULT_FORM_FIELDS.filter((f) => f.enabled));
+      if (seq !== requestSeq.current) return;
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   }, []);
 
@@ -63,10 +56,6 @@ export function useFormConfig(options?: { refreshOnFocus?: boolean }) {
     useCallback(() => {
       if (!refreshOnFocus) return;
       void reload(false);
-      const timer = setInterval(() => {
-        void reload(true);
-      }, 2500);
-      return () => clearInterval(timer);
     }, [refreshOnFocus, reload])
   );
 

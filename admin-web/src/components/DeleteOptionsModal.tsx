@@ -8,11 +8,12 @@ export type DeleteJob = {
   date?: string;
   classSection?: string;
   fieldKey?: string;
-  dataScope?: "captured" | "uncaptured";
+  dataScope?: "captured" | "uncaptured" | "pending-data";
+  photoScope?: "all" | "pending" | "captured";
 };
 
 type Step = "menu" | "photo-dates" | "value" | "scope";
-type DeleteScope = "photos" | "all-data" | "pending" | "captured";
+type FieldMode = "photos" | "data";
 
 function dayLabel(iso: string): string {
   const [year, month, day] = iso.slice(0, 10).split("-");
@@ -32,10 +33,12 @@ export function DeleteOptionsModal({
   onChoose: (job: DeleteJob) => void;
 }) {
   const [step, setStep] = useState<Step>("menu");
+  const [fieldMode, setFieldMode] = useState<FieldMode>("photos");
   const [fieldIndex, setFieldIndex] = useState(0);
   const [selected, setSelected] = useState("");
   const [date, setDate] = useState("");
-  const [scope, setScope] = useState<DeleteScope>("photos");
+  const [photoScope, setPhotoScope] = useState<"all" | "pending" | "captured">("all");
+  const [dataScope, setDataScope] = useState<"all" | "pending-data" | "captured">("all");
 
   const activeField = categoryFields[fieldIndex];
   const options = activeField?.options ?? [];
@@ -49,13 +52,16 @@ export function DeleteOptionsModal({
     setStep("menu");
     setSelected("");
     setDate("");
-    setScope("photos");
+    setPhotoScope("all");
+    setDataScope("all");
   }
 
-  function openField(index: number) {
+  function openField(index: number, mode: FieldMode) {
     setFieldIndex(index);
+    setFieldMode(mode);
     setSelected("");
-    setScope("photos");
+    setPhotoScope("all");
+    setDataScope("all");
     setStep("value");
   }
 
@@ -72,6 +78,13 @@ export function DeleteOptionsModal({
             <div className="mt-2 space-y-2">
               <Row title="Delete All Photos" onClick={() => onChoose({ kind: "photos", label: "Delete all photos" })} />
               <Row title="Delete Date-wise Photos" onClick={() => setStep("photo-dates")} />
+              {categoryFields.map((field, index) => (
+                <Row
+                  key={`photo-${field.key}`}
+                  title={wiseActionLabel("DELETE", field.label, "Photos")}
+                  onClick={() => openField(index, "photos")}
+                />
+              ))}
             </div>
             <h3 className="mt-5 text-sm font-semibold text-text-navy">Data</h3>
             <div className="mt-2 space-y-2">
@@ -86,9 +99,9 @@ export function DeleteOptionsModal({
               />
               {categoryFields.map((field, index) => (
                 <Row
-                  key={field.key}
-                  title={wiseActionLabel("DELETE", field.label)}
-                  onClick={() => openField(index)}
+                  key={`data-${field.key}`}
+                  title={wiseActionLabel("DELETE", field.label, "Data")}
+                  onClick={() => openField(index, "data")}
                 />
               ))}
             </div>
@@ -129,6 +142,9 @@ export function DeleteOptionsModal({
 
         {step === "value" ? (
           <div className="mt-4 space-y-3">
+            <p className="text-sm font-semibold text-text-navy">
+              {wiseActionLabel("DELETE", activeField?.label ?? "Field", fieldMode === "photos" ? "Photos" : "Data")}
+            </p>
             <label className="block text-sm font-medium text-text-navy">
               {activeField?.label ?? "Field"}
               <select
@@ -162,17 +178,30 @@ export function DeleteOptionsModal({
         {step === "scope" ? (
           <div className="mt-4 space-y-3">
             <label className="block text-sm font-medium text-text-navy">
-              Scope
-              <select
-                value={scope}
-                onChange={(event) => setScope(event.target.value as DeleteScope)}
-                className="input-field mt-1 w-full"
-              >
-                <option value="photos">Photos</option>
-                <option value="all-data">All data</option>
-                <option value="pending">Pending</option>
-                <option value="captured">Captured</option>
-              </select>
+              {fieldMode === "photos" ? "Photos" : "Data"}
+              {fieldMode === "photos" ? (
+                <select
+                  value={photoScope}
+                  onChange={(event) => setPhotoScope(event.target.value as "all" | "pending" | "captured")}
+                  className="input-field mt-1 w-full"
+                >
+                  <option value="all">All Photos</option>
+                  <option value="pending">Pending Photos</option>
+                  <option value="captured">Captured Photos</option>
+                </select>
+              ) : (
+                <select
+                  value={dataScope}
+                  onChange={(event) =>
+                    setDataScope(event.target.value as "all" | "pending-data" | "captured")
+                  }
+                  className="input-field mt-1 w-full"
+                >
+                  <option value="all">All Data</option>
+                  <option value="pending-data">Pending Data</option>
+                  <option value="captured">Captured Data</option>
+                </select>
+              )}
             </label>
             <button
               type="button"
@@ -182,12 +211,15 @@ export function DeleteOptionsModal({
                 const valueLabel = selected === "__all__" ? allValuesLabel(activeField?.label ?? "Field") : selected;
                 const classSection = selected === "__all__" ? undefined : selected;
                 const fieldKey = selected === "__all__" ? undefined : option?.key || activeField?.key;
-                if (scope === "photos") {
+                if (fieldMode === "photos") {
                   onChoose({
                     kind: "photos",
                     classSection,
                     fieldKey,
-                    label: `Delete photos for ${valueLabel}`,
+                    photoScope,
+                    dataScope:
+                      photoScope === "pending" ? "uncaptured" : photoScope === "captured" ? "captured" : undefined,
+                    label: `Delete ${photoScope} photos for ${valueLabel}`,
                   });
                   return;
                 }
@@ -195,8 +227,8 @@ export function DeleteOptionsModal({
                   kind: "data",
                   classSection,
                   fieldKey,
-                  dataScope: scope === "pending" ? "uncaptured" : scope === "captured" ? "captured" : undefined,
-                  label: `Delete ${scope === "pending" ? "pending" : scope === "captured" ? "captured" : "all"} data for ${valueLabel}`,
+                  dataScope: dataScope === "all" ? undefined : dataScope,
+                  label: `Delete ${dataScope === "pending-data" ? "pending" : dataScope} data for ${valueLabel}`,
                 });
               }}
             >

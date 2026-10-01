@@ -27,6 +27,8 @@ export function EditStudentModal({
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(student.photo_url);
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(student.signature_url ?? null);
+  const [uploadingSignature, setUploadingSignature] = useState(false);
 
   useEffect(() => {
     const next: Record<string, string> = {
@@ -51,20 +53,16 @@ export function EditStudentModal({
     }
     setValues(next);
     setPhotoPreview(student.photo_url);
+    setSignaturePreview(student.signature_url ?? null);
   }, [student]);
 
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [onClose]);
+  }, []);
 
   function setField(key: string, value: string) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -86,8 +84,7 @@ export function EditStudentModal({
       form.append("photo", file);
       const { data } = await api.post<{ student: Student }>(
         `/admin/students/${student.id}/photo`,
-        form,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        form
       );
       setPhotoPreview(data.student.photo_url);
       onSaved(data.student);
@@ -98,6 +95,31 @@ export function EditStudentModal({
       } else setError("Failed to upload photo.");
     } finally {
       setUploadingPhoto(false);
+    }
+  }
+
+  async function handleSignatureChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setUploadingSignature(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append("signature", file);
+      const { data } = await api.post<{ student: Student }>(
+        `/admin/students/${student.id}/signature`,
+        form
+      );
+      setSignaturePreview(data.student.signature_url ?? null);
+      onSaved(data.student);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const body = err.response?.data as ApiErrorBody | undefined;
+        setError(body?.message ?? "Failed to upload signature.");
+      } else setError("Failed to upload signature.");
+    } finally {
+      setUploadingSignature(false);
     }
   }
 
@@ -123,6 +145,7 @@ export function EditStudentModal({
 
     const extraFields: Record<string, string | null> = {};
     for (const field of fields) {
+      if (field.key === "signature_upload") continue;
       extraFields[field.key] = fieldValue(field.key).trim() || null;
     }
     const requestBody: Record<string, unknown> = {
@@ -130,6 +153,7 @@ export function EditStudentModal({
       extra_fields: extraFields,
     };
     for (const field of fields) {
+      if (field.key === "signature_upload") continue;
       requestBody[field.key] = fieldValue(field.key).trim() || null;
     }
 
@@ -236,6 +260,31 @@ export function EditStudentModal({
       );
     }
 
+    if (key === "signature_upload") {
+      return (
+        <div key={key} className="block text-sm">
+          <span className="mb-1 block font-medium text-text-navy">{label}</span>
+          {signaturePreview ? (
+            <img
+              src={signaturePreview}
+              alt="Signature"
+              className="mb-2 h-16 w-full rounded-lg bg-white object-contain"
+            />
+          ) : null}
+          <label className="relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy">
+            {uploadingSignature ? "Uploading…" : "Choose File"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png"
+              className="absolute inset-0 cursor-pointer opacity-0"
+              disabled={uploadingSignature}
+              onChange={(event) => void handleSignatureChange(event)}
+            />
+          </label>
+        </div>
+      );
+    }
+
     if (key === "photo_id") {
       return (
         <label key={key} className="block text-sm">
@@ -258,7 +307,6 @@ export function EditStudentModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4 py-6"
       role="dialog"
       aria-modal="true"
-      onClick={onClose}
     >
       <div
         className="flex max-h-[min(90vh,640px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-xl"

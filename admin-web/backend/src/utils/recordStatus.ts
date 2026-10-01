@@ -122,6 +122,8 @@ export function matchesExportScope(
   if (scope === "pending" || scope === "uncaptured") return !photo;
   if (scope === "captured") return photo;
   if (scope === "captured-pending-data") return photo && !complete;
+  if (scope === "uncaptured-pending-data") return !photo && !complete;
+  if (scope === "pending-data") return !complete;
   return true;
 }
 

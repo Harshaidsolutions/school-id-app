@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useFocusEffect } from "@react-navigation/native";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
 
@@ -104,11 +103,37 @@ export function EditStudentScreen({ navigation, route }: Props) {
 
   const [currentStudent, setCurrentStudent] = useState(student);
 
-  useFocusEffect(
-    useCallback(() => {
-      setCurrentStudent(route.params.student);
-    }, [route.params.student])
-  );
+  function applyStudent(next: TeacherStudent) {
+    const parts = splitName(next.student_name);
+    setCurrentStudent(next);
+    setFirstName(parts.first);
+    setLastName(parts.last);
+    setClassSection(next.class_section ?? "");
+    setRollNo(next.roll_no ?? "");
+    setDob(next.dob ?? "");
+    setGender(next.gender ?? "");
+    setBloodGroup(next.blood_group ?? "");
+    setFatherName(next.father_name ?? next.parent_name ?? "");
+    setParentPhone(next.parent_phone ?? "");
+    setCustom1(next.custom_1 ?? "");
+    setCustom2(next.custom_2 ?? "");
+    setCustom3(next.custom_3 ?? "");
+    setAddress(next.address ?? "");
+    setSignatureUri(next.signature_url ?? null);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    void api
+      .get<{ student: TeacherStudent }>(`/teacher/students/${student.id}`)
+      .then(({ data }) => {
+        if (!cancelled && data.student?.id === student.id) applyStudent(data.student);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [student.id]);
 
   const initial = useMemo(
 

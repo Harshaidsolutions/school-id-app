@@ -19,12 +19,12 @@ const NAV: NavItem[] = [
   { label: "Dashboard", icon: "dashboard", to: "/" },
   { label: "Schools", icon: "school", to: "/schools" },
   { label: "Institutes", icon: "institute", to: "/institutes" },
+  { label: "Organization", icon: "extra", to: "/extra-2", superOnly: true },
   { label: "Templates", icon: "templates", to: "/templates" },
   { label: "Models", icon: "model", to: "/models" },
   { label: "Brochures", icon: "brochure", to: "/brochures" },
   { label: "Notifications", icon: "notification", to: "/notifications" },
   { label: "Admin Management", icon: "extra", to: "/extra-1", superOnly: true },
-  { label: "Organization", icon: "extra", to: "/extra-2", superOnly: true },
 ];
 
 const TITLES: Record<string, string> = {

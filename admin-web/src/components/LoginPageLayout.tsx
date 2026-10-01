@@ -77,7 +77,7 @@ export function LoginPageLayout({
                   <p
                     className={
                       brandAccent
-                        ? "mt-1.5 text-xl font-bold leading-tight text-[#F97316]"
+                        ? "mt-1.5 text-[clamp(1.45rem,2.8vw,1.85rem)] font-bold leading-tight text-[#F97316]"
                         : "mt-2 text-lg font-bold text-text-navy"
                     }
                   >

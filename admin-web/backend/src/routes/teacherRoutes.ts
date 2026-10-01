@@ -10,6 +10,7 @@ import {
   listTeacherModels,
   getTeacherProgress,
   getTeacherFormConfig,
+  getTeacherStudent,
   listTeacherStudents,
   updateTeacherStudent,
   uploadMemberSignature,
@@ -52,6 +53,7 @@ router.get("/organization", getTeacherOrganization);
 router.put("/organization", optionalUploadSchoolAssets, updateTeacherOrganization);
 
 router.get("/students", listTeacherStudents);
+router.get("/students/:id", getTeacherStudent);
 router.post("/students", createTeacherStudent);
 router.put("/students/:id", updateTeacherStudent);
 router.post(

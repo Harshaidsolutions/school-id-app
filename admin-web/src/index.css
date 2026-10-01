@@ -347,8 +347,12 @@
     box-sizing: border-box;
   }
 
+  .detail-toolbar-span-2 {
+    grid-column: span 2;
+  }
+
   .detail-toolbar-row2-add {
-    grid-column: 9 / 10;
+    grid-column: 8 / 10;
     grid-row: 2;
     min-width: 0;
     width: 100%;
@@ -472,7 +476,7 @@
   }
 
   .detail-toolbar-status-tab {
-    @apply relative flex min-w-0 w-full items-center justify-center overflow-hidden text-ellipsis whitespace-nowrap px-0.5 text-center text-[9px] font-semibold uppercase tracking-tight transition sm:text-[10px];
+    @apply relative flex min-w-0 w-full items-center justify-center overflow-hidden text-ellipsis whitespace-nowrap px-0.5 text-center text-[11px] font-semibold uppercase tracking-tight transition sm:text-xs;
     height: var(--toolbar-control-height);
     min-height: var(--toolbar-control-height);
     max-height: var(--toolbar-control-height);

@@ -123,6 +123,12 @@ const TEACHER_STUDENT_SELECT = `
   dob, gender, blood_group, custom_1, custom_2, custom_3, extra_fields, field_labels
 `;
 
+function nullableText(value: unknown): string | null {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text || null;
+}
+
 function optionalBodyString(
   body: Record<string, unknown>,
   keys: string[]
@@ -291,6 +297,38 @@ export async function listTeacherStudents(
       count: result.rows.length,
       students: await presentStudents(result.rows),
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** GET /teacher/students/:id — one record scoped to the signed-in organization. */
+export async function getTeacherStudent(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const studentId = typeof req.params.id === "string" ? req.params.id.trim() : "";
+    if (!studentId) throw new AppError("Student id is required", 400);
+
+    const studentResult = await pool.query<TeacherStudentRow>(
+      `SELECT ${TEACHER_STUDENT_SELECT} FROM students WHERE id = $1 LIMIT 1`,
+      [studentId]
+    );
+    const student = studentResult.rows[0];
+    if (!student) throw new AppError("Student not found", 404);
+    assertStudentBelongsToOrg(req.user, student);
+    if (!isInstituteStaff(req.user)) {
+      assertTeacherScope(req.user, {
+        schoolId: student.school_id!,
+        classSection: student.class_section,
+      });
+    }
+    const [presented] = await presentStudents([student]);
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.status(200).json({ status: "ok", student: presented });
   } catch (error) {
     next(error);
   }
@@ -773,9 +811,9 @@ export async function updateTeacherStudent(
       req.body.class_section !== undefined ||
       req.body.classSection !== undefined
     ) {
-      classSection = String(
-        req.body.class_section ?? req.body.classSection
-      ).trim();
+      classSection =
+        nullableText(req.body.class_section ?? req.body.classSection) ||
+        (isInstituteStaff(req.user) ? student.class_section || "ALL" : "");
     } else if (
       req.body.class !== undefined ||
       req.body.section !== undefined
@@ -799,7 +837,7 @@ export async function updateTeacherStudent(
 
     const parentName =
       req.body.parent_name !== undefined || req.body.parentName !== undefined
-        ? String(req.body.parent_name ?? req.body.parentName).trim() || null
+        ? nullableText(req.body.parent_name ?? req.body.parentName)
         : student.parent_name;
 
     const parentPhone =
@@ -807,12 +845,12 @@ export async function updateTeacherStudent(
       req.body.parentPhone !== undefined ||
       req.body.phone_number !== undefined ||
       req.body.phoneNumber !== undefined
-        ? String(
+        ? nullableText(
             req.body.parent_phone ??
               req.body.parentPhone ??
               req.body.phone_number ??
               req.body.phoneNumber
-          ).trim() || null
+          )
         : student.parent_phone;
 
     if (parentPhone && !/^\d+$/.test(parentPhone)) {
@@ -820,9 +858,7 @@ export async function updateTeacherStudent(
     }
 
     const address =
-      req.body.address !== undefined
-        ? String(req.body.address).trim() || null
-        : student.address;
+      req.body.address !== undefined ? nullableText(req.body.address) : student.address;
 
     const body = req.body as Record<string, unknown>;
     const rollNo =

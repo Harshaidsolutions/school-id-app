@@ -4,8 +4,8 @@ import { allValuesLabel, wiseActionLabel } from "../utils/formFieldHelpers";
 export type CountOption = { name: string; count: number; key?: string };
 export type CategoryField = { label: string; key: string; options: CountOption[] };
 
-type Step = "menu" | "dates" | "signature-dates" | "value" | "status";
-type PhotoScope = "all" | "pending" | "captured";
+type Step = "menu" | "all-type" | "dates" | "date-type" | "value" | "asset";
+type Asset = "photo" | "signature";
 
 function dayLabel(iso: string): string {
   const [year, month, day] = iso.slice(0, 10).split("-");
@@ -16,7 +16,6 @@ function dayLabel(iso: string): string {
 export function DownloadPhotosModal({
   downloading,
   photoCounts,
-  signatureCounts,
   categoryFields,
   onClose,
   onDownload,
@@ -27,39 +26,28 @@ export function DownloadPhotosModal({
   categoryFields: CategoryField[];
   onClose: () => void;
   onDownload: (job: {
-    asset: "photo" | "signature";
+    asset: Asset;
     date?: string;
     classSection?: string;
     fieldKey?: string;
-    scope?: PhotoScope;
   }) => void;
 }) {
   const [step, setStep] = useState<Step>("menu");
   const [fieldIndex, setFieldIndex] = useState(0);
   const [selected, setSelected] = useState("");
-  const [photoScope, setPhotoScope] = useState<PhotoScope>("all");
+  const [date, setDate] = useState("");
+  const [asset, setAsset] = useState<Asset>("photo");
 
   const activeField = categoryFields[fieldIndex] ?? categoryFields[0];
   const options = activeField?.options ?? [];
   const selectedOption = options.find((item) => item.name === selected);
   const photoDates = Object.entries(photoCounts).sort(([a], [b]) => b.localeCompare(a));
-  const signatureDates = Object.entries(signatureCounts).sort(([a], [b]) => b.localeCompare(a));
 
-  function back() {
-    if (step === "status") {
-      setStep("value");
-      return;
-    }
+  function backToMenu() {
     setStep("menu");
     setSelected("");
-    setPhotoScope("all");
-  }
-
-  function openField(index: number) {
-    setFieldIndex(index);
-    setSelected("");
-    setPhotoScope("all");
-    setStep("value");
+    setDate("");
+    setAsset("photo");
   }
 
   return (
@@ -74,15 +62,18 @@ export function DownloadPhotosModal({
 
         {step === "menu" ? (
           <div className="space-y-2">
-            <MenuButton label="All Photos" onClick={() => onDownload({ asset: "photo" })} disabled={downloading} />
+            <MenuButton label="All Photos" onClick={() => setStep("all-type")} disabled={downloading} />
             <MenuButton label="Date-wise Photos" onClick={() => setStep("dates")} disabled={downloading} />
-            <MenuButton label="All Signatures" onClick={() => onDownload({ asset: "signature" })} disabled={downloading} />
-            <MenuButton label="Date-wise Signatures" onClick={() => setStep("signature-dates")} disabled={downloading} />
             {categoryFields.map((field, index) => (
               <MenuButton
                 key={field.key}
                 label={wiseActionLabel("DOWNLOAD", field.label)}
-                onClick={() => openField(index)}
+                onClick={() => {
+                  setFieldIndex(index);
+                  setSelected("");
+                  setAsset("photo");
+                  setStep("value");
+                }}
                 disabled={downloading}
               />
             ))}
@@ -92,24 +83,62 @@ export function DownloadPhotosModal({
           </div>
         ) : null}
 
-        {step === "dates" || step === "signature-dates" ? (
-          <DateList
-            title={step === "dates" ? "Date-wise Photos" : "Date-wise Signatures"}
-            noun={step === "dates" ? "Photos" : "Signatures"}
-            dates={step === "dates" ? photoDates : signatureDates}
+        {step === "all-type" ? (
+          <AssetStep
+            title="All Photos"
+            asset={asset}
+            onAsset={setAsset}
             downloading={downloading}
-            onBack={back}
-            onDownload={(date) =>
-              onDownload({
-                asset: step === "dates" ? "photo" : "signature",
-                date,
-              })
-            }
+            onBack={backToMenu}
+            onDownload={() => onDownload({ asset })}
+          />
+        ) : null}
+
+        {step === "dates" ? (
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-text-navy">Date-wise Photos</p>
+            {photoDates.length === 0 ? (
+              <p className="text-sm text-text-muted">No dates with files are available.</p>
+            ) : (
+              <select value={date} onChange={(event) => setDate(event.target.value)} className="input-field">
+                <option value="">Choose a date</option>
+                {photoDates.map(([value, count]) => (
+                  <option key={value} value={value} disabled={count === 0}>
+                    {dayLabel(value)} — {count} Photos
+                  </option>
+                ))}
+              </select>
+            )}
+            <button
+              type="button"
+              className="btn-primary w-full disabled:opacity-50"
+              disabled={!date}
+              onClick={() => setStep("date-type")}
+            >
+              Next
+            </button>
+            <button type="button" className="btn-secondary w-full" onClick={backToMenu}>
+              Back
+            </button>
+          </div>
+        ) : null}
+
+        {step === "date-type" ? (
+          <AssetStep
+            title={`Date-wise Photos: ${dayLabel(date)}`}
+            asset={asset}
+            onAsset={setAsset}
+            downloading={downloading}
+            onBack={() => setStep("dates")}
+            onDownload={() => onDownload({ asset, date })}
           />
         ) : null}
 
         {step === "value" ? (
           <div className="space-y-3">
+            <p className="text-sm font-semibold text-text-navy">
+              {wiseActionLabel("DOWNLOAD", activeField?.label ?? "Field")}
+            </p>
             <label className="block text-sm font-medium text-text-navy">
               {activeField?.label ?? "Field"}
               <select
@@ -130,52 +159,78 @@ export function DownloadPhotosModal({
             <button
               type="button"
               className="btn-primary w-full disabled:opacity-50"
-              disabled={downloading || !selected}
-              onClick={() => setStep("status")}
+              disabled={!selected}
+              onClick={() => setStep("asset")}
             >
               Next
             </button>
-            <button type="button" className="btn-secondary w-full" onClick={back}>
+            <button type="button" className="btn-secondary w-full" onClick={backToMenu}>
               Back
             </button>
           </div>
         ) : null}
 
-        {step === "status" ? (
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-text-navy">
-              Download Type
-              <select
-                value={photoScope}
-                onChange={(event) => setPhotoScope(event.target.value as PhotoScope)}
-                className="input-field mt-1 w-full"
-              >
-                <option value="all">All</option>
-                <option value="pending">Pending</option>
-                <option value="captured">Captured</option>
-              </select>
-            </label>
-            <button
-              type="button"
-              className="btn-primary w-full disabled:opacity-50"
-              disabled={downloading}
-              onClick={() =>
-                onDownload({
-                  asset: "photo",
-                  classSection: selected === "__all__" ? undefined : selected,
-                  fieldKey: selected === "__all__" ? undefined : selectedOption?.key || activeField?.key,
-                  scope: photoScope,
-                })
-              }
-            >
-              {downloading ? "Preparing…" : "Download"}
-            </button>
-            <button type="button" className="btn-secondary w-full" onClick={back}>
-              Back
-            </button>
-          </div>
+        {step === "asset" ? (
+          <AssetStep
+            title={wiseActionLabel("DOWNLOAD", activeField?.label ?? "Field")}
+            asset={asset}
+            onAsset={setAsset}
+            downloading={downloading}
+            onBack={() => setStep("value")}
+            onDownload={() =>
+              onDownload({
+                asset,
+                classSection: selected === "__all__" ? undefined : selected,
+                fieldKey: selected === "__all__" ? undefined : selectedOption?.key || activeField?.key,
+              })
+            }
+          />
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function AssetStep({
+  title,
+  asset,
+  onAsset,
+  downloading,
+  onBack,
+  onDownload,
+}: {
+  title: string;
+  asset: Asset;
+  onAsset: (asset: Asset) => void;
+  downloading: boolean;
+  onBack: () => void;
+  onDownload: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-medium text-text-navy">{title}</p>
+      <label className="block text-sm font-medium text-text-navy">
+        Type
+        <select
+          value={asset}
+          onChange={(event) => onAsset(event.target.value as Asset)}
+          className="input-field mt-1 w-full"
+        >
+          <option value="photo">Photo</option>
+          <option value="signature">Signature</option>
+        </select>
+      </label>
+      <button
+        type="button"
+        className="btn-primary w-full disabled:opacity-50"
+        disabled={downloading}
+        onClick={onDownload}
+      >
+        {downloading ? "Preparing…" : "Download"}
+      </button>
+      <button type="button" className="btn-secondary w-full" onClick={onBack}>
+        Back
+      </button>
     </div>
   );
 }
@@ -198,51 +253,5 @@ function MenuButton({
     >
       {label}
     </button>
-  );
-}
-
-function DateList({
-  title,
-  noun,
-  dates,
-  downloading,
-  onBack,
-  onDownload,
-}: {
-  title: string;
-  noun: string;
-  dates: [string, number][];
-  downloading: boolean;
-  onBack: () => void;
-  onDownload: (date: string) => void;
-}) {
-  const [selected, setSelected] = useState("");
-  return (
-    <div className="space-y-3">
-      <p className="text-sm font-medium text-text-navy">{title}</p>
-      {dates.length === 0 ? (
-        <p className="text-sm text-text-muted">No dates with files are available.</p>
-      ) : (
-        <select value={selected} onChange={(event) => setSelected(event.target.value)} className="input-field">
-          <option value="">Choose a date</option>
-          {dates.map(([date, count]) => (
-            <option key={date} value={date} disabled={count === 0}>
-              {dayLabel(date)} — {count} {noun}
-            </option>
-          ))}
-        </select>
-      )}
-      <button
-        type="button"
-        className="btn-primary w-full disabled:opacity-50"
-        disabled={downloading || !selected}
-        onClick={() => onDownload(selected)}
-      >
-        {downloading ? "Preparing…" : "Download"}
-      </button>
-      <button type="button" className="btn-secondary w-full" onClick={onBack}>
-        Back
-      </button>
-    </div>
   );
 }

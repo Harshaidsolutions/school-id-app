@@ -73,9 +73,14 @@ function titleCaseLabel(label: string): string {
     });
 }
 
-export function wiseActionLabel(action: "DOWNLOAD" | "DELETE", label: string): string {
+export function wiseActionLabel(
+  action: "DOWNLOAD" | "DELETE",
+  label: string,
+  kind?: "Photos" | "Data"
+): string {
   const verb = action === "DELETE" ? "Delete" : "Download";
-  return `${verb} ${titleCaseLabel(label)}-wise`;
+  const base = `${verb} ${titleCaseLabel(label)}-wise`;
+  return kind ? `${base} ${kind}` : base;
 }
 
 export function allValuesLabel(label: string): string {

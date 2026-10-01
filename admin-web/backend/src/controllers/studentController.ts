@@ -49,6 +49,8 @@ import {
   assertNumberEditAllowed,
   collectRecordFacets,
   extraFieldValue,
+  hasAllRequiredFieldData,
+  loadRequiredDataContext,
   withPendingFlags,
 } from "../utils/recordStatus";
 
@@ -88,6 +90,39 @@ function deleteFilterSql(
     parts.push(`(photo_url IS NULL OR btrim(photo_url) = '')`);
   }
   return { sql: parts.length ? ` AND ${parts.join(" AND ")}` : "", values };
+}
+
+async function appendPendingDataIds(
+  queryable: { query: typeof pool.query },
+  orgColumn: "school_id" | "institute_id",
+  orgId: string,
+  filter: { sql: string; values: unknown[] },
+  dataScope: string
+): Promise<{ sql: string; values: unknown[] }> {
+  if (dataScope !== "pending-data") return filter;
+  const ctx = await loadRequiredDataContext(
+    orgColumn === "school_id" ? orgId : null,
+    orgColumn === "institute_id" ? orgId : null
+  );
+  const rows = await queryable.query<Student>(
+    `SELECT ${STUDENT_SELECT} FROM students WHERE ${orgColumn} = $1${filter.sql}`,
+    [orgId, ...filter.values]
+  );
+  const ids = rows.rows
+    .filter(
+      (row) =>
+        !hasAllRequiredFieldData(
+          row as unknown as Record<string, unknown>,
+          ctx.fields,
+          ctx.visibility,
+          ctx.institute
+        )
+    )
+    .map((row) => row.id);
+  return {
+    sql: `${filter.sql} AND id = ANY($${2 + filter.values.length}::uuid[])`,
+    values: [...filter.values, ids],
+  };
 }
 
 const STUDENT_SELECT = `
@@ -567,26 +602,38 @@ export async function updateStudentAdmin(
       student.photo_id
     );
 
+    const textValue = (value: unknown): string | null | undefined => {
+      if (value === undefined) return undefined;
+      if (value === null) return null;
+      const text = String(value).trim();
+      return text || null;
+    };
     const optional = (key: string, alt?: string): string | null | undefined => {
-      if (req.body[key] !== undefined) {
-        const s = String(req.body[key]).trim();
-        return s || null;
-      }
-      if (alt && req.body[alt] !== undefined) {
-        const s = String(req.body[alt]).trim();
-        return s || null;
-      }
+      if (req.body[key] !== undefined) return textValue(req.body[key]);
+      if (alt && req.body[alt] !== undefined) return textValue(req.body[alt]);
       return undefined;
+    };
+    const optionalDate = (key: string): string | null | undefined => {
+      const value = optional(key);
+      if (value === undefined || value === null) return value;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        throw new AppError(`${key} must use YYYY-MM-DD`, 400);
+      }
+      return value;
     };
 
     const studentName =
       req.body.student_name !== undefined || req.body.studentName !== undefined
-        ? String(req.body.student_name ?? req.body.studentName).trim()
+        ? textValue(req.body.student_name ?? req.body.studentName) || ""
         : student.student_name;
+    if (!studentName.trim()) throw new AppError("Name is required", 400);
     const classSection =
       req.body.class_section !== undefined || req.body.classSection !== undefined
-        ? String(req.body.class_section ?? req.body.classSection).trim()
+        ? textValue(req.body.class_section ?? req.body.classSection) || ""
         : student.class_section;
+    if (!classSection.trim() && student.school_id) {
+      throw new AppError("Class is required", 400);
+    }
 
     const orgScope = student.school_id
       ? { schoolId: student.school_id }
@@ -597,12 +644,14 @@ export async function updateStudentAdmin(
     const parentName = optional("parent_name", "parentName") ?? student.parent_name;
     const parentPhone = optional("parent_phone", "parentPhone") ?? student.parent_phone;
     const address = optional("address") ?? student.address;
-    const dob = optional("dob") ?? student.dob;
+    const dob = optionalDate("dob") ?? student.dob;
     const gender = optional("gender") ?? student.gender;
     const bloodGroup = optional("blood_group", "bloodGroup") ?? student.blood_group;
     const custom1 = optional("custom_1", "custom1") ?? student.custom_1;
     const custom2 = optional("custom_2", "custom2") ?? student.custom_2;
     const custom3 = optional("custom_3", "custom3") ?? student.custom_3;
+    const photoIdProvided = req.body.photo_id !== undefined || req.body.photoId !== undefined;
+    const photoId = photoIdProvided ? textValue(req.body.photo_id ?? req.body.photoId) ?? null : null;
 
     const extraFields = mergeExtraFieldsForSave(
       formFields,
@@ -644,8 +693,9 @@ export async function updateStudentAdmin(
            custom_2 = COALESCE($11, custom_2),
            custom_3 = COALESCE($12, custom_3),
            extra_fields = $13::jsonb,
+           photo_id = CASE WHEN $14::boolean THEN $15 ELSE photo_id END,
            updated_at = NOW()
-       WHERE id = $14
+       WHERE id = $16
        RETURNING ${STUDENT_SELECT}`,
       [
         studentName,
@@ -661,6 +711,8 @@ export async function updateStudentAdmin(
         custom2,
         custom3,
         JSON.stringify(extraFields),
+        photoIdProvided,
+        photoId,
         id,
       ]
     );
@@ -1145,7 +1197,14 @@ export async function deleteSchoolExcelData(
     if (!schoolId) throw new AppError("School id is required", 400);
 
     const otp = String(req.body?.otp ?? "").trim();
-    const filter = deleteFilterSql(req.body as Record<string, unknown>, 2);
+    const body = req.body as Record<string, unknown>;
+    const filter = await appendPendingDataIds(
+      client,
+      "school_id",
+      schoolId,
+      deleteFilterSql(body, 2),
+      typeof body.dataScope === "string" ? body.dataScope : ""
+    );
     await client.query("BEGIN");
 
     await verifyAdminActionOtp({
@@ -1239,7 +1298,14 @@ export async function deleteInstituteExcelData(
     if (!instituteId) throw new AppError("Institute id is required", 400);
 
     const otp = String(req.body?.otp ?? "").trim();
-    const filter = deleteFilterSql(req.body as Record<string, unknown>, 2);
+    const body = req.body as Record<string, unknown>;
+    const filter = await appendPendingDataIds(
+      client,
+      "institute_id",
+      instituteId,
+      deleteFilterSql(body, 2),
+      typeof body.dataScope === "string" ? body.dataScope : ""
+    );
     await client.query("BEGIN");
 
     await verifyAdminActionOtp({

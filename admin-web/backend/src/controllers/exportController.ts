@@ -481,7 +481,7 @@ export async function exportStudentsExcel(
     await assertSchoolOwnedByAdmin(scope, schoolId);
     const exportScope =
       typeof req.query.scope === "string" ? req.query.scope.trim() : "all";
-    if (!["all", "pending", "captured", "uncaptured", "captured-pending-data"].includes(exportScope)) {
+    if (!["all", "pending", "captured", "uncaptured", "captured-pending-data", "uncaptured-pending-data", "pending-data"].includes(exportScope)) {
       throw new AppError("scope is not supported", 400);
     }
 
@@ -561,7 +561,7 @@ export async function exportInstituteMembersExcel(
     await assertInstituteOwnedByAdmin(scope, instituteId);
     const exportScope =
       typeof req.query.scope === "string" ? req.query.scope.trim() : "all";
-    if (!["all", "pending", "captured", "uncaptured", "captured-pending-data"].includes(exportScope)) {
+    if (!["all", "pending", "captured", "uncaptured", "captured-pending-data", "uncaptured-pending-data", "pending-data"].includes(exportScope)) {
       throw new AppError("scope is not supported", 400);
     }
 

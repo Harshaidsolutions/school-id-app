@@ -14,7 +14,8 @@ import { BulkModeButtons } from "../components/BulkActionBar";
 import { OtpConfirmModal } from "../components/OtpConfirmModal";
 import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
 import type { ApiErrorBody, NamedCount, RecordFacets, School, Student, StudentsResponse } from "../types";
-import { allValuesLabel, configuredCategoryFields, wiseActionLabel } from "../utils/formFieldHelpers";
+import { ExcelDownloadModal } from "../components/ExcelDownloadModal";
+import { configuredCategoryFields } from "../utils/formFieldHelpers";
 import {
   isPhotoExcelField,
   sortFormFields,
@@ -250,10 +251,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [capturedOn, setCapturedOn] = useState("");
   const [groupFilter, setGroupFilter] = useState("");
   const [designationFilter, setDesignationFilter] = useState("");
-  const [excelStep, setExcelStep] = useState<"menu" | "date" | "value" | "status">("menu");
-  const [excelFieldIndex, setExcelFieldIndex] = useState(0);
-  const [excelStatus, setExcelStatus] = useState<"all" | "pending" | "captured">("all");
-  const [excelValue, setExcelValue] = useState("");
   const [showDeletePhotosOtp, setShowDeletePhotosOtp] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showDeleteOptions, setShowDeleteOptions] = useState(false);
@@ -264,8 +261,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [otpOpen, setOtpOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
-  const [excelMenuOpen, setExcelMenuOpen] = useState(false);
-  const excelMenuRef = useRef<HTMLDivElement>(null);
+  const [excelModalOpen, setExcelModalOpen] = useState(false);
   const [exportingPhotos, setExportingPhotos] = useState(false);
   const [downloadingPhotoId, setDownloadingPhotoId] = useState<string | null>(
     null
@@ -395,16 +391,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       cancelled = true;
     };
   }, [orgId, isInstitute, location.key]);
-
-  useEffect(() => {
-    if (!excelMenuOpen) return;
-    function onDown(event: MouseEvent) {
-      if (excelMenuRef.current?.contains(event.target as Node)) return;
-      setExcelMenuOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [excelMenuOpen]);
 
   const hasExcelUploaded = importBatchCount > 0;
 
@@ -556,7 +542,14 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   }
 
   async function handleDownloadExcel(
-    scope: "all" | "pending" | "captured" | "uncaptured" | "captured-pending-data" = "all",
+    scope:
+      | "all"
+      | "pending"
+      | "captured"
+      | "uncaptured"
+      | "captured-pending-data"
+      | "uncaptured-pending-data"
+      | "pending-data" = "all",
     extra?: { date?: string; classSection?: string; fieldKey?: string }
   ) {
     if (!orgId) {
@@ -575,6 +568,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         : `/admin/students/${schoolId}/export?${query.toString()}`;
       const filename = isInstitute ? `members-${scope}.xlsx` : `students-${scope}.xlsx`;
       await downloadAuthenticatedFile(path, filename);
+      setExcelModalOpen(false);
     } catch (err) {
       setError(await downloadErrorMessage(err, "Failed to download Excel."));
     } finally {
@@ -635,7 +629,14 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         date: deleteJob.date,
         classSection: deleteJob.classSection,
         fieldKey: deleteJob.fieldKey,
-        dataScope: deleteJob.dataScope,
+        dataScope:
+          deleteJob.kind === "photos"
+            ? deleteJob.photoScope === "pending"
+              ? "uncaptured"
+              : deleteJob.photoScope === "captured"
+                ? "captured"
+                : undefined
+            : deleteJob.dataScope,
         asset: deleteJob.kind === "photos" ? "photos" : undefined,
       },
     });
@@ -748,188 +749,14 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               Upload Excel
             </button>
 
-            <div className="relative" ref={excelMenuRef}>
-              <button
-                type="button"
-                disabled={!orgId || exportingExcel}
-                onClick={() => {
-                  setExcelMenuOpen((open) => !open);
-                  setExcelStep("menu");
-                  setExcelValue("");
-                  setExcelStatus("all");
-                }}
-                className="detail-toolbar-btn"
-              >
-                {exportingExcel ? "Exporting…" : "Download Excel"}
-              </button>
-              {excelMenuOpen ? (
-                <div className="absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-white p-1.5 shadow-lg">
-                  {excelStep === "menu" ? (
-                    <>
-                      {(
-                        [
-                          ["all", "All Excel"],
-                          ["captured", "Captured Photos Excel"],
-                          ["pending", "Pending Photos Excel"],
-                          ["captured-pending-data", "Captured Photos – Pending Data"],
-                          ["uncaptured", "Uncaptured Data"],
-                        ] as const
-                      ).map(([scope, label]) => (
-                        <button
-                          key={scope}
-                          type="button"
-                          className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
-                          onClick={() => {
-                            setExcelMenuOpen(false);
-                            void handleDownloadExcel(scope);
-                          }}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
-                        onClick={() => setExcelStep("date")}
-                      >
-                        Date-wise Captured Data
-                      </button>
-                      {categoryFields.length === 1 ? (
-                        <button
-                          type="button"
-                          className="block w-full whitespace-normal rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
-                          onClick={() => {
-                            setExcelFieldIndex(0);
-                            setExcelValue("");
-                            setExcelStatus("all");
-                            setExcelStep("value");
-                          }}
-                        >
-                          {wiseActionLabel("DOWNLOAD", categoryFields[0].label)}
-                        </button>
-                      ) : (
-                        categoryFields.map((field, index) => (
-                          <button
-                            key={field.key}
-                            type="button"
-                            className="block w-full whitespace-normal rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
-                            onClick={() => {
-                              setExcelFieldIndex(index);
-                              setExcelValue("");
-                              setExcelStatus("all");
-                              setExcelStep("value");
-                            }}
-                          >
-                            {wiseActionLabel("DOWNLOAD", field.label)}
-                          </button>
-                        ))
-                      )}
-                    </>
-                  ) : null}
-                  {excelStep === "date" ? (
-                    <div className="space-y-2 p-1">
-                      <select
-                        value={excelValue}
-                        onChange={(event) => setExcelValue(event.target.value)}
-                        className="input-field text-sm"
-                      >
-                        <option value="">Choose a date</option>
-                        {(facets?.captureDates ?? []).map((item) => (
-                          <option key={item.name} value={item.name}>
-                            {dayLabel(item.name)} — {item.count} Photos
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        className="btn-primary w-full disabled:opacity-50"
-                        disabled={!excelValue}
-                        onClick={() => {
-                          setExcelMenuOpen(false);
-                          void handleDownloadExcel("captured", { date: excelValue });
-                        }}
-                      >
-                        Download
-                      </button>
-                      <button type="button" className="btn-secondary w-full" onClick={() => setExcelStep("menu")}>
-                        Back
-                      </button>
-                    </div>
-                  ) : null}
-                  {excelStep === "value" ? (
-                    <div className="space-y-2 p-1">
-                      <label className="block text-xs font-medium text-text-navy">
-                        {categoryFields[excelFieldIndex]?.label ?? "Field"}
-                        <select
-                          value={excelValue}
-                          onChange={(event) => setExcelValue(event.target.value)}
-                          className="input-field mt-1 w-full text-sm"
-                        >
-                          <option value="">Choose…</option>
-                          <option value="__all__">
-                            {allValuesLabel(categoryFields[excelFieldIndex]?.label ?? "Field")}
-                          </option>
-                          {categoryFields[excelFieldIndex]?.options.map((item) => (
-                            <option key={item.name} value={item.name}>
-                              {item.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <button
-                        type="button"
-                        className="btn-primary w-full disabled:opacity-50"
-                        disabled={!excelValue}
-                        onClick={() => setExcelStep("status")}
-                      >
-                        Next
-                      </button>
-                      <button type="button" className="btn-secondary w-full" onClick={() => setExcelStep("menu")}>
-                        Back
-                      </button>
-                    </div>
-                  ) : null}
-                  {excelStep === "status" ? (
-                    <div className="space-y-2 p-1">
-                      <label className="block text-xs font-medium text-text-navy">
-                        Download Type
-                        <select
-                          value={excelStatus}
-                          onChange={(event) =>
-                            setExcelStatus(event.target.value as "all" | "pending" | "captured")
-                          }
-                          className="input-field mt-1 w-full text-sm"
-                        >
-                          <option value="all">All</option>
-                          <option value="pending">Pending</option>
-                          <option value="captured">Captured</option>
-                        </select>
-                      </label>
-                      <button
-                        type="button"
-                        className="btn-primary w-full"
-                        onClick={() => {
-                          const field = categoryFields[excelFieldIndex];
-                          const option = field?.options.find((item) => item.name === excelValue);
-                          setExcelMenuOpen(false);
-                          void handleDownloadExcel(excelStatus, excelValue === "__all__"
-                            ? undefined
-                            : {
-                                classSection: excelValue,
-                                fieldKey: option?.key || field?.key,
-                              });
-                        }}
-                      >
-                        Download Excel
-                      </button>
-                      <button type="button" className="btn-secondary w-full" onClick={() => setExcelStep("value")}>
-                        Back
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
+            <button
+              type="button"
+              disabled={!orgId || exportingExcel}
+              onClick={() => setExcelModalOpen(true)}
+              className="detail-toolbar-btn"
+            >
+              {exportingExcel ? "Exporting…" : "Download Excel"}
+            </button>
 
             <button
               type="button"
@@ -973,9 +800,8 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               Delete Options
             </button>
 
-            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder">Empty</div>
-            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder">Empty</div>
-            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder">Empty</div>
+            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-toolbar-span-2" aria-hidden />
+            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder" aria-hidden />
           </div>
 
           <div className="detail-toolbar-row2">
@@ -1048,19 +874,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                 </div>
               ) : null}
             </div>
-
-            <select
-              value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
-              className="detail-toolbar-row2-filter input-field text-sm"
-            >
-              <option value="">{isInstitute ? "All" : "All Classes"}</option>
-              {classOptions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
 
             <button
               type="button"
@@ -1329,11 +1142,9 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   </td>
                   <td className="col-field">
                     {(() => {
-                      const created = formatCreated(
-                        student.photo_url?.trim()
-                          ? (student.photo_captured_at ?? null)
-                          : student.created_at
-                      );
+                      const created = student.photo_url?.trim()
+                        ? formatCreated(student.photo_captured_at ?? null)
+                        : null;
                       if (!created) return "—";
                       return (
                         <span className="block whitespace-normal text-xs leading-4 text-text">
@@ -1461,6 +1272,22 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
           }}
         />
       )}
+
+      {excelModalOpen && orgId ? (
+        <ExcelDownloadModal
+          downloading={exportingExcel}
+          categoryFields={categoryFields}
+          captureDates={facets?.captureDates ?? []}
+          onClose={() => setExcelModalOpen(false)}
+          onDownload={(job) =>
+            void handleDownloadExcel(job.scope, {
+              date: job.date,
+              classSection: job.classSection,
+              fieldKey: job.fieldKey,
+            })
+          }
+        />
+      ) : null}
 
       {showDownloadPhotosModal && orgId && (
         <DownloadPhotosModal
