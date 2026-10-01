@@ -35,6 +35,8 @@ export function AddStudentModal({
   const [saving, setSaving] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -42,6 +44,8 @@ export function AddStudentModal({
     setError(null);
     setPhotoFile(null);
     setPhotoPreview(null);
+    setSignatureFile(null);
+    setSignaturePreview(null);
   }, [open, formFields]);
 
   useEffect(() => {
@@ -53,6 +57,16 @@ export function AddStudentModal({
     setPhotoPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [photoFile]);
+
+  useEffect(() => {
+    if (!signatureFile) {
+      setSignaturePreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(signatureFile);
+    setSignaturePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [signatureFile]);
 
   if (!open) return null;
 
@@ -86,6 +100,14 @@ export function AddStudentModal({
       setError("Photo must be a JPG or PNG under 10MB.");
       return;
     }
+    if (
+      signatureFile &&
+      (!["image/jpeg", "image/png"].includes(signatureFile.type) ||
+        signatureFile.size > 10 * 1024 * 1024)
+    ) {
+      setError("Signature must be a JPG or PNG under 10MB.");
+      return;
+    }
 
     setSaving(true);
     setError(null);
@@ -103,6 +125,7 @@ export function AddStudentModal({
       };
 
       for (const field of fields) {
+        if (field.key === "signature_upload") continue;
         const value = fieldValue(field.key).trim();
         extraFields[field.key] = value || null;
         payload[field.key] = value || undefined;
@@ -111,6 +134,27 @@ export function AddStudentModal({
 
       const { data } = await api.post<{ student: Student }>("/admin/students", payload);
       let student = data.student;
+      if (signatureFile) {
+        try {
+          const form = new FormData();
+          form.append("signature", signatureFile);
+          const uploaded = await api.post<{ student: Student }>(
+            `/admin/students/${student.id}/signature`,
+            form,
+            { headers: { "Content-Type": "multipart/form-data" } }
+          );
+          student = uploaded.data.student ?? student;
+        } catch (err) {
+          onCreated(student);
+          if (axios.isAxiosError(err)) {
+            const body = err.response?.data as ApiErrorBody | undefined;
+            setError(body?.message ?? "Record saved, but the signature could not be uploaded.");
+          } else {
+            setError("Record saved, but the signature could not be uploaded.");
+          }
+          return;
+        }
+      }
       if (photoFile) {
         try {
           const form = new FormData();
@@ -235,6 +279,41 @@ export function AddStudentModal({
             className="input-field"
           />
         </label>
+      );
+    }
+
+    if (key === "signature_upload") {
+      return (
+        <div key={key} className="text-sm">
+          <span className="mb-1.5 block font-medium text-text-navy">{label}</span>
+          {signaturePreview ? (
+            <img
+              src={signaturePreview}
+              alt="Selected signature"
+              className="mb-2 h-20 w-full rounded-lg object-contain"
+            />
+          ) : null}
+          <label className="group relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy hover:border-button-blue/40 hover:bg-blue-soft/30">
+            {signatureFile ? signatureFile.name : "Choose File"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={(e) => setSignatureFile(e.target.files?.[0] ?? null)}
+              className="absolute inset-0 cursor-pointer opacity-0"
+            />
+          </label>
+          {signatureFile ? (
+            <button
+              type="button"
+              className="mt-1 text-xs font-semibold text-danger"
+              onClick={() => setSignatureFile(null)}
+            >
+              Remove signature
+            </button>
+          ) : (
+            <p className="mt-1 text-xs text-text-muted">JPG or PNG, up to 10MB.</p>
+          )}
+        </div>
       );
     }
 

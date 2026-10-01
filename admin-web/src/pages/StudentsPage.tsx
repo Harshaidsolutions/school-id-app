@@ -14,6 +14,7 @@ import { BulkModeButtons } from "../components/BulkActionBar";
 import { OtpConfirmModal } from "../components/OtpConfirmModal";
 import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
 import type { ApiErrorBody, NamedCount, RecordFacets, School, Student, StudentsResponse } from "../types";
+import { configuredCategoryFields } from "../utils/formFieldHelpers";
 import {
   isPhotoExcelField,
   sortFormFields,
@@ -217,7 +218,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [groupFilter, setGroupFilter] = useState("");
   const [designationFilter, setDesignationFilter] = useState("");
   const [excelStep, setExcelStep] = useState<"menu" | "date" | "kind" | "value">("menu");
-  const [excelKind, setExcelKind] = useState<"class" | "group" | "designation" | "">("");
+  const [excelFieldIndex, setExcelFieldIndex] = useState(0);
   const [excelValue, setExcelValue] = useState("");
   const [showDeletePhotosOtp, setShowDeletePhotosOtp] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
@@ -230,6 +231,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [excelMenuOpen, setExcelMenuOpen] = useState(false);
+  const excelMenuRef = useRef<HTMLDivElement>(null);
   const [exportingPhotos, setExportingPhotos] = useState(false);
   const [downloadingPhotoId, setDownloadingPhotoId] = useState<string | null>(
     null
@@ -360,6 +362,16 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     };
   }, [orgId, isInstitute, location.key]);
 
+  useEffect(() => {
+    if (!excelMenuOpen) return;
+    function onDown(event: MouseEvent) {
+      if (excelMenuRef.current?.contains(event.target as Node)) return;
+      setExcelMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [excelMenuOpen]);
+
   const hasExcelUploaded = importBatchCount > 0;
 
   async function reloadStudentsAndConfig() {
@@ -389,6 +401,30 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   );
 
   const tableColSpan = enabledFields.length + 4 + (selecting && isDetailView ? 1 : 0);
+
+  const categoryFields = useMemo(() => {
+    return configuredCategoryFields(formFields).map((field) => {
+      const source =
+        field.kind === "group"
+          ? photoGroups.length
+            ? photoGroups
+            : (facets?.groups ?? [])
+          : field.kind === "designation"
+            ? photoDesignations.length
+              ? photoDesignations
+              : (facets?.designations ?? [])
+            : photoClasses.length
+              ? photoClasses
+              : (facets?.classes ?? []);
+      return {
+        label: field.label,
+        key: field.key,
+        options: source.filter(
+          (item) => !item.key || item.key === field.key || (field.kind === "class" && item.key === "class_section")
+        ),
+      };
+    });
+  }, [formFields, facets, photoClasses, photoGroups, photoDesignations]);
 
   const classOptions = useMemo(() => {
     const fromFacets = facets?.classes.map((item) => item.name) ?? [];
@@ -697,14 +733,13 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               Upload Excel
             </button>
 
-            <div className="relative">
+            <div className="relative" ref={excelMenuRef}>
               <button
                 type="button"
                 disabled={!orgId || exportingExcel}
                 onClick={() => {
                   setExcelMenuOpen((open) => !open);
                   setExcelStep("menu");
-                  setExcelKind("");
                   setExcelValue("");
                 }}
                 className="detail-toolbar-btn"
@@ -743,17 +778,23 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                       >
                         Date-wise Captured Data
                       </button>
-                      <button
-                        type="button"
-                        className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
-                        onClick={() => {
-                          setExcelKind("");
-                          setExcelValue("");
-                          setExcelStep("kind");
-                        }}
-                      >
-                        Class / Group / Designation
-                      </button>
+                      {categoryFields.length > 0 ? (
+                        <button
+                          type="button"
+                          className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
+                          onClick={() => {
+                            setExcelValue("");
+                            if (categoryFields.length === 1) {
+                              setExcelFieldIndex(0);
+                              setExcelStep("value");
+                              return;
+                            }
+                            setExcelStep("kind");
+                          }}
+                        >
+                          {categoryFields.length === 1 ? categoryFields[0].label : "By field"}
+                        </button>
+                      ) : null}
                     </>
                   ) : null}
                   {excelStep === "date" ? (
@@ -788,28 +829,20 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   ) : null}
                   {excelStep === "kind" ? (
                     <div className="space-y-1 p-1">
-                      {(
-                        [
-                          facets?.classes.length ? ["class", "Class"] : null,
-                          facets?.groups.length ? ["group", "Group"] : null,
-                          facets?.designations.length ? ["designation", "Designation"] : null,
-                        ] as Array<[string, string] | null>
-                      )
-                        .filter((item): item is [string, string] => Boolean(item))
-                        .map(([id, label]) => (
-                          <button
-                            key={id}
-                            type="button"
-                            className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
-                            onClick={() => {
-                              setExcelKind(id as "class" | "group" | "designation");
-                              setExcelValue("");
-                              setExcelStep("value");
-                            }}
-                          >
-                            {label}
-                          </button>
-                        ))}
+                      {categoryFields.map((field, index) => (
+                        <button
+                          key={field.key}
+                          type="button"
+                          className="block w-full rounded-md px-2 py-2 text-left text-xs font-semibold text-text-navy hover:bg-content-bg"
+                          onClick={() => {
+                            setExcelFieldIndex(index);
+                            setExcelValue("");
+                            setExcelStep("value");
+                          }}
+                        >
+                          {field.label}
+                        </button>
+                      ))}
                       <button type="button" className="btn-secondary w-full" onClick={() => setExcelStep("menu")}>
                         Back
                       </button>
@@ -818,19 +851,14 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   {excelStep === "value" ? (
                     <div className="space-y-2 p-1">
                       <label className="block text-xs font-medium text-text-navy">
-                        {excelKind === "group" ? "Group" : excelKind === "designation" ? "Designation" : "Class"}
+                        {categoryFields[excelFieldIndex]?.label ?? "Field"}
                         <select
                           value={excelValue}
                           onChange={(event) => setExcelValue(event.target.value)}
                           className="input-field mt-1 text-sm"
                         >
                           <option value="">Choose…</option>
-                          {(excelKind === "group"
-                            ? facets?.groups
-                            : excelKind === "designation"
-                              ? facets?.designations
-                              : facets?.classes
-                          )?.map((item) => (
+                          {categoryFields[excelFieldIndex]?.options.map((item) => (
                             <option key={item.name} value={item.name}>
                               {item.name}
                             </option>
@@ -842,23 +870,22 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                         className="btn-primary w-full disabled:opacity-50"
                         disabled={!excelValue}
                         onClick={() => {
-                          const list =
-                            excelKind === "group"
-                              ? facets?.groups
-                              : excelKind === "designation"
-                                ? facets?.designations
-                                : facets?.classes;
-                          const option = list?.find((item) => item.name === excelValue);
+                          const field = categoryFields[excelFieldIndex];
+                          const option = field?.options.find((item) => item.name === excelValue);
                           setExcelMenuOpen(false);
                           void handleDownloadExcel("all", {
                             classSection: excelValue,
-                            fieldKey: option?.key || "class_section",
+                            fieldKey: option?.key || field?.key,
                           });
                         }}
                       >
                         Download
                       </button>
-                      <button type="button" className="btn-secondary w-full" onClick={() => setExcelStep("kind")}>
+                      <button
+                        type="button"
+                        className="btn-secondary w-full"
+                        onClick={() => setExcelStep(categoryFields.length > 1 ? "kind" : "menu")}
+                      >
                         Back
                       </button>
                     </div>
@@ -1041,7 +1068,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         </>
       ) : !isDetailView ? (
         <>
-          <div className="mb-3 flex gap-1 border-b border-border">
+          <div className="mb-3 grid grid-cols-4 border-b border-border">
             {(
               [
                 { key: "all", label: "All", count: counts.all },
@@ -1054,7 +1081,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                 key={t.key}
                 type="button"
                 onClick={() => setTab(t.key)}
-                className={`relative px-4 py-2.5 text-sm font-medium transition ${
+                className={`relative min-w-0 px-1 py-2.5 text-center text-[11px] font-medium transition sm:text-xs ${
                   tab === t.key ? "text-button-blue" : "text-text-muted hover:text-text-navy"
                 }`}
               >
@@ -1265,7 +1292,11 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   </td>
                   <td className="col-field">
                     {(() => {
-                      const created = formatCreated(student.created_at);
+                      const created = formatCreated(
+                        student.photo_url?.trim()
+                          ? (student.photo_captured_at ?? null)
+                          : student.created_at
+                      );
                       if (!created) return "—";
                       return (
                         <span className="block whitespace-normal text-xs leading-4 text-text">
@@ -1384,9 +1415,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       {showDeleteOptions && orgId && (
         <DeleteOptionsModal
           photoCounts={photoCounts}
-          classes={photoClasses.length ? photoClasses : (facets?.classes ?? [])}
-          groups={photoGroups.length ? photoGroups : (facets?.groups ?? [])}
-          designations={photoDesignations.length ? photoDesignations : (facets?.designations ?? [])}
+          categoryFields={categoryFields}
           onClose={() => setShowDeleteOptions(false)}
           onChoose={(job) => {
             setDeleteJob(job);
@@ -1401,9 +1430,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
           downloading={exportingPhotos}
           photoCounts={photoCounts}
           signatureCounts={signatureCounts}
-          classes={photoClasses}
-          groups={photoGroups}
-          designations={photoDesignations}
+          categoryFields={categoryFields}
           onClose={() => setShowDownloadPhotosModal(false)}
           onDownload={(job) => void handleDownloadAssets(job)}
         />

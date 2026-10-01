@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { CountOption } from "./DownloadPhotosModal";
+import type { CategoryField } from "./DownloadPhotosModal";
 
 export type DeleteJob = {
   kind: "photos" | "data";
@@ -20,41 +20,34 @@ function dayLabel(iso: string): string {
 
 export function DeleteOptionsModal({
   photoCounts,
-  classes,
-  groups,
-  designations,
+  categoryFields,
   onClose,
   onChoose,
 }: {
   photoCounts: Record<string, number>;
-  classes: CountOption[];
-  groups: CountOption[];
-  designations: CountOption[];
+  categoryFields: CategoryField[];
   onClose: () => void;
   onChoose: (job: DeleteJob) => void;
 }) {
   const [step, setStep] = useState<Step>("menu");
-  const [kind, setKind] = useState<"class" | "group" | "designation" | "">("");
+  const [fieldIndex, setFieldIndex] = useState(0);
   const [selected, setSelected] = useState("");
   const [date, setDate] = useState("");
 
-  const options = kind === "group" ? groups : kind === "designation" ? designations : classes;
+  const activeField = fieldIndex >= 0 ? categoryFields[fieldIndex] : undefined;
+  const options = activeField?.options ?? [];
   const dates = Object.entries(photoCounts).sort(([a], [b]) => b.localeCompare(a));
-  const kindLabel = kind === "group" ? "Group" : kind === "designation" ? "Designation" : "Class";
+  const fieldActionLabel =
+    categoryFields.length === 1 ? `Delete by ${categoryFields[0].label}` : "Delete by field";
 
   function back() {
-    if (step === "photo-value") {
+    if ((step === "photo-kind" || step === "data-kind") && categoryFields.length > 1 && fieldIndex >= 0) {
       setSelected("");
-      setStep("photo-kind");
-      return;
-    }
-    if (step === "data-value") {
-      setSelected("");
-      setStep("data-kind");
+      setFieldIndex(-1);
       return;
     }
     setStep("menu");
-    setKind("");
+    setFieldIndex(0);
     setSelected("");
     setDate("");
   }
@@ -72,9 +65,9 @@ export function DeleteOptionsModal({
             <div className="mt-2 space-y-2">
               <Row title="Delete All Photos" onClick={() => onChoose({ kind: "photos", label: "Delete all photos" })} />
               <Row title="Delete Date-wise Photos" onClick={() => setStep("photo-dates")} />
-              <Row title="Delete Class-wise Photos" onClick={() => openKind("class", "photo-kind")} />
-              <Row title="Delete Group-wise Photos" onClick={() => openKind("group", "photo-kind")} />
-              <Row title="Delete Designation-wise Photos" onClick={() => openKind("designation", "photo-kind")} />
+              {categoryFields.length > 0 ? (
+                <Row title={fieldActionLabel} onClick={() => openField("photo-kind")} />
+              ) : null}
             </div>
             <h3 className="mt-5 text-sm font-semibold text-text-navy">Data</h3>
             <div className="mt-2 space-y-2">
@@ -87,9 +80,9 @@ export function DeleteOptionsModal({
                 title="Delete Uncaptured Data"
                 onClick={() => onChoose({ kind: "data", dataScope: "uncaptured", label: "Delete uncaptured data" })}
               />
-              <Row title="Delete Class-wise Data" onClick={() => openKind("class", "data-kind")} />
-              <Row title="Delete Group-wise Data" onClick={() => openKind("group", "data-kind")} />
-              <Row title="Delete Designation-wise Data" onClick={() => openKind("designation", "data-kind")} />
+              {categoryFields.length > 0 ? (
+                <Row title={fieldActionLabel} onClick={() => openField("data-kind")} />
+              ) : null}
             </div>
             <button type="button" className="btn-secondary mt-4 w-full" onClick={onClose}>
               Cancel
@@ -127,9 +120,26 @@ export function DeleteOptionsModal({
         ) : null}
 
         {step === "photo-kind" || step === "data-kind" ? (
+          fieldIndex < 0 ? (
+            <div className="mt-4 space-y-2">
+              {categoryFields.map((item, index) => (
+                <Row
+                  key={item.key}
+                  title={item.label}
+                  onClick={() => {
+                    setFieldIndex(index);
+                    setSelected("");
+                  }}
+                />
+              ))}
+              <button type="button" className="btn-secondary mt-2 w-full" onClick={back}>
+                Back
+              </button>
+            </div>
+          ) : (
           <div className="mt-4 space-y-3">
             <label className="block text-sm font-medium text-text-navy">
-              {kindLabel}
+              {activeField?.label ?? "Field"}
               <select value={selected} onChange={(event) => setSelected(event.target.value)} className="input-field mt-1">
                 <option value="">Choose…</option>
                 {options.map((item) => (
@@ -149,7 +159,7 @@ export function DeleteOptionsModal({
                 onChoose({
                   kind: step === "photo-kind" ? "photos" : "data",
                   classSection: selected,
-                  fieldKey: option?.key || (kind === "class" ? "class_section" : undefined),
+                  fieldKey: option?.key || activeField?.key,
                   label: `Delete ${step === "photo-kind" ? "photos" : "data"} for ${selected}`,
                 });
               }}
@@ -160,17 +170,21 @@ export function DeleteOptionsModal({
               Back
             </button>
           </div>
+          )
         ) : null}
       </div>
     </div>
   );
 
-  function openKind(next: "class" | "group" | "designation", nextStep: "photo-kind" | "data-kind") {
-    const available =
-      next === "group" ? groups.length : next === "designation" ? designations.length : classes.length;
-    if (!available) return;
-    setKind(next);
+  function openField(nextStep: "photo-kind" | "data-kind") {
+    if (categoryFields.length === 0) return;
     setSelected("");
+    if (categoryFields.length === 1) {
+      setFieldIndex(0);
+      setStep(nextStep);
+      return;
+    }
+    setFieldIndex(-1);
     setStep(nextStep);
   }
 }

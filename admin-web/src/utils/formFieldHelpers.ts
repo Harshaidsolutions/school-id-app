@@ -34,6 +34,36 @@ export function findStudentNameField(fields: FormFieldConfig[]): FormFieldConfig
   });
 }
 
+export type ConfiguredCategoryField = {
+  kind: "class" | "group" | "designation";
+  key: string;
+  label: string;
+};
+
+/** Class, group, or designation fields that this organization actually configured. */
+export function configuredCategoryFields(fields: FormFieldConfig[]): ConfiguredCategoryField[] {
+  const out: ConfiguredCategoryField[] = [];
+  for (const field of fields) {
+    if (field.enabled === false) continue;
+    const n = normalizeLabel(field.label);
+    if (field.key === "signature_upload" || n.includes("signature") || n.includes("photo")) continue;
+    if (n.includes("designation")) {
+      out.push({ kind: "designation", key: field.key, label: field.label });
+    } else if (n.includes("group")) {
+      out.push({ kind: "group", key: field.key, label: field.label });
+    } else if (
+      field.key === "class_section" ||
+      n === "class" ||
+      n.includes("classsection") ||
+      n.includes("section") ||
+      n.includes("grade")
+    ) {
+      out.push({ kind: "class", key: field.key, label: field.label });
+    }
+  }
+  return out;
+}
+
 export function findClassField(fields: FormFieldConfig[]): FormFieldConfig | undefined {
   return fields.find((f) => {
     const n = normalizeLabel(f.label);

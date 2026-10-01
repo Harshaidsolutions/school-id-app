@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 export type CountOption = { name: string; count: number; key?: string };
+export type CategoryField = { label: string; key: string; options: CountOption[] };
 
 type Step = "menu" | "dates" | "signature-dates" | "kind" | "value";
 
@@ -14,18 +15,14 @@ export function DownloadPhotosModal({
   downloading,
   photoCounts,
   signatureCounts,
-  classes,
-  groups,
-  designations,
+  categoryFields,
   onClose,
   onDownload,
 }: {
   downloading: boolean;
   photoCounts: Record<string, number>;
   signatureCounts: Record<string, number>;
-  classes: CountOption[];
-  groups: CountOption[];
-  designations: CountOption[];
+  categoryFields: CategoryField[];
   onClose: () => void;
   onDownload: (job: {
     asset: "photo" | "signature";
@@ -35,30 +32,33 @@ export function DownloadPhotosModal({
   }) => void;
 }) {
   const [step, setStep] = useState<Step>("menu");
-  const [kind, setKind] = useState<"class" | "group" | "designation" | "">("");
+  const [fieldIndex, setFieldIndex] = useState(0);
   const [selected, setSelected] = useState("");
 
-  const kinds = [
-    classes.length ? { id: "class" as const, label: "Class" } : null,
-    groups.length ? { id: "group" as const, label: "Group" } : null,
-    designations.length ? { id: "designation" as const, label: "Designation" } : null,
-  ].filter((item): item is { id: "class" | "group" | "designation"; label: string } => Boolean(item));
-
-  const options =
-    kind === "group" ? groups : kind === "designation" ? designations : classes;
+  const activeField = categoryFields[fieldIndex] ?? categoryFields[0];
+  const options = activeField?.options ?? [];
   const selectedOption = options.find((item) => item.name === selected);
   const photoDates = Object.entries(photoCounts).sort(([a], [b]) => b.localeCompare(a));
   const signatureDates = Object.entries(signatureCounts).sort(([a], [b]) => b.localeCompare(a));
 
   function back() {
-    if (step === "value") {
+    if (step === "value" && categoryFields.length > 1) {
       setSelected("");
       setStep("kind");
       return;
     }
     setStep("menu");
-    setKind("");
     setSelected("");
+  }
+
+  function openCategory() {
+    setSelected("");
+    if (categoryFields.length === 1) {
+      setFieldIndex(0);
+      setStep("value");
+      return;
+    }
+    setStep("kind");
   }
 
   return (
@@ -77,7 +77,13 @@ export function DownloadPhotosModal({
             <MenuButton label="Date-wise Photos" onClick={() => setStep("dates")} disabled={downloading} />
             <MenuButton label="All Signatures" onClick={() => onDownload({ asset: "signature" })} disabled={downloading} />
             <MenuButton label="Date-wise Signatures" onClick={() => setStep("signature-dates")} disabled={downloading} />
-            <MenuButton label="Class / Group / Designation" onClick={() => setStep("kind")} disabled={downloading || kinds.length === 0} />
+            {categoryFields.length > 0 ? (
+              <MenuButton
+                label={categoryFields.length === 1 ? categoryFields[0].label : "By field"}
+                onClick={openCategory}
+                disabled={downloading}
+              />
+            ) : null}
             <button type="button" className="btn-secondary mt-2 w-full" onClick={onClose}>
               Cancel
             </button>
@@ -103,13 +109,13 @@ export function DownloadPhotosModal({
         {step === "kind" ? (
           <div className="space-y-2">
             <p className="text-sm font-medium text-text-navy">Choose a type</p>
-            {kinds.map((item) => (
+            {categoryFields.map((item, index) => (
               <MenuButton
-                key={item.id}
+                key={item.key}
                 label={item.label}
                 disabled={downloading}
                 onClick={() => {
-                  setKind(item.id);
+                  setFieldIndex(index);
                   setSelected("");
                   setStep("value");
                 }}
@@ -124,7 +130,7 @@ export function DownloadPhotosModal({
         {step === "value" ? (
           <div className="space-y-3">
             <label className="block text-sm font-medium text-text-navy">
-              {kind === "group" ? "Group" : kind === "designation" ? "Designation" : "Class"}
+              {activeField?.label ?? "Field"}
               <select
                 value={selected}
                 onChange={(event) => setSelected(event.target.value)}
@@ -146,7 +152,7 @@ export function DownloadPhotosModal({
                 onDownload({
                   asset: "photo",
                   classSection: selected,
-                  fieldKey: selectedOption?.key || (kind === "class" ? "class_section" : undefined),
+                  fieldKey: selectedOption?.key || activeField?.key,
                 })
               }
             >

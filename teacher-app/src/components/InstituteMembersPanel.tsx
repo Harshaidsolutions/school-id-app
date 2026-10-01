@@ -42,7 +42,6 @@ import { uploadStudentPhoto } from "../utils/uploadStudentPhoto";
 import { scrollToFocusedInput } from "../utils/scrollToFocusedInput";
 import { useFormConfig } from "../hooks/useFormConfig";
 import {
-  studentFullyCaptured,
   studentHasPhoto,
   studentPendingData,
 } from "../utils/recordStatus";
@@ -133,7 +132,7 @@ export function InstituteMembersPanel({
     [students]
   );
   const capturedCount = useMemo(
-    () => students.filter((s) => studentFullyCaptured(s, true)).length,
+    () => students.filter((s) => studentHasPhoto(s)).length,
     [students]
   );
   const pendingCount = useMemo(
@@ -169,7 +168,7 @@ export function InstituteMembersPanel({
     }
     if (tab === "captured" && showCapturedSection) {
       return students
-        .filter((s) => studentFullyCaptured(s, true))
+        .filter((s) => studentHasPhoto(s))
         .sort((a, b) => {
           const aTs = Date.parse(a.photo_captured_at ?? "") || 0;
           const bTs = Date.parse(b.photo_captured_at ?? "") || 0;

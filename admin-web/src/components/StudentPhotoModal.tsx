@@ -4,6 +4,26 @@ import { authenticatedStudentPhotoUrl } from "../utils/studentPhotoSrc";
 
 const VIEWER_BODY_CLASS = "student-photo-viewer-open";
 
+function formatCaptureStamp(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  const date = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
+    .format(parsed)
+    .replace(/\//g, "-");
+  const time = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(parsed);
+  return `${date} ${time}`;
+}
+
 /**
  * Full-size student photo viewer with previous/next navigation.
  */
@@ -155,15 +175,7 @@ export function StudentPhotoModal({
           )}
           {student.photo_captured_at ? (
             <div className="border-t border-border px-4 py-2 text-center text-xs text-text-muted">
-              Captured:{" "}
-              {new Date(student.photo_captured_at).toLocaleString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}
+              Captured: {formatCaptureStamp(student.photo_captured_at)}
             </div>
           ) : null}
           <div className="border-t border-border px-4 py-3 text-center">

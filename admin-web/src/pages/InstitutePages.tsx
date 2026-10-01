@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
@@ -26,6 +26,8 @@ export function InstituteListPage() {
   const [otpOpen, setOtpOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const filterPanelRef = useRef<HTMLDivElement>(null);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
   async function loadInstitutes() {
@@ -47,6 +49,17 @@ export function InstituteListPage() {
   useEffect(() => {
     void loadInstitutes();
   }, []);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    function onDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (filterButtonRef.current?.contains(target) || filterPanelRef.current?.contains(target)) return;
+      setFilterOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [filterOpen]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -144,7 +157,7 @@ export function InstituteListPage() {
         }
         actions={
           <>
-            <button type="button" className="btn-secondary shrink-0" onClick={() => setFilterOpen((open) => !open)}>
+            <button ref={filterButtonRef} type="button" className="btn-secondary shrink-0" onClick={() => setFilterOpen((open) => !open)}>
               Filter
             </button>
             {selecting || filtered.length > 0 ? (
@@ -174,23 +187,36 @@ export function InstituteListPage() {
       />
 
       {filterOpen ? (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-3">
+        <div ref={filterPanelRef} className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-3">
           <span className="text-xs font-medium text-text-navy">Sort</span>
           <button
             type="button"
             className={sortOrder === "newest" ? "btn-primary" : "btn-secondary"}
-            onClick={() => setSortOrder("newest")}
+            onClick={() => {
+              setSortOrder("newest");
+              setFilterOpen(false);
+            }}
           >
             Newest
           </button>
           <button
             type="button"
             className={sortOrder === "oldest" ? "btn-primary" : "btn-secondary"}
-            onClick={() => setSortOrder("oldest")}
+            onClick={() => {
+              setSortOrder("oldest");
+              setFilterOpen(false);
+            }}
           >
             Oldest
           </button>
-          <button type="button" className="btn-secondary" onClick={() => setSortOrder("newest")}>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              setSortOrder("newest");
+              setFilterOpen(false);
+            }}
+          >
             Clear filters
           </button>
         </div>

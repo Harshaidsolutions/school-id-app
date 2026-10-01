@@ -17,6 +17,7 @@ const ANDROID_CHANNEL_ID = "harsha_teacher_alerts_v2";
 export type SnsPushPayload = {
   title: string;
   body: string;
+  imageUrl?: string | null;
   data?: Record<string, string>;
 };
 
@@ -113,28 +114,34 @@ export async function deleteSnsEndpoint(endpointArn: string): Promise<void> {
 
 function buildGcmMessage(payload: SnsPushPayload): string {
   const data = payload.data ?? {};
+  const imageUrl = payload.imageUrl?.trim() || "";
   const dataStrings: Record<string, string> = {
     title: payload.title,
     body: payload.body,
   };
+  if (imageUrl) dataStrings.imageUrl = imageUrl;
   for (const [key, value] of Object.entries(data)) {
     dataStrings[key] = String(value);
   }
+  const notification: Record<string, string> = {
+    title: payload.title,
+    body: payload.body,
+    sound: "default",
+  };
+  if (imageUrl) notification.image = imageUrl;
+  const androidNotification: Record<string, string | boolean> = {
+    channel_id: ANDROID_CHANNEL_ID,
+    sound: "default",
+    default_vibrate_timings: true,
+    visibility: "public",
+    notification_priority: "PRIORITY_HIGH",
+  };
+  if (imageUrl) androidNotification.image = imageUrl;
   return JSON.stringify({
-    notification: {
-      title: payload.title,
-      body: payload.body,
-      sound: "default",
-    },
+    notification,
     android: {
       priority: "high",
-      notification: {
-        channel_id: ANDROID_CHANNEL_ID,
-        sound: "default",
-        default_vibrate_timings: true,
-        visibility: "public",
-        notification_priority: "PRIORITY_HIGH",
-      },
+      notification: androidNotification,
     },
     data: dataStrings,
     priority: "high",

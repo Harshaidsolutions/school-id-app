@@ -165,7 +165,7 @@ function SortableFieldRow({
             >
               Edit
             </button>
-            {isManualFormField(field) && (
+            {isManualFormField(field) && field.key !== "signature_upload" && (
               <button
                 type="button"
                 onClick={() => onRemove(rowId)}

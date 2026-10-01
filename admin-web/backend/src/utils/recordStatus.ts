@@ -36,13 +36,19 @@ function visibilityMap(raw: unknown): Record<string, boolean> {
   return out;
 }
 
-/** Photo and photo identity are not "pending data". Every other enabled field is. */
+/** Photo, photo identity, and signature upload are not "pending data". */
 export function isNonDataField(field: { key: string; label?: string }): boolean {
-  if (field.key === "photo" || field.key === "photo_id" || field.key === "signature") {
+  if (
+    field.key === "photo" ||
+    field.key === "photo_id" ||
+    field.key === "signature" ||
+    field.key === "signature_upload"
+  ) {
     return true;
   }
   const n = (field.label ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
-  if (!n || n === "signature") return n === "signature";
+  if (!n) return false;
+  if (n.includes("signature")) return true;
   return n.includes("photo") && !n.includes("url");
 }
 

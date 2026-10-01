@@ -460,7 +460,7 @@
 
   .detail-status-tabs-inline {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     align-items: stretch;
     width: 100%;
     height: var(--toolbar-control-height);
@@ -472,7 +472,7 @@
   }
 
   .detail-toolbar-status-tab {
-    @apply relative flex min-w-0 w-full items-center justify-center overflow-hidden text-ellipsis whitespace-nowrap px-1 text-center text-[10px] font-semibold uppercase tracking-wide transition sm:px-1.5 sm:text-[11px];
+    @apply relative flex min-w-0 w-full items-center justify-center overflow-hidden text-ellipsis whitespace-nowrap px-0.5 text-center text-[9px] font-semibold uppercase tracking-tight transition sm:text-[10px];
     height: var(--toolbar-control-height);
     min-height: var(--toolbar-control-height);
     max-height: var(--toolbar-control-height);

@@ -46,7 +46,6 @@ import { gridItemWidth } from "../theme/responsive";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
 import { useFormConfig } from "../hooks/useFormConfig";
 import {
-  studentFullyCaptured,
   studentHasPhoto,
   studentPendingData,
 } from "../utils/recordStatus";
@@ -159,7 +158,7 @@ export function StudentListScreen({ navigation, route }: Props) {
     [students]
   );
   const capturedCount = useMemo(
-    () => students.filter((s) => studentFullyCaptured(s, false)).length,
+    () => students.filter((s) => studentHasPhoto(s)).length,
     [students]
   );
   const pendingCount = useMemo(
@@ -195,7 +194,7 @@ export function StudentListScreen({ navigation, route }: Props) {
     }
     if (tab === "captured" && showCapturedSection) {
       return students
-        .filter((s) => studentFullyCaptured(s, false))
+        .filter((s) => studentHasPhoto(s))
         .sort((a, b) => {
           const aTs = Date.parse(a.photo_captured_at ?? "") || 0;
           const bTs = Date.parse(b.photo_captured_at ?? "") || 0;

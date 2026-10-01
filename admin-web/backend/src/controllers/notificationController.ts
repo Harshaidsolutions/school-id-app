@@ -88,6 +88,7 @@ export async function createNotification(
         void sendSnsPushNotifications(endpoints, {
           title,
           body: message,
+          imageUrl,
           data: { notificationId: notification.id, schoolId },
         }).then((result) => {
           if (result.disabledEndpointArns.length > 0) {
@@ -119,6 +120,7 @@ export async function createNotification(
       void sendSnsPushNotifications(endpoints, {
         title,
         body: message,
+        imageUrl,
         data: { notificationId: notification.id, instituteId },
       }).then((result) => {
         if (result.disabledEndpointArns.length > 0) {

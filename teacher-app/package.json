@@ -47,7 +47,7 @@
     "typescript": "~5.9.2"
   },
   "scripts": {
-    "postinstall": "node scripts/patch-vision-camera.js",
+    "postinstall": "node scripts/patch-vision-camera.js && node scripts/patch-notification-image.js",
     "start": "expo start",
     "start:go": "expo start",
     "start:dev": "expo start --dev-client",
@@ -61,5 +61,12 @@
     "android:network": "node scripts/ensure-android-release-network.mjs",
     "prebuild:release": "npm run assets:generate && npm run assets:logos && npm run assets:verify && npm run android:network"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "autolinking": {
+      "android": {
+        "buildFromSource": ["expo-notifications"]
+      }
+    }
+  }
 }

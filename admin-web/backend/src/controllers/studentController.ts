@@ -3,6 +3,7 @@ import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
 import {
   deleteStudentPhotoFromStorage,
+  uploadMemberSignatureToStorage,
   uploadStudentPhotoToStorage,
 } from "../config/storage";
 import {
@@ -912,6 +913,54 @@ export async function uploadStudentPhotoAdmin(
     } finally {
       client.release();
     }
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** POST /admin/students/:id/signature — upload the member signature image */
+export async function uploadStudentSignatureAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const studentId = routeParam(req.params.id);
+    if (!studentId) throw new AppError("Student id is required", 400);
+    if (!req.file) throw new AppError("Image file is required (field name: signature)", 400);
+
+    const scope = await requireAdminScope(req);
+    const studentResult = await pool.query<Student>(
+      `SELECT ${STUDENT_SELECT} FROM students WHERE id = $1 LIMIT 1`,
+      [studentId]
+    );
+    const student = studentResult.rows[0];
+    if (!student) throw new AppError("Student not found", 404);
+    await assertStudentOwnedByAdmin(scope, student);
+    const orgId = student.school_id ?? student.institute_id;
+    if (!orgId) throw new AppError("Student is not assigned to an organization", 400);
+
+    const formFields = await loadFormConfigForOrg({
+      schoolId: student.school_id,
+      instituteId: student.institute_id,
+    });
+    const signatureField = formFields.find((field) => field.key === "signature_upload");
+    if (!signatureField?.enabled) {
+      throw new AppError("Signature upload is turned off for this organization", 403);
+    }
+
+    const signatureUrl = await uploadMemberSignatureToStorage(orgId, student.id, req.file);
+    const updated = await pool.query<Student>(
+      `UPDATE students
+       SET signature_url = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING ${STUDENT_SELECT}`,
+      [signatureUrl, student.id]
+    );
+    const row = updated.rows[0];
+    if (!row) throw new AppError("Failed to save signature", 500);
+    res.status(200).json({ status: "ok", student: row });
   } catch (error) {
     next(error);
   }
