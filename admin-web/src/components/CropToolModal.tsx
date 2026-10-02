@@ -58,15 +58,16 @@ export function CropToolModal({
   const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [frameLimit, setFrameLimit] = useState({ width: 720, height: 520 });
+  const [toneOpen, setToneOpen] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
+  const tonePanelRef = useRef<HTMLDivElement>(null);
+  const toneButtonRef = useRef<HTMLButtonElement>(null);
   const cropRef = useRef<Crop>({ ...FULL });
   const toneRef = useRef({ brightness: 0, contrast: 0 });
   const toneGestureRef = useRef(false);
-  const curveDragRef = useRef(false);
-  const curveRef = useRef<HTMLCanvasElement>(null);
   const brightnessInputRef = useRef<HTMLInputElement>(null);
   const contrastInputRef = useRef<HTMLInputElement>(null);
   const brightnessLabelRef = useRef<HTMLSpanElement>(null);
@@ -100,6 +101,7 @@ export function CropToolModal({
     cropRef.current = { ...FULL };
     toneRef.current = { brightness: 0, contrast: 0 };
     toneGestureRef.current = false;
+    setToneOpen(false);
     previewBlobRef.current = null;
     clearPreview();
     if (!student?.photo_url) return;
@@ -120,7 +122,19 @@ export function CropToolModal({
     }
     paintFrame();
     paintTone();
-  }, [src, phase, student?.id, frameLimit]);
+  }, [src, phase, student?.id, frameLimit, toneOpen]);
+
+  useEffect(() => {
+    if (!toneOpen) return;
+    const close = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (tonePanelRef.current?.contains(target) || toneButtonRef.current?.contains(target)) return;
+      setToneOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [toneOpen]);
 
   useEffect(() => {
     const node = workspaceRef.current;
@@ -128,8 +142,8 @@ export function CropToolModal({
     const measure = () => {
       const box = node.getBoundingClientRect();
       setFrameLimit({
-        width: Math.max(160, Math.floor(box.width - 28)),
-        height: Math.max(160, Math.floor(box.height - 44)),
+        width: Math.max(160, Math.floor(box.width - 48)),
+        height: Math.max(160, Math.floor(box.height - 96)),
       });
     };
     measure();
@@ -176,7 +190,6 @@ export function CropToolModal({
     if (contrastInputRef.current) contrastInputRef.current.value = String(Math.round(contrast));
     if (brightnessLabelRef.current) brightnessLabelRef.current.textContent = String(Math.round(brightness));
     if (contrastLabelRef.current) contrastLabelRef.current.textContent = String(Math.round(contrast));
-    if (curveRef.current) drawToneCurve(curveRef.current, brightness, contrast);
   }
 
   function scheduleTonePaint() {
@@ -215,42 +228,7 @@ export function CropToolModal({
     toneGestureRef.current = false;
   }
 
-  function curvePoint(event: ReactPointerEvent): { x: number; y: number } | null {
-    const box = curveRef.current?.getBoundingClientRect();
-    if (!box || box.width <= 0 || box.height <= 0) return null;
-    const padX = (CURVE_PAD / CURVE_SIZE) * box.width;
-    const padY = (CURVE_PAD / CURVE_SIZE) * box.height;
-    const plotW = box.width - padX * 2;
-    const plotH = box.height - padY * 2;
-    if (plotW <= 0 || plotH <= 0) return null;
-    return {
-      x: clampNumber((event.clientX - box.left - padX) / plotW, 0, 1),
-      y: clampNumber(1 - (event.clientY - box.top - padY) / plotH, 0, 1),
-    };
-  }
-
-  function applyCurvePoint(point: { x: number; y: number }) {
-    const contrast = clampNumber(((point.x - 0.5) / 0.32) * 100, -100, 100);
-    const slope = Math.max(0.05, 1 + contrast / 100);
-    const brightness = clampNumber((200 * (point.y - 0.5)) / slope, -100, 100);
-    applyTone(brightness, contrast);
-  }
-
-  function onCurveDown(event: ReactPointerEvent<HTMLCanvasElement>) {
-    curveDragRef.current = true;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    const point = curvePoint(event);
-    if (point) applyCurvePoint(point);
-  }
-
-  function onCurveMove(event: ReactPointerEvent<HTMLCanvasElement>) {
-    if (!curveDragRef.current) return;
-    const point = curvePoint(event);
-    if (point) applyCurvePoint(point);
-  }
-
-  function onCurveUp() {
-    curveDragRef.current = false;
+  function endToneGesture() {
     toneGestureRef.current = false;
   }
 
@@ -431,9 +409,15 @@ export function CropToolModal({
               ) : null}
             </div>
           </aside>
-          <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[#EEF2FF]">
-              <div ref={workspaceRef} className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-3">
+          <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#EEF2FF]">
+            <div className="relative min-h-0 flex-1">
+              <div
+                ref={workspaceRef}
+                className="absolute inset-0 flex items-center justify-center overflow-hidden"
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+              >
                 {phase === "preview" && previewUrl ? (
                   <img
                     src={previewUrl}
@@ -442,54 +426,47 @@ export function CropToolModal({
                     style={{ maxWidth: frameLimit.width, maxHeight: frameLimit.height }}
                   />
                 ) : src && student ? (
-                  <div
-                    className="relative max-h-full max-w-full touch-none pt-8"
-                    onPointerDown={onPointerDown}
-                    onPointerMove={onPointerMove}
-                    onPointerUp={onPointerUp}
-                  >
-                    <div ref={stageRef} className="relative inline-block max-w-full">
-                      <img
-                        ref={imageRef}
-                        src={src}
-                        alt={student.student_name ?? "Photo"}
-                        draggable={false}
-                        className="block h-auto w-auto max-w-full select-none"
-                        style={{ maxWidth: frameLimit.width, maxHeight: frameLimit.height }}
-                        onLoad={() => {
-                          paintFrame();
-                          paintTone();
+                  <div ref={stageRef} className="relative inline-block max-h-full max-w-full touch-none">
+                    <img
+                      ref={imageRef}
+                      src={src}
+                      alt={student.student_name ?? "Photo"}
+                      draggable={false}
+                      className="block h-auto w-auto max-w-full select-none object-contain"
+                      style={{ maxWidth: frameLimit.width, maxHeight: frameLimit.height }}
+                      onLoad={() => {
+                        paintFrame();
+                        paintTone();
+                      }}
+                    />
+                    <div className="pointer-events-none absolute inset-0">
+                      <div
+                        ref={frameRef}
+                        className="absolute"
+                        style={{
+                          left: 0,
+                          top: 0,
+                          width: "100%",
+                          height: "100%",
+                          transformOrigin: "center center",
+                          border: "1px solid #ffffff",
+                          boxShadow: "0 0 0 1px rgba(30, 27, 75, 0.55), 0 0 0 9999px rgba(49, 46, 129, 0.28)",
                         }}
-                      />
-                      <div className="pointer-events-none absolute inset-0">
-                        <div
-                          ref={frameRef}
-                          className="absolute"
-                          style={{
-                            left: 0,
-                            top: 0,
-                            width: "100%",
-                            height: "100%",
-                            transformOrigin: "center center",
-                            border: "1px solid #ffffff",
-                            boxShadow: "0 0 0 1px rgba(30, 27, 75, 0.55), 0 0 0 9999px rgba(49, 46, 129, 0.28)",
-                          }}
-                        >
-                          {HANDLES.map((handle) => (
-                            <span
-                              key={handle}
-                              className="pointer-events-none absolute h-2 w-2 border border-[#6366F1] bg-white"
-                              style={handleStyle(handle)}
-                            />
-                          ))}
-                          <span className="pointer-events-none absolute left-1/2 top-0 h-4 w-px -translate-x-1/2 -translate-y-full bg-white" />
-                          <span className="pointer-events-none absolute left-1/2 top-0 flex h-6 w-6 -translate-x-1/2 -translate-y-[1.7rem] items-center justify-center rounded-full border border-[#6366F1] bg-white text-[#6366F1] shadow-sm">
-                            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M20 12a8 8 0 1 1-2.2-5.5" />
-                              <path d="M20 4v4h-4" />
-                            </svg>
-                          </span>
-                        </div>
+                      >
+                        {HANDLES.map((handle) => (
+                          <span
+                            key={handle}
+                            className="pointer-events-none absolute h-2 w-2 border border-[#6366F1] bg-white"
+                            style={handleStyle(handle)}
+                          />
+                        ))}
+                        <span className="pointer-events-none absolute left-1/2 top-0 h-4 w-px -translate-x-1/2 -translate-y-full bg-white" />
+                        <span className="pointer-events-none absolute left-1/2 top-0 flex h-6 w-6 -translate-x-1/2 -translate-y-[1.7rem] items-center justify-center rounded-full border border-[#6366F1] bg-white text-[#6366F1] shadow-sm">
+                          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20 12a8 8 0 1 1-2.2-5.5" />
+                            <path d="M20 4v4h-4" />
+                          </svg>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -497,21 +474,32 @@ export function CropToolModal({
                   <p className="text-sm text-[#64748B]">{student ? "Loading photo…" : "Choose a photo."}</p>
                 )}
               </div>
-              <div className="flex shrink-0 items-center gap-3 border-t border-[#E2E8F0] bg-white px-3 py-2">
-                <canvas
-                  ref={curveRef}
-                  width={112}
-                  height={112}
-                  aria-label="Brightness and contrast curve"
-                  className="h-28 w-28 shrink-0 cursor-crosshair touch-none rounded-md border border-[#E2E8F0] bg-[#F8FAFC]"
-                  onPointerDown={onCurveDown}
-                  onPointerMove={onCurveMove}
-                  onPointerUp={onCurveUp}
-                  onPointerCancel={onCurveUp}
-                />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <label className="flex items-center gap-2 text-[11px] font-semibold text-[#334155]">
-                    Brightness
+            </div>
+            <div className="relative z-10 shrink-0 border-t border-[#E2E8F0] bg-white px-3 py-1.5">
+              <button
+                ref={toneButtonRef}
+                type="button"
+                className={`inline-flex h-8 items-center gap-1.5 rounded-[10px] border px-3 text-sm font-semibold ${
+                  toneOpen
+                    ? "border-[#C4B5FD] bg-[#F5F3FF] text-[#6366F1]"
+                    : "border-[#BFDBFE] bg-white text-[#2563EB]"
+                }`}
+                aria-expanded={toneOpen}
+                onClick={() => setToneOpen((open) => !open)}
+              >
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                </svg>
+                Edit
+              </button>
+              {toneOpen ? (
+                <div
+                  ref={tonePanelRef}
+                  className="absolute bottom-full left-3 z-20 mb-2 w-72 rounded-xl border border-[#E2E8F0] bg-white p-3 shadow-[0_12px_28px_rgba(49,46,129,0.12)]"
+                >
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#334155]">
+                    <span className="w-[4.6rem] shrink-0">Brightness</span>
                     <input
                       ref={brightnessInputRef}
                       type="range"
@@ -521,12 +509,13 @@ export function CropToolModal({
                       aria-label="Brightness"
                       className="min-w-0 flex-1 accent-[#6366F1]"
                       onInput={(event) => applyTone(Number(event.currentTarget.value), toneRef.current.contrast)}
-                      onPointerUp={onCurveUp}
+                      onPointerUp={endToneGesture}
+                      onPointerCancel={endToneGesture}
                     />
-                    <span ref={brightnessLabelRef} className="w-8 text-right text-[#64748B]">0</span>
+                    <span ref={brightnessLabelRef} className="w-8 text-right tabular-nums text-[#64748B]">0</span>
                   </label>
-                  <label className="flex items-center gap-2 text-[11px] font-semibold text-[#334155]">
-                    Contrast
+                  <label className="mt-2 flex items-center gap-2 text-xs font-semibold text-[#334155]">
+                    <span className="w-[4.6rem] shrink-0">Contrast</span>
                     <input
                       ref={contrastInputRef}
                       type="range"
@@ -536,40 +525,41 @@ export function CropToolModal({
                       aria-label="Contrast"
                       className="min-w-0 flex-1 accent-[#6366F1]"
                       onInput={(event) => applyTone(toneRef.current.brightness, Number(event.currentTarget.value))}
-                      onPointerUp={onCurveUp}
+                      onPointerUp={endToneGesture}
+                      onPointerCancel={endToneGesture}
                     />
-                    <span ref={contrastLabelRef} className="w-8 text-right text-[#64748B]">0</span>
+                    <span ref={contrastLabelRef} className="w-8 text-right tabular-nums text-[#64748B]">0</span>
                   </label>
-                  <button type="button" className="btn-secondary" onClick={resetTone}>Reset</button>
+                  <button type="button" className="btn-secondary mt-3 px-3 py-1.5 text-sm" onClick={resetTone}>Reset</button>
                 </div>
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-[#E2E8F0] bg-white px-3 py-2">
-                <button type="button" className="btn-secondary" disabled={!student || index === 0} onClick={() => setIndex((value) => Math.max(0, value - 1))}>Previous</button>
-                <button type="button" className="btn-secondary" disabled={!student || index >= gallery.length - 1} onClick={() => setIndex((value) => Math.min(gallery.length - 1, value + 1))}>Next</button>
-                {phase === "preview" ? (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => {
-                      if (student) markDirty(student.id);
-                      setPhase("edit");
-                      previewBlobRef.current = null;
-                      clearPreview();
-                    }}
-                  >
-                    Back
-                  </button>
-                ) : (
-                  <button type="button" className="btn-secondary" disabled={!src || applying} onClick={() => void applyOk()}>
-                    {applying ? "Preparing…" : "OK"}
-                  </button>
-                )}
-                <button type="button" className="btn-primary" disabled={phase !== "preview" || saving} onClick={() => void saveCrop()}>
-                  {saving ? "Saving…" : "Save"}
-                </button>
-              </div>
-              {error ? <p className="bg-white px-3 pb-2 text-sm text-[#DC2626]">{error}</p> : null}
+              ) : null}
             </div>
+            <div className="flex shrink-0 items-center gap-2 border-t border-[#E2E8F0] bg-white px-3 py-1.5">
+              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!student || index === 0} onClick={() => setIndex((value) => Math.max(0, value - 1))}>Previous</button>
+              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!student || index >= gallery.length - 1} onClick={() => setIndex((value) => Math.min(gallery.length - 1, value + 1))}>Next</button>
+              {phase === "preview" ? (
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-1.5 text-sm"
+                  onClick={() => {
+                    if (student) markDirty(student.id);
+                    setPhase("edit");
+                    previewBlobRef.current = null;
+                    clearPreview();
+                  }}
+                >
+                  Back
+                </button>
+              ) : (
+                <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!src || applying} onClick={() => void applyOk()}>
+                  {applying ? "Preparing…" : "OK"}
+                </button>
+              )}
+              <button type="button" className="btn-primary px-3 py-1.5 text-sm" disabled={phase !== "preview" || saving} onClick={() => void saveCrop()}>
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {error ? <p className="bg-white px-3 pb-2 text-sm text-[#DC2626]">{error}</p> : null}
           </div>
         </div>
       </div>
@@ -780,9 +770,6 @@ function cursorFor(hit: Hit | null): string {
   return "default";
 }
 
-const CURVE_SIZE = 112;
-const CURVE_PAD = 10;
-
 function toneFilter(brightness: number, contrast: number): string {
   if (brightness === 0 && contrast === 0) return "none";
   return `brightness(${1 + brightness / 100}) contrast(${1 + contrast / 100})`;
@@ -791,57 +778,6 @@ function toneFilter(brightness: number, contrast: number): string {
 function clampNumber(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.min(max, Math.max(min, value));
-}
-
-function toneAt(input: number, brightness: number, contrast: number): number {
-  const bright = 1 + brightness / 100;
-  const slope = 1 + contrast / 100;
-  return clampNumber((input * bright - 0.5) * slope + 0.5, 0, 1);
-}
-
-function drawToneCurve(canvas: HTMLCanvasElement, brightness: number, contrast: number) {
-  const size = CURVE_SIZE;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  if (canvas.width !== Math.round(size * dpr)) {
-    canvas.width = Math.round(size * dpr);
-    canvas.height = Math.round(size * dpr);
-  }
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, size, size);
-  ctx.fillStyle = "#f8fafc";
-  ctx.fillRect(0, 0, size, size);
-  const pad = CURVE_PAD;
-  const plot = size - pad * 2;
-  const xOf = (value: number) => pad + value * plot;
-  const yOf = (value: number) => pad + (1 - value) * plot;
-  ctx.strokeStyle = "#e2e8f0";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(xOf(0), yOf(0));
-  ctx.lineTo(xOf(1), yOf(1));
-  ctx.stroke();
-  ctx.strokeStyle = "#6366f1";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  for (let step = 0; step <= 32; step += 1) {
-    const input = step / 32;
-    const x = xOf(input);
-    const y = yOf(toneAt(input, brightness, contrast));
-    if (step === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-  const handleX = clampNumber(0.5 + (contrast / 100) * 0.32, 0.08, 0.92);
-  const handleY = toneAt(0.5, brightness, contrast);
-  ctx.fillStyle = "#ffffff";
-  ctx.strokeStyle = "#6366f1";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(xOf(handleX), yOf(handleY), 4.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
 }
 
 function adjustedSource(
