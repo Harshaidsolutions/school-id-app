@@ -21,14 +21,6 @@ import {
   getTeacherOrgId,
   isInstituteStaff,
 } from "../utils/teacherOrgScope";
-import {
-  allocateInstitutePhotoId,
-  isInstituteCapturePhotoId,
-} from "../utils/institutePhotoId";
-import {
-  allocateSchoolPhotoId,
-  isSchoolCapturePhotoId,
-} from "../utils/schoolPhotoId";
 import { studentPhotoOrgId } from "../config/storage";
 import { loadOrgOwnerAdminId } from "../utils/adminScope";
 import {
@@ -612,53 +604,16 @@ export async function uploadStudentPhoto(
       }
 
       const photoUrl = await uploadStudentPhotoToStorage(orgId, current.id, req.file);
-      const instituteId = current.institute_id;
-      const instituteCapture = Boolean(instituteId);
-      const schoolId = current.school_id;
-
-      const orgFields = await loadFormConfigForOrg({
-        schoolId: current.school_id,
-        instituteId: current.institute_id,
-      });
-      const keepUploadedIdentity = identityFields(orgFields).length > 0;
-
-      let capturePhotoId: string | null = null;
-      if (keepUploadedIdentity) {
-        capturePhotoId = current.photo_id?.trim() || null;
-      } else if (instituteCapture && instituteId) {
-        if (isInstituteCapturePhotoId(current.photo_id)) {
-          capturePhotoId = current.photo_id!.trim();
-        } else {
-          capturePhotoId = await allocateInstitutePhotoId(client, instituteId);
-        }
-      } else if (schoolId) {
-        if (isSchoolCapturePhotoId(current.photo_id)) {
-          capturePhotoId = current.photo_id!.trim();
-        } else {
-          capturePhotoId = await allocateSchoolPhotoId(client, schoolId);
-        }
-      }
 
       const updated = await client.query<TeacherStudentRow>(
-        capturePhotoId
-          ? `UPDATE students
-             SET photo_url = $1,
-                 photo_id = $2,
-                 status = 'captured',
-                 photo_captured_at = NOW(),
-                 updated_at = NOW()
-             WHERE id = $3
-             RETURNING ${TEACHER_STUDENT_SELECT}`
-          : `UPDATE students
-             SET photo_url = $1,
-                 status = 'captured',
-                 photo_captured_at = NOW(),
-                 updated_at = NOW()
-             WHERE id = $2
-             RETURNING ${TEACHER_STUDENT_SELECT}`,
-        capturePhotoId
-          ? [photoUrl, capturePhotoId, current.id]
-          : [photoUrl, current.id]
+        `UPDATE students
+         SET photo_url = $1,
+             status = 'captured',
+             photo_captured_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $2
+         RETURNING ${TEACHER_STUDENT_SELECT}`,
+        [photoUrl, current.id]
       );
 
       updatedStudent = updated.rows[0];

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { Student } from "../types";
-import { authenticatedStudentPhotoUrl } from "../utils/studentPhotoSrc";
+import { authenticatedStudentPhotoUrl, authenticatedStudentSignatureUrl } from "../utils/studentPhotoSrc";
 
 const VIEWER_BODY_CLASS = "student-photo-viewer-open";
 
@@ -32,17 +32,20 @@ export function StudentPhotoModal({
   students,
   onNavigate,
   onClose,
+  mode = "photo",
 }: {
   student: Student;
   students: Student[];
   onNavigate: (student: Student) => void;
   onClose: () => void;
+  mode?: "photo" | "signature";
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const isSignature = mode === "signature";
 
   const gallery = useMemo(
-    () => students.filter((s) => Boolean(s.photo_url)),
-    [students]
+    () => students.filter((s) => Boolean(isSignature ? s.signature_url : s.photo_url)),
+    [students, isSignature]
   );
 
   const currentIndex = gallery.findIndex((s) => s.id === student.id);
@@ -89,20 +92,23 @@ export function StudentPhotoModal({
     };
   }, [onClose, onNavigate, gallery, currentIndex, hasPrev, hasNext]);
 
-  const photoUrl = student.photo_url;
+  const assetUrl = isSignature ? student.signature_url : student.photo_url;
   const [src, setSrc] = useState("");
   useEffect(() => {
     let cancelled = false;
     setSrc("");
-    if (!photoUrl) return;
-    void authenticatedStudentPhotoUrl(student.id).then((url) => {
-      if (!cancelled) setSrc(url || photoUrl);
+    if (!assetUrl) return;
+    const load = isSignature
+      ? authenticatedStudentSignatureUrl(student.id)
+      : authenticatedStudentPhotoUrl(student.id);
+    void load.then((url) => {
+      if (!cancelled) setSrc(url || assetUrl);
     });
     return () => {
       cancelled = true;
     };
-  }, [student.id, photoUrl]);
-  if (!photoUrl) return null;
+  }, [student.id, assetUrl, isSignature]);
+  if (!assetUrl) return null;
 
   function goPrev(e: MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
@@ -121,7 +127,7 @@ export function StudentPhotoModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-dark-blue/55 px-4 py-8"
       role="dialog"
       aria-modal="true"
-      aria-label={`${student.student_name ?? "Student"} photo`}
+      aria-label={`${student.student_name ?? "Student"} ${isSignature ? "signature" : "photo"}`}
       onClick={onClose}
     >
       <div
@@ -165,15 +171,15 @@ export function StudentPhotoModal({
           {src ? (
           <img
             src={src}
-            alt={student.student_name ?? "Student"}
+            alt={isSignature ? `${student.student_name ?? "Student"} signature` : (student.student_name ?? "Student")}
             className="block max-h-[75vh] w-full bg-content-bg object-contain"
           />
           ) : (
             <div className="flex h-64 items-center justify-center bg-content-bg text-sm text-text-muted">
-              Loading photo…
+              {isSignature ? "Loading signature…" : "Loading photo…"}
             </div>
           )}
-          {student.photo_captured_at ? (
+          {!isSignature && student.photo_captured_at ? (
             <div className="border-t border-border px-4 py-2 text-center text-xs text-text-muted">
               Captured: {formatCaptureStamp(student.photo_captured_at)}
             </div>
@@ -183,7 +189,7 @@ export function StudentPhotoModal({
               {student.student_name ?? "—"}
             </div>
             <div className="mt-0.5 text-xs text-text-muted">
-              {student.photo_id ? `Photo ${student.photo_id} · ` : ""}
+              {student.photo_id ? `${isSignature ? "Signature" : "Photo"} ${student.photo_id} · ` : ""}
               {student.roll_no ? `Roll ${student.roll_no} · ` : ""}
               {student.class_section ?? "—"}
               {gallery.length > 1 && currentIndex >= 0 && (

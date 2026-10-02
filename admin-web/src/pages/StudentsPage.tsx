@@ -133,7 +133,13 @@ function StudentThumb({ student }: { student: Student }): ReactNode {
   );
 }
 
-function SignatureThumb({ student }: { student: Student }): ReactNode {
+function SignatureThumb({
+  student,
+  onOpen,
+}: {
+  student: Student;
+  onOpen: () => void;
+}): ReactNode {
   const [src, setSrc] = useState("");
   useEffect(() => {
     let cancelled = false;
@@ -146,14 +152,19 @@ function SignatureThumb({ student }: { student: Student }): ReactNode {
       cancelled = true;
     };
   }, [student.id, student.signature_url]);
-  if (!student.signature_url || !src) return null;
+  if (!student.signature_url) return null;
   return (
-    <img
-      src={src}
-      alt="Signature"
-      title="Signature"
-      className="h-8 w-16 rounded bg-white object-contain ring-1 ring-border"
-    />
+    <button type="button" onClick={onOpen} title="View signature" className="shrink-0">
+      {src ? (
+        <img
+          src={src}
+          alt="Signature"
+          className="h-8 w-16 rounded bg-white object-contain ring-1 ring-border"
+        />
+      ) : (
+        <span className="block h-8 w-16 animate-pulse rounded bg-content-bg ring-1 ring-border" />
+      )}
+    </button>
   );
 }
 
@@ -231,6 +242,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState("");
   const [photoStudent, setPhotoStudent] = useState<Student | null>(null);
+  const [signatureStudent, setSignatureStudent] = useState<Student | null>(null);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [deleteChoiceStudent, setDeleteChoiceStudent] = useState<Student | null>(null);
   const [confirmDeletePhotoStudent, setConfirmDeletePhotoStudent] =
@@ -800,8 +812,25 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               Delete Options
             </button>
 
-            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-toolbar-long-slot" aria-hidden />
-            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-toolbar-short-slot" aria-hidden />
+            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-feature-card detail-feature-card-short detail-toolbar-short-slot">
+              <span className="detail-feature-icon bg-[#FFEDD5] text-[#F97316]" aria-hidden>
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 3h6l6 6v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+                  <path d="M12 3v6h6M8 14h8M8 18h5" />
+                </svg>
+              </span>
+              CROPPING TOOL
+            </div>
+            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-feature-card detail-feature-card-long detail-toolbar-long-slot">
+              <span className="detail-feature-icon bg-[#DBEAFE] text-[#2563EB]" aria-hidden>
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="5" width="18" height="14" rx="2" />
+                  <circle cx="9" cy="11" r="2" />
+                  <path d="M21 16l-5-4-4 4-2-2-4 4" />
+                </svg>
+              </span>
+              ID CARD GENERATOR
+            </div>
           </div>
 
           <div className="detail-toolbar-row2">
@@ -1104,7 +1133,10 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                           >
                             <StudentThumb student={student} />
                           </button>
-                          <SignatureThumb student={student} />
+                          <SignatureThumb
+                            student={student}
+                            onOpen={() => setSignatureStudent(student)}
+                          />
                           <span className="max-w-[4.5rem] truncate text-[10px] font-medium text-text-muted">
                             {studentFieldDisplay(student, field.key, field.label)}
                           </span>
@@ -1213,6 +1245,16 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
           students={filtered}
           onNavigate={setPhotoStudent}
           onClose={() => setPhotoStudent(null)}
+        />
+      )}
+
+      {signatureStudent?.signature_url && (
+        <StudentPhotoModal
+          mode="signature"
+          student={signatureStudent}
+          students={filtered}
+          onNavigate={setSignatureStudent}
+          onClose={() => setSignatureStudent(null)}
         />
       )}
 

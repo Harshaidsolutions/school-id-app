@@ -62,29 +62,29 @@ export function LoginPageLayout({
           <div
             className={
               appBrand
-                ? "flex w-full max-w-[26rem] items-center justify-center"
-                : "flex w-full items-center justify-center md:max-w-[min(100%,26rem)] md:justify-end"
+                ? "flex w-full max-w-[22.5rem] items-center justify-center"
+                : "flex w-full items-center justify-center md:max-w-[min(100%,22.5rem)] md:justify-end"
             }
           >
-            <div className="max-h-[calc(100dvh-1.5rem)] w-full overflow-y-auto rounded-2xl border border-border/70 bg-white px-[clamp(1.25rem,2.5vw,1.75rem)] py-[clamp(0.85rem,2vh,1.35rem)] shadow-[0_8px_40px_rgba(15,23,42,0.07)]">
+            <div className="max-h-[calc(100dvh-1.25rem)] w-full overflow-y-auto rounded-2xl border border-[#E2E8F0] bg-white px-5 py-4 shadow-[0_12px_32px_rgba(99,102,241,0.12)]">
               {appBrand ? (
-                <div className="mb-4 flex w-full flex-col items-center overflow-visible px-1 text-center">
+                <div className="mb-3 flex w-full flex-col items-center overflow-visible px-1 text-center">
                   <img
                     src="/app-logo.png"
                     alt="My School ID Card"
-                    className="block h-auto max-h-[min(24vh,8.75rem)] w-auto max-w-full object-contain"
+                    className="block h-auto max-h-[min(16vh,5.5rem)] w-auto max-w-full object-contain"
                   />
                   <p
                     className={
                       brandAccent
-                        ? "mt-1.5 text-[clamp(1.45rem,2.8vw,1.85rem)] font-bold leading-tight text-[#F97316]"
+                        ? "mt-1.5 text-[clamp(1.7rem,3.2vw,2.05rem)] font-bold leading-tight text-[#F97316]"
                         : "mt-2 text-lg font-bold text-text-navy"
                     }
                   >
                     My School ID Card
                   </p>
                   {brandAccent ? (
-                    <p className="mt-1 text-xs font-medium leading-tight text-text-muted">
+                    <p className="mt-0.5 text-[13px] font-medium leading-tight text-[#64748B]">
                       Get Your Identity Here..
                     </p>
                   ) : null}
@@ -99,19 +99,19 @@ export function LoginPageLayout({
                 <button
                   type="button"
                   onClick={onTitlePress}
-                  className={`m-0 block w-full cursor-pointer border-0 bg-transparent p-0 text-center text-[clamp(1.125rem,2vw,1.375rem)] font-bold leading-tight no-underline hover:no-underline ${titleClassName ?? "text-text-navy"}`}
+                  className={`m-0 block w-full cursor-pointer border-0 bg-transparent p-0 text-center text-[1.125rem] font-semibold leading-tight no-underline hover:no-underline ${titleClassName ?? "text-text-navy"}`}
                 >
                   {title}
                 </button>
               ) : (
                 <h1
-                  className={`text-center text-[clamp(1.125rem,2vw,1.375rem)] font-bold ${titleClassName ?? "text-text-navy"}`}
+                  className={`text-center text-[1.125rem] font-semibold ${titleClassName ?? "text-text-navy"}`}
                 >
                   {title}
                 </h1>
               )}
 
-              <div className="mt-3">{children}</div>
+              <div className="mt-2.5">{children}</div>
               {footer ? <div className="mt-3">{footer}</div> : null}
             </div>
           </div>

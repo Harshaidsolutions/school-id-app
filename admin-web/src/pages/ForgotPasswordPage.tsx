@@ -88,10 +88,10 @@ export function ForgotPasswordPage() {
         </div>
       }
     >
-      <p className="mb-4 text-center text-sm text-text-muted">
+      <p className="mb-3 text-center text-[13px] text-text-muted">
         Enter your email and we will send a verification code.
       </p>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
         <IconField
           label="Email"
           icon={

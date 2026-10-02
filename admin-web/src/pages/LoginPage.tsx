@@ -113,7 +113,7 @@ export function LoginPage() {
         />
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
         <IconField
           label="User ID"
           icon={
@@ -175,7 +175,7 @@ export function LoginPage() {
 
         {error && <div className="alert-error">{error}</div>}
 
-        <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 text-sm sm:text-[15px]">
+        <button type="submit" disabled={loading} className="btn-primary h-10 w-full text-[15px]">
           {loading ? "Logging in…" : "Login"}
         </button>
       </form>
@@ -213,23 +213,41 @@ function SuperAdminContacts({
   const mail = email?.trim() || null;
   if (!chat && !mail) return null;
   return (
-    <div className="flex w-full flex-col items-center gap-1 text-center text-sm leading-snug">
+    <div className="flex w-full items-stretch justify-center gap-3">
       {chat ? (
         <a
-          className="max-w-full break-words font-medium text-button-blue hover:underline"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#F0FDF4]"
           href={`https://wa.me/${waDigits(chat)}`}
           target="_blank"
           rel="noreferrer"
         >
-          WhatsApp: {formatWhatsApp(chat)}
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F0FDF4] text-[#22C55E]">
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M21 11.5a8.4 8.4 0 0 1-9.1 8.4L6 21l1.2-4.4A8.5 8.5 0 1 1 21 11.5z" />
+            </svg>
+          </span>
+          <span className="min-w-0 text-left">
+            <span className="block text-[11px] font-semibold text-[#1E293B]">WhatsApp</span>
+            <span className="block truncate text-[11px] font-medium text-[#64748B]">{formatWhatsApp(chat)}</span>
+          </span>
         </a>
       ) : null}
+      {chat && mail ? <span className="my-1 w-px shrink-0 bg-[#E2E8F0]" aria-hidden /> : null}
       {mail ? (
         <a
-          className="max-w-full break-all font-medium text-button-blue hover:underline"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#EFF6FF]"
           href={`mailto:${mail}`}
         >
-          Email: {mail}
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EFF6FF] text-[#2563EB]">
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <path d="M3 7l9 7 9-7" />
+            </svg>
+          </span>
+          <span className="min-w-0 text-left">
+            <span className="block text-[11px] font-semibold text-[#1E293B]">Email</span>
+            <span className="block truncate text-[11px] font-medium text-[#64748B]">{mail}</span>
+          </span>
         </a>
       ) : null}
     </div>
