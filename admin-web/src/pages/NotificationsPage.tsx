@@ -283,7 +283,7 @@ export function NotificationsPage() {
                 <button
                   type="button"
                   onClick={toggleAllInstitutes}
-                  className="text-xs font-semibold text-accent-purple hover:underline"
+                  className="text-xs font-semibold text-button-blue hover:underline"
                 >
                   {allInstitutesSelected
                     ? "Clear all institutes"
@@ -336,7 +336,7 @@ export function NotificationsPage() {
                           type="checkbox"
                           checked={selectedInstituteIds.has(inst.id)}
                           onChange={() => toggleInstitute(inst.id)}
-                          className="h-4 w-4 rounded border-border text-accent-purple focus:ring-accent-purple/30"
+                          className="h-4 w-4 rounded border-border text-button-blue focus:ring-button-blue/30"
                         />
                         {inst.name}
                       </label>

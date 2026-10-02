@@ -635,7 +635,7 @@ export function ModelsPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="border-b border-border px-5 py-4">
-              <h2 className="text-lg font-bold uppercase text-button-blue">
+              <h2 className="text-lg font-semibold text-text-navy">
                 {descriptionPreview.title}
               </h2>
               <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-text-muted">

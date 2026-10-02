@@ -131,10 +131,10 @@ function SidebarNav({
           end={item.to === "/"}
           onClick={onNavigate}
           className={({ isActive }) =>
-            `flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] ${
+            `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] ${
               isActive
                 ? "nav-active"
-                : "font-medium text-text-muted hover:bg-content-bg hover:text-text-navy"
+                : "font-medium text-slate-300 hover:bg-[#1E293B] hover:text-white"
             }`
           }
         >
@@ -316,9 +316,11 @@ export function AppLayout() {
 
   const sidebarContent = (
     <>
-      <div className="shrink-0 border-b border-border px-2 py-2.5">
+      <div className="shrink-0 border-b border-[#1E293B] px-3 py-3">
         {user?.isSuperAdmin === true ? (
-          <HarshaLogo compact />
+          <div className="rounded-lg bg-white px-2 py-1">
+            <HarshaLogo compact />
+          </div>
         ) : (
           <div className="px-1 py-1 text-sm">
             {user?.photoUrl ? (
@@ -328,8 +330,8 @@ export function AppLayout() {
                 className="mb-2 h-16 w-16 rounded-lg bg-white object-contain"
               />
             ) : null}
-            <div className="text-text-muted">Hi</div>
-            <div className="font-semibold text-text-navy">
+            <div className="text-slate-400">Hi</div>
+            <div className="font-semibold text-white">
               {user?.displayName?.trim() || user?.username || user?.email}
             </div>
           </div>
@@ -348,7 +350,7 @@ export function AppLayout() {
     <div className="flex h-screen overflow-hidden bg-content-bg">
       {!hideSidebar && (
         <>
-          <aside className="app-sidebar hidden h-full shrink-0 flex-col overflow-hidden border-r border-border bg-white lg:flex">
+          <aside className="app-sidebar hidden h-full shrink-0 flex-col overflow-hidden border-r border-[#1E293B] bg-[#0F172A] lg:flex">
             {sidebarContent}
           </aside>
 
@@ -362,7 +364,7 @@ export function AppLayout() {
           )}
 
           <aside
-            className={`app-sidebar fixed inset-y-0 left-0 z-40 flex h-full flex-col overflow-hidden border-r border-border bg-white transition-transform duration-200 lg:hidden ${
+            className={`app-sidebar fixed inset-y-0 left-0 z-40 flex h-full flex-col overflow-hidden border-r border-[#1E293B] bg-[#0F172A] transition-transform duration-200 lg:hidden ${
               mobileOpen ? "translate-x-0" : "-translate-x-full"
             }`}
           >
@@ -373,7 +375,7 @@ export function AppLayout() {
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header
-          className={`z-20 flex shrink-0 items-center gap-3 border-b border-border bg-white px-4 py-3 sm:px-6 ${
+          className={`z-20 flex shrink-0 items-center gap-4 border-b border-border bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:px-6 ${
             useLockedPageScroll ? "" : "sticky top-0"
           }`}
         >
@@ -403,20 +405,18 @@ export function AppLayout() {
           ) : null}
 
           <div
-            className={`min-w-0 flex-1 truncate ${
-              showCenteredHeading
-                ? "text-center text-xl font-bold text-button-blue sm:text-2xl"
-                : "text-lg font-semibold text-button-blue"
+            className={`min-w-0 flex-1 truncate text-lg font-semibold text-text-navy sm:text-xl ${
+              showCenteredHeading ? "text-center" : ""
             }`}
           >
-            {title.toUpperCase()}
+            {title}
           </div>
 
           {isDashboard && (
             <select
               value={year}
               onChange={(e) => setYear(e.target.value)}
-              className="max-w-[140px] rounded-lg border border-border bg-white px-2 py-2 text-sm text-text-navy sm:max-w-none sm:px-3"
+              className="max-w-[140px] rounded-lg border border-border bg-white px-2 py-2 text-sm font-medium text-text-navy outline-none focus:border-button-blue focus:ring-2 focus:ring-button-blue/20 sm:max-w-none sm:px-3"
               aria-label="Academic year"
             >
               {years.map((item) => (

@@ -1126,14 +1126,14 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   <td className="col-captured">
                     {captured ? (
                       <span
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-green-soft text-parrot-green"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-green-soft text-royal-green"
                         title="Captured"
                       >
                         <CheckIcon />
                       </span>
                     ) : (
                       <span
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-orange-soft text-primary-orange"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-warning/10 text-warning"
                         title="Pending"
                       >
                         <ClockIcon />

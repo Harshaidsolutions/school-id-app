@@ -78,6 +78,7 @@ export function ForgotPasswordPage() {
   return (
     <LoginPageLayout
       appBrand
+      brandAccent
       title="Forgot Password"
       footer={
         <div className="text-center">

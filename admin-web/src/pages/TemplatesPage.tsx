@@ -301,7 +301,7 @@ export function TemplatesPage() {
                 className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
                   tab === "all"
                     ? "nav-active"
-                    : "bg-content-bg text-text-navy hover:bg-orange-soft"
+                    : "bg-content-bg text-text-navy hover:bg-blue-soft"
                 }`}
               >
                 All
@@ -314,7 +314,7 @@ export function TemplatesPage() {
                   className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
                     tab === item.key
                       ? "nav-active"
-                      : "bg-content-bg text-text-navy hover:bg-orange-soft"
+                      : "bg-content-bg text-text-navy hover:bg-blue-soft"
                   }`}
                 >
                   {item.label.replace(" – ", " ")}

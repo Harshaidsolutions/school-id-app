@@ -231,7 +231,7 @@ function SuperAdminContactCard() {
 
   return (
     <section className="dashboard-section">
-      <h2 className="dashboard-section-title uppercase">Super Admin contact</h2>
+      <h2 className="dashboard-section-title">Super Admin contact</h2>
       <div className="card divide-y divide-border">
         {rows.map(([label, value]) => (
           <div key={label} className="px-4 py-3 text-sm">
@@ -382,15 +382,15 @@ export function DashboardPage() {
 
     { iconBg: "bg-blue-soft", iconColor: "text-button-blue" },
 
-    { iconBg: "bg-teal-soft", iconColor: "text-accent-teal" },
+    { iconBg: "bg-info/10", iconColor: "text-info" },
 
-    { iconBg: "bg-green-soft", iconColor: "text-parrot-green" },
+    { iconBg: "bg-green-soft", iconColor: "text-royal-green" },
 
-    { iconBg: "bg-orange-soft", iconColor: "text-primary-orange" },
+    { iconBg: "bg-warning/10", iconColor: "text-warning" },
 
-    { iconBg: "bg-purple-soft", iconColor: "text-accent-purple" },
+    { iconBg: "bg-blue-soft", iconColor: "text-button-blue" },
 
-    { iconBg: "bg-pink-soft", iconColor: "text-accent-pink" },
+    { iconBg: "bg-green-soft", iconColor: "text-royal-green" },
 
   ];
 
@@ -425,7 +425,7 @@ export function DashboardPage() {
 
           <section className="dashboard-section">
 
-            <h2 className="dashboard-section-title uppercase">Schools</h2>
+            <h2 className="dashboard-section-title">Schools</h2>
 
             <MetricPatternGrid cards={schoolCards} cardStyle={cardStyle} icon={icon} />
 
@@ -435,7 +435,7 @@ export function DashboardPage() {
 
           <section className="dashboard-section">
 
-            <h2 className="dashboard-section-title uppercase">Institutes</h2>
+            <h2 className="dashboard-section-title">Institutes</h2>
 
             <MetricPatternGrid cards={instituteCards} cardStyle={cardStyle} icon={icon} />
 
@@ -473,7 +473,7 @@ export function DashboardPage() {
 
                 value={summary?.activeInstitutes ?? 0}
 
-                tone="border-orange-200 bg-orange-soft text-primary-orange"
+                tone="border-info/30 bg-info/10 text-info"
 
               />
 
@@ -483,7 +483,7 @@ export function DashboardPage() {
 
                 value={summary?.inactiveInstitutes ?? 0}
 
-                tone="border-orange-200 bg-orange-soft text-primary-orange"
+                tone="border-info/30 bg-info/10 text-info"
 
               />
 

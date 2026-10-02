@@ -1,7 +1,7 @@
 import type { Student } from "../types";
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-orange-soft text-primary-orange border-primary-orange/30",
+  pending: "bg-warning/10 text-warning border-warning/30",
   captured: "bg-green-soft text-royal-green border-parrot-green/50",
   printed: "bg-green-soft text-royal-green border-parrot-green/50",
   completed: "bg-green-soft text-royal-green border-parrot-green/50",

@@ -196,7 +196,7 @@ export function BulkUploadPage() {
             Validation failed — fix these rows and re-upload
           </div>
           <table className="min-w-full divide-y divide-border text-sm">
-            <thead className="bg-surface-muted text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+            <thead className="bg-[#F8FAFC] text-left text-xs font-semibold uppercase tracking-wide text-text-navy">
               <tr>
                 <th className="px-4 py-3">Row</th>
                 <th className="px-4 py-3">Reason</th>
