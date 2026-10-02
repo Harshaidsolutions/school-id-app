@@ -127,7 +127,7 @@ function StudentThumb({ student }: { student: Student }): ReactNode {
       controller.abort();
       observer.disconnect();
     };
-  }, [student.id, student.photo_url, student.photo_captured_at]);
+  }, [student.id, student.photo_url, student.photo_captured_at, student.updated_at]);
   return (
     <div ref={holder} className="h-12 w-12 shrink-0">
       {!student.photo_url ? (
@@ -1304,7 +1304,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   ? {
                       ...item,
                       photo_url: student.photo_url,
-                      photo_captured_at: student.photo_captured_at,
+                      photo_captured_at: item.photo_captured_at,
                       status: student.status,
                       updated_at: student.updated_at,
                     }

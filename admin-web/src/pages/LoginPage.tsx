@@ -113,7 +113,7 @@ export function LoginPage() {
         />
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-2">
+      <form onSubmit={handleSubmit} className="space-y-3">
         <IconField
           label="User ID"
           icon={

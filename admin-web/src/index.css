@@ -118,16 +118,16 @@
   }
 
   .auth-card {
-    padding: 0.7rem 1.25rem 0.65rem;
+    padding: 1rem 1.25rem 0.9rem;
   }
 
   .auth-card .input-field-icon {
-    padding-top: 0.4rem;
-    padding-bottom: 0.4rem;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
   }
 
   .auth-card .btn-primary {
-    height: 2.25rem;
+    height: 2.5rem;
     padding-top: 0;
     padding-bottom: 0;
   }
@@ -170,7 +170,12 @@
   }
 
   .page-heading {
-    @apply text-center text-[1.625rem] font-bold leading-tight text-text-navy;
+    font-family: var(--font-sans);
+    font-size: clamp(1.1875rem, 1.5vw, 1.375rem);
+    font-weight: 600;
+    line-height: 1.3;
+    color: #334155;
+    text-align: center;
   }
 
   .app-sidebar {
@@ -197,7 +202,8 @@
     background-color: #f7faff;
     background-image:
       radial-gradient(circle at top right, rgba(99, 102, 241, 0.08), transparent 35%),
-      radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.06), transparent 35%);
+      radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.06), transparent 35%),
+      radial-gradient(circle at top left, rgba(249, 115, 22, 0.05), transparent 28%);
   }
 
   .app-header {
@@ -206,10 +212,11 @@
   }
 
   .app-header-title {
+    font-family: var(--font-sans);
     font-size: clamp(1.625rem, 2vw, 1.875rem);
-    font-weight: 700;
-    line-height: 1.2;
-    color: #1e293b;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #334155;
   }
 
   .app-page {
@@ -936,5 +943,6 @@ body {
   background-color: #f7faff;
   background-image:
     radial-gradient(circle at top right, rgba(99, 102, 241, 0.08), transparent 35%),
-    radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.06), transparent 35%);
+    radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.06), transparent 35%),
+    radial-gradient(circle at top left, rgba(249, 115, 22, 0.05), transparent 28%);
 }

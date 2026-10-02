@@ -80,6 +80,7 @@ export function ForgotPasswordPage() {
       appBrand
       brandAccent
       title="Forgot Password"
+      titleClassName="text-[#22C55E]"
       footer={
         <div className="text-center">
           <Link to="/login" className="text-sm font-medium text-button-blue hover:underline">
@@ -91,7 +92,7 @@ export function ForgotPasswordPage() {
       <p className="mb-2 text-center text-[13px] leading-snug text-text-muted">
         Enter your email and we will send a verification code.
       </p>
-      <form onSubmit={handleSubmit} className="space-y-2">
+      <form onSubmit={handleSubmit} className="space-y-3">
         <IconField
           label="Email"
           icon={

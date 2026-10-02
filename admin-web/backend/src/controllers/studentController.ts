@@ -949,7 +949,7 @@ export async function uploadStudentPhotoAdmin(
         `UPDATE students
          SET photo_url = $1,
              status = 'captured',
-             photo_captured_at = NOW(),
+             photo_captured_at = COALESCE(photo_captured_at, NOW()),
              updated_at = NOW()
          WHERE id = $2
          RETURNING ${STUDENT_SELECT}`,
