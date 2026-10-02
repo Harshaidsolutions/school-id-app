@@ -29,6 +29,8 @@ function MetricCard({
 
   iconColor,
 
+  cardClass = "",
+
   linkTo,
 
   suffix,
@@ -47,6 +49,8 @@ function MetricCard({
 
   iconColor: string;
 
+  cardClass?: string;
+
   linkTo?: string;
 
   suffix?: string;
@@ -57,7 +61,7 @@ function MetricCard({
 
   return (
 
-    <div className={`dashboard-stat-card h-full ${spanTwo ? "dashboard-stat-card-span-2" : ""}`}>
+    <div className={`dashboard-stat-card h-full ${cardClass} ${spanTwo ? "dashboard-stat-card-span-2" : ""}`}>
 
       <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}>
 
@@ -145,7 +149,7 @@ function MetricPatternGrid({
 
   }>;
 
-  cardStyle: Array<{ iconBg: string; iconColor: string }>;
+  cardStyle: Array<{ iconBg: string; iconColor: string; cardClass?: string }>;
 
   icon: ReactNode;
 
@@ -380,17 +384,17 @@ export function DashboardPage() {
 
   const cardStyle = [
 
-    { iconBg: "bg-blue-soft", iconColor: "text-button-blue" },
+    { iconBg: "bg-white/80", iconColor: "text-button-blue", cardClass: "bg-[#EFF6FF]" },
 
-    { iconBg: "bg-info/10", iconColor: "text-info" },
+    { iconBg: "bg-white/80", iconColor: "text-[#22C55E]", cardClass: "bg-[#F0FDF4]" },
 
-    { iconBg: "bg-green-soft", iconColor: "text-royal-green" },
+    { iconBg: "bg-white/80", iconColor: "text-primary-orange", cardClass: "bg-[#FFF7ED]" },
 
-    { iconBg: "bg-warning/10", iconColor: "text-warning" },
+    { iconBg: "bg-white/80", iconColor: "text-accent-purple", cardClass: "bg-[#F5F3FF]" },
 
-    { iconBg: "bg-blue-soft", iconColor: "text-button-blue" },
+    { iconBg: "bg-white/80", iconColor: "text-[#38BDF8]", cardClass: "bg-[#F0F9FF]" },
 
-    { iconBg: "bg-green-soft", iconColor: "text-royal-green" },
+    { iconBg: "bg-white/80", iconColor: "text-accent-pink", cardClass: "bg-[#FDF2F8]" },
 
   ];
 
@@ -453,7 +457,7 @@ export function DashboardPage() {
 
                 value={summary?.activeSchools ?? 0}
 
-                tone="border-blue-200 bg-blue-soft text-button-blue"
+                tone="border-[#BBF7D0] bg-[#F0FDF4] text-[#22C55E]"
 
               />
 
@@ -463,7 +467,7 @@ export function DashboardPage() {
 
                 value={summary?.inactiveSchools ?? 0}
 
-                tone="border-blue-200 bg-blue-soft text-button-blue"
+                tone="border-[#E2E8F0] bg-[#EFF6FF] text-[#64748B]"
 
               />
 
@@ -473,7 +477,7 @@ export function DashboardPage() {
 
                 value={summary?.activeInstitutes ?? 0}
 
-                tone="border-info/30 bg-info/10 text-info"
+                tone="border-[#BBF7D0] bg-[#F0FDF4] text-[#22C55E]"
 
               />
 
@@ -483,7 +487,7 @@ export function DashboardPage() {
 
                 value={summary?.inactiveInstitutes ?? 0}
 
-                tone="border-info/30 bg-info/10 text-info"
+                tone="border-[#E2E8F0] bg-[#EFF6FF] text-[#64748B]"
 
               />
 

@@ -131,10 +131,10 @@ function SidebarNav({
           end={item.to === "/"}
           onClick={onNavigate}
           className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] ${
+            `flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition duration-200 ${
               isActive
                 ? "nav-active"
-                : "font-medium text-slate-300 hover:bg-[#1E293B] hover:text-white"
+                : "font-medium text-white/90 hover:bg-white/15 hover:text-white"
             }`
           }
         >
@@ -316,7 +316,7 @@ export function AppLayout() {
 
   const sidebarContent = (
     <>
-      <div className="shrink-0 border-b border-[#1E293B] px-3 py-3">
+      <div className="shrink-0 border-b border-white/25 px-3 py-3">
         {user?.isSuperAdmin === true ? (
           <div className="rounded-lg bg-white px-2 py-1">
             <HarshaLogo compact />
@@ -330,7 +330,7 @@ export function AppLayout() {
                 className="mb-2 h-16 w-16 rounded-lg bg-white object-contain"
               />
             ) : null}
-            <div className="text-slate-400">Hi</div>
+            <div className="text-white/75">Hi</div>
             <div className="font-semibold text-white">
               {user?.displayName?.trim() || user?.username || user?.email}
             </div>
@@ -347,10 +347,10 @@ export function AppLayout() {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-content-bg">
+    <div className="app-shell flex h-screen overflow-hidden">
       {!hideSidebar && (
         <>
-          <aside className="app-sidebar hidden h-full shrink-0 flex-col overflow-hidden border-r border-[#1E293B] bg-[#0F172A] lg:flex">
+          <aside className="app-sidebar hidden h-full shrink-0 flex-col overflow-hidden lg:flex">
             {sidebarContent}
           </aside>
 
@@ -364,7 +364,7 @@ export function AppLayout() {
           )}
 
           <aside
-            className={`app-sidebar fixed inset-y-0 left-0 z-40 flex h-full flex-col overflow-hidden border-r border-[#1E293B] bg-[#0F172A] transition-transform duration-200 lg:hidden ${
+            className={`app-sidebar fixed inset-y-0 left-0 z-40 flex h-full flex-col overflow-hidden transition-transform duration-200 lg:hidden ${
               mobileOpen ? "translate-x-0" : "-translate-x-full"
             }`}
           >
@@ -375,7 +375,7 @@ export function AppLayout() {
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header
-          className={`z-20 flex shrink-0 items-center gap-4 border-b border-border bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:px-6 ${
+          className={`app-header z-20 flex shrink-0 items-center gap-4 border-b border-[#E2E8F0] px-4 py-3 sm:px-6 ${
             useLockedPageScroll ? "" : "sticky top-0"
           }`}
         >
@@ -405,7 +405,7 @@ export function AppLayout() {
           ) : null}
 
           <div
-            className={`min-w-0 flex-1 truncate text-lg font-semibold text-text-navy sm:text-xl ${
+            className={`app-header-title min-w-0 flex-1 truncate ${
               showCenteredHeading ? "text-center" : ""
             }`}
           >
@@ -431,7 +431,7 @@ export function AppLayout() {
             <div className="relative" ref={noticeRef}>
               <button
                 type="button"
-                className="relative rounded-lg p-2 text-text-muted hover:bg-content-bg"
+                className="relative rounded-xl p-2 text-button-blue hover:bg-blue-soft"
                 aria-label="Notifications"
                 aria-expanded={user?.isSuperAdmin === true ? noticeOpen : undefined}
                 onClick={() => {
@@ -641,7 +641,7 @@ export function AppLayout() {
               onClick={() => setMenuOpen((v) => !v)}
               className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-content-bg"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-button-blue text-xs font-bold text-white">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] text-sm font-semibold text-white shadow-[0_6px_14px_rgba(99,102,241,0.28)]">
                 A
               </span>
               <span className="hidden text-left sm:block">

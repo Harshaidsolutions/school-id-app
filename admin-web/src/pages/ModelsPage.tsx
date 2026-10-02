@@ -418,7 +418,7 @@ export function ModelsPage() {
                         <video
                           src={item.video_url}
                           controls
-                          className="mt-2 h-16 w-24 rounded bg-black"
+                          className="mt-2 h-16 w-24 rounded bg-[#EFF6FF]"
                         />
                       ) : null}
                     </td>
@@ -541,7 +541,7 @@ export function ModelsPage() {
                 />
               </div>
               {videoPreview ? (
-                <video src={videoPreview} controls className="mt-2 h-28 w-full rounded bg-black" />
+                <video src={videoPreview} controls className="mt-2 h-28 w-full rounded bg-[#EFF6FF]" />
               ) : null}
               {videoFile ? (
                 <button type="button" className="mt-1 text-xs text-danger" onClick={() => setVideoFile(null)}>
