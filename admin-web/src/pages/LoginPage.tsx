@@ -17,7 +17,7 @@ function IconField({
 }) {
   return (
     <label className="block w-full">
-      <span className="mb-1.5 block text-sm font-medium text-text-navy">{label}</span>
+      <span className="mb-1 block text-[13px] font-semibold text-[#1E293B]">{label}</span>
       <div className="relative w-full">
         <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-muted">
           {icon}
@@ -113,7 +113,7 @@ export function LoginPage() {
         />
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-2">
         <IconField
           label="User ID"
           icon={

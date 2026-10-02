@@ -18,8 +18,14 @@ function poolConfigFromDatabaseUrl(connectionString: string | undefined) {
     connectionString.includes("localhost") ||
     connectionString.includes("127.0.0.1");
 
+  const poolSize = {
+    max: 20,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
+  };
+
   if (isLocal) {
-    return { connectionString };
+    return { connectionString, ...poolSize };
   }
 
   let cleaned = connectionString;
@@ -40,6 +46,7 @@ function poolConfigFromDatabaseUrl(connectionString: string | undefined) {
   return {
     connectionString: cleaned,
     ssl: { rejectUnauthorized: false as const },
+    ...poolSize,
   };
 }
 

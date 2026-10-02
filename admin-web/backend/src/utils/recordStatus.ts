@@ -3,6 +3,7 @@ import { AppError } from "../middleware/errorHandler";
 import type { FormFieldConfig } from "../constants/formFields";
 import { loadFormConfigForOrg } from "../controllers/formConfigController";
 import { getStudentFieldValue } from "./studentFieldAccess";
+import { persistCanonicalPhotoIds, withCanonicalPhotoId } from "./photoIdentity";
 
 export function hasCapturedPhoto(photoUrl: string | null | undefined): boolean {
   return Boolean(photoUrl && photoUrl.trim());
@@ -142,6 +143,7 @@ export async function withPendingFlags<
   const out: Array<
     T & { pending_photo: boolean; pending_data: boolean; fully_captured: boolean }
   > = [];
+  const persist: { id: string; photoId: string }[] = [];
   for (const row of rows) {
     const schoolId = row.school_id ?? null;
     const instituteId = row.institute_id ?? null;
@@ -152,18 +154,33 @@ export async function withPendingFlags<
       cache.set(key, ctx);
     }
     const institute = Boolean(instituteId) && !schoolId;
-    const photo = hasCapturedPhoto(row.photo_url);
+    const unified = withCanonicalPhotoId(
+      row as T & {
+        id?: string;
+        photo_id?: string | null;
+        extra_fields?: unknown;
+        field_labels?: unknown;
+      }
+    );
+    if (unified.persist) persist.push(unified.persist);
+    const next = unified.row as T;
+    const photo = hasCapturedPhoto(next.photo_url);
     const complete = hasAllRequiredFieldData(
-      row as unknown as Record<string, unknown>,
+      next as unknown as Record<string, unknown>,
       ctx.fields,
       ctx.visibility,
       institute
     );
     out.push({
-      ...row,
+      ...next,
       pending_photo: !photo,
       pending_data: !complete,
       fully_captured: photo && complete,
+    });
+  }
+  if (persist.length > 0) {
+    void persistCanonicalPhotoIds(persist).catch(() => {
+      /* The response already uses the Excel number. A failed write can retry next load. */
     });
   }
   return out;

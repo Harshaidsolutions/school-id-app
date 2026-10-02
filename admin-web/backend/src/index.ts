@@ -1,6 +1,7 @@
 import "dotenv/config";
 import path from "path";
 import fs from "fs";
+import zlib from "zlib";
 import express from "express";
 import cors from "cors";
 import routes from "./routes";
@@ -28,6 +29,38 @@ app.use(
 );
 app.use(express.json());
 
+/** Shrink large JSON lists (student tables) without an extra dependency. */
+app.use((req, res, next) => {
+  const accept = String(req.headers["accept-encoding"] ?? "");
+  if (!/\bgzip\b/.test(accept)) {
+    next();
+    return;
+  }
+  const originalJson = res.json.bind(res);
+  res.json = ((body: unknown) => {
+    let payload: Buffer;
+    try {
+      payload = Buffer.from(JSON.stringify(body ?? null));
+    } catch {
+      return originalJson(body);
+    }
+    if (payload.length < 2048) return originalJson(body);
+    zlib.gzip(payload, { level: 4 }, (err, gz) => {
+      if (err || res.headersSent) {
+        if (!res.headersSent) originalJson(body);
+        return;
+      }
+      res.setHeader("Content-Encoding", "gzip");
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.setHeader("Vary", "Accept-Encoding");
+      res.setHeader("Content-Length", gz.length);
+      res.end(gz);
+    });
+    return res;
+  }) as typeof res.json;
+  next();
+});
+
 // ---------------------------------------------------------------------------
 // Middleware / route order (critical):
 //   (a) /api/* API routes
@@ -48,6 +81,15 @@ app.use(
   express.static(publicDir, {
     index: false, // never auto-serve index.html here; SPA handler owns that
     fallthrough: true,
+    setHeaders(res, filePath) {
+      if (filePath.endsWith(`${path.sep}index.html`)) {
+        res.setHeader("Cache-Control", "no-cache");
+        return;
+      }
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      }
+    },
   })
 );
 

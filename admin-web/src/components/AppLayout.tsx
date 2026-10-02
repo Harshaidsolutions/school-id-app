@@ -131,7 +131,7 @@ function SidebarNav({
           end={item.to === "/"}
           onClick={onNavigate}
           className={({ isActive }) =>
-            `flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition duration-200 ${
+            `flex items-center justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] transition duration-200 ${
               isActive
                 ? "nav-active"
                 : "font-medium text-white/90 hover:bg-white/15 hover:text-white"
@@ -252,7 +252,7 @@ export function AppLayout() {
       }
     }
     void loadUnread();
-    const timer = window.setInterval(() => void loadUnread(), 4000);
+    const timer = window.setInterval(() => void loadUnread(), 20000);
     return () => {
       cancelled = true;
       window.clearInterval(timer);

@@ -26,37 +26,8 @@ export async function getDashboardSummary(
       ? `(owner_admin_id = $1 OR owner_admin_id IS NULL)`
       : `owner_admin_id = $1`;
 
-    const schoolValues: unknown[] = [scope.adminUserId];
     const schoolWhere = ` WHERE ${ownedSchool}`;
-
-    const instituteValues: unknown[] = [scope.adminUserId];
     const instituteWhere = ` WHERE ${ownedInstitute}`;
-
-    const schoolStats = await pool.query<{
-      total: string;
-      active: string;
-      inactive: string;
-    }>(
-      `SELECT
-         COUNT(*)::text AS total,
-         COUNT(*) FILTER (WHERE COALESCE(is_active, true) = true)::text AS active,
-         COUNT(*) FILTER (WHERE COALESCE(is_active, true) = false)::text AS inactive
-       FROM schools${schoolWhere}`,
-      schoolValues
-    );
-
-    const instituteStats = await pool.query<{
-      total: string;
-      active: string;
-      inactive: string;
-    }>(
-      `SELECT
-         COUNT(*)::text AS total,
-         COUNT(*) FILTER (WHERE COALESCE(is_active, true) = true)::text AS active,
-         COUNT(*) FILTER (WHERE COALESCE(is_active, true) = false)::text AS inactive
-       FROM institutes${instituteWhere}`,
-      instituteValues
-    );
 
     const studentValues: unknown[] = [scope.adminUserId];
     const studentFilters: string[] = [
@@ -70,21 +41,6 @@ export async function getDashboardSummary(
 
     const capturedExpr = `LOWER(COALESCE(s.status, '')) IN ('captured', 'printed')`;
 
-    const studentStats = await pool.query<{
-      total: string;
-      captured: string;
-      uncaptured: string;
-    }>(
-      `SELECT
-         COUNT(*)::text AS total,
-         COUNT(*) FILTER (WHERE ${capturedExpr})::text AS captured,
-         COUNT(*) FILTER (WHERE NOT (${capturedExpr}))::text AS uncaptured
-       FROM students s
-       INNER JOIN schools sc ON sc.id = s.school_id
-       ${studentWhere}`,
-      studentValues
-    );
-
     const instituteMemberValues: unknown[] = [scope.adminUserId];
     const instituteMemberFilters: string[] = [
       "s.institute_id IS NOT NULL",
@@ -95,29 +51,7 @@ export async function getDashboardSummary(
     ];
     const instituteMemberWhere = `WHERE ${instituteMemberFilters.join(" AND ")}`;
 
-    const instituteMemberStats = await pool.query<{
-      total: string;
-      captured: string;
-      uncaptured: string;
-    }>(
-      `SELECT
-         COUNT(*)::text AS total,
-         COUNT(*) FILTER (WHERE ${capturedExpr})::text AS captured,
-         COUNT(*) FILTER (WHERE NOT (${capturedExpr}))::text AS uncaptured
-       FROM students s
-       INNER JOIN institutes i ON i.id = s.institute_id
-       ${instituteMemberWhere}`,
-      instituteMemberValues
-    );
-
-    const templateCount = await pool.query<{ count: string }>(
-      `SELECT COUNT(*)::text AS count FROM templates WHERE owner_admin_id = $1`,
-      [scope.adminUserId]
-    );
-    const modelCount = await pool.query<{ count: string }>(
-      `SELECT COUNT(*)::text AS count FROM catalog_items WHERE kind = 'model' AND owner_admin_id = $1`,
-      [scope.adminUserId]
-    );
+    const modelCountSql = `SELECT COUNT(*)::text AS count FROM catalog_items WHERE kind = 'model' AND owner_admin_id = $1`;
 
     const overviewSchoolFilter = seeAll
       ? ` AND (s.owner_admin_id = $1 OR s.owner_admin_id IS NULL)`
@@ -127,18 +61,11 @@ export async function getDashboardSummary(
       : ` AND i.owner_admin_id = $1`;
     const overviewValues = [scope.adminUserId];
 
-    const overview = await pool.query<{
-      day: string;
-      schools: string;
-      institutes: string;
-    }>(
-      `SELECT
+    const overviewSql = `SELECT
          to_char(d::date, 'YYYY-MM-DD') AS day,
          (SELECT COUNT(*)::text FROM schools s WHERE s.created_at::date = d::date${overviewSchoolFilter}) AS schools,
          (SELECT COUNT(*)::text FROM institutes i WHERE i.created_at::date = d::date${overviewInstituteFilter}) AS institutes
-       FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, INTERVAL '1 day') AS d`,
-      overviewValues
-    );
+       FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, INTERVAL '1 day') AS d`;
 
     const activityValues: unknown[] = [];
     const activityParts: string[] = [];
@@ -163,18 +90,72 @@ export async function getDashboardSummary(
       `SELECT kind, name, created_at FROM catalog_items WHERE owner_admin_id = $${catalogParam}`
     );
 
-    const activity = await pool.query<{
-      kind: string;
-      title: string;
-      created_at: string;
-    }>(
-      `SELECT kind, title, created_at FROM (
+    const activitySql = `SELECT kind, title, created_at FROM (
          ${activityParts.join(" UNION ALL ")}
        ) x
        ORDER BY created_at DESC NULLS LAST
-       LIMIT 8`,
-      activityValues
-    );
+       LIMIT 8`;
+
+    const [
+      schoolStats,
+      instituteStats,
+      studentStats,
+      instituteMemberStats,
+      templateCount,
+      modelCount,
+      overview,
+      activity,
+    ] = await Promise.all([
+      pool.query<{ total: string; active: string; inactive: string }>(
+        `SELECT
+           COUNT(*)::text AS total,
+           COUNT(*) FILTER (WHERE COALESCE(is_active, true) = true)::text AS active,
+           COUNT(*) FILTER (WHERE COALESCE(is_active, true) = false)::text AS inactive
+         FROM schools${schoolWhere}`,
+        [scope.adminUserId]
+      ),
+      pool.query<{ total: string; active: string; inactive: string }>(
+        `SELECT
+           COUNT(*)::text AS total,
+           COUNT(*) FILTER (WHERE COALESCE(is_active, true) = true)::text AS active,
+           COUNT(*) FILTER (WHERE COALESCE(is_active, true) = false)::text AS inactive
+         FROM institutes${instituteWhere}`,
+        [scope.adminUserId]
+      ),
+      pool.query<{ total: string; captured: string; uncaptured: string }>(
+        `SELECT
+           COUNT(*)::text AS total,
+           COUNT(*) FILTER (WHERE ${capturedExpr})::text AS captured,
+           COUNT(*) FILTER (WHERE NOT (${capturedExpr}))::text AS uncaptured
+         FROM students s
+         INNER JOIN schools sc ON sc.id = s.school_id
+         ${studentWhere}`,
+        studentValues
+      ),
+      pool.query<{ total: string; captured: string; uncaptured: string }>(
+        `SELECT
+           COUNT(*)::text AS total,
+           COUNT(*) FILTER (WHERE ${capturedExpr})::text AS captured,
+           COUNT(*) FILTER (WHERE NOT (${capturedExpr}))::text AS uncaptured
+         FROM students s
+         INNER JOIN institutes i ON i.id = s.institute_id
+         ${instituteMemberWhere}`,
+        instituteMemberValues
+      ),
+      pool.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM templates WHERE owner_admin_id = $1`,
+        [scope.adminUserId]
+      ),
+      pool.query<{ count: string }>(modelCountSql, [scope.adminUserId]),
+      pool.query<{ day: string; schools: string; institutes: string }>(
+        overviewSql,
+        overviewValues
+      ),
+      pool.query<{ kind: string; title: string; created_at: string }>(
+        activitySql,
+        activityValues
+      ),
+    ]);
 
     const schools = schoolStats.rows[0];
     const institutes = instituteStats.rows[0];

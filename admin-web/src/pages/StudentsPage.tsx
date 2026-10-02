@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import api, { getAuthToken } from "../api/client";
+import { CropToolModal } from "../components/CropToolModal";
 import { StudentPhotoModal } from "../components/StudentPhotoModal";
 import { EditStudentModal } from "../components/EditStudentModal";
 import { DeleteStudentChoiceModal } from "../components/DeleteStudentChoiceModal";
@@ -22,7 +23,7 @@ import {
   studentFieldDisplay,
   type FormFieldConfig,
 } from "../constants/formFields";
-import { authenticatedStudentPhotoUrl, authenticatedStudentSignatureUrl } from "../utils/studentPhotoSrc";
+import { authenticatedStudentPhotoUrl, authenticatedStudentSignatureUrl, invalidateStudentPhotoCache } from "../utils/studentPhotoSrc";
 
 type TabKey = "all" | "pending" | "captured" | "pending-data";
 
@@ -99,37 +100,50 @@ function recordFlags(student: Student, isInstitute: boolean) {
 }
 
 function StudentThumb({ student }: { student: Student }): ReactNode {
+  const holder = useRef<HTMLDivElement>(null);
   const [src, setSrc] = useState("");
   useEffect(() => {
-    let cancelled = false;
+    const node = holder.current;
     setSrc("");
-    if (!student.photo_url) return;
-    void authenticatedStudentPhotoUrl(student.id).then((url) => {
-      if (cancelled) return;
-      setSrc(url || student.photo_url || "");
-    });
+    if (!node || !student.photo_url) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        void authenticatedStudentPhotoUrl(student.id, {
+          thumb: true,
+          signal: controller.signal,
+        }).then((url) => {
+          if (!cancelled && url) setSrc(url);
+        });
+      },
+      { rootMargin: "180px" }
+    );
+    observer.observe(node);
     return () => {
       cancelled = true;
+      controller.abort();
+      observer.disconnect();
     };
-  }, [student.id, student.photo_url]);
-  if (!student.photo_url) {
-    return (
-      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-content-bg text-xs font-semibold text-text-muted">
-        {initials(student.student_name)}
-      </div>
-    );
-  }
-  if (!src) {
-    return (
-      <div className="h-12 w-12 animate-pulse rounded-lg bg-content-bg ring-1 ring-border" />
-    );
-  }
+  }, [student.id, student.photo_url, student.photo_captured_at]);
   return (
-    <img
-      src={src}
-      alt={student.student_name ?? "Student"}
-      className="h-12 w-12 rounded-lg object-cover ring-1 ring-border"
-    />
+    <div ref={holder} className="h-12 w-12 shrink-0">
+      {!student.photo_url ? (
+        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-content-bg text-xs font-semibold text-text-muted">
+          {initials(student.student_name)}
+        </div>
+      ) : src ? (
+        <img
+          src={src}
+          alt={student.student_name ?? "Student"}
+          className="h-12 w-12 rounded-lg object-cover ring-1 ring-border"
+        />
+      ) : (
+        <div className="h-12 w-12 animate-pulse rounded-lg bg-content-bg ring-1 ring-border" />
+      )}
+    </div>
   );
 }
 
@@ -140,21 +154,43 @@ function SignatureThumb({
   student: Student;
   onOpen: () => void;
 }): ReactNode {
+  const holder = useRef<HTMLButtonElement>(null);
   const [src, setSrc] = useState("");
   useEffect(() => {
-    let cancelled = false;
+    const node = holder.current;
     setSrc("");
-    if (!student.signature_url) return;
-    void authenticatedStudentSignatureUrl(student.id).then((url) => {
-      if (!cancelled && url) setSrc(url);
-    });
+    if (!node || !student.signature_url) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        void authenticatedStudentSignatureUrl(student.id, {
+          thumb: true,
+          signal: controller.signal,
+        }).then((url) => {
+          if (!cancelled && url) setSrc(url);
+        });
+      },
+      { rootMargin: "180px" }
+    );
+    observer.observe(node);
     return () => {
       cancelled = true;
+      controller.abort();
+      observer.disconnect();
     };
   }, [student.id, student.signature_url]);
   if (!student.signature_url) return null;
   return (
-    <button type="button" onClick={onOpen} title="View signature" className="shrink-0">
+    <button
+      ref={holder}
+      type="button"
+      onClick={onOpen}
+      title="View signature"
+      className="shrink-0"
+    >
       {src ? (
         <img
           src={src}
@@ -243,6 +279,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [classFilter, setClassFilter] = useState("");
   const [photoStudent, setPhotoStudent] = useState<Student | null>(null);
   const [signatureStudent, setSignatureStudent] = useState<Student | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [deleteChoiceStudent, setDeleteChoiceStudent] = useState<Student | null>(null);
   const [confirmDeletePhotoStudent, setConfirmDeletePhotoStudent] =
@@ -812,24 +849,29 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               Delete Options
             </button>
 
-            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-feature-card detail-feature-card-short detail-toolbar-short-slot">
-              <span className="detail-feature-icon bg-[#FFEDD5] text-[#F97316]" aria-hidden>
+            <button
+              type="button"
+              disabled={!orgId}
+              onClick={() => setCropOpen(true)}
+              className="detail-toolbar-btn detail-feature-card detail-feature-card-short detail-toolbar-short-slot"
+            >
+              <span className="detail-feature-icon bg-white/20 text-white" aria-hidden>
                 <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M6 3h6l6 6v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-                  <path d="M12 3v6h6M8 14h8M8 18h5" />
+                  <path d="M12 3v6h6" />
                 </svg>
               </span>
-              CROPPING TOOL
-            </div>
+              <span className="detail-feature-label">CROPPING TOOL</span>
+            </button>
             <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-feature-card detail-feature-card-long detail-toolbar-long-slot">
-              <span className="detail-feature-icon bg-[#DBEAFE] text-[#2563EB]" aria-hidden>
+              <span className="detail-feature-icon bg-white/20 text-white" aria-hidden>
                 <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="5" width="18" height="14" rx="2" />
                   <circle cx="9" cy="11" r="2" />
-                  <path d="M21 16l-5-4-4 4-2-2-4 4" />
+                  <path d="M21 16l-5-4-4 4" />
                 </svg>
               </span>
-              ID CARD GENERATOR
+              <span className="detail-feature-label">ID CARD GENERATOR</span>
             </div>
           </div>
 
@@ -1247,6 +1289,17 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
           onClose={() => setPhotoStudent(null)}
         />
       )}
+
+      {cropOpen && orgId ? (
+        <CropToolModal
+          students={students}
+          onClose={() => setCropOpen(false)}
+          onSaved={(student) => {
+            invalidateStudentPhotoCache(student.id);
+            setStudents((prev) => prev.map((item) => (item.id === student.id ? { ...item, ...student } : item)));
+          }}
+        />
+      ) : null}
 
       {signatureStudent?.signature_url && (
         <StudentPhotoModal

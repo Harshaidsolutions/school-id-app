@@ -175,6 +175,15 @@ function readFieldValue(
   const labels = parseFieldLabels(student.field_labels);
   const label = configLabel?.trim() || labels[key] || "";
 
+  if (key === "photo_id" || isIdentityAliasLabel(label)) {
+    const generated = /^(?:ADD_\d+|IMP-\d+|ROW-\d+)$/i;
+    const stored = String(student.photo_id ?? "").trim();
+    const fromExtra = extra[key] != null ? String(extra[key]).trim() : "";
+    if (stored && !generated.test(stored)) return stored;
+    if (fromExtra && !generated.test(fromExtra)) return fromExtra;
+    return stored || fromExtra || null;
+  }
+
   if (extra[key] != null && String(extra[key]).trim() !== "") {
     return String(extra[key]).trim();
   }

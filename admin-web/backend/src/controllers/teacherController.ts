@@ -28,6 +28,7 @@ import {
   firstIdentityValue,
   identityFields,
 } from "../utils/addSerial";
+import { persistCanonicalPhotoIds, withCanonicalPhotoId } from "../utils/photoIdentity";
 import {
   assertRecordEditAllowed,
   requestedIdentityChange,
@@ -134,6 +135,8 @@ function optionalBodyString(
 }
 
 function toStudentJson(row: TeacherStudentRow, ctx?: RequiredDataContext) {
+  const unified = withCanonicalPhotoId(row);
+  row = unified.row;
   const extraFields = parseExtraFields(row.extra_fields);
   const institute = Boolean(row.institute_id) && !row.school_id;
   const dataComplete = ctx
@@ -177,14 +180,35 @@ function toStudentJson(row: TeacherStudentRow, ctx?: RequiredDataContext) {
 }
 
 async function presentStudent(row: TeacherStudentRow) {
+  const unified = withCanonicalPhotoId(row);
+  if (unified.persist) {
+    try {
+      await persistCanonicalPhotoIds([unified.persist]);
+    } catch {
+      /* Response already shows the Excel photo number. */
+    }
+  }
   const ctx = await loadRequiredDataContext(row.school_id, row.institute_id);
-  return toStudentJson(row, ctx);
+  return toStudentJson(unified.row, ctx);
 }
 
 async function presentStudents(rows: TeacherStudentRow[]) {
   if (rows.length === 0) return [];
   const ctx = await loadRequiredDataContext(rows[0].school_id, rows[0].institute_id);
-  return rows.map((row) => toStudentJson(row, ctx));
+  const persist: { id: string; photoId: string }[] = [];
+  const students = rows.map((row) => {
+    const unified = withCanonicalPhotoId(row);
+    if (unified.persist) persist.push(unified.persist);
+    return toStudentJson(unified.row, ctx);
+  });
+  if (persist.length > 0) {
+    try {
+      await persistCanonicalPhotoIds(persist);
+    } catch {
+      /* Response already shows the Excel photo number. */
+    }
+  }
+  return students;
 }
 
 export async function getTeacherFormConfig(

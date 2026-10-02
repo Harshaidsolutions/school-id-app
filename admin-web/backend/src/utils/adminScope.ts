@@ -85,19 +85,42 @@ export async function queryAdminSeesAllOrganizations(
   return isDbTrue(result.rows[0]?.see_all);
 }
 
+const scopeCache = new Map<string, { scope: AdminScope; at: number }>();
+const SCOPE_TTL_MS = 60_000;
+
 export async function loadAdminScope(userId: string): Promise<AdminScope> {
-  const row = await pool.query<{ id: string }>(
-    `SELECT id FROM users WHERE id = $1::uuid AND role = 'admin' LIMIT 1`,
-    [userId]
+  const cached = scopeCache.get(userId);
+  if (cached && Date.now() - cached.at < SCOPE_TTL_MS) return cached.scope;
+
+  const result = await pool.query<{ see_all: boolean }>(
+    `SELECT (
+       COALESCE(u.is_super_admin, false)
+       OR lower(trim(u.email)) = $2
+       OR lower(trim(u.email)) LIKE '%harshaidsolutions%'
+       OR lower(trim(COALESCE(u.username, ''))) = ANY($3::text[])
+       OR lower(trim(COALESCE(u.username, ''))) LIKE '%harshaid%'
+       OR (SELECT COUNT(*)::int FROM users WHERE role = 'admin') <= 1
+       OR u.id = (
+         SELECT id FROM users
+         WHERE role = 'admin'
+         ORDER BY created_at ASC NULLS LAST
+         LIMIT 1
+       )
+     ) AS see_all
+     FROM users u
+     WHERE u.id = $1::uuid AND u.role = 'admin'
+     LIMIT 1`,
+    [userId, SUPER_ADMIN_EMAIL, [...SUPER_ADMIN_USERNAMES]]
   );
-  if (!row.rows[0]) {
+  if (!result.rows[0]) {
     throw new AppError("Admin account not found", 403);
   }
-  const isSuperAdmin = await queryAdminSeesAllOrganizations(userId);
-  return {
+  const scope: AdminScope = {
     adminUserId: userId,
-    isSuperAdmin,
+    isSuperAdmin: isDbTrue(result.rows[0].see_all),
   };
+  scopeCache.set(userId, { scope, at: Date.now() });
+  return scope;
 }
 
 /** Super admin sees every school/institute; scoped admins see only owned orgs. */

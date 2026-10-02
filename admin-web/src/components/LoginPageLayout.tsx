@@ -66,25 +66,25 @@ export function LoginPageLayout({
                 : "flex w-full items-center justify-center md:max-w-[min(100%,22.5rem)] md:justify-end"
             }
           >
-            <div className="max-h-[calc(100dvh-1.25rem)] w-full overflow-y-auto rounded-2xl border border-[#E2E8F0] bg-white px-5 py-4 shadow-[0_12px_32px_rgba(99,102,241,0.12)]">
+            <div className="auth-card max-h-[calc(100dvh-1rem)] w-full overflow-y-auto rounded-2xl border border-[#E2E8F0] bg-white shadow-[0_12px_32px_rgba(99,102,241,0.12)]">
               {appBrand ? (
-                <div className="mb-3 flex w-full flex-col items-center overflow-visible px-1 text-center">
+                <div className="mb-1.5 flex w-full flex-col items-center overflow-visible px-1 text-center">
                   <img
                     src="/app-logo.png"
                     alt="My School ID Card"
-                    className="block h-auto max-h-[min(16vh,5.5rem)] w-auto max-w-full object-contain"
+                    className="block h-auto max-h-[3.25rem] w-auto max-w-full object-contain"
                   />
                   <p
                     className={
                       brandAccent
-                        ? "mt-1.5 text-[clamp(1.7rem,3.2vw,2.05rem)] font-bold leading-tight text-[#F97316]"
-                        : "mt-2 text-lg font-bold text-text-navy"
+                        ? "mt-1 text-[clamp(1.45rem,2.4vw,1.7rem)] font-bold leading-none text-[#F97316]"
+                        : "mt-1 text-lg font-bold text-text-navy"
                     }
                   >
                     My School ID Card
                   </p>
                   {brandAccent ? (
-                    <p className="mt-0.5 text-[13px] font-medium leading-tight text-[#64748B]">
+                    <p className="mt-1 text-[12px] font-medium leading-none text-[#64748B]">
                       Get Your Identity Here..
                     </p>
                   ) : null}
@@ -111,8 +111,8 @@ export function LoginPageLayout({
                 </h1>
               )}
 
-              <div className="mt-2.5">{children}</div>
-              {footer ? <div className="mt-3">{footer}</div> : null}
+              <div className="mt-1.5">{children}</div>
+              {footer ? <div className="mt-2">{footer}</div> : null}
             </div>
           </div>
         </div>

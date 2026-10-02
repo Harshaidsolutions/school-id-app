@@ -1,11 +1,19 @@
 export function isIdentityAliasLabel(label: string): boolean {
   const normalized = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
-  return (
+  if (!normalized) return false;
+  if (
     normalized === "id" ||
     normalized === "photoid" ||
     normalized === "photonumber" ||
-    normalized === "photono"
-  );
+    normalized === "photono" ||
+    normalized === "photoidnumber"
+  ) {
+    return true;
+  }
+  if (normalized.includes("url") || normalized.includes("capture") || !normalized.includes("photo")) {
+    return false;
+  }
+  return normalized.includes("id") || normalized.includes("number") || normalized.endsWith("no");
 }
 
 export function isNameAliasLabel(label: string): boolean {

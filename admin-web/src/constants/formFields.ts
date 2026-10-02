@@ -278,11 +278,46 @@ export function isPhotoExcelField(field: { label: string; key?: string }): boole
   return n.includes("photo") && !n.includes("url");
 }
 
+function isDisplayedPhotoIdentity(key: string, label?: string): boolean {
+  if (key === "photo_id") return true;
+  const n = (label ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+  if (!n) return false;
+  if (n === "id" || n === "photoid" || n === "photonumber" || n === "photono" || n === "photoidnumber") {
+    return true;
+  }
+  if (n.includes("url") || n.includes("capture") || !n.includes("photo")) return false;
+  return n.includes("id") || n.includes("number") || n.endsWith("no");
+}
+
+function canonicalDisplayedPhotoId(student: StudentFieldSource): string | null {
+  const extra = parseExtraFields(student.extra_fields);
+  const labels =
+    student.field_labels && typeof student.field_labels === "object" ? student.field_labels : {};
+  const generated = /^(?:ADD_\d+|IMP-\d+|ROW-\d+)$/i;
+  const numbered: string[] = [];
+  const others: string[] = [];
+  for (const [fieldKey, raw] of Object.entries(extra)) {
+    const label = labels[fieldKey] || "";
+    if (fieldKey !== "photo_id" && !isDisplayedPhotoIdentity(fieldKey, label)) continue;
+    const value = String(raw ?? "").trim();
+    if (!value || generated.test(value)) continue;
+    if (label.toLowerCase().replace(/[^a-z0-9]+/g, "").includes("number")) numbered.push(value);
+    else others.push(value);
+  }
+  const stored = String(student.photo_id ?? "").trim();
+  if (stored && !generated.test(stored)) return stored;
+  return numbered[0] || others[0] || stored || null;
+}
+
 export function studentFieldDisplay(
   student: StudentFieldSource,
   key: string,
   fieldLabel?: string
 ): string {
+  if (isDisplayedPhotoIdentity(key, fieldLabel)) {
+    const unified = canonicalDisplayedPhotoId(student);
+    if (unified) return displayValue(unified);
+  }
   const extra = parseExtraFields(student.extra_fields);
   const labels =
     student.field_labels && typeof student.field_labels === "object"

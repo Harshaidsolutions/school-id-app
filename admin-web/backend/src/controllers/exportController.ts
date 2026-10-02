@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import sharp from "sharp";
 import * as XLSX from "xlsx";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
@@ -23,6 +24,33 @@ import {
   requireAdminScope,
 } from "../utils/adminScope";
 import { loadRequiredDataContext, matchesExportScope, collectRecordFacets } from "../utils/recordStatus";
+
+function wantsThumb(req: Request): boolean {
+  return req.query.thumb === "1";
+}
+
+async function asListThumb(
+  bytes: Uint8Array | Buffer,
+  contentType: string | undefined,
+  thumb: boolean,
+  kind: "photo" | "signature"
+): Promise<{ bytes: Buffer; contentType: string }> {
+  const input = Buffer.from(bytes);
+  if (!thumb) {
+    return { bytes: input, contentType: contentType || "application/octet-stream" };
+  }
+  try {
+    const pipeline = sharp(input, { failOn: "none" }).rotate();
+    const resized =
+      kind === "photo"
+        ? pipeline.resize(96, 96, { fit: "cover" })
+        : pipeline.resize({ width: 160, height: 48, fit: "inside" });
+    const out = await resized.jpeg({ quality: 68 }).toBuffer();
+    return { bytes: out, contentType: "image/jpeg" };
+  } catch {
+    return { bytes: input, contentType: contentType || "application/octet-stream" };
+  }
+}
 
 function sanitizePhotoIdFilename(photoId: string): string {
   const cleaned = photoId
@@ -684,19 +712,23 @@ export async function downloadStudentPhoto(
       throw new AppError("Could not download photo from storage", 502);
     }
 
-    const ext = extensionFromContentType(fetched.contentType);
+    const image = await asListThumb(
+      fetched.bytes,
+      fetched.contentType,
+      wantsThumb(req),
+      "photo"
+    );
+    const ext = wantsThumb(req) ? ".jpg" : extensionFromContentType(image.contentType);
     const base =
       sanitizePhotoIdFilename(
         student.photo_id || student.student_name || studentId
       ) || "photo";
     const filename = `${base}${ext}`;
 
-    res.setHeader(
-      "Content-Type",
-      fetched.contentType || "application/octet-stream"
-    );
+    res.setHeader("Content-Type", image.contentType);
+    res.setHeader("Cache-Control", "private, max-age=600");
     res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
-    res.status(200).send(Buffer.from(fetched.bytes));
+    res.status(200).send(image.bytes);
   } catch (error) {
     next(error);
   }
@@ -741,11 +773,18 @@ export async function downloadStudentSignature(
     }
     if (!fetched?.bytes?.length) fetched = await fetchImageBytes(student.signature_url);
     if (!fetched?.bytes?.length) throw new AppError("Could not download signature from storage", 502);
-    const ext = extensionFromContentType(fetched.contentType);
+    const image = await asListThumb(
+      fetched.bytes,
+      fetched.contentType,
+      wantsThumb(req),
+      "signature"
+    );
+    const ext = wantsThumb(req) ? ".jpg" : extensionFromContentType(image.contentType);
     const base = sanitizePhotoIdFilename(student.photo_id || studentId);
-    res.setHeader("Content-Type", fetched.contentType || "image/jpeg");
+    res.setHeader("Content-Type", image.contentType);
+    res.setHeader("Cache-Control", "private, max-age=600");
     res.setHeader("Content-Disposition", `inline; filename="${base}${ext}"`);
-    res.status(200).send(Buffer.from(fetched.bytes));
+    res.status(200).send(image.bytes);
   } catch (error) {
     next(error);
   }
