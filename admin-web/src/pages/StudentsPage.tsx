@@ -857,8 +857,8 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             >
               <span className="detail-feature-icon bg-white/20 text-white" aria-hidden>
                 <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M6 3h6l6 6v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-                  <path d="M12 3v6h6" />
+                  <path d="M6 3H3v3M18 3h3v3M6 21H3v-3M18 21h3v-3" />
+                  <rect x="7" y="7" width="10" height="10" rx="1" />
                 </svg>
               </span>
               <span className="detail-feature-label">CROPPING TOOL</span>
@@ -867,8 +867,9 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               <span className="detail-feature-icon bg-white/20 text-white" aria-hidden>
                 <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="5" width="18" height="14" rx="2" />
-                  <circle cx="9" cy="11" r="2" />
-                  <path d="M21 16l-5-4-4 4" />
+                  <circle cx="9" cy="11" r="1.6" />
+                  <path d="M7 16.5c.6-1.2 1.5-1.8 2.4-1.8s1.6.5 2.1 1.3" />
+                  <path d="M13 15h5" />
                 </svg>
               </span>
               <span className="detail-feature-label">ID CARD GENERATOR</span>
@@ -1293,10 +1294,23 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       {cropOpen && orgId ? (
         <CropToolModal
           students={students}
+          categories={configuredCategoryFields(formFields)}
           onClose={() => setCropOpen(false)}
           onSaved={(student) => {
             invalidateStudentPhotoCache(student.id);
-            setStudents((prev) => prev.map((item) => (item.id === student.id ? { ...item, ...student } : item)));
+            setStudents((prev) =>
+              prev.map((item) =>
+                item.id === student.id
+                  ? {
+                      ...item,
+                      photo_url: student.photo_url,
+                      photo_captured_at: student.photo_captured_at,
+                      status: student.status,
+                      updated_at: student.updated_at,
+                    }
+                  : item
+              )
+            );
           }}
         />
       ) : null}

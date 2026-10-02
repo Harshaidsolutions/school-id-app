@@ -192,12 +192,12 @@
     color: #fff;
   }
 
-  .app-shell {
+  .app-shell,
+  .app-main {
     background-color: #f7faff;
     background-image:
-      radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 32%),
-      radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.06), transparent 30%),
-      radial-gradient(circle at top left, rgba(249, 115, 22, 0.05), transparent 26%);
+      radial-gradient(circle at top right, rgba(99, 102, 241, 0.08), transparent 35%),
+      radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.06), transparent 35%);
   }
 
   .app-header {
@@ -753,13 +753,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.375rem;
-    border-radius: 10px;
+    gap: 0.4rem;
+    border-radius: 12px;
     border: 0;
     color: #fff;
     font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0;
+    letter-spacing: 0.01em;
     line-height: 1;
     text-transform: none;
     box-shadow: 0 8px 16px rgba(99, 102, 241, 0.18);
@@ -935,7 +935,6 @@ body {
   font-size: 15px;
   background-color: #f7faff;
   background-image:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 32%),
-    radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.06), transparent 30%),
-    radial-gradient(circle at top left, rgba(249, 115, 22, 0.05), transparent 26%);
+    radial-gradient(circle at top right, rgba(99, 102, 241, 0.08), transparent 35%),
+    radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.06), transparent 35%);
 }
