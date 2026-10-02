@@ -834,6 +834,8 @@ export async function listStudentsAdmin(
     }
     if (req.query.cropQueue === "1" || req.query.cropQueue === "true") {
       conditions.push(`photo_url IS NOT NULL AND btrim(photo_url) <> '' AND photo_cropped = false`);
+    } else if (req.query.cropPhotos === "1" || req.query.cropPhotos === "true") {
+      conditions.push(`photo_url IS NOT NULL AND btrim(photo_url) <> ''`);
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";

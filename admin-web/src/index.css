@@ -172,9 +172,9 @@
   .page-heading {
     font-family: var(--font-sans);
     font-size: clamp(1.1875rem, 1.5vw, 1.375rem);
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.3;
-    color: #334155;
+    color: #4f46e5;
     text-align: center;
   }
 
@@ -214,9 +214,9 @@
   .app-header-title {
     font-family: var(--font-sans);
     font-size: clamp(1.625rem, 2vw, 1.875rem);
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.25;
-    color: #334155;
+    color: #4f46e5;
   }
 
   .app-page {
@@ -499,7 +499,7 @@
   }
 
   .dashboard-section-title {
-    @apply mb-4 text-center text-[1.375rem] font-bold text-text-navy;
+    @apply mb-4 text-center text-[1.375rem] font-bold text-[#4f46e5];
   }
 
   .dashboard-pattern-grid {
@@ -945,4 +945,10 @@ body {
     radial-gradient(circle at top right, rgba(99, 102, 241, 0.08), transparent 35%),
     radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.06), transparent 35%),
     radial-gradient(circle at top left, rgba(249, 115, 22, 0.05), transparent 28%);
+}
+
+/* Unlayered so it wins over Tailwind text color utilities on headings. */
+.app-shell :is(h1, h2, h3, .page-heading, .app-header-title, .dashboard-section-title) {
+  color: #4f46e5;
+  font-weight: 700;
 }

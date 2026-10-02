@@ -31,9 +31,13 @@ export function CropToolModal({
   layout?: "page" | "modal";
 }) {
   const field = useMemo(() => primaryCategory(categories), [categories]);
+  const [cropView, setCropView] = useState<"uncropped" | "cropped">("uncropped");
   const photos = useMemo(
-    () => students.filter((student) => Boolean(student.photo_url) && student.photo_cropped !== true),
-    [students]
+    () => students.filter((student) => {
+      if (!student.photo_url) return false;
+      return cropView === "cropped" ? student.photo_cropped === true : student.photo_cropped !== true;
+    }),
+    [students, cropView]
   );
   const [selected, setSelected] = useState("");
   const [captureDay, setCaptureDay] = useState("");
@@ -110,6 +114,9 @@ export function CropToolModal({
   const tonePaintRef = useRef(0);
   const toneStudentRef = useRef<string | undefined>(undefined);
   const limitRef = useRef<{ width: number | null; height: number | null }>({ width: null, height: null });
+  const historyRef = useRef<Crop[]>([]);
+  const undoRef = useRef<() => void>(() => {});
+  const quickSaveRef = useRef<() => void>(() => {});
   const student = gallery[index] ?? null;
 
   useEffect(() => {
@@ -132,6 +139,7 @@ export function CropToolModal({
     setCropArmed(false);
     setError(null);
     cropRef.current = { ...FULL };
+    historyRef.current = [];
     toneRef.current = { brightness: 0, contrast: 0 };
     toneGestureRef.current = false;
     setToneOpen(false);
@@ -271,8 +279,41 @@ export function CropToolModal({
     toneGestureRef.current = false;
   }
 
+  function rememberCrop() {
+    const current = { ...cropRef.current };
+    const last = historyRef.current[historyRef.current.length - 1];
+    if (
+      last &&
+      last.cx === current.cx &&
+      last.cy === current.cy &&
+      last.w === current.w &&
+      last.h === current.h &&
+      last.angle === current.angle
+    ) {
+      return;
+    }
+    historyRef.current.push(current);
+    if (historyRef.current.length > 40) historyRef.current.shift();
+  }
+
+  function undoCrop() {
+    if (browsing) return;
+    if (phase === "preview") {
+      previewBlobRef.current = null;
+      clearPreview();
+      setPreviewUrl("");
+      setPhase("edit");
+      return;
+    }
+    const previous = historyRef.current.pop();
+    if (!previous) return;
+    cropRef.current = previous;
+    paintFrame();
+  }
+
   function rotateCrop(delta: number) {
     if (!student || !cropArmed || phase !== "edit") return;
+    rememberCrop();
     markDirty(student.id);
     cropRef.current = { ...cropRef.current, angle: cropRef.current.angle + delta };
     paintFrame();
@@ -289,6 +330,7 @@ export function CropToolModal({
       height: Number.isFinite(height) && height > 0 ? height : null,
     };
     if (cropArmed) {
+      rememberCrop();
       cropRef.current = limitCrop(cropRef.current, imageRef.current, limitRef.current);
       paintFrame();
     }
@@ -318,6 +360,7 @@ export function CropToolModal({
     if (!box || !point) return;
     const hit = hitTest(event.clientX, event.clientY, cropRef.current, box);
     if (!hit) return;
+    rememberCrop();
     if (student) markDirty(student.id);
     event.currentTarget.setPointerCapture(event.pointerId);
     if (hit === "rotate") {
@@ -419,6 +462,41 @@ export function CropToolModal({
     }
   }
 
+  async function quickSave() {
+    if (browsing || saving || applying || !student || student.photo_cropped) return;
+    if (!previewBlobRef.current) await applyOk();
+    if (previewBlobRef.current) await saveCrop();
+  }
+
+  undoRef.current = undoCrop;
+  quickSaveRef.current = () => {
+    void quickSave();
+  };
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      const target = event.target;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+      if (!event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
+      const key = event.key.toLowerCase();
+      if (key === "z") {
+        event.preventDefault();
+        undoRef.current();
+      } else if (key === "s") {
+        event.preventDefault();
+        quickSaveRef.current();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  function leaveEditor() {
+    setCropArmed(false);
+    setPhase("edit");
+    setBrowsing(true);
+  }
+
   const shell = layout === "page"
     ? "flex min-h-[70vh] flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white"
     : "fixed inset-0 z-50 flex items-center justify-center bg-[#312E81]/35 px-3 py-4";
@@ -457,6 +535,21 @@ export function CropToolModal({
               ))}
             </select>
           </label>
+          <label className="min-w-[11rem] text-xs font-semibold text-[#334155]">
+            Status
+            <select
+              className="input-field mt-1"
+              value={cropView}
+              onChange={(event) => {
+                setCropView(event.target.value === "cropped" ? "cropped" : "uncropped");
+                setIndex(0);
+                setBrowsing(true);
+              }}
+            >
+              <option value="uncropped">Not cropped</option>
+              <option value="cropped">Cropped</option>
+            </select>
+          </label>
           <label className="min-w-[14rem] text-xs font-semibold text-[#334155]">
             Hour
             <select className="input-field mt-1" value={captureHour} disabled={!captureDay} onChange={(event) => { setCaptureHour(event.target.value); setIndex(0); setBrowsing(true); }}>
@@ -468,7 +561,7 @@ export function CropToolModal({
           </label>
         </div>
         {browsing ? (
-          <div className="grid grid-cols-1 gap-4 overflow-y-auto p-4 md:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3 overflow-y-auto p-4 md:grid-cols-3 xl:grid-cols-4">
             {gallery.map((item, itemIndex) => (
               <GalleryThumb
                 key={item.id}
@@ -494,7 +587,11 @@ export function CropToolModal({
             ))}
             {gallery.length === 0 ? (
               <p className="col-span-full px-2 py-16 text-center text-sm font-medium text-[#64748B]">
-                {photos.length === 0 ? "All photos are cropped." : "No captured photos match these filters."}
+                {photos.length === 0
+                  ? cropView === "cropped"
+                    ? "No cropped photos."
+                    : "All photos are cropped."
+                  : "No photos match these filters."}
               </p>
             ) : null}
           </div>
@@ -625,7 +722,7 @@ export function CropToolModal({
               ) : null}
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-[#E2E8F0] bg-white px-3 py-1.5">
-              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" onClick={() => setBrowsing(true)}>Photos</button>
+              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" onClick={leaveEditor}>Back</button>
               <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!src || phase !== "edit" || student?.photo_cropped === true} onClick={() => { if (!student || student.photo_cropped) return; setCropArmed(true); markDirty(student.id); }}>Crop</button>
               <select
                 aria-label="Rotate"
@@ -674,6 +771,7 @@ export function CropToolModal({
               <button type="button" className="btn-primary px-3 py-1.5 text-sm" disabled={phase !== "preview" || saving} onClick={() => void saveCrop()}>
                 {saving ? "Saving…" : "Save"}
               </button>
+              <span className="text-[11px] font-medium text-[#64748B]">Shift+Z undo · Shift+S save</span>
             </div>
             {error ? <p className="bg-white px-3 pb-2 text-sm text-[#DC2626]">{error}</p> : null}
           </div>
@@ -794,24 +892,26 @@ function GalleryThumb({
         large ? "flex-col gap-2 rounded-xl border bg-white p-3" : "items-center gap-2 rounded-lg border px-2 py-1.5"
       } ${student.photo_cropped ? "cursor-default border-[#BBF7D0] bg-[#F0FDF4]" : active ? "border-[#8B5CF6] bg-[#F5F3FF]" : "border-[#E2E8F0]"}`}
     >
-      {src ? (
-        <img src={src} alt="" className={large ? "h-72 w-full rounded-lg object-contain" : "h-11 w-11 shrink-0 rounded object-cover"} />
-      ) : (
-        <span className={large ? "block h-72 w-full animate-pulse rounded-lg bg-[#EEF2FF]" : "block h-11 w-11 shrink-0 animate-pulse rounded bg-[#EEF2FF]"} />
-      )}
+      <span className={large ? "relative block h-40 w-full" : "relative block h-11 w-11 shrink-0"}>
+        {src ? (
+          <img src={src} alt="" className={large ? "h-40 w-full rounded-lg bg-[#F8FAFC] object-contain" : "h-11 w-11 rounded object-cover"} />
+        ) : (
+          <span className={large ? "block h-40 w-full animate-pulse rounded-lg bg-[#EEF2FF]" : "block h-11 w-11 animate-pulse rounded bg-[#EEF2FF]"} />
+        )}
+        {large && (status === "cropped" || student.photo_cropped) ? (
+          <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-[#16A34A] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+            <svg className="h-3 w-3" viewBox="0 0 16 16" aria-hidden>
+              <path d="M3.5 8.2 6.4 11 12.5 4.8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Cropped
+          </span>
+        ) : null}
+      </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-xs font-semibold text-[#334155]">
           {student.photo_id || student.student_name || "Photo"}
         </span>
-        {status === "cropped" || student.photo_cropped ? (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#16A34A]">
-            <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" aria-hidden>
-              <circle cx="8" cy="8" r="7" fill="currentColor" />
-              <path d="M4.6 8.2 6.8 10.3 11.4 5.7" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Cropped
-          </span>
-        ) : status === "saved" ? (
+        {status === "saved" ? (
           <span className="text-[11px] font-semibold text-[#22C55E]">Saved</span>
         ) : status === "editing" ? (
           <span className="text-[11px] font-semibold text-[#F97316]">Editing</span>

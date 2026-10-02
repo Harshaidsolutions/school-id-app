@@ -24,8 +24,8 @@ export function CropToolPage() {
     }
     let cancelled = false;
     const query = isInstitute
-      ? { instituteId, cropQueue: "1" }
-      : { schoolId, cropQueue: "1" };
+      ? { instituteId, cropPhotos: "1" }
+      : { schoolId, cropPhotos: "1" };
     setLoading(true);
     void Promise.all([
       api.get<StudentsResponse>("/admin/students", { params: query }),
@@ -59,7 +59,15 @@ export function CropToolPage() {
           onClose={() => navigate(back)}
           onSaved={(student) => {
             if (!student.photo_cropped) return;
-            setStudents((current) => current.filter((item) => item.id !== student.id));
+            setStudents((current) => current.map((item) => item.id === student.id ? {
+              ...item,
+              photo_url: student.photo_url,
+              photo_captured_at: item.photo_captured_at,
+              photo_id: item.photo_id,
+              photo_cropped: true,
+              status: student.status,
+              updated_at: student.updated_at,
+            } : item));
           }}
         />
       )}
