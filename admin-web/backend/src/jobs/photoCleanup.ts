@@ -53,7 +53,7 @@ export async function runPhotoCleanup(): Promise<CleanupResult> {
 
       await pool.query(
         `UPDATE students
-         SET photo_url = NULL, updated_at = NOW()
+         SET photo_url = NULL, photo_captured_at = NULL, photo_cropped = false, updated_at = NOW()
          WHERE id = $1`,
         [student.id]
       );

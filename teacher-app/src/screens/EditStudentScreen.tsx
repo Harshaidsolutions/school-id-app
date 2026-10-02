@@ -248,7 +248,6 @@ export function EditStudentScreen({ navigation, route }: Props) {
       extraValues,
     });
     delete payload.photo_id;
-    payload.student_name = currentStudent.student_name ?? "";
     const extra = payload.extra_fields;
     if (extra && typeof extra === "object") {
       const rec = extra as Record<string, unknown>;
@@ -261,16 +260,6 @@ export function EditStudentScreen({ navigation, route }: Props) {
     const student_name = String(payload.student_name ?? "").trim();
     if (!student_name) {
       setError("Student name is required.");
-      return;
-    }
-
-    const phoneDigits = parentPhone.replace(/\D/g, "");
-    if (!phoneDigits) {
-      setError("Phone number is required.");
-      return;
-    }
-    if (phoneDigits.length !== 10) {
-      setError("Phone number must be exactly 10 digits.");
       return;
     }
 
@@ -504,7 +493,6 @@ export function EditStudentScreen({ navigation, route }: Props) {
                 setExtraValues((prev) => ({ ...prev, [key]: value }))
               }
               classSectionReadOnly
-              parentPhoneTenDigits
               onInputFocus={(target) =>
                 scrollToFocusedInput(scrollRef, target)
               }

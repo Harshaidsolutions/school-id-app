@@ -17,12 +17,14 @@ export function DownloadPhotosModal({
   downloading,
   photoCounts,
   categoryFields,
+  showSignature = false,
   onClose,
   onDownload,
 }: {
   downloading: boolean;
   photoCounts: Record<string, number>;
   signatureCounts: Record<string, number>;
+  showSignature?: boolean;
   categoryFields: CategoryField[];
   onClose: () => void;
   onDownload: (job: {
@@ -67,7 +69,7 @@ export function DownloadPhotosModal({
             {categoryFields.map((field, index) => (
               <MenuButton
                 key={field.key}
-                label={wiseActionLabel("DOWNLOAD", field.label)}
+                label={`${wiseActionLabel("DOWNLOAD", field.label)} (${field.options.reduce((sum, option) => sum + option.count, 0)})`}
                 onClick={() => {
                   setFieldIndex(index);
                   setSelected("");
@@ -85,12 +87,13 @@ export function DownloadPhotosModal({
 
         {step === "all-type" ? (
           <AssetStep
-            title="All Photos"
+            title={`All Photos (${Object.values(photoCounts).reduce((sum, count) => sum + count, 0)})`}
+            showSignature={showSignature}
             asset={asset}
             onAsset={setAsset}
             downloading={downloading}
             onBack={backToMenu}
-            onDownload={() => onDownload({ asset })}
+            onDownload={() => onDownload({ asset: showSignature ? asset : "photo" })}
           />
         ) : null}
 
@@ -126,11 +129,12 @@ export function DownloadPhotosModal({
         {step === "date-type" ? (
           <AssetStep
             title={`Date-wise Photos: ${dayLabel(date)}`}
+            showSignature={showSignature}
             asset={asset}
             onAsset={setAsset}
             downloading={downloading}
             onBack={() => setStep("dates")}
-            onDownload={() => onDownload({ asset, date })}
+            onDownload={() => onDownload({ asset: showSignature ? asset : "photo", date })}
           />
         ) : null}
 
@@ -173,7 +177,8 @@ export function DownloadPhotosModal({
         {step === "asset" ? (
           <AssetStep
             title={wiseActionLabel("DOWNLOAD", activeField?.label ?? "Field")}
-            asset={asset}
+            showSignature={showSignature}
+            asset={showSignature ? asset : "photo"}
             onAsset={setAsset}
             downloading={downloading}
             onBack={() => setStep("value")}
@@ -198,6 +203,7 @@ function AssetStep({
   downloading,
   onBack,
   onDownload,
+  showSignature = false,
 }: {
   title: string;
   asset: Asset;
@@ -205,6 +211,7 @@ function AssetStep({
   downloading: boolean;
   onBack: () => void;
   onDownload: () => void;
+  showSignature?: boolean;
 }) {
   return (
     <div className="space-y-3">
@@ -217,7 +224,7 @@ function AssetStep({
           className="input-field mt-1 w-full"
         >
           <option value="photo">Photo</option>
-          <option value="signature">Signature</option>
+          {showSignature ? <option value="signature">Signature</option> : null}
         </select>
       </label>
       <button

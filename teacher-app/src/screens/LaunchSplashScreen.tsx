@@ -87,6 +87,7 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
           <BrandLockup
             variant="splash"
             title={BRAND.appName}
+            subtitle={BRAND.headerSubtitle}
             showTagline={false}
             singleLine
             style={{ marginTop: scale(12) }}

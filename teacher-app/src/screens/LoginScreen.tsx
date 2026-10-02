@@ -30,7 +30,6 @@ import {
   SUPPORT_EMAIL,
   SUPPORT_PHONE,
   SUPPORT_WEBSITE,
-  buildHelpSupportMessage,
 } from "../constants/support";
 import { openWhatsApp } from "../utils/whatsappBusiness";
 
@@ -100,7 +99,7 @@ export function LoginScreen(_props: Props) {
   }
 
   function handleWhatsAppPress() {
-    void openWhatsApp(buildHelpSupportMessage("Your School"));
+    void openWhatsApp("I need help with My School ID Card.");
   }
 
   function openCall() {
@@ -131,6 +130,7 @@ export function LoginScreen(_props: Props) {
             <BrandLockup
               variant="hero"
               title={BRAND.appName}
+              subtitle={BRAND.headerSubtitle}
               showTagline={false}
               singleLine
               style={{ marginTop: spacing.sm }}
@@ -235,7 +235,7 @@ function useLoginStyles() {
         fontSize: scale(28),
         fontFamily: fonts.headingBold,
         textAlign: "center",
-        color: "#F5811F",
+        color: "#4CAF50",
       },
       subtitle: {
         marginTop: scale(4),
@@ -304,7 +304,7 @@ function useLoginStyles() {
         textAlign: "center",
         fontFamily: fonts.body,
         fontSize: typeScale.subtitle,
-        color: "#F5811F",
+        color: "#4CAF50",
         marginTop: spacing.md,
         marginBottom: spacing.sm,
         width: formW,

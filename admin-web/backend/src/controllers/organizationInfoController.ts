@@ -30,7 +30,8 @@ export async function getSchoolOrganizationInfo(
     const result = await pool.query<
       SchoolRow & { template_name: string | null; template_image_url: string | null }
     >(
-      `SELECT s.id, s.name, s.year, s.phone, s.phone2, s.school_code, s.address, s.instructions,
+      `SELECT s.id, s.name, s.detail_year AS year, s.detail_phone AS phone, s.detail_phone2 AS phone2,
+              s.detail_code AS school_code, s.detail_address AS address, s.detail_instructions AS instructions,
               s.logo_url, s.signature_url, s.organization_photo_url, s.model, s.tags,
               s.template_id, s.owner_admin_id, s.created_at,
               COALESCE(s.field_visibility, '{}'::jsonb) AS field_visibility,
@@ -93,7 +94,8 @@ export async function getInstituteOrganizationInfo(
         template_id: string | null;
       }
     >(
-      `SELECT i.id, i.name, i.year, i.phone, i.institute_code, i.address, i.instructions,
+      `SELECT i.id, i.name, i.detail_year AS year, i.detail_phone AS phone, i.detail_code AS institute_code,
+              i.detail_address AS address, i.detail_instructions AS instructions,
               i.logo_url, i.signature_url, i.organization_photo_url, i.created_at,
               i.model, i.tags, i.template_id, i.owner_admin_id,
               COALESCE(i.field_visibility, '{}'::jsonb) AS field_visibility,

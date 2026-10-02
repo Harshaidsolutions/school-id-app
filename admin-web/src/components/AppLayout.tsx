@@ -41,6 +41,7 @@ const TITLES: Record<string, string> = {
   "/institute-members": "Members",
   "/bulk-upload": "Excel Upload",
   "/form-setup": "Form Setup",
+  "/crop-tool": "Cropping Tool",
   "/school-info": "School Info",
   "/institute-info": "Institution Info",
 };
@@ -50,6 +51,7 @@ const ORG_CONTEXT_PATHS = new Set([
   "/institute-members",
   "/bulk-upload",
   "/form-setup",
+  "/crop-tool",
   "/school-info",
   "/institute-info",
 ]);

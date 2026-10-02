@@ -65,17 +65,23 @@ function DetailSwitch({
   onToggle: (on: boolean) => void;
 }) {
   return (
-    <label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-text-muted">
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={() => onToggle(!on)}
+      className={`inline-flex h-8 items-center gap-2 rounded-full border px-1.5 text-xs font-semibold disabled:opacity-60 ${
+        on ? "border-[#86EFAC] bg-[#F0FDF4] text-[#15803D]" : "border-[#E2E8F0] bg-[#F8FAFC] text-[#64748B]"
+      }`}
+    >
+      <span
+        className={`h-6 w-11 rounded-full p-0.5 transition ${on ? "bg-[#22C55E]" : "bg-[#CBD5E1]"}`}
+      >
+        <span className={`block h-5 w-5 rounded-full bg-white shadow ${on ? "translate-x-5" : "translate-x-0"}`} />
+      </span>
       {on ? "ON" : "OFF"}
-      <input
-        type="checkbox"
-        role="switch"
-        checked={on}
-        disabled={disabled}
-        onChange={(e) => onToggle(e.target.checked)}
-        className="h-4 w-4"
-      />
-    </label>
+    </button>
   );
 }
 

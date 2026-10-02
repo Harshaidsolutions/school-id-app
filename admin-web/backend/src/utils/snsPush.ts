@@ -131,10 +131,25 @@ function buildGcmMessage(payload: SnsPushPayload): string {
   for (const [key, value] of Object.entries(data)) {
     dataStrings[key] = String(value);
   }
-  return JSON.stringify({
+  const message: Record<string, unknown> = {
     data: dataStrings,
     priority: "high",
-  });
+  };
+  if (imageUrl) {
+    message.notification = {
+      title: payload.title,
+      body: payload.body,
+      image: imageUrl,
+    };
+    message.android = {
+      priority: "high",
+      notification: {
+        image: imageUrl,
+        channel_id: ANDROID_CHANNEL_ID,
+      },
+    };
+  }
+  return JSON.stringify(message);
 }
 
 export type SnsSendResult = {

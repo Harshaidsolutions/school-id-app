@@ -19,8 +19,10 @@ export const REFER_WHATSAPP_CATALOG_LINK =
   "https://wa.me/message/HGMJJK7FOLRBB1";
 
 /** Opens WhatsApp chat without prefilled body text. */
-export function buildHelpSupportMessage(_schoolName?: string): string {
-  return "I need help with My School ID Card.";
+export function buildHelpSupportMessage(schoolName?: string): string {
+  const name = schoolName?.trim() ?? "";
+  if (!name) return "I need support @My School ID Card";
+  return `I need support @My School ID Card\n#${name}`;
 }
 
 export function buildReferMessage(schoolName: string): string {
@@ -30,5 +32,5 @@ export function buildReferMessage(schoolName: string): string {
 
 /** Message the current user sends to someone else. The catalog link is the text, not the chat target. */
 export function buildReferShareMessage(_catalogLink?: string): string {
-  return `I want to refer this MySchool ID card app\n\n${REFER_WHATSAPP_CATALOG_LINK}`;
+  return `I want to refer this My School ID card app\n\n${REFER_WHATSAPP_CATALOG_LINK}`;
 }

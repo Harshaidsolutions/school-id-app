@@ -13,6 +13,7 @@ import { TemplatesPage } from "./pages/TemplatesPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { ModelsPage } from "./pages/ModelsPage";
 import { FormSetupPage } from "./pages/FormSetupPage";
+import { CropToolPage } from "./pages/CropToolPage";
 import { OrganizationInfoPage } from "./pages/OrganizationInfoPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { VerifyOtpPage } from "./pages/VerifyOtpPage";
@@ -44,6 +45,7 @@ export default function App() {
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/form-setup" element={<FormSetupPage />} />
+              <Route path="/crop-tool" element={<CropToolPage />} />
               <Route path="/school-info" element={<OrganizationInfoPage mode="school" />} />
               <Route path="/institute-info" element={<OrganizationInfoPage mode="institute" />} />
               <Route path="/models" element={<ModelsPage />} />

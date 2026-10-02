@@ -24,11 +24,13 @@ function dayLabel(iso: string): string {
 export function DeleteOptionsModal({
   photoCounts,
   categoryFields,
+  counts,
   onClose,
   onChoose,
 }: {
   photoCounts: Record<string, number>;
   categoryFields: CategoryField[];
+  counts: { allPhotos: number; allData: number; capturedData: number; uncapturedData: number };
   onClose: () => void;
   onChoose: (job: DeleteJob) => void;
 }) {
@@ -76,31 +78,31 @@ export function DeleteOptionsModal({
             </p>
             <h3 className="mt-4 text-sm font-semibold text-text-navy">Photos</h3>
             <div className="mt-2 space-y-2">
-              <Row title="Delete All Photos" onClick={() => onChoose({ kind: "photos", label: "Delete all photos" })} />
-              <Row title="Delete Date-wise Photos" onClick={() => setStep("photo-dates")} />
+              <Row title={`Delete All Photos (${counts.allPhotos})`} onClick={() => onChoose({ kind: "photos", label: "Delete all photos" })} />
+              <Row title={`Delete Date-wise Photos (${counts.allPhotos})`} onClick={() => setStep("photo-dates")} />
               {categoryFields.map((field, index) => (
                 <Row
                   key={`photo-${field.key}`}
-                  title={wiseActionLabel("DELETE", field.label, "Photos")}
+                  title={`${wiseActionLabel("DELETE", field.label, "Photos")} (${field.options.reduce((sum, option) => sum + option.count, 0)})`}
                   onClick={() => openField(index, "photos")}
                 />
               ))}
             </div>
             <h3 className="mt-5 text-sm font-semibold text-text-navy">Data</h3>
             <div className="mt-2 space-y-2">
-              <Row title="Delete Excel / Full Data" onClick={() => onChoose({ kind: "data", label: "Delete full data" })} />
+              <Row title={`Delete Excel / Full Data (${counts.allData})`} onClick={() => onChoose({ kind: "data", label: "Delete full data" })} />
               <Row
-                title="Delete Captured Data"
+                title={`Delete Captured Data (${counts.capturedData})`}
                 onClick={() => onChoose({ kind: "data", dataScope: "captured", label: "Delete captured data" })}
               />
               <Row
-                title="Delete Uncaptured Data"
+                title={`Delete Uncaptured Data (${counts.uncapturedData})`}
                 onClick={() => onChoose({ kind: "data", dataScope: "uncaptured", label: "Delete uncaptured data" })}
               />
               {categoryFields.map((field, index) => (
                 <Row
                   key={`data-${field.key}`}
-                  title={wiseActionLabel("DELETE", field.label, "Data")}
+                  title={`${wiseActionLabel("DELETE", field.label, "Data")} (${counts.allData})`}
                   onClick={() => openField(index, "data")}
                 />
               ))}

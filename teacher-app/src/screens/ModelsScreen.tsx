@@ -493,7 +493,7 @@ export function ModelsScreen() {
         onClose={() => setPreviewIndex(null)}
         onIndexChange={setViewerIndex}
         title={(idx) => modelViewerItems[idx]?.name ?? null}
-        subtitle={(idx) =>
+        caption={(idx) =>
           modelTab === "tags"
             ? null
             : modelViewerItems[idx]?.description?.trim() || null

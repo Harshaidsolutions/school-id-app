@@ -30,12 +30,14 @@ export function ExcelDownloadModal({
   downloading,
   categoryFields,
   captureDates,
+  counts,
   onClose,
   onDownload,
 }: {
   downloading: boolean;
   categoryFields: CategoryField[];
   captureDates: { name: string; count: number }[];
+  counts: Partial<Record<ExcelScope, number>>;
   onClose: () => void;
   onDownload: (job: {
     scope: ExcelScope;
@@ -90,7 +92,7 @@ export function ExcelDownloadModal({
                 }`}
                 onClick={() => chooseMenu(item.scope, item.label)}
               >
-                {item.label}
+                {item.label} ({counts[item.scope] ?? 0})
               </button>
             ))}
             <button
@@ -101,7 +103,7 @@ export function ExcelDownloadModal({
                 setStep("date");
               }}
             >
-              Date-wise Captured Data
+              Date-wise Captured Data ({captureDates.reduce((sum, item) => sum + item.count, 0)})
             </button>
             {categoryFields.map((item, index) => (
               <button
@@ -116,7 +118,7 @@ export function ExcelDownloadModal({
                   setStep("value");
                 }}
               >
-                {wiseActionLabel("DOWNLOAD", item.label)}
+                {wiseActionLabel("DOWNLOAD", item.label)} ({item.options.reduce((sum, option) => sum + option.count, 0)})
               </button>
             ))}
           </div>

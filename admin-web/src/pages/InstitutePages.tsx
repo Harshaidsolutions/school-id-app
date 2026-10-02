@@ -144,6 +144,7 @@ export function InstituteListPage() {
           <>
             {selecting || filtered.length > 0 ? (
               <BulkModeButtons
+                cancelOnRight
                 selecting={selecting}
                 selectedCount={filtered.filter((institute) => selectedIds.has(institute.id)).length}
                 deleting={bulkDeleting}

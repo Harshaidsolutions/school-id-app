@@ -13,6 +13,7 @@ export interface Student {
   photo_id: string | null;
   photo_url: string | null;
   photo_captured_at?: string | Date | null;
+  photo_cropped?: boolean;
   signature_url?: string | null;
   status: string | null;
   import_batch_id: string | null;

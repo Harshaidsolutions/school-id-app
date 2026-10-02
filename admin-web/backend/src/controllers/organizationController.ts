@@ -39,7 +39,8 @@ export async function getTeacherOrganization(
     const row = isInstituteStaff(req.user)
       ? (
           await pool.query<InstituteRow>(
-            `SELECT id, name, year, phone, institute_code, address, instructions,
+            `SELECT id, name, detail_year AS year, detail_phone AS phone, detail_code AS institute_code,
+                    detail_address AS address, detail_instructions AS instructions,
                     logo_url, signature_url, organization_photo_url, model, tags,
                     template_id, created_at,
                     COALESCE(allow_screenshot, true) AS allow_screenshot,
@@ -56,7 +57,8 @@ export async function getTeacherOrganization(
         ).rows[0]
       : (
           await pool.query<SchoolRow>(
-            `SELECT id, name, year, phone, phone2, school_code, address, instructions,
+            `SELECT id, name, detail_year AS year, detail_phone AS phone, detail_phone2 AS phone2,
+                    detail_code AS school_code, detail_address AS address, detail_instructions AS instructions,
                     logo_url, signature_url, organization_photo_url, model, tags,
                     template_id, created_at,
                     COALESCE(allow_screenshot, true) AS allow_screenshot,
@@ -118,7 +120,10 @@ export async function updateTeacherOrganization(
 
     if (instituteUser) {
       const existing = await pool.query<InstituteRow>(
-        `SELECT * FROM institutes WHERE id = $1 LIMIT 1`,
+        `SELECT id, name, detail_year AS year, detail_phone AS phone, detail_code AS institute_code,
+                detail_address AS address, detail_instructions AS instructions,
+                logo_url, signature_url, organization_photo_url, model, tags, template_id
+         FROM institutes WHERE id = $1 LIMIT 1`,
         [orgId]
       );
       const institute = existing.rows[0];
@@ -198,19 +203,21 @@ export async function updateTeacherOrganization(
 
       const updated = await pool.query<InstituteRow>(
         `UPDATE institutes
-         SET phone = $1,
-             institute_code = $2,
-             address = $3,
-             instructions = $4,
+         SET detail_phone = $1,
+             detail_code = $2,
+             detail_address = $3,
+             detail_instructions = $4,
              model = $5,
              tags = $6,
              template_id = $7,
              logo_url = $8,
              signature_url = $9,
              organization_photo_url = $10,
-             year = $11
+             detail_year = $11,
+             details_separated = true
          WHERE id = $12
-         RETURNING id, name, year, phone, institute_code, address, instructions,
+         RETURNING id, name, detail_year AS year, detail_phone AS phone, detail_code AS institute_code,
+                   detail_address AS address, detail_instructions AS instructions,
                    logo_url, signature_url, organization_photo_url, model, tags,
                    template_id, created_at`,
         [
@@ -238,7 +245,10 @@ export async function updateTeacherOrganization(
     }
 
     const existing = await pool.query<SchoolRow>(
-      `SELECT * FROM schools WHERE id = $1 LIMIT 1`,
+      `SELECT id, name, detail_year AS year, detail_phone AS phone, detail_phone2 AS phone2,
+              detail_code AS school_code, detail_address AS address, detail_instructions AS instructions,
+              logo_url, signature_url, organization_photo_url, model, tags, template_id
+       FROM schools WHERE id = $1 LIMIT 1`,
       [orgId]
     );
     const school = existing.rows[0];
@@ -313,20 +323,22 @@ export async function updateTeacherOrganization(
 
     const updated = await pool.query<SchoolRow>(
       `UPDATE schools
-       SET phone = $1,
-           phone2 = $2,
-           school_code = $3,
-           address = $4,
-           instructions = $5,
+       SET detail_phone = $1,
+           detail_phone2 = $2,
+           detail_code = $3,
+           detail_address = $4,
+           detail_instructions = $5,
            model = $6,
            tags = $7,
            template_id = $8,
            logo_url = $9,
            signature_url = $10,
            organization_photo_url = $11,
-           year = $12
+           detail_year = $12,
+           details_separated = true
        WHERE id = $13
-       RETURNING id, name, year, phone, phone2, school_code, address, instructions,
+       RETURNING id, name, detail_year AS year, detail_phone AS phone, detail_phone2 AS phone2,
+                 detail_code AS school_code, detail_address AS address, detail_instructions AS instructions,
                  logo_url, signature_url, organization_photo_url, model, tags,
                  template_id, created_at`,
       [

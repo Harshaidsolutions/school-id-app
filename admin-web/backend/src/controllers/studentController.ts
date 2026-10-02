@@ -37,6 +37,7 @@ import {
 } from "../utils/addSerial";
 import { studentPhotoOrgId } from "../config/storage";
 import { loadFormConfigForOrg } from "./formConfigController";
+import { captureDayKey } from "../utils/dateUtils";
 import { routeParam } from "../utils/routeParams";
 import {
   assertInstituteOwnedByAdmin,
@@ -68,8 +69,8 @@ function deleteFilterSql(
   if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     values.push(date);
     const dateSql = photosOnly
-      ? `(photo_captured_at AT TIME ZONE 'UTC')::date = $${startIndex + values.length - 1}::date`
-      : `COALESCE((photo_captured_at AT TIME ZONE 'UTC')::date, (updated_at AT TIME ZONE 'UTC')::date) = $${startIndex + values.length - 1}::date`;
+      ? `(photo_captured_at AT TIME ZONE 'Asia/Kolkata')::date = $${startIndex + values.length - 1}::date`
+      : `COALESCE((photo_captured_at AT TIME ZONE 'Asia/Kolkata')::date, (updated_at AT TIME ZONE 'Asia/Kolkata')::date) = $${startIndex + values.length - 1}::date`;
     parts.push(dateSql);
   }
   if (category && fieldKey && fieldKey !== "class_section" && /^[a-zA-Z0-9_]+$/.test(fieldKey)) {
@@ -127,7 +128,7 @@ async function appendPendingDataIds(
 
 const STUDENT_SELECT = `
   id, school_id, institute_id, class_section, roll_no, student_name, parent_name, parent_phone,
-  address, photo_id, photo_url, photo_captured_at, signature_url, status, import_batch_id, printed_at, created_at, updated_at,
+  address, photo_id, photo_url, photo_captured_at, photo_cropped, signature_url, status, import_batch_id, printed_at, created_at, updated_at,
   custom_1, custom_2, custom_3, dob, gender, blood_group, extra_fields, field_labels
 `;
 
@@ -831,6 +832,9 @@ export async function listStudentsAdmin(
       values.push(statusFilter);
       conditions.push(`status = $${values.length}`);
     }
+    if (req.query.cropQueue === "1" || req.query.cropQueue === "true") {
+      conditions.push(`photo_url IS NOT NULL AND btrim(photo_url) <> '' AND photo_cropped = false`);
+    }
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
@@ -881,9 +885,7 @@ export async function listStudentsAdmin(
     }
     if (capturedOn) {
       students = students.filter((row) => {
-        const raw = row.photo_captured_at;
-        if (!raw) return false;
-        return new Date(raw).toISOString().slice(0, 10) === capturedOn;
+        return captureDayKey(row.photo_captured_at) === capturedOn;
       });
     }
     res.status(200).json({
@@ -931,6 +933,13 @@ export async function uploadStudentPhotoAdmin(
     if (!student) throw new AppError("Student not found", 404);
     await assertStudentOwnedByAdmin(scope, student);
 
+    const orgId = student.school_id ?? student.institute_id;
+    if (!orgId) throw new AppError("Student is not assigned to an organization", 400);
+    const photoUrl = await uploadStudentPhotoToStorage(orgId, student.id, req.file);
+    const markCropped = ["1", "true", "yes"].includes(
+      String(req.body?.markCropped ?? "").trim().toLowerCase()
+    );
+
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -941,19 +950,19 @@ export async function uploadStudentPhotoAdmin(
       const current = locked.rows[0];
       if (!current) throw new AppError("Student not found", 404);
       await assertStudentOwnedByAdmin(scope, current);
-      const orgId = current.school_id ?? current.institute_id;
-      if (!orgId) throw new AppError("Student is not assigned to an organization", 400);
+      const currentOrgId = current.school_id ?? current.institute_id;
+      if (!currentOrgId) throw new AppError("Student is not assigned to an organization", 400);
 
-      const photoUrl = await uploadStudentPhotoToStorage(orgId, current.id, req.file);
       const updated = await client.query<Student>(
         `UPDATE students
          SET photo_url = $1,
              status = 'captured',
              photo_captured_at = COALESCE(photo_captured_at, NOW()),
+             photo_cropped = $3,
              updated_at = NOW()
          WHERE id = $2
          RETURNING ${STUDENT_SELECT}`,
-        [photoUrl, studentId]
+        [photoUrl, studentId, markCropped]
       );
       await client.query("COMMIT");
       res.status(200).json({ status: "ok", student: updated.rows[0] });
@@ -1046,7 +1055,7 @@ export async function deleteStudentPhotoAdmin(
 
     const updated = await pool.query<Student>(
       `UPDATE students
-       SET photo_url = NULL, status = 'pending', updated_at = NOW()
+       SET photo_url = NULL, photo_captured_at = NULL, photo_cropped = false, status = 'pending', updated_at = NOW()
        WHERE id = $1
        RETURNING ${STUDENT_SELECT}`,
       [studentId]
@@ -1386,6 +1395,7 @@ export async function deleteSchoolPhotosData(
   next: NextFunction
 ): Promise<void> {
   const client = await pool.connect();
+  let released = false;
   try {
     if (!req.user) throw new AppError("Authentication required", 401);
 
@@ -1407,6 +1417,9 @@ export async function deleteSchoolPhotosData(
       `SELECT id, photo_url FROM students WHERE school_id = $1 AND photo_url IS NOT NULL${filter.sql} FOR UPDATE`,
       [schoolId, ...filter.values]
     );
+    await client.query("COMMIT");
+    client.release();
+    released = true;
 
     for (const row of students.rows) {
       if (row.photo_url) {
@@ -1414,13 +1427,17 @@ export async function deleteSchoolPhotosData(
       }
     }
 
-    await client.query(
-      `UPDATE students SET photo_url = NULL, status = 'pending', updated_at = NOW()
-       WHERE school_id = $1 AND photo_url IS NOT NULL${filter.sql}`,
-      [schoolId, ...filter.values]
-    );
-
-    await client.query("COMMIT");
+    if (students.rows.length > 0) {
+      await pool.query(
+        `UPDATE students AS s
+         SET photo_url = NULL, photo_captured_at = NULL, photo_cropped = false, status = 'pending', updated_at = NOW()
+         FROM unnest($1::uuid[], $2::text[]) AS incoming(id, previous_url)
+         WHERE s.id = incoming.id
+           AND s.school_id = $3
+           AND s.photo_url = incoming.previous_url`,
+        [students.rows.map((row) => row.id), students.rows.map((row) => row.photo_url), schoolId]
+      );
+    }
 
     res.status(200).json({
       status: "ok",
@@ -1428,14 +1445,16 @@ export async function deleteSchoolPhotosData(
       deletedCount: students.rows.length,
     });
   } catch (error) {
-    try {
-      await client.query("ROLLBACK");
-    } catch {
-      /* ignore */
+    if (!released) {
+      try {
+        await client.query("ROLLBACK");
+      } catch {
+        /* ignore */
+      }
     }
     next(error);
   } finally {
-    client.release();
+    if (!released) client.release();
   }
 }
 
@@ -1482,6 +1501,7 @@ export async function deleteInstitutePhotosData(
   next: NextFunction
 ): Promise<void> {
   const client = await pool.connect();
+  let released = false;
   try {
     if (!req.user) throw new AppError("Authentication required", 401);
 
@@ -1510,6 +1530,9 @@ export async function deleteInstitutePhotosData(
        FOR UPDATE`,
       [instituteId, ...filter.values]
     );
+    await client.query("COMMIT");
+    client.release();
+    released = true;
 
     for (const row of students.rows) {
       if (row.photo_url) {
@@ -1518,13 +1541,17 @@ export async function deleteInstitutePhotosData(
       }
     }
 
-    await client.query(
-      `UPDATE students SET photo_url = NULL, status = 'pending', updated_at = NOW()
-       WHERE institute_id = $1 AND photo_url IS NOT NULL${filter.sql}`,
-      [instituteId, ...filter.values]
-    );
-
-    await client.query("COMMIT");
+    if (students.rows.length > 0) {
+      await pool.query(
+        `UPDATE students AS s
+         SET photo_url = NULL, photo_captured_at = NULL, photo_cropped = false, status = 'pending', updated_at = NOW()
+         FROM unnest($1::uuid[], $2::text[]) AS incoming(id, previous_url)
+         WHERE s.id = incoming.id
+           AND s.institute_id = $3
+           AND s.photo_url = incoming.previous_url`,
+        [students.rows.map((row) => row.id), students.rows.map((row) => row.photo_url), instituteId]
+      );
+    }
 
     res.status(200).json({
       status: "ok",
@@ -1532,14 +1559,16 @@ export async function deleteInstitutePhotosData(
       deletedCount: students.rows.length,
     });
   } catch (error) {
-    try {
-      await client.query("ROLLBACK");
-    } catch {
-      /* ignore */
+    if (!released) {
+      try {
+        await client.query("ROLLBACK");
+      } catch {
+        /* ignore */
+      }
     }
     next(error);
   } finally {
-    client.release();
+    if (!released) client.release();
   }
 }
 

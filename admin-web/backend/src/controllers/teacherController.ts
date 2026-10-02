@@ -225,8 +225,21 @@ export async function getTeacherFormConfig(
     const fields = withSignatureUploadField(
       await loadFormConfigForOrg({ schoolId, instituteId })
     );
+    const version = await pool.query<{ updated_at: Date | null }>(
+      `SELECT updated_at
+       FROM form_configs
+       WHERE ($1::uuid IS NOT NULL AND school_id = $1::uuid)
+          OR ($2::uuid IS NOT NULL AND institute_id = $2::uuid)
+       ORDER BY updated_at DESC NULLS LAST
+       LIMIT 1`,
+      [schoolId ?? null, instituteId ?? null]
+    );
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-    res.status(200).json({ status: "ok", fields });
+    res.status(200).json({
+      status: "ok",
+      fields,
+      updated_at: version.rows[0]?.updated_at ?? null,
+    });
   } catch (error) {
     next(error);
   }
@@ -609,6 +622,8 @@ export async function uploadStudentPhoto(
       });
     }
 
+    const photoUrl = await uploadStudentPhotoToStorage(orgId, student.id, req.file);
+
     const client = await pool.connect();
     let updatedStudent: TeacherStudentRow | undefined;
     try {
@@ -627,13 +642,12 @@ export async function uploadStudentPhoto(
         });
       }
 
-      const photoUrl = await uploadStudentPhotoToStorage(orgId, current.id, req.file);
-
       const updated = await client.query<TeacherStudentRow>(
         `UPDATE students
          SET photo_url = $1,
              status = 'captured',
-             photo_captured_at = NOW(),
+             photo_captured_at = COALESCE(photo_captured_at, NOW()),
+             photo_cropped = false,
              updated_at = NOW()
          WHERE id = $2
          RETURNING ${TEACHER_STUDENT_SELECT}`,
@@ -773,14 +787,8 @@ export async function updateTeacherStudent(
     const requestedName = [req.body.student_name, req.body.studentName, req.body.name].find(
       (value) => value !== undefined && value !== null
     );
-    if (
-      requestedName !== undefined &&
-      String(requestedName).trim() !== (student.student_name ?? "").trim()
-    ) {
-      throw new AppError("Name cannot be changed", 400);
-    }
-
-    const studentName = student.student_name;
+    const studentName =
+      requestedName !== undefined ? String(requestedName).trim() : student.student_name;
     if (!studentName) {
       throw new AppError("Name is required", 400);
     }
@@ -831,10 +839,6 @@ export async function updateTeacherStudent(
               req.body.phoneNumber
           )
         : student.parent_phone;
-
-    if (parentPhone && !/^\d+$/.test(parentPhone)) {
-      throw new AppError("Parent phone number must be numeric", 400);
-    }
 
     const address =
       req.body.address !== undefined ? nullableText(req.body.address) : student.address;
@@ -988,6 +992,8 @@ export async function deleteStudentPhoto(
     const updated = await pool.query<TeacherStudentRow>(
       `UPDATE students
        SET photo_url = NULL,
+           photo_captured_at = NULL,
+           photo_cropped = false,
            status = 'pending',
            updated_at = NOW()
        WHERE id = $1
@@ -1028,8 +1034,8 @@ export async function getTeacherProgress(
       }>(
         `SELECT
            COUNT(*)::text AS total_students,
-           COUNT(*) FILTER (WHERE status IN ('captured', 'printed'))::text AS captured,
-           COUNT(*) FILTER (WHERE status IS DISTINCT FROM 'captured' AND status IS DISTINCT FROM 'printed')::text AS uncaptured
+           COUNT(*) FILTER (WHERE photo_url IS NOT NULL AND btrim(photo_url) <> '')::text AS captured,
+           COUNT(*) FILTER (WHERE photo_url IS NULL OR btrim(photo_url) = '')::text AS uncaptured
          FROM students
          WHERE institute_id = $1`,
         [instituteId]
@@ -1060,8 +1066,8 @@ export async function getTeacherProgress(
     }>(
       `SELECT
          COUNT(*)::text AS total_students,
-         COUNT(*) FILTER (WHERE status IN ('captured', 'printed'))::text AS captured,
-         COUNT(*) FILTER (WHERE status IS DISTINCT FROM 'captured' AND status IS DISTINCT FROM 'printed')::text AS uncaptured
+         COUNT(*) FILTER (WHERE photo_url IS NOT NULL AND btrim(photo_url) <> '')::text AS captured,
+         COUNT(*) FILTER (WHERE photo_url IS NULL OR btrim(photo_url) = '')::text AS uncaptured
        FROM students
        WHERE school_id = $1
          ${scopeSql}`,
@@ -1105,11 +1111,8 @@ export async function getTeacherHome(
       }>(
         `SELECT
            COUNT(*)::text AS total_students,
-           COUNT(*) FILTER (WHERE status IN ('captured', 'printed'))::text AS captured,
-           COUNT(*) FILTER (
-             WHERE status IS DISTINCT FROM 'captured'
-               AND status IS DISTINCT FROM 'printed'
-           )::text AS uncaptured
+           COUNT(*) FILTER (WHERE photo_url IS NOT NULL AND btrim(photo_url) <> '')::text AS captured,
+           COUNT(*) FILTER (WHERE photo_url IS NULL OR btrim(photo_url) = '')::text AS uncaptured
          FROM students
          WHERE institute_id = $1`,
         [instituteId]
@@ -1156,11 +1159,8 @@ export async function getTeacherHome(
       `SELECT
          class_section,
          COUNT(*)::text AS total_students,
-         COUNT(*) FILTER (WHERE status IN ('captured', 'printed'))::text AS captured,
-         COUNT(*) FILTER (
-           WHERE status IS DISTINCT FROM 'captured'
-             AND status IS DISTINCT FROM 'printed'
-         )::text AS uncaptured
+         COUNT(*) FILTER (WHERE photo_url IS NOT NULL AND btrim(photo_url) <> '')::text AS captured,
+         COUNT(*) FILTER (WHERE photo_url IS NULL OR btrim(photo_url) = '')::text AS uncaptured
        FROM students
        WHERE school_id = $1
          ${scopeSql}

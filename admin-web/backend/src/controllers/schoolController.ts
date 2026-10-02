@@ -141,8 +141,8 @@ export async function createSchool(
     const instructions = String(req.body.instructions ?? "").trim() || null;
 
     const inserted = await pool.query<SchoolRow>(
-      `INSERT INTO schools (name, year, phone, school_code, address, instructions, owner_admin_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO schools (name, year, phone, school_code, address, instructions, owner_admin_id, details_separated)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, true)
        RETURNING *`,
       [name, year, phone, schoolCode, address, instructions, scope.adminUserId]
     );
@@ -225,8 +225,8 @@ export async function createSchoolWithOwner(
     const email = await allocateOwnerEmail(client, preferredEmail);
 
     const schoolResult = await client.query<SchoolRow>(
-      `INSERT INTO schools (name, phone, year, owner_username_plain, owner_password_plain, owner_admin_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO schools (name, phone, year, owner_username_plain, owner_password_plain, owner_admin_id, details_separated)
+       VALUES ($1, $2, $3, $4, $5, $6, true)
        RETURNING *`,
       [
         schoolName,

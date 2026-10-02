@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import api, { getErrorMessage } from "../api/client";
 import { ErrorRetry, LoadingBlock } from "../components/ErrorRetry";
+import { FullScreenImageViewer } from "../components/FullScreenImageViewer";
 import { OrangeGradientHeader } from "../components/OrangeGradientHeader";
 import type { RootStackParamList } from "../navigation/types";
 import type { NotificationItem, NotificationsResponse } from "../types";
@@ -101,6 +102,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<NotificationItem | null>(null);
   const [hiddenImages, setHiddenImages] = useState<Set<string>>(new Set());
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   const migrateLegacyHiddenNotifications = useCallback(async () => {
     try {
@@ -458,18 +460,20 @@ export function NotificationsScreen({ navigation, route }: Props) {
                 {detailItem?.message}
               </Text>
               {detailItem?.image_url && !hiddenImages.has(detailItem.id) ? (
-                <Image
-                  source={{ uri: detailItem.image_url }}
-                  style={styles.modalImage}
-                  resizeMode="contain"
-                  onError={() =>
-                    setHiddenImages((prev) => {
-                      const next = new Set(prev);
-                      next.add(detailItem.id);
-                      return next;
-                    })
-                  }
-                />
+                <Pressable onPress={() => setZoomImage(detailItem.image_url ?? null)}>
+                  <Image
+                    source={{ uri: detailItem.image_url }}
+                    style={styles.modalImage}
+                    resizeMode="contain"
+                    onError={() =>
+                      setHiddenImages((prev) => {
+                        const next = new Set(prev);
+                        next.add(detailItem.id);
+                        return next;
+                      })
+                    }
+                  />
+                </Pressable>
               ) : null}
             </ScrollView>
             <Pressable
@@ -481,6 +485,14 @@ export function NotificationsScreen({ navigation, route }: Props) {
           </View>
         </View>
       </Modal>
+      <FullScreenImageViewer
+        visible={zoomImage != null}
+        images={zoomImage ? [zoomImage] : []}
+        onClose={() => setZoomImage(null)}
+        colors={colors}
+        showCounter={false}
+        showNavButtons={false}
+      />
     </View>
   );
 }
@@ -530,8 +542,8 @@ const styles = StyleSheet.create({
   },
   modalImage: {
     width: "100%",
-    height: 180,
-    marginTop: 12,
+    height: 320,
+    marginTop: 16,
     borderRadius: 8,
   },
   message: {

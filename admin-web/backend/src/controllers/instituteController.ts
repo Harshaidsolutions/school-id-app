@@ -101,8 +101,8 @@ export async function createInstitute(
     const instructions = String(req.body.instructions ?? "").trim() || null;
 
     const inserted = await pool.query<InstituteRow>(
-      `INSERT INTO institutes (name, year, phone, institute_code, address, instructions, owner_admin_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO institutes (name, year, phone, institute_code, address, instructions, owner_admin_id, details_separated)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, true)
        RETURNING *`,
       [name, year, phone, instituteCode, address, instructions, scope.adminUserId]
     );
@@ -178,8 +178,8 @@ export async function createInstituteWithOwner(
     const email = await allocateOwnerEmail(client, preferredEmail);
 
     const instituteResult = await client.query<InstituteRow>(
-      `INSERT INTO institutes (name, phone, year, owner_username_plain, owner_password_plain, owner_admin_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO institutes (name, phone, year, owner_username_plain, owner_password_plain, owner_admin_id, details_separated)
+       VALUES ($1, $2, $3, $4, $5, $6, true)
        RETURNING *`,
       [
         instituteName,

@@ -40,10 +40,11 @@ export function smallestAddSerial(texts: string[]): string {
   return `ADD_${String(serial).padStart(3, "0")}`;
 }
 
+const ADD_PHOTO_ID = /^ADD_(\d+)$/i;
+
 /**
- * Smallest ADD_ serial that is not present on any student in this organization.
- * Deleted rows free their number. The org capture counter is raised to this
- * number so the photo-capture allocator cannot hand the same value out.
+ * Next manual Photo Number for this organization: ADD_000, ADD_001, ADD_002.
+ * Existing numbers stay as they are. A deleted number is not issued again.
  */
 export async function allocateReusableAddSerial(
   client: PoolClient,
@@ -60,25 +61,33 @@ export async function allocateReusableAddSerial(
 
   await client.query(`SELECT id FROM ${table} WHERE id = $1::uuid FOR UPDATE`, [orgId]);
 
-  const existing = await client.query<{ photo_id: string | null; extra_fields: unknown }>(
-    `SELECT photo_id, extra_fields FROM students WHERE ${column} = $1`,
-    [orgId]
-  );
+  const [org, existing] = await Promise.all([
+    client.query<{ photo_capture_seq: number }>(
+      `SELECT photo_capture_seq FROM ${table} WHERE id = $1::uuid`,
+      [orgId]
+    ),
+    client.query<{ photo_id: string | null }>(
+      `SELECT photo_id FROM students WHERE ${column} = $1`,
+      [orgId]
+    ),
+  ]);
 
-  const texts: string[] = [];
+  let highest = -1;
   for (const row of existing.rows) {
-    if (row.photo_id) texts.push(row.photo_id);
-    if (row.extra_fields != null) texts.push(JSON.stringify(row.extra_fields));
+    const match = ADD_PHOTO_ID.exec(String(row.photo_id ?? "").trim());
+    if (!match) continue;
+    const serial = Number(match[1]);
+    if (Number.isFinite(serial)) highest = Math.max(highest, serial);
   }
-  const nextId = smallestAddSerial(texts);
-  const serial = Number(nextId.slice(4));
+  const current = org.rows[0]?.photo_capture_seq ?? 0;
+  const issued = current === 0 && highest < 0 ? 0 : Math.max(current, highest) + 1;
 
   await client.query(
     `UPDATE ${table}
-     SET photo_capture_seq = GREATEST(COALESCE(photo_capture_seq, 0), $2)
+     SET photo_capture_seq = $2
      WHERE id = $1::uuid`,
-    [orgId, serial]
+    [orgId, issued]
   );
 
-  return nextId;
+  return `ADD_${String(issued).padStart(3, "0")}`;
 }

@@ -52,6 +52,8 @@ type Props = {
   imageLayout?: ViewerImageLayout | ((uri: string, index: number) => ViewerImageLayout);
   title?: string | ((index: number) => string | null | undefined);
   subtitle?: string | ((index: number) => string | null | undefined);
+  /** Shown under the image. Used by the Models description. */
+  caption?: string | ((index: number) => string | null | undefined);
 };
 
 function resolveLayout(
@@ -129,6 +131,7 @@ export function FullScreenImageViewer({
   imageLayout = "default",
   title,
   subtitle,
+  caption,
 }: Props) {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -445,6 +448,16 @@ export function FullScreenImageViewer({
             ) : null}
           </View>
 
+          {(() => {
+            const captionText = typeof caption === "function" ? caption(index) : caption;
+            if (!captionText) return null;
+            return (
+              <Text style={styles.modelCaption} numberOfLines={4}>
+                {captionText}
+              </Text>
+            );
+          })()}
+
           {showFooterNav ? (
             <View
               style={[
@@ -530,6 +543,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  modelCaption: {
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 14,
+    fontWeight: "500",
+    textAlign: "center",
+    marginTop: 16,
+    marginBottom: 8,
+    paddingHorizontal: 20,
   },
   gestureWrap: {
     alignItems: "center",

@@ -5,6 +5,7 @@ export function BulkModeButtons({
   onStart,
   onCancel,
   onConfirm,
+  cancelOnRight = false,
 }: {
   selecting: boolean;
   selectedCount: number;
@@ -12,6 +13,7 @@ export function BulkModeButtons({
   onStart: () => void;
   onCancel: () => void;
   onConfirm: () => void;
+  cancelOnRight?: boolean;
 }) {
   if (!selecting) {
     return (
@@ -20,24 +22,30 @@ export function BulkModeButtons({
       </button>
     );
   }
+  const cancel = (
+    <button
+      type="button"
+      className="btn-secondary shrink-0"
+      onClick={onCancel}
+      disabled={deleting}
+    >
+      Cancel
+    </button>
+  );
+  const confirm = (
+    <button
+      type="button"
+      className="btn-primary shrink-0 disabled:opacity-50"
+      onClick={onConfirm}
+      disabled={selectedCount === 0 || deleting}
+    >
+      {deleting ? "Deleting…" : "Bulk Delete"}
+    </button>
+  );
   return (
     <>
-      <button
-        type="button"
-        className="btn-secondary shrink-0"
-        onClick={onCancel}
-        disabled={deleting}
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        className="btn-primary shrink-0 disabled:opacity-50"
-        onClick={onConfirm}
-        disabled={selectedCount === 0 || deleting}
-      >
-        {deleting ? "Deleting…" : "Bulk Delete"}
-      </button>
+      {cancelOnRight ? confirm : cancel}
+      {cancelOnRight ? cancel : confirm}
     </>
   );
 }

@@ -22,22 +22,49 @@ export function CropToolModal({
   categories,
   onClose,
   onSaved,
+  layout = "page",
 }: {
   students: Student[];
   categories: ConfiguredCategoryField[];
   onClose: () => void;
   onSaved: (student: Student) => void;
+  layout?: "page" | "modal";
 }) {
   const field = useMemo(() => primaryCategory(categories), [categories]);
   const photos = useMemo(
-    () => students.filter((student) => Boolean(student.photo_url)),
+    () => students.filter((student) => Boolean(student.photo_url) && student.photo_cropped !== true),
     [students]
   );
   const [selected, setSelected] = useState("");
+  const [captureDay, setCaptureDay] = useState("");
+  const [captureHour, setCaptureHour] = useState("");
+  const dated = useMemo(() => {
+    return photos.map((student) => ({ student, parts: captureParts(student.photo_captured_at) }));
+  }, [photos]);
+  const dateOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of dated) {
+      if (!item.parts) continue;
+      counts.set(item.parts.day, (counts.get(item.parts.day) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  }, [dated]);
+  const hourOptions = useMemo(() => {
+    if (!captureDay) return [];
+    const counts = new Map<number, number>();
+    for (const item of dated) {
+      if (item.parts?.day !== captureDay) continue;
+      counts.set(item.parts.hour, (counts.get(item.parts.hour) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => a[0] - b[0]);
+  }, [dated, captureDay]);
   const gallery = useMemo(() => {
-    if (!field || !selected) return photos;
-    return photos.filter((student) => categoryValue(student, field) === selected);
-  }, [photos, field, selected]);
+    return dated
+      .filter((item) => !field || !selected || categoryValue(item.student, field) === selected)
+      .filter((item) => !captureDay || item.parts?.day === captureDay)
+      .filter((item) => captureHour === "" || item.parts?.hour === Number(captureHour))
+      .map((item) => item.student);
+  }, [dated, field, selected, captureDay, captureHour]);
   const options = useMemo(() => {
     if (!field) return [];
     const values = new Set<string>();
@@ -59,6 +86,10 @@ export function CropToolModal({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [frameLimit, setFrameLimit] = useState({ width: 720, height: 520 });
   const [toneOpen, setToneOpen] = useState(false);
+  const [browsing, setBrowsing] = useState(true);
+  const [cropArmed, setCropArmed] = useState(false);
+  const [limitWidth, setLimitWidth] = useState("");
+  const [limitHeight, setLimitHeight] = useState("");
   const imageRef = useRef<HTMLImageElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -78,6 +109,7 @@ export function CropToolModal({
   const paintRef = useRef(0);
   const tonePaintRef = useRef(0);
   const toneStudentRef = useRef<string | undefined>(undefined);
+  const limitRef = useRef<{ width: number | null; height: number | null }>({ width: null, height: null });
   const student = gallery[index] ?? null;
 
   useEffect(() => {
@@ -97,6 +129,7 @@ export function CropToolModal({
     const controller = new AbortController();
     setSrc("");
     setPhase("edit");
+    setCropArmed(false);
     setError(null);
     cropRef.current = { ...FULL };
     toneRef.current = { brightness: 0, contrast: 0 };
@@ -113,6 +146,12 @@ export function CropToolModal({
       controller.abort();
     };
   }, [student?.id, student?.photo_url]);
+
+  useEffect(() => {
+    if (!student?.photo_cropped) return;
+    setCropArmed(false);
+    setBrowsing(true);
+  }, [student?.id, student?.photo_cropped]);
 
   useLayoutEffect(() => {
     if (toneStudentRef.current !== student?.id) {
@@ -232,6 +271,29 @@ export function CropToolModal({
     toneGestureRef.current = false;
   }
 
+  function rotateCrop(delta: number) {
+    if (!student || !cropArmed || phase !== "edit") return;
+    markDirty(student.id);
+    cropRef.current = { ...cropRef.current, angle: cropRef.current.angle + delta };
+    paintFrame();
+  }
+
+  function updateCropLimit(axis: "width" | "height", raw: string) {
+    const cleaned = raw.replace(/[^\d]/g, "").slice(0, 5);
+    if (axis === "width") setLimitWidth(cleaned);
+    else setLimitHeight(cleaned);
+    const width = axis === "width" ? Number(cleaned) : Number(limitWidth);
+    const height = axis === "height" ? Number(cleaned) : Number(limitHeight);
+    limitRef.current = {
+      width: Number.isFinite(width) && width > 0 ? width : null,
+      height: Number.isFinite(height) && height > 0 ? height : null,
+    };
+    if (cropArmed) {
+      cropRef.current = limitCrop(cropRef.current, imageRef.current, limitRef.current);
+      paintFrame();
+    }
+  }
+
   function schedulePaint() {
     if (paintRef.current) return;
     paintRef.current = requestAnimationFrame(() => {
@@ -250,7 +312,7 @@ export function CropToolModal({
   }
 
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (phase !== "edit") return;
+    if (phase !== "edit" || !cropArmed) return;
     const box = stageRef.current?.getBoundingClientRect();
     const point = pointOf(event);
     if (!box || !point) return;
@@ -295,10 +357,11 @@ export function CropToolModal({
     if (!point) return;
     const dx = point.x - drag.startX;
     const dy = point.y - drag.startY;
-    cropRef.current =
+    const next =
       drag.kind === "move"
         ? clampCrop({ ...drag.origin, cx: drag.origin.cx + dx, cy: drag.origin.cy + dy })
         : clampCrop(resizeCrop(drag.origin, drag.handle, dx, dy));
+    cropRef.current = limitCrop(next, imageRef.current, limitRef.current);
     event.currentTarget.style.cursor = cursorFor(drag.kind === "move" ? "move" : drag.handle);
     schedulePaint();
   }
@@ -336,11 +399,19 @@ export function CropToolModal({
     try {
       const body = new FormData();
       body.append("photo", blob, `${student.photo_id || student.id}.jpg`);
+      body.append("markCropped", "1");
+      const savedIndex = gallery.findIndex((item) => item.id === student.id);
+      const hasNext = savedIndex >= 0 && savedIndex + 1 < gallery.length;
       const { data } = await api.post<{ student: Student }>(`/admin/students/${student.id}/photo`, body);
+      if (!data.student?.photo_cropped) {
+        throw new Error("Crop status was not saved");
+      }
       invalidateStudentPhotoCache(student.id);
       onSaved(data.student);
-      setSavedIds((current) => new Set(current).add(student.id));
       setEditingId((current) => (current === student.id ? null : current));
+      setCropArmed(false);
+      setPhase("edit");
+      if (!hasNext) setBrowsing(true);
     } catch {
       setError("Could not save the cropped photo.");
     } finally {
@@ -348,69 +419,88 @@ export function CropToolModal({
     }
   }
 
-  if (!photos.length) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#312E81]/35 px-4" role="dialog" aria-modal="true">
-        <div className="w-full max-w-md rounded-2xl border border-[#E2E8F0] bg-white p-6 text-center shadow-[0_18px_48px_rgba(99,102,241,0.16)]">
-          <h2 className="text-lg font-semibold text-[#334155]">Cropping Tool</h2>
-          <p className="mt-2 text-sm text-[#64748B]">No captured photos for this school or institute yet.</p>
-          <button type="button" className="btn-primary mt-4" onClick={onClose}>Close</button>
-        </div>
-      </div>
-    );
-  }
+  const shell = layout === "page"
+    ? "flex min-h-[70vh] flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white"
+    : "fixed inset-0 z-50 flex items-center justify-center bg-[#312E81]/35 px-3 py-4";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#312E81]/35 px-3 py-4" role="dialog" aria-modal="true" aria-label="Cropping Tool">
-      <div className="flex h-[min(92vh,860px)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-[0_18px_48px_rgba(99,102,241,0.16)]">
+    <div className={shell} role={layout === "page" ? undefined : "dialog"} aria-modal={layout === "page" ? undefined : true} aria-label="Cropping Tool">
+      <div className={layout === "page" ? "flex min-h-0 flex-1 flex-col" : "flex h-[min(92vh,860px)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white"}>
         <div className="flex items-center justify-between gap-3 border-b border-[#E2E8F0] px-4 py-3">
           <div>
             <h2 className="text-lg font-semibold text-[#334155]">Cropping Tool</h2>
             <p className="text-xs text-[#64748B]">
-              {student ? student.student_name ?? "Student" : "No photos in this filter"}
-              {student?.photo_id ? ` · Photo ${student.photo_id}` : ""}
-              {student ? ` · ${index + 1} of ${gallery.length}` : ""}
+              {student && !browsing ? student.student_name ?? "Student" : `${gallery.length} photo${gallery.length === 1 ? "" : "s"}`}
+              {student && !browsing && student.photo_id ? ` · Photo ${student.photo_id}` : ""}
             </p>
           </div>
-          <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
+          <button type="button" className="btn-secondary px-3 py-1.5 text-sm" onClick={onClose}>Back</button>
         </div>
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[18rem_minmax(0,1fr)]">
-          <aside className="flex min-h-0 flex-col overflow-hidden border-b border-[#E2E8F0] bg-[#F7FAFF] lg:border-b-0 lg:border-r">
-            {field ? (
-              <label className="block shrink-0 border-b border-[#E2E8F0] p-3 text-sm font-semibold text-[#334155]">
-                {field.label}
-                <select
-                  className="input-field mt-2"
-                  value={selected}
-                  onChange={(event) => {
-                    setSelected(event.target.value);
-                    setIndex(0);
-                  }}
-                >
-                  <option value="">{`Select ${field.label}`}</option>
-                  {options.map((value) => (
-                    <option key={value} value={value}>{value}</option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-2">
-              {gallery.map((item, itemIndex) => (
-                <GalleryThumb
-                  key={item.id}
-                  student={item}
-                  active={itemIndex === index}
-                  status={editingId === item.id ? "editing" : savedIds.has(item.id) ? "saved" : null}
-                  onClick={() => setIndex(itemIndex)}
-                />
+        <div className="flex flex-wrap items-end gap-3 border-b border-[#E2E8F0] bg-[#F7FAFF] px-4 py-3">
+          {field ? (
+            <label className="min-w-[12rem] text-xs font-semibold text-[#334155]">
+              {field.label}
+              <select className="input-field mt-1" value={selected} onChange={(event) => { setSelected(event.target.value); setIndex(0); setBrowsing(true); }}>
+                <option value="">{`All ${field.label}`}</option>
+                {options.map((value) => (
+                  <option key={value} value={value}>{value}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <label className="min-w-[12rem] text-xs font-semibold text-[#334155]">
+            Date
+            <select className="input-field mt-1" value={captureDay} onChange={(event) => { setCaptureDay(event.target.value); setCaptureHour(""); setIndex(0); setBrowsing(true); }}>
+              <option value="">All dates</option>
+              {dateOptions.map(([day, count]) => (
+                <option key={day} value={day}>{formatCaptureDay(day)} ({count})</option>
               ))}
-              {gallery.length === 0 ? (
-                <p className="px-1 py-3 text-xs text-[#64748B]">No photos match this {field?.label.toLowerCase() ?? "filter"}.</p>
-              ) : null}
-            </div>
-          </aside>
-          <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#EEF2FF]">
-            <div className="relative min-h-0 flex-1">
+            </select>
+          </label>
+          <label className="min-w-[14rem] text-xs font-semibold text-[#334155]">
+            Hour
+            <select className="input-field mt-1" value={captureHour} disabled={!captureDay} onChange={(event) => { setCaptureHour(event.target.value); setIndex(0); setBrowsing(true); }}>
+              <option value="">{captureDay ? "All hours" : "Select a date first"}</option>
+              {hourOptions.map(([hour, count]) => (
+                <option key={hour} value={hour}>{formatCaptureHour(hour)} ({count})</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {browsing ? (
+          <div className="grid grid-cols-1 gap-4 overflow-y-auto p-4 md:grid-cols-2">
+            {gallery.map((item, itemIndex) => (
+              <GalleryThumb
+                key={item.id}
+                student={item}
+                large
+                active={itemIndex === index}
+                status={
+                  item.photo_cropped
+                    ? "cropped"
+                    : editingId === item.id
+                      ? "editing"
+                      : savedIds.has(item.id)
+                        ? "saved"
+                        : null
+                }
+                onClick={() => {
+                  if (item.photo_cropped) return;
+                  setIndex(itemIndex);
+                  setCropArmed(false);
+                  setBrowsing(false);
+                }}
+              />
+            ))}
+            {gallery.length === 0 ? (
+              <p className="col-span-full px-2 py-16 text-center text-sm font-medium text-[#64748B]">
+                {photos.length === 0 ? "All photos are cropped." : "No captured photos match these filters."}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#EEF2FF]">
+            <div className="relative min-h-[28rem] flex-1">
               <div
                 ref={workspaceRef}
                 className="absolute inset-0 flex items-center justify-center overflow-hidden"
@@ -439,7 +529,7 @@ export function CropToolModal({
                         paintTone();
                       }}
                     />
-                    <div className="pointer-events-none absolute inset-0">
+                    {cropArmed ? <div className="pointer-events-none absolute inset-0">
                       <div
                         ref={frameRef}
                         className="absolute"
@@ -468,7 +558,7 @@ export function CropToolModal({
                           </svg>
                         </span>
                       </div>
-                    </div>
+                    </div> : null}
                   </div>
                 ) : (
                   <p className="text-sm text-[#64748B]">{student ? "Loading photo…" : "Choose a photo."}</p>
@@ -534,9 +624,35 @@ export function CropToolModal({
                 </div>
               ) : null}
             </div>
-            <div className="flex shrink-0 items-center gap-2 border-t border-[#E2E8F0] bg-white px-3 py-1.5">
-              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!student || index === 0} onClick={() => setIndex((value) => Math.max(0, value - 1))}>Previous</button>
-              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!student || index >= gallery.length - 1} onClick={() => setIndex((value) => Math.min(gallery.length - 1, value + 1))}>Next</button>
+            <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-[#E2E8F0] bg-white px-3 py-1.5">
+              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" onClick={() => setBrowsing(true)}>Photos</button>
+              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!src || phase !== "edit" || student?.photo_cropped === true} onClick={() => { if (!student || student.photo_cropped) return; setCropArmed(true); markDirty(student.id); }}>Crop</button>
+              <select
+                aria-label="Rotate"
+                className="h-8 rounded-[10px] border border-[#BFDBFE] bg-white px-2 text-sm font-semibold text-[#2563EB]"
+                defaultValue=""
+                disabled={!cropArmed || phase !== "edit"}
+                onChange={(event) => {
+                  const value = event.currentTarget.value;
+                  event.currentTarget.value = "";
+                  if (value === "left") rotateCrop(-90);
+                  if (value === "right") rotateCrop(90);
+                }}
+              >
+                <option value="">Rotate</option>
+                <option value="left">Rotate Left</option>
+                <option value="right">Rotate Right</option>
+              </select>
+              <label className="flex items-center gap-1 text-xs font-semibold text-[#334155]">
+                Width
+                <input value={limitWidth} inputMode="numeric" aria-label="Crop width" className="h-8 w-16 rounded-[10px] border border-[#E2E8F0] px-2 text-sm" onChange={(event) => updateCropLimit("width", event.target.value)} />
+              </label>
+              <label className="flex items-center gap-1 text-xs font-semibold text-[#334155]">
+                Height
+                <input value={limitHeight} inputMode="numeric" aria-label="Crop height" className="h-8 w-16 rounded-[10px] border border-[#E2E8F0] px-2 text-sm" onChange={(event) => updateCropLimit("height", event.target.value)} />
+              </label>
+              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!student || index === 0} onClick={() => { setCropArmed(false); setIndex((value) => Math.max(0, value - 1)); }}>Previous</button>
+              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!student || index >= gallery.length - 1} onClick={() => { setCropArmed(false); setIndex((value) => Math.min(gallery.length - 1, value + 1)); }}>Next</button>
               {phase === "preview" ? (
                 <button
                   type="button"
@@ -551,7 +667,7 @@ export function CropToolModal({
                   Back
                 </button>
               ) : (
-                <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!src || applying} onClick={() => void applyOk()}>
+                <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!src || applying || !cropArmed} onClick={() => void applyOk()}>
                   {applying ? "Preparing…" : "OK"}
                 </button>
               )}
@@ -561,21 +677,84 @@ export function CropToolModal({
             </div>
             {error ? <p className="bg-white px-3 pb-2 text-sm text-[#DC2626]">{error}</p> : null}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
+}
+
+function captureParts(iso: string | null | undefined): { day: string; hour: number } | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const read = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  const hour = Number(read("hour"));
+  if (!Number.isFinite(hour)) return null;
+  return { day: `${read("year")}-${read("month")}-${read("day")}`, hour };
+}
+
+function formatCaptureDay(day: string): string {
+  const [year, month, date] = day.split("-").map(Number);
+  if (!year || !month || !date) return day;
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(year, month - 1, date));
+}
+
+function formatCaptureHour(hour: number): string {
+  const start = new Date(2020, 0, 1, hour);
+  const end = new Date(2020, 0, 1, (hour + 1) % 24);
+  const label = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
+  return `${label.format(start)} – ${label.format(end)}`;
+}
+
+function limitCrop(
+  crop: Crop,
+  image: HTMLImageElement | null,
+  limit: { width: number | null; height: number | null }
+): Crop {
+  if (!image?.naturalWidth || !image.naturalHeight) return clampCrop(crop);
+  const maxWidth = limit.width && limit.width > 0 ? Math.min(1, limit.width / image.naturalWidth) : null;
+  const maxHeight = limit.height && limit.height > 0 ? Math.min(1, limit.height / image.naturalHeight) : null;
+  let width = crop.w;
+  let height = crop.h;
+  if (maxWidth != null && maxHeight != null) {
+    width = maxWidth;
+    height = maxHeight;
+  } else {
+    width = Math.max(MIN_SIZE, width);
+    height = Math.max(MIN_SIZE, height);
+    if (maxWidth != null) width = Math.min(width, maxWidth);
+    if (maxHeight != null) height = Math.min(height, maxHeight);
+  }
+  width = Math.min(1, Math.max(1 / image.naturalWidth, width));
+  height = Math.min(1, Math.max(1 / image.naturalHeight, height));
+  return {
+    ...crop,
+    w: width,
+    h: height,
+    cx: Math.min(1 - width / 2, Math.max(width / 2, crop.cx)),
+    cy: Math.min(1 - height / 2, Math.max(height / 2, crop.cy)),
+  };
 }
 
 function GalleryThumb({
   student,
   active,
   status,
+  large = false,
   onClick,
 }: {
   student: Student;
   active: boolean;
-  status: "saved" | "editing" | null;
+  status: "saved" | "editing" | "cropped" | null;
+  large?: boolean;
   onClick: () => void;
 }) {
   const holder = useRef<HTMLButtonElement>(null);
@@ -606,21 +785,33 @@ function GalleryThumb({
     <button
       ref={holder}
       type="button"
-      onClick={onClick}
-      className={`flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left ${
-        active ? "border-[#8B5CF6] bg-[#F5F3FF]" : "border-[#E2E8F0] bg-white"
-      }`}
+      disabled={student.photo_cropped === true}
+      onClick={() => {
+        if (student.photo_cropped) return;
+        onClick();
+      }}
+      className={`flex w-full text-left ${
+        large ? "flex-col gap-2 rounded-xl border bg-white p-3" : "items-center gap-2 rounded-lg border px-2 py-1.5"
+      } ${student.photo_cropped ? "cursor-default border-[#BBF7D0] bg-[#F0FDF4]" : active ? "border-[#8B5CF6] bg-[#F5F3FF]" : "border-[#E2E8F0]"}`}
     >
       {src ? (
-        <img src={src} alt="" className="h-11 w-11 shrink-0 rounded object-cover" />
+        <img src={src} alt="" className={large ? "h-72 w-full rounded-lg object-contain" : "h-11 w-11 shrink-0 rounded object-cover"} />
       ) : (
-        <span className="block h-11 w-11 shrink-0 animate-pulse rounded bg-[#EEF2FF]" />
+        <span className={large ? "block h-72 w-full animate-pulse rounded-lg bg-[#EEF2FF]" : "block h-11 w-11 shrink-0 animate-pulse rounded bg-[#EEF2FF]"} />
       )}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-xs font-semibold text-[#334155]">
           {student.photo_id || student.student_name || "Photo"}
         </span>
-        {status === "saved" ? (
+        {status === "cropped" || student.photo_cropped ? (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#16A34A]">
+            <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" aria-hidden>
+              <circle cx="8" cy="8" r="7" fill="currentColor" />
+              <path d="M4.6 8.2 6.8 10.3 11.4 5.7" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Cropped
+          </span>
+        ) : status === "saved" ? (
           <span className="text-[11px] font-semibold text-[#22C55E]">Saved</span>
         ) : status === "editing" ? (
           <span className="text-[11px] font-semibold text-[#F97316]">Editing</span>

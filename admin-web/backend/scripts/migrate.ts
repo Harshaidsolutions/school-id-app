@@ -747,6 +747,54 @@ async function migrate() {
       WHERE institute_id IS NOT NULL
         AND photo_id IS NOT NULL
         AND btrim(photo_id) <> '';
+
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS detail_year TEXT;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS detail_phone TEXT;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS detail_phone2 TEXT;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS detail_code TEXT;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS detail_address TEXT;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS detail_instructions TEXT;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS details_separated BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS detail_year TEXT;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS detail_phone TEXT;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS detail_code TEXT;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS detail_address TEXT;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS detail_instructions TEXT;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS details_separated BOOLEAN NOT NULL DEFAULT false;
+
+    UPDATE schools
+    SET detail_year = year,
+        detail_phone = phone,
+        detail_phone2 = phone2,
+        detail_code = school_code,
+        detail_address = address,
+        detail_instructions = instructions,
+        details_separated = true
+    WHERE details_separated = false;
+
+    UPDATE institutes
+    SET detail_year = year,
+        detail_phone = phone,
+        detail_code = institute_code,
+        detail_address = address,
+        detail_instructions = instructions,
+        details_separated = true
+    WHERE details_separated = false;
+
+    CREATE INDEX IF NOT EXISTS idx_students_school_photo_captured
+      ON students (school_id, photo_captured_at)
+      WHERE photo_url IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_students_institute_photo_captured
+      ON students (institute_id, photo_captured_at)
+      WHERE photo_url IS NOT NULL;
+
+    ALTER TABLE students ADD COLUMN IF NOT EXISTS photo_cropped BOOLEAN NOT NULL DEFAULT false;
+    CREATE INDEX IF NOT EXISTS idx_students_school_crop_queue
+      ON students (school_id, photo_captured_at)
+      WHERE photo_cropped = false AND photo_url IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_students_institute_crop_queue
+      ON students (institute_id, photo_captured_at)
+      WHERE photo_cropped = false AND photo_url IS NOT NULL;
   `);
 
   console.log("Migration completed successfully.");

@@ -72,7 +72,7 @@ export function DrawerMenuScreen({ navigation }: Props) {
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const [rateOpen, setRateOpen] = useState(false);
-  const [schoolName, setSchoolName] = useState("Your School");
+  const [schoolName, setSchoolName] = useState("");
   const { brand, ready } = useCustomerBrand();
   const childBrand = ready && brand.source === "child";
 
@@ -250,9 +250,11 @@ export function DrawerMenuScreen({ navigation }: Props) {
         navigation.navigate("Settings" as never);
       },
     },
-  ] as MenuItem[]).filter(
-    (item) => item.label !== "About Us" || (ready && !childBrand)
-  );
+  ] as MenuItem[]).filter((item) => {
+    if (item.label === "About Us") return ready && !childBrand;
+    if (item.label === "Refer Us") return !childBrand;
+    return true;
+  });
 
   return (
     <View style={styles.root}>

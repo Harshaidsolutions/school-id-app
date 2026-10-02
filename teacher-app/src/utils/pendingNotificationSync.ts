@@ -67,15 +67,23 @@ async function presentSystemNotification(options: {
   notificationId: string;
   title: string;
   body: string;
+  imageUrl?: string | null;
 }): Promise<void> {
   await ensureAndroidChannel();
+  const imageUrl = options.imageUrl?.trim() || "";
   await Notifications.scheduleNotificationAsync({
     identifier: `admin-notification-${options.notificationId}`,
     content: {
       title: options.title,
       body: options.body,
-      data: { notificationId: options.notificationId },
+      data: {
+        notificationId: options.notificationId,
+        ...(imageUrl ? { imageUrl, image: imageUrl } : {}),
+      },
       sound: "default",
+      ...(imageUrl
+        ? { attachments: [{ identifier: "image", url: imageUrl, type: "image" }] }
+        : {}),
       ...(Platform.OS === "android"
         ? {
             channelId: ANDROID_NOTIFICATION_CHANNEL_ID,
@@ -124,6 +132,7 @@ export async function syncPendingNotificationsAfterLogin(
       notificationId: item.id,
       title: item.title,
       body: item.message,
+      imageUrl: item.image_url,
     });
     await markPushNotificationDelivered(userId, item.id);
   }

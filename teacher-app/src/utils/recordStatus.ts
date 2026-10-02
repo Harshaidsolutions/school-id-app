@@ -23,29 +23,27 @@ export function studentFullyCaptured(
   return studentHasPhoto(student) && !studentPendingData(student, institute);
 }
 
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-/** Display the stored capture timestamp. Returns null when it is missing or invalid. */
+/** Display the stored capture timestamp in India time, matching the admin website and Excel. */
 export function formatCapturedAt(iso: string | null | undefined): string | null {
   if (!iso?.trim()) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
-  const hours = date.getHours();
-  const hour12 = hours % 12 || 12;
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const ampm = hours >= 12 ? "PM" : "AM";
-  return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}, ${hour12}:${minutes} ${ampm}`;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(date);
+  const read = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  const day = read("day");
+  const month = read("month");
+  const year = read("year");
+  const hour = read("hour");
+  const minute = read("minute");
+  const dayPeriod = read("dayPeriod").toUpperCase();
+  if (!day || !month || !year || !hour || !minute) return null;
+  return `${day} ${month} ${year}, ${hour}:${minute} ${dayPeriod}`;
 }

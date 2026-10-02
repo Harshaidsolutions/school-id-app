@@ -1,4 +1,5 @@
 import { pool } from "../config/database";
+import { captureDayKey } from "./dateUtils";
 import { AppError } from "../middleware/errorHandler";
 import type { FormFieldConfig } from "../constants/formFields";
 import { loadFormConfigForOrg } from "../controllers/formConfigController";
@@ -186,13 +187,10 @@ export async function withPendingFlags<
   return out;
 }
 
-export function excelScopeClause(scope: string, institute: boolean): string {
+export function excelScopeClause(scope: string, _institute: boolean): string {
   const photo = `(photo_url IS NOT NULL AND btrim(photo_url) <> '')`;
-  const name = `(student_name IS NOT NULL AND btrim(student_name) <> '')`;
-  const klass = `(class_section IS NOT NULL AND btrim(class_section) <> '')`;
-  const complete = institute ? name : `(${name} AND ${klass})`;
-  if (scope === "pending") return ` AND (NOT ${photo} OR NOT ${complete})`;
-  if (scope === "captured") return ` AND ${photo} AND ${complete}`;
+  if (scope === "pending" || scope === "uncaptured") return ` AND NOT ${photo}`;
+  if (scope === "captured") return ` AND ${photo}`;
   return "";
 }
 
@@ -377,12 +375,8 @@ export function collectRecordFacets(
       buckets[kind].set(item.value, current);
     }
     if (hasPhoto) {
-      const raw = row.photo_captured_at ?? row.updated_at;
-      const parsed = raw ? new Date(raw) : null;
-      if (parsed && !Number.isNaN(parsed.getTime())) {
-        const day = parsed.toISOString().slice(0, 10);
-        dates.set(day, (dates.get(day) ?? 0) + 1);
-      }
+      const day = captureDayKey(row.photo_captured_at);
+      if (day) dates.set(day, (dates.get(day) ?? 0) + 1);
     }
   }
 

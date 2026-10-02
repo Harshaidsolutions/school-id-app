@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import api, { getAuthToken } from "../api/client";
-import { CropToolModal } from "../components/CropToolModal";
 import { StudentPhotoModal } from "../components/StudentPhotoModal";
 import { EditStudentModal } from "../components/EditStudentModal";
 import { DeleteStudentChoiceModal } from "../components/DeleteStudentChoiceModal";
@@ -23,7 +22,7 @@ import {
   studentFieldDisplay,
   type FormFieldConfig,
 } from "../constants/formFields";
-import { authenticatedStudentPhotoUrl, authenticatedStudentSignatureUrl, invalidateStudentPhotoCache } from "../utils/studentPhotoSrc";
+import { authenticatedStudentPhotoUrl, authenticatedStudentSignatureUrl } from "../utils/studentPhotoSrc";
 
 type TabKey = "all" | "pending" | "captured" | "pending-data";
 
@@ -279,7 +278,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [classFilter, setClassFilter] = useState("");
   const [photoStudent, setPhotoStudent] = useState<Student | null>(null);
   const [signatureStudent, setSignatureStudent] = useState<Student | null>(null);
-  const [cropOpen, setCropOpen] = useState(false);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [deleteChoiceStudent, setDeleteChoiceStudent] = useState<Student | null>(null);
   const [confirmDeletePhotoStudent, setConfirmDeletePhotoStudent] =
@@ -470,6 +468,17 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   );
 
   const tableColSpan = enabledFields.length + 4 + (selecting && isDetailView ? 1 : 0);
+
+  const categoryLabels = useMemo(() => {
+    const configured = configuredCategoryFields(formFields);
+    const labelFor = (kind: "class" | "group" | "designation") =>
+      configured.find((field) => field.kind === kind)?.label.trim() ?? "";
+    return {
+      class: labelFor("class"),
+      group: labelFor("group"),
+      designation: labelFor("designation"),
+    };
+  }, [formFields]);
 
   const categoryFields = useMemo(() => {
     return configuredCategoryFields(formFields).map((field) => {
@@ -852,7 +861,13 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             <button
               type="button"
               disabled={!orgId}
-              onClick={() => setCropOpen(true)}
+              onClick={() => {
+                if (isInstitute) {
+                  navigate(`/crop-tool?instituteId=${encodeURIComponent(instituteId)}&instituteName=${encodeURIComponent(searchParams.get("instituteName") ?? "")}`);
+                } else {
+                  navigate(`/crop-tool?schoolId=${encodeURIComponent(schoolId)}&schoolName=${encodeURIComponent(selectedSchoolName ?? "")}`);
+                }
+              }}
               className="detail-toolbar-btn detail-feature-card detail-feature-card-short detail-toolbar-short-slot"
             >
               <span className="detail-feature-icon bg-white/20 text-white" aria-hidden>
@@ -974,6 +989,9 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   pendingDataFilter={pendingDataFilter}
                   setPendingDataFilter={setPendingDataFilter}
                   facets={facets}
+                  classLabel={categoryLabels.class}
+                  groupLabel={categoryLabels.group}
+                  designationLabel={categoryLabels.designation}
                   onClear={() => {
                     setCapturedOn("");
                     setClassFilter("");
@@ -1291,30 +1309,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         />
       )}
 
-      {cropOpen && orgId ? (
-        <CropToolModal
-          students={students}
-          categories={configuredCategoryFields(formFields)}
-          onClose={() => setCropOpen(false)}
-          onSaved={(student) => {
-            invalidateStudentPhotoCache(student.id);
-            setStudents((prev) =>
-              prev.map((item) =>
-                item.id === student.id
-                  ? {
-                      ...item,
-                      photo_url: student.photo_url,
-                      photo_captured_at: item.photo_captured_at,
-                      status: student.status,
-                      updated_at: student.updated_at,
-                    }
-                  : item
-              )
-            );
-          }}
-        />
-      ) : null}
-
       {signatureStudent?.signature_url && (
         <StudentPhotoModal
           mode="signature"
@@ -1373,6 +1367,12 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         <DeleteOptionsModal
           photoCounts={photoCounts}
           categoryFields={categoryFields}
+          counts={{
+            allPhotos: students.filter((student) => Boolean(student.photo_url?.trim())).length,
+            allData: students.length,
+            capturedData: students.filter((student) => Boolean(student.photo_url?.trim())).length,
+            uncapturedData: students.filter((student) => !student.photo_url?.trim()).length,
+          }}
           onClose={() => setShowDeleteOptions(false)}
           onChoose={(job) => {
             setDeleteJob(job);
@@ -1387,6 +1387,13 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
           downloading={exportingExcel}
           categoryFields={categoryFields}
           captureDates={facets?.captureDates ?? []}
+          counts={{
+            all: students.length,
+            captured: students.filter((student) => Boolean(student.photo_url?.trim())).length,
+            pending: students.filter((student) => !student.photo_url?.trim()).length,
+            "captured-pending-data": students.filter((student) => Boolean(student.photo_url?.trim()) && student.pending_data).length,
+            "uncaptured-pending-data": students.filter((student) => !student.photo_url?.trim() && student.pending_data).length,
+          }}
           onClose={() => setExcelModalOpen(false)}
           onDownload={(job) =>
             void handleDownloadExcel(job.scope, {
@@ -1403,6 +1410,10 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
           downloading={exportingPhotos}
           photoCounts={photoCounts}
           signatureCounts={signatureCounts}
+          showSignature={
+            formFields.some((field) => field.key === "signature_upload" && field.enabled) &&
+            Object.values(signatureCounts).some((count) => count > 0)
+          }
           categoryFields={categoryFields}
           onClose={() => setShowDownloadPhotosModal(false)}
           onDownload={(job) => void handleDownloadAssets(job)}
@@ -1588,6 +1599,9 @@ function StudentFilterPanel({
   pendingDataFilter,
   setPendingDataFilter,
   facets,
+  classLabel,
+  groupLabel,
+  designationLabel,
   onClear,
 }: {
   anchor: HTMLElement | null;
@@ -1605,6 +1619,9 @@ function StudentFilterPanel({
   pendingDataFilter: string;
   setPendingDataFilter: (value: string) => void;
   facets: RecordFacets | null;
+  classLabel: string;
+  groupLabel: string;
+  designationLabel: string;
   onClear: () => void;
 }) {
   const [box, setBox] = useState({ top: 0, left: 0, width: 360 });
@@ -1661,15 +1678,17 @@ function StudentFilterPanel({
             </option>
           ))}
         </FilterSelect>
-        <FilterSelect label="Class" value={classFilter} onChange={setClassFilter}>
-          {(facets?.classes ?? []).map((item) => (
-            <option key={item.name} value={item.name}>
-              {item.name}
-            </option>
-          ))}
-        </FilterSelect>
-        {facets?.groups.length ? (
-          <FilterSelect label="Group" value={groupFilter} onChange={setGroupFilter}>
+        {classLabel ? (
+          <FilterSelect label={classLabel} value={classFilter} onChange={setClassFilter}>
+            {(facets?.classes ?? []).map((item) => (
+              <option key={item.name} value={item.name}>
+                {item.name}
+              </option>
+            ))}
+          </FilterSelect>
+        ) : null}
+        {groupLabel && facets?.groups.length ? (
+          <FilterSelect label={groupLabel} value={groupFilter} onChange={setGroupFilter}>
             {facets.groups.map((item) => (
               <option key={item.name} value={item.name}>
                 {item.name}
@@ -1677,8 +1696,8 @@ function StudentFilterPanel({
             ))}
           </FilterSelect>
         ) : null}
-        {facets?.designations.length ? (
-          <FilterSelect label="Designation" value={designationFilter} onChange={setDesignationFilter}>
+        {designationLabel && facets?.designations.length ? (
+          <FilterSelect label={designationLabel} value={designationFilter} onChange={setDesignationFilter}>
             {facets.designations.map((item) => (
               <option key={item.name} value={item.name}>
                 {item.name}

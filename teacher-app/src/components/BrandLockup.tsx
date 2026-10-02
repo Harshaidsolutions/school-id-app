@@ -31,6 +31,8 @@ type Props = {
   taglineColor?: string;
   /** Keep a customer title on one line. Used by splash, welcome, and login. */
   singleLine?: boolean;
+  /** Small line under the title. Used by splash, welcome, and login only. */
+  subtitle?: string;
 };
 
 const BRAND_MIN = { harsha: 18, solutions: 12, tag: 11 } as const;
@@ -79,6 +81,7 @@ export function BrandLockup({
   solutionsColor,
   taglineColor,
   singleLine = false,
+  subtitle,
 }: Props) {
   const { width: screenW } = useWindowDimensions();
   const lineW = wp(
@@ -217,6 +220,24 @@ export function BrandLockup({
       />
         </>
       )}
+      {subtitle ? (
+        <Text
+          style={[
+            tagStyle,
+            {
+              fontSize: scaleFont(12, 10, undefined, screenW),
+              lineHeight: scaleFont(12, 10, undefined, screenW) * 1.3,
+              width: lineW,
+              color: variant === "splash" ? "rgba(255,255,255,0.95)" : tColor,
+            },
+          ]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+        >
+          {subtitle}
+        </Text>
+      ) : null}
       {showTagline && !title ? (
         <BrandLine
           text={BRAND.tagline}

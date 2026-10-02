@@ -12,6 +12,7 @@ import {
   studentPhotoPathFromUrl,
   studentPhotoStoragePath,
 } from "../config/storage";
+import { captureDayKey } from "../utils/dateUtils";
 import { loadFormConfigForOrg } from "./formConfigController";
 import {
   buildExportHeaders,
@@ -145,9 +146,10 @@ function rowMatchesExportExtras(
     }
   }
   if (!captureDate) return true;
+  if (!row.photo_url) return false;
   const raw = row.photo_captured_at;
-  if (!raw || !row.photo_url) return false;
-  return new Date(String(raw)).toISOString().slice(0, 10) === captureDate;
+  const stamp = raw instanceof Date || typeof raw === "string" ? raw : null;
+  return captureDayKey(stamp) === captureDate;
 }
 
 function createdExcelParts(raw: unknown): [string, string] {
@@ -235,7 +237,7 @@ async function downloadOrgPhotosZip(
       const dateExpr =
         asset === "signature"
           ? `(updated_at AT TIME ZONE 'UTC')::date`
-          : `(photo_captured_at AT TIME ZONE 'UTC')::date`;
+          : `(photo_captured_at AT TIME ZONE 'Asia/Kolkata')::date`;
       extra.push(`AND ${dateExpr} = $${values.length}::date`);
     }
     if (category && fieldKey && fieldKey !== "class_section" && /^[a-zA-Z0-9_]+$/.test(fieldKey)) {
@@ -402,18 +404,13 @@ async function listPhotoCaptureCounts(
     if (instituteId) await assertInstituteOwnedByAdmin(scope, instituteId);
     const whereOrg = schoolId ? "school_id = $1" : "institute_id = $1";
     const result = await pool.query<{ capture_date: string; photo_count: number }>(
-      `SELECT to_char(
-                COALESCE(
-                  (photo_captured_at AT TIME ZONE 'UTC')::date,
-                  (updated_at AT TIME ZONE 'UTC')::date
-                ),
-                'YYYY-MM-DD'
-              ) AS capture_date,
+      `SELECT to_char((photo_captured_at AT TIME ZONE 'Asia/Kolkata')::date, 'YYYY-MM-DD') AS capture_date,
               COUNT(*)::int AS photo_count
        FROM students
        WHERE ${whereOrg}
          AND photo_url IS NOT NULL
-         AND status IN ('captured', 'printed')
+         AND btrim(photo_url) <> ''
+         AND photo_captured_at IS NOT NULL
        GROUP BY 1
        ORDER BY 1`,
       [orgId]
@@ -555,7 +552,7 @@ export async function exportStudentsExcel(
       ...exportColumns.map((col) =>
         studentFieldValue(s as Record<string, string | null>, col.key, col.label)
       ),
-      ...createdExcelParts(s.created_at),
+      ...createdExcelParts(String(s.photo_url ?? "").trim() ? s.photo_captured_at : null),
     ]);
 
     const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
@@ -634,7 +631,7 @@ export async function exportInstituteMembersExcel(
       ...exportColumns.map((col) =>
         studentFieldValue(s as Record<string, string | null>, col.key, col.label)
       ),
-      ...createdExcelParts(s.created_at),
+      ...createdExcelParts(String(s.photo_url ?? "").trim() ? s.photo_captured_at : null),
     ]);
 
     const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);

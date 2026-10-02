@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Linking,
@@ -22,6 +22,7 @@ import {
   PLAY_STORE_MARKET_URL,
   PLAY_STORE_URL,
 } from "../constants/support";
+import api from "../api/client";
 import { openBrandWhatsApp, useCustomerBrand } from "../hooks/useCustomerBrand";
 import { buildHelpSupportMessage } from "../constants/support";
 import { openWhatsApp } from "../utils/whatsappBusiness";
@@ -45,6 +46,35 @@ export function SettingsScreen({ navigation }: Props) {
   const version = appVersion();
   const [termsOpen, setTermsOpen] = useState(false);
   const { brand, ready } = useCustomerBrand();
+  const [schoolName, setSchoolName] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { data } = await api.get<{ school: { name: string } }>(
+          "/teacher/organization"
+        );
+        if (!cancelled && data.school?.name?.trim()) {
+          setSchoolName(data.school.name.trim());
+          return;
+        }
+      } catch {
+        /* try home */
+      }
+      try {
+        const { data } = await api.get<{ schoolName: string }>("/teacher/home");
+        if (!cancelled && data.schoolName?.trim()) {
+          setSchoolName(data.schoolName.trim());
+        }
+      } catch {
+        /* leave blank */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function confirmLogout() {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -159,8 +189,8 @@ export function SettingsScreen({ navigation }: Props) {
           onPress={() => {
             if (!ready) return;
             void (brand.source === "child"
-              ? openBrandWhatsApp(brand)
-              : openWhatsApp(buildHelpSupportMessage("Your School"))
+              ? openBrandWhatsApp(brand, buildHelpSupportMessage(schoolName))
+              : openWhatsApp(buildHelpSupportMessage(schoolName))
             ).catch((err) =>
               Alert.alert(
                 "WhatsApp",

@@ -133,3 +133,71 @@ if (!content.includes("notificationImageUri")) {
     console.log("[patch-notification-image] remote notifications read the image URL");
   }
 }
+
+const downloadFile = path.join(
+  __dirname,
+  "..",
+  "node_modules",
+  "expo-notifications",
+  "android",
+  "src",
+  "main",
+  "java",
+  "expo",
+  "modules",
+  "notifications",
+  "notifications",
+  "presentation",
+  "builders",
+  "DownloadImage.kt"
+);
+
+if (fs.existsSync(downloadFile)) {
+  const download = fs.readFileSync(downloadFile, "utf8");
+  if (!download.includes("inSampleSize")) {
+    const nextDownload = `package expo.modules.notifications.notifications.presentation.builders
+
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import java.net.HttpURLConnection
+import java.net.URL
+
+suspend fun downloadImage(imageUrl: Uri, connectTimeout: Long = 12000, readTimeout: Long = 12000): Bitmap? {
+  return runCatching {
+    withTimeout(connectTimeout + readTimeout) {
+      withContext(Dispatchers.IO) {
+        val connection = URL(imageUrl.toString()).openConnection() as HttpURLConnection
+        connection.instanceFollowRedirects = true
+        connection.connectTimeout = connectTimeout.toInt()
+        connection.readTimeout = readTimeout.toInt()
+        connection.setRequestProperty("User-Agent", "MySchoolIDCard")
+        connection.connect()
+        if (connection.responseCode !in 200..299) {
+          connection.disconnect()
+          return@withContext null
+        }
+        val bytes = connection.inputStream.use { it.readBytes() }
+        connection.disconnect()
+        if (bytes.isEmpty()) return@withContext null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        var sample = 1
+        val maxEdge = 1280
+        while (bounds.outWidth / sample > maxEdge || bounds.outHeight / sample > maxEdge) {
+          sample *= 2
+        }
+        val options = BitmapFactory.Options().apply { inSampleSize = sample }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+      }
+    }
+  }.getOrNull()
+}
+`;
+    fs.writeFileSync(downloadFile, nextDownload);
+    console.log("[patch-notification-image] notification images download off the UI thread");
+  }
+}
