@@ -5,16 +5,17 @@ import type { Student } from "../types";
 import type { ConfiguredCategoryField } from "../utils/formFieldHelpers";
 import { authenticatedStudentPhotoUrl, invalidateStudentPhotoCache } from "../utils/studentPhotoSrc";
 
-type Rect = { x: number; y: number; w: number; h: number };
+type Crop = { cx: number; cy: number; w: number; h: number; angle: number };
 type Handle = "n" | "s" | "e" | "w" | "nw" | "ne" | "sw" | "se";
+type Hit = Handle | "move" | "rotate";
 type Drag =
-  | { kind: "move"; startX: number; startY: number; origin: Rect }
-  | { kind: "resize"; handle: Handle; startX: number; startY: number; origin: Rect }
-  | { kind: "rotate"; startPointer: number; startAngle: number };
+  | { kind: "move"; startX: number; startY: number; origin: Crop }
+  | { kind: "resize"; handle: Handle; startX: number; startY: number; origin: Crop }
+  | { kind: "rotate"; startPointer: number; origin: Crop };
 
 const HANDLES: Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
-const FULL: Rect = { x: 0, y: 0, w: 1, h: 1 };
 const MIN_SIZE = 0.04;
+const FULL: Crop = { cx: 0.5, cy: 0.5, w: 1, h: 1, angle: 0 };
 
 export function CropToolModal({
   students,
@@ -27,32 +28,25 @@ export function CropToolModal({
   onClose: () => void;
   onSaved: (student: Student) => void;
 }) {
+  const field = useMemo(() => primaryCategory(categories), [categories]);
   const photos = useMemo(
     () => students.filter((student) => Boolean(student.photo_url)),
     [students]
   );
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [selected, setSelected] = useState("");
   const gallery = useMemo(() => {
-    return photos.filter((student) =>
-      categories.every((field) => {
-        const selected = filters[field.key];
-        if (!selected) return true;
-        return categoryValue(student, field) === selected;
-      })
-    );
-  }, [photos, categories, filters]);
+    if (!field || !selected) return photos;
+    return photos.filter((student) => categoryValue(student, field) === selected);
+  }, [photos, field, selected]);
   const options = useMemo(() => {
-    const next: Record<string, string[]> = {};
-    for (const field of categories) {
-      const values = new Set<string>();
-      for (const student of photos) {
-        const value = categoryValue(student, field);
-        if (value) values.add(value);
-      }
-      next[field.key] = [...values].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    if (!field) return [];
+    const values = new Set<string>();
+    for (const student of photos) {
+      const value = categoryValue(student, field);
+      if (value) values.add(value);
     }
-    return next;
-  }, [photos, categories]);
+    return [...values].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [photos, field]);
 
   const [index, setIndex] = useState(0);
   const [src, setSrc] = useState("");
@@ -64,8 +58,7 @@ export function CropToolModal({
   const imageRef = useRef<HTMLImageElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
-  const rectRef = useRef<Rect>({ ...FULL });
-  const angleRef = useRef(0);
+  const cropRef = useRef<Crop>({ ...FULL });
   const dragRef = useRef<Drag | null>(null);
   const previewBlobRef = useRef<Blob | null>(null);
   const previewUrlRef = useRef("");
@@ -89,8 +82,7 @@ export function CropToolModal({
     setSrc("");
     setPhase("edit");
     setError(null);
-    rectRef.current = { ...FULL };
-    angleRef.current = 0;
+    cropRef.current = { ...FULL };
     previewBlobRef.current = null;
     clearPreview();
     if (!student?.photo_url) return;
@@ -104,7 +96,7 @@ export function CropToolModal({
   }, [student?.id, student?.photo_url]);
 
   useLayoutEffect(() => {
-    paintEditor();
+    paintFrame();
   }, [src, phase, student?.id]);
 
   function clearPreview() {
@@ -113,28 +105,26 @@ export function CropToolModal({
     setPreviewUrl("");
   }
 
-  function paintEditor() {
+  function paintFrame() {
     const frame = frameRef.current;
-    const image = imageRef.current;
-    const rect = rectRef.current;
-    if (frame) {
-      frame.style.left = `${rect.x * 100}%`;
-      frame.style.top = `${rect.y * 100}%`;
-      frame.style.width = `${rect.w * 100}%`;
-      frame.style.height = `${rect.h * 100}%`;
-    }
-    if (image) image.style.transform = `rotate(${angleRef.current}deg)`;
+    const crop = cropRef.current;
+    if (!frame) return;
+    frame.style.left = `${(crop.cx - crop.w / 2) * 100}%`;
+    frame.style.top = `${(crop.cy - crop.h / 2) * 100}%`;
+    frame.style.width = `${crop.w * 100}%`;
+    frame.style.height = `${crop.h * 100}%`;
+    frame.style.transform = `rotate(${crop.angle}deg)`;
   }
 
   function schedulePaint() {
     if (paintRef.current) return;
     paintRef.current = requestAnimationFrame(() => {
       paintRef.current = 0;
-      paintEditor();
+      paintFrame();
     });
   }
 
-  function localPoint(event: ReactPointerEvent | PointerEvent): { x: number; y: number } | null {
+  function pointOf(event: ReactPointerEvent): { x: number; y: number } | null {
     const box = stageRef.current?.getBoundingClientRect();
     if (!box || box.width <= 0 || box.height <= 0) return null;
     return {
@@ -143,63 +133,55 @@ export function CropToolModal({
     };
   }
 
-  function angleAt(clientX: number, clientY: number): number {
-    const frame = frameRef.current?.getBoundingClientRect();
-    if (!frame) return 0;
-    const cx = frame.left + frame.width / 2;
-    const cy = frame.top + frame.height / 2;
-    return Math.atan2(clientX - cx, cy - clientY);
-  }
-
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (phase !== "edit") return;
-    const point = localPoint(event);
     const box = stageRef.current?.getBoundingClientRect();
-    if (!point || !box) return;
-    const hit = hitTest(event.clientX, event.clientY, rectRef.current, box);
+    const point = pointOf(event);
+    if (!box || !point) return;
+    const hit = hitTest(event.clientX, event.clientY, cropRef.current, box);
     if (!hit) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     if (hit === "rotate") {
       dragRef.current = {
         kind: "rotate",
-        startPointer: angleAt(event.clientX, event.clientY),
-        startAngle: angleRef.current,
+        startPointer: pointerAngle(event.clientX, event.clientY, cropRef.current, box),
+        origin: { ...cropRef.current },
       };
       return;
     }
     if (hit === "move") {
-      dragRef.current = { kind: "move", startX: point.x, startY: point.y, origin: { ...rectRef.current } };
+      dragRef.current = { kind: "move", startX: point.x, startY: point.y, origin: { ...cropRef.current } };
       return;
     }
-    dragRef.current = { kind: "resize", handle: hit, startX: point.x, startY: point.y, origin: { ...rectRef.current } };
+    dragRef.current = { kind: "resize", handle: hit, startX: point.x, startY: point.y, origin: { ...cropRef.current } };
   }
 
   function onPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const box = stageRef.current?.getBoundingClientRect();
     const drag = dragRef.current;
-    const stage = stageRef.current;
+    if (!box) return;
     if (!drag) {
-      const box = stage?.getBoundingClientRect();
-      if (box) {
-        const hit = hitTest(event.clientX, event.clientY, rectRef.current, box);
-        event.currentTarget.style.cursor = cursorFor(hit);
-      }
+      event.currentTarget.style.cursor = cursorFor(hitTest(event.clientX, event.clientY, cropRef.current, box));
       return;
     }
     if (drag.kind === "rotate") {
-      const current = angleAt(event.clientX, event.clientY);
-      angleRef.current = drag.startAngle + ((current - drag.startPointer) * 180) / Math.PI;
+      const current = pointerAngle(event.clientX, event.clientY, drag.origin, box);
+      cropRef.current = {
+        ...drag.origin,
+        angle: drag.origin.angle + (angleDelta(current, drag.startPointer) * 180) / Math.PI,
+      };
       event.currentTarget.style.cursor = "grabbing";
       schedulePaint();
       return;
     }
-    const point = localPoint(event);
+    const point = pointOf(event);
     if (!point) return;
     const dx = point.x - drag.startX;
     const dy = point.y - drag.startY;
-    rectRef.current =
+    cropRef.current =
       drag.kind === "move"
-        ? clampRect({ ...drag.origin, x: drag.origin.x + dx, y: drag.origin.y + dy })
-        : clampRect(resizeRect(drag.origin, drag.handle, dx, dy));
+        ? clampCrop({ ...drag.origin, cx: drag.origin.cx + dx, cy: drag.origin.cy + dy })
+        : clampCrop(resizeCrop(drag.origin, drag.handle, dx, dy));
     event.currentTarget.style.cursor = cursorFor(drag.kind === "move" ? "move" : drag.handle);
     schedulePaint();
   }
@@ -214,7 +196,7 @@ export function CropToolModal({
     setApplying(true);
     setError(null);
     try {
-      const blob = await renderCrop(image, angleRef.current, rectRef.current);
+      const blob = await renderCrop(image, cropRef.current);
       clearPreview();
       const url = URL.createObjectURL(blob);
       previewUrlRef.current = url;
@@ -272,119 +254,125 @@ export function CropToolModal({
           </div>
           <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
         </div>
-        {categories.length > 0 ? (
-          <div className="flex flex-wrap gap-3 border-b border-[#E2E8F0] px-4 py-3">
-            {categories.map((field) => (
-              <label key={field.key} className="text-xs font-semibold text-[#334155]">
-                {`${field.label}-wise`}
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[13rem_minmax(0,1fr)]">
+          <aside className="border-b border-[#E2E8F0] bg-[#F7FAFF] p-4 lg:border-b-0 lg:border-r">
+            {field ? (
+              <label className="block text-sm font-semibold text-[#334155]">
+                {field.label}
                 <select
-                  className="input-field mt-1 min-w-[10rem]"
-                  value={filters[field.key] ?? ""}
+                  className="input-field mt-2"
+                  value={selected}
                   onChange={(event) => {
-                    setFilters((current) => ({ ...current, [field.key]: event.target.value }));
+                    setSelected(event.target.value);
                     setIndex(0);
                   }}
                 >
                   <option value="">{`Select ${field.label}`}</option>
-                  {(options[field.key] ?? []).map((value) => (
+                  {options.map((value) => (
                     <option key={value} value={value}>{value}</option>
                   ))}
                 </select>
               </label>
-            ))}
-          </div>
-        ) : null}
-        <div className="grid min-h-0 flex-1 gap-3 overflow-hidden p-3 lg:grid-cols-[11rem_minmax(0,1fr)]">
-          <div className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-y-auto">
-            {gallery.map((item, itemIndex) => (
-              <GalleryThumb
-                key={item.id}
-                student={item}
-                active={itemIndex === index}
-                onClick={() => setIndex(itemIndex)}
-              />
-            ))}
-            {gallery.length === 0 ? (
-              <p className="px-1 text-xs text-[#64748B]">No photos match this filter.</p>
-            ) : null}
-          </div>
-          <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl bg-[#312E81]">
-            <div className="flex min-h-[280px] flex-1 items-center justify-center overflow-auto p-4">
-              {phase === "preview" && previewUrl ? (
-                <img src={previewUrl} alt="Cropped preview" className="max-h-[58vh] max-w-full object-contain" />
-              ) : src && student ? (
-                <div
-                  className="relative touch-none px-3 pt-12"
-                  onPointerDown={onPointerDown}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={onPointerUp}
-                >
-                  <div ref={stageRef} className="relative inline-block max-h-[52vh] max-w-full">
-                  <img
-                    ref={imageRef}
-                    src={src}
-                    alt={student.student_name ?? "Photo"}
-                    draggable={false}
-                    className="block max-h-[52vh] max-w-full select-none"
-                    style={{ transformOrigin: "center center" }}
-                    onLoad={paintEditor}
-                  />
-                  <div className="pointer-events-none absolute inset-0">
-                    <div
-                      ref={frameRef}
-                      className="absolute border-2 border-white"
-                      style={{ left: 0, top: 0, width: "100%", height: "100%", boxShadow: "0 0 0 9999px rgba(30, 27, 75, 0.55)" }}
-                    >
-                      {HANDLES.map((handle) => (
-                        <span
-                          key={handle}
-                          className="pointer-events-none absolute h-3.5 w-3.5 rounded-sm border-2 border-[#6366F1] bg-white"
-                          style={handleStyle(handle)}
-                        />
-                      ))}
-                      <span className="pointer-events-none absolute left-1/2 top-0 h-5 w-px -translate-x-1/2 -translate-y-full bg-white" />
-                      <span
-                        className="pointer-events-none absolute left-1/2 top-0 flex h-8 w-8 -translate-x-1/2 -translate-y-[2.15rem] items-center justify-center rounded-full border-2 border-[#6366F1] bg-white text-[#6366F1] shadow"
-                        aria-hidden
-                      >
-                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M20 12a8 8 0 1 1-2.2-5.5" />
-                          <path d="M20 4v4h-4" />
-                        </svg>
-                      </span>
+            ) : (
+              <p className="text-xs text-[#64748B]">No class, group, or designation is configured for this organization.</p>
+            )}
+          </aside>
+          <div className="flex min-h-0 flex-col overflow-hidden">
+            <div className="flex gap-2 overflow-x-auto border-b border-[#E2E8F0] bg-white px-3 py-2">
+              {gallery.map((item, itemIndex) => (
+                <GalleryThumb
+                  key={item.id}
+                  student={item}
+                  active={itemIndex === index}
+                  onClick={() => setIndex(itemIndex)}
+                />
+              ))}
+              {gallery.length === 0 ? (
+                <p className="px-1 py-3 text-xs text-[#64748B]">No photos match this {field?.label.toLowerCase() ?? "filter"}.</p>
+              ) : null}
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col bg-[#EEF2FF]">
+              <div className="flex min-h-[280px] flex-1 items-center justify-center overflow-auto p-4">
+                {phase === "preview" && previewUrl ? (
+                  <img src={previewUrl} alt="Cropped preview" className="max-h-[54vh] max-w-full object-contain" />
+                ) : src && student ? (
+                  <div
+                    className="relative touch-none px-4 pt-12"
+                    onPointerDown={onPointerDown}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={onPointerUp}
+                  >
+                    <div ref={stageRef} className="relative inline-block max-h-[52vh] max-w-full">
+                      <img
+                        ref={imageRef}
+                        src={src}
+                        alt={student.student_name ?? "Photo"}
+                        draggable={false}
+                        className="block max-h-[52vh] max-w-full select-none"
+                        onLoad={paintFrame}
+                      />
+                      <div className="pointer-events-none absolute inset-0">
+                        <div
+                          ref={frameRef}
+                          className="absolute"
+                          style={{
+                            left: 0,
+                            top: 0,
+                            width: "100%",
+                            height: "100%",
+                            transformOrigin: "center center",
+                            border: "1px solid #ffffff",
+                            boxShadow: "0 0 0 1px rgba(30, 27, 75, 0.55), 0 0 0 9999px rgba(49, 46, 129, 0.28)",
+                          }}
+                        >
+                          {HANDLES.map((handle) => (
+                            <span
+                              key={handle}
+                              className="pointer-events-none absolute h-2 w-2 border border-[#6366F1] bg-white"
+                              style={handleStyle(handle)}
+                            />
+                          ))}
+                          <span className="pointer-events-none absolute left-1/2 top-0 h-4 w-px -translate-x-1/2 -translate-y-full bg-white" />
+                          <span className="pointer-events-none absolute left-1/2 top-0 flex h-6 w-6 -translate-x-1/2 -translate-y-[1.7rem] items-center justify-center rounded-full border border-[#6366F1] bg-white text-[#6366F1] shadow-sm">
+                            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M20 12a8 8 0 1 1-2.2-5.5" />
+                              <path d="M20 4v4h-4" />
+                            </svg>
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-white/80">{student ? "Loading photo…" : "Choose a photo."}</p>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-2 border-t border-white/10 bg-[#1E1B4B] px-3 py-2">
-              <button type="button" className="btn-secondary" disabled={!student || index === 0} onClick={() => setIndex((value) => Math.max(0, value - 1))}>Previous</button>
-              <button type="button" className="btn-secondary" disabled={!student || index >= gallery.length - 1} onClick={() => setIndex((value) => Math.min(gallery.length - 1, value + 1))}>Next</button>
-              {phase === "preview" ? (
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    setPhase("edit");
-                    previewBlobRef.current = null;
-                    clearPreview();
-                  }}
-                >
-                  Back
+                ) : (
+                  <p className="text-sm text-[#64748B]">{student ? "Loading photo…" : "Choose a photo."}</p>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 border-t border-[#E2E8F0] bg-white px-3 py-2">
+                <button type="button" className="btn-secondary" disabled={!student || index === 0} onClick={() => setIndex((value) => Math.max(0, value - 1))}>Previous</button>
+                <button type="button" className="btn-secondary" disabled={!student || index >= gallery.length - 1} onClick={() => setIndex((value) => Math.min(gallery.length - 1, value + 1))}>Next</button>
+                {phase === "preview" ? (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      setPhase("edit");
+                      previewBlobRef.current = null;
+                      clearPreview();
+                    }}
+                  >
+                    Back
+                  </button>
+                ) : (
+                  <button type="button" className="btn-secondary" disabled={!src || applying} onClick={() => void applyOk()}>
+                    {applying ? "Preparing…" : "OK"}
+                  </button>
+                )}
+                <button type="button" className="btn-primary" disabled={phase !== "preview" || saving} onClick={() => void saveCrop()}>
+                  {saving ? "Saving…" : "Save"}
                 </button>
-              ) : (
-                <button type="button" className="btn-secondary" disabled={!src || applying} onClick={() => void applyOk()}>
-                  {applying ? "Preparing…" : "OK"}
-                </button>
-              )}
-              <button type="button" className="btn-primary" disabled={phase !== "preview" || saving} onClick={() => void saveCrop()}>
-                {saving ? "Saving…" : "Save"}
-              </button>
+              </div>
+              {error ? <p className="bg-white px-3 pb-2 text-sm text-[#DC2626]">{error}</p> : null}
             </div>
-            {error ? <p className="px-3 pb-2 text-sm text-[#FECACA]">{error}</p> : null}
           </div>
         </div>
       </div>
@@ -416,7 +404,7 @@ function GalleryThumb({
           if (!cancelled && url) setSrc(url);
         });
       },
-      { root: node.parentElement, rootMargin: "120px" }
+      { root: node.parentElement, rootMargin: "80px" }
     );
     observer.observe(node);
     return () => {
@@ -430,19 +418,28 @@ function GalleryThumb({
       ref={holder}
       type="button"
       onClick={onClick}
-      className={`flex w-24 shrink-0 items-center gap-2 rounded-xl border px-2 py-1.5 text-left lg:w-full ${
+      className={`flex w-[4.5rem] shrink-0 flex-col items-center gap-1 rounded-lg border px-1 py-1 ${
         active ? "border-[#8B5CF6] bg-[#F5F3FF]" : "border-[#E2E8F0] bg-white"
       }`}
     >
       {src ? (
-        <img src={src} alt="" className="h-10 w-10 rounded-md object-cover" />
+        <img src={src} alt="" className="h-10 w-10 rounded object-cover" />
       ) : (
-        <span className="block h-10 w-10 animate-pulse rounded-md bg-[#EEF2FF]" />
+        <span className="block h-10 w-10 animate-pulse rounded bg-[#EEF2FF]" />
       )}
-      <span className="min-w-0 truncate text-xs font-semibold text-[#334155]">
+      <span className="w-full truncate text-center text-[10px] font-semibold text-[#334155]">
         {student.photo_id || student.student_name || "Photo"}
       </span>
     </button>
+  );
+}
+
+function primaryCategory(categories: ConfiguredCategoryField[]): ConfiguredCategoryField | null {
+  return (
+    categories.find((field) => field.kind === "class") ??
+    categories.find((field) => field.kind === "group") ??
+    categories.find((field) => field.kind === "designation") ??
+    null
   );
 }
 
@@ -453,102 +450,121 @@ function categoryValue(student: Student, field: ConfiguredCategoryField): string
   return "";
 }
 
-function hitTest(
-  clientX: number,
-  clientY: number,
-  rect: Rect,
-  box: DOMRect
-): Handle | "move" | "rotate" | null {
-  const x = box.left + rect.x * box.width;
-  const y = box.top + rect.y * box.height;
-  const w = rect.w * box.width;
-  const handleX = x + w / 2;
-  const handleY = y - 34;
-  if (Math.hypot(clientX - handleX, clientY - handleY) <= 20) return "rotate";
+function hitTest(clientX: number, clientY: number, crop: Crop, box: DOMRect): Hit | null {
   const px = clientX - box.left;
   const py = clientY - box.top;
-  const local = handleAt(px, py, rect, box.width, box.height);
-  return local;
+  const cx = crop.cx * box.width;
+  const cy = crop.cy * box.height;
+  const hw = (crop.w * box.width) / 2;
+  const hh = (crop.h * box.height) / 2;
+  const spots: Array<[Hit, number, number]> = [
+    ["rotate", 0, -hh - 28],
+    ["nw", -hw, -hh],
+    ["n", 0, -hh],
+    ["ne", hw, -hh],
+    ["e", hw, 0],
+    ["se", hw, hh],
+    ["s", 0, hh],
+    ["sw", -hw, hh],
+    ["w", -hw, 0],
+  ];
+  for (const [hit, ox, oy] of spots) {
+    const world = rotatePoint(ox, oy, crop.angle);
+    const reach = hit === "rotate" ? 16 : 12;
+    if (Math.hypot(px - (cx + world.x), py - (cy + world.y)) <= reach) return hit;
+  }
+  const local = unrotatePoint(px - cx, py - cy, crop.angle);
+  if (Math.abs(local.x) <= hw && Math.abs(local.y) <= hh) return "move";
+  return null;
 }
 
-function handleStyle(handle: Handle): { left: string | number; top: string | number; transform: string } {
-  const pos: Record<Handle, { left: string | number; top: string | number }> = {
-    nw: { left: 0, top: 0 },
-    n: { left: "50%", top: 0 },
-    ne: { left: "100%", top: 0 },
+function pointerAngle(clientX: number, clientY: number, crop: Crop, box: DOMRect): number {
+  const cx = box.left + crop.cx * box.width;
+  const cy = box.top + crop.cy * box.height;
+  return Math.atan2(clientX - cx, cy - clientY);
+}
+
+function angleDelta(next: number, start: number): number {
+  let delta = next - start;
+  while (delta > Math.PI) delta -= Math.PI * 2;
+  while (delta < -Math.PI) delta += Math.PI * 2;
+  return delta;
+}
+
+function rotatePoint(x: number, y: number, degrees: number): { x: number; y: number } {
+  const t = (degrees * Math.PI) / 180;
+  const c = Math.cos(t);
+  const s = Math.sin(t);
+  return { x: x * c - y * s, y: x * s + y * c };
+}
+
+function unrotatePoint(x: number, y: number, degrees: number): { x: number; y: number } {
+  return rotatePoint(x, y, -degrees);
+}
+
+function resizeCrop(origin: Crop, handle: Handle, dx: number, dy: number): Crop {
+  const local = unrotatePoint(dx, dy, origin.angle);
+  const east = handle === "e" || handle === "ne" || handle === "se";
+  const west = handle === "w" || handle === "nw" || handle === "sw";
+  const north = handle === "n" || handle === "ne" || handle === "nw";
+  const south = handle === "s" || handle === "se" || handle === "sw";
+  let dw = 0;
+  let dh = 0;
+  let sx = 0;
+  let sy = 0;
+  if (east) {
+    dw += local.x;
+    sx += local.x / 2;
+  }
+  if (west) {
+    dw -= local.x;
+    sx += local.x / 2;
+  }
+  if (south) {
+    dh += local.y;
+    sy += local.y / 2;
+  }
+  if (north) {
+    dh -= local.y;
+    sy += local.y / 2;
+  }
+  const shift = rotatePoint(sx, sy, origin.angle);
+  return {
+    ...origin,
+    cx: origin.cx + shift.x,
+    cy: origin.cy + shift.y,
+    w: origin.w + dw,
+    h: origin.h + dh,
+  };
+}
+
+function clampCrop(crop: Crop): Crop {
+  const w = Math.min(1, Math.max(MIN_SIZE, crop.w));
+  const h = Math.min(1, Math.max(MIN_SIZE, crop.h));
+  return {
+    ...crop,
+    w,
+    h,
+    cx: Math.min(1 - w / 2, Math.max(w / 2, crop.cx)),
+    cy: Math.min(1 - h / 2, Math.max(h / 2, crop.cy)),
+  };
+}
+
+function handleStyle(handle: Handle): { left: string; top: string; transform: string } {
+  const pos: Record<Handle, { left: string; top: string }> = {
+    nw: { left: "0%", top: "0%" },
+    n: { left: "50%", top: "0%" },
+    ne: { left: "100%", top: "0%" },
     e: { left: "100%", top: "50%" },
     se: { left: "100%", top: "100%" },
     s: { left: "50%", top: "100%" },
-    sw: { left: 0, top: "100%" },
-    w: { left: 0, top: "50%" },
+    sw: { left: "0%", top: "100%" },
+    w: { left: "0%", top: "50%" },
   };
   return { ...pos[handle], transform: "translate(-50%, -50%)" };
 }
 
-function clampRect(rect: Rect): Rect {
-  const w = Math.min(1, Math.max(MIN_SIZE, rect.w));
-  const h = Math.min(1, Math.max(MIN_SIZE, rect.h));
-  return {
-    x: Math.min(1 - w, Math.max(0, rect.x)),
-    y: Math.min(1 - h, Math.max(0, rect.y)),
-    w,
-    h,
-  };
-}
-
-function resizeRect(origin: Rect, handle: Handle, dx: number, dy: number): Rect {
-  let { x, y, w, h } = origin;
-  if (handle.includes("w")) {
-    x += dx;
-    w -= dx;
-  }
-  if (handle.includes("e")) w += dx;
-  if (handle.includes("n")) {
-    y += dy;
-    h -= dy;
-  }
-  if (handle.includes("s")) h += dy;
-  if (w < 0) {
-    x += w;
-    w = -w;
-  }
-  if (h < 0) {
-    y += h;
-    h = -h;
-  }
-  return { x, y, w, h };
-}
-
-function handleAt(
-  px: number,
-  py: number,
-  rect: Rect,
-  width: number,
-  height: number
-): Handle | "move" | null {
-  const x = rect.x * width;
-  const y = rect.y * height;
-  const w = rect.w * width;
-  const h = rect.h * height;
-  const points: Record<Handle, [number, number]> = {
-    nw: [x, y],
-    n: [x + w / 2, y],
-    ne: [x + w, y],
-    e: [x + w, y + h / 2],
-    se: [x + w, y + h],
-    s: [x + w / 2, y + h],
-    sw: [x, y + h],
-    w: [x, y + h / 2],
-  };
-  for (const handle of HANDLES) {
-    const [hx, hy] = points[handle];
-    if (Math.hypot(px - hx, py - hy) <= 14) return handle;
-  }
-  if (px >= x && px <= x + w && py >= y && py <= y + h) return "move";
-  return null;
-}
-
-function cursorFor(hit: Handle | "move" | "rotate" | null): string {
+function cursorFor(hit: Hit | null): string {
   if (hit === "rotate") return "grab";
   if (hit === "move") return "move";
   if (hit === "n" || hit === "s") return "ns-resize";
@@ -558,34 +574,24 @@ function cursorFor(hit: Handle | "move" | "rotate" | null): string {
   return "default";
 }
 
-function renderCrop(image: HTMLImageElement, rotation: number, crop: Rect): Promise<Blob> {
+function renderCrop(image: HTMLImageElement, crop: Crop): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const width = image.naturalWidth;
     const height = image.naturalHeight;
-    const rotated = document.createElement("canvas");
-    rotated.width = width;
-    rotated.height = height;
-    const ctx = rotated.getContext("2d");
+    const output = document.createElement("canvas");
+    output.width = Math.max(1, Math.round(crop.w * width));
+    output.height = Math.max(1, Math.round(crop.h * height));
+    const ctx = output.getContext("2d");
     if (!ctx) {
       reject(new Error("Canvas is unavailable"));
       return;
     }
-    ctx.translate(width / 2, height / 2);
-    ctx.rotate((rotation * Math.PI) / 180);
-    ctx.drawImage(image, -width / 2, -height / 2);
-    const sx = crop.x * width;
-    const sy = crop.y * height;
-    const sw = Math.max(1, crop.w * width);
-    const sh = Math.max(1, crop.h * height);
-    const output = document.createElement("canvas");
-    output.width = Math.max(1, Math.round(sw));
-    output.height = Math.max(1, Math.round(sh));
-    const out = output.getContext("2d");
-    if (!out) {
-      reject(new Error("Canvas is unavailable"));
-      return;
-    }
-    out.drawImage(rotated, sx, sy, sw, sh, 0, 0, output.width, output.height);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, output.width, output.height);
+    ctx.translate(output.width / 2, output.height / 2);
+    ctx.rotate((-crop.angle * Math.PI) / 180);
+    ctx.translate(-crop.cx * width, -crop.cy * height);
+    ctx.drawImage(image, 0, 0);
     output.toBlob((blob) => {
       if (blob) resolve(blob);
       else reject(new Error("Could not encode the photo"));
