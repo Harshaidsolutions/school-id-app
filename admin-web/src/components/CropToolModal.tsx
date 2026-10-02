@@ -55,14 +55,28 @@ export function CropToolModal({
   const [saving, setSaving] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [frameLimit, setFrameLimit] = useState({ width: 720, height: 520 });
   const imageRef = useRef<HTMLImageElement>(null);
+  const workspaceRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const cropRef = useRef<Crop>({ ...FULL });
+  const toneRef = useRef({ brightness: 0, contrast: 0 });
+  const toneGestureRef = useRef(false);
+  const curveDragRef = useRef(false);
+  const curveRef = useRef<HTMLCanvasElement>(null);
+  const brightnessInputRef = useRef<HTMLInputElement>(null);
+  const contrastInputRef = useRef<HTMLInputElement>(null);
+  const brightnessLabelRef = useRef<HTMLSpanElement>(null);
+  const contrastLabelRef = useRef<HTMLSpanElement>(null);
   const dragRef = useRef<Drag | null>(null);
   const previewBlobRef = useRef<Blob | null>(null);
   const previewUrlRef = useRef("");
   const paintRef = useRef(0);
+  const tonePaintRef = useRef(0);
+  const toneStudentRef = useRef<string | undefined>(undefined);
   const student = gallery[index] ?? null;
 
   useEffect(() => {
@@ -73,6 +87,7 @@ export function CropToolModal({
     return () => {
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
       if (paintRef.current) cancelAnimationFrame(paintRef.current);
+      if (tonePaintRef.current) cancelAnimationFrame(tonePaintRef.current);
     };
   }, []);
 
@@ -83,6 +98,8 @@ export function CropToolModal({
     setPhase("edit");
     setError(null);
     cropRef.current = { ...FULL };
+    toneRef.current = { brightness: 0, contrast: 0 };
+    toneGestureRef.current = false;
     previewBlobRef.current = null;
     clearPreview();
     if (!student?.photo_url) return;
@@ -96,8 +113,40 @@ export function CropToolModal({
   }, [student?.id, student?.photo_url]);
 
   useLayoutEffect(() => {
+    if (toneStudentRef.current !== student?.id) {
+      toneStudentRef.current = student?.id;
+      toneRef.current = { brightness: 0, contrast: 0 };
+      toneGestureRef.current = false;
+    }
     paintFrame();
-  }, [src, phase, student?.id]);
+    paintTone();
+  }, [src, phase, student?.id, frameLimit]);
+
+  useEffect(() => {
+    const node = workspaceRef.current;
+    if (!node) return;
+    const measure = () => {
+      const box = node.getBoundingClientRect();
+      setFrameLimit({
+        width: Math.max(160, Math.floor(box.width - 28)),
+        height: Math.max(160, Math.floor(box.height - 44)),
+      });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [phase, student?.id, src]);
+
+  function markDirty(studentId: string) {
+    setEditingId(studentId);
+    setSavedIds((current) => {
+      if (!current.has(studentId)) return current;
+      const next = new Set(current);
+      next.delete(studentId);
+      return next;
+    });
+  }
 
   function clearPreview() {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
@@ -114,6 +163,95 @@ export function CropToolModal({
     frame.style.width = `${crop.w * 100}%`;
     frame.style.height = `${crop.h * 100}%`;
     frame.style.transform = `rotate(${crop.angle}deg)`;
+  }
+
+  function paintTone() {
+    const { brightness, contrast } = toneRef.current;
+    const image = imageRef.current;
+    if (image) {
+      const filter = toneFilter(brightness, contrast);
+      image.style.filter = filter === "none" ? "" : filter;
+    }
+    if (brightnessInputRef.current) brightnessInputRef.current.value = String(Math.round(brightness));
+    if (contrastInputRef.current) contrastInputRef.current.value = String(Math.round(contrast));
+    if (brightnessLabelRef.current) brightnessLabelRef.current.textContent = String(Math.round(brightness));
+    if (contrastLabelRef.current) contrastLabelRef.current.textContent = String(Math.round(contrast));
+    if (curveRef.current) drawToneCurve(curveRef.current, brightness, contrast);
+  }
+
+  function scheduleTonePaint() {
+    if (tonePaintRef.current) return;
+    tonePaintRef.current = requestAnimationFrame(() => {
+      tonePaintRef.current = 0;
+      paintTone();
+    });
+  }
+
+  function beginToneEdit() {
+    if (phase === "preview") {
+      previewBlobRef.current = null;
+      clearPreview();
+      setPhase("edit");
+    }
+    if (!toneGestureRef.current && student) {
+      toneGestureRef.current = true;
+      markDirty(student.id);
+    }
+  }
+
+  function applyTone(brightness: number, contrast: number) {
+    const next = {
+      brightness: clampNumber(brightness, -100, 100),
+      contrast: clampNumber(contrast, -100, 100),
+    };
+    const current = toneRef.current;
+    if (next.brightness !== current.brightness || next.contrast !== current.contrast) beginToneEdit();
+    toneRef.current = next;
+    scheduleTonePaint();
+  }
+
+  function resetTone() {
+    applyTone(0, 0);
+    toneGestureRef.current = false;
+  }
+
+  function curvePoint(event: ReactPointerEvent): { x: number; y: number } | null {
+    const box = curveRef.current?.getBoundingClientRect();
+    if (!box || box.width <= 0 || box.height <= 0) return null;
+    const padX = (CURVE_PAD / CURVE_SIZE) * box.width;
+    const padY = (CURVE_PAD / CURVE_SIZE) * box.height;
+    const plotW = box.width - padX * 2;
+    const plotH = box.height - padY * 2;
+    if (plotW <= 0 || plotH <= 0) return null;
+    return {
+      x: clampNumber((event.clientX - box.left - padX) / plotW, 0, 1),
+      y: clampNumber(1 - (event.clientY - box.top - padY) / plotH, 0, 1),
+    };
+  }
+
+  function applyCurvePoint(point: { x: number; y: number }) {
+    const contrast = clampNumber(((point.x - 0.5) / 0.32) * 100, -100, 100);
+    const slope = Math.max(0.05, 1 + contrast / 100);
+    const brightness = clampNumber((200 * (point.y - 0.5)) / slope, -100, 100);
+    applyTone(brightness, contrast);
+  }
+
+  function onCurveDown(event: ReactPointerEvent<HTMLCanvasElement>) {
+    curveDragRef.current = true;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const point = curvePoint(event);
+    if (point) applyCurvePoint(point);
+  }
+
+  function onCurveMove(event: ReactPointerEvent<HTMLCanvasElement>) {
+    if (!curveDragRef.current) return;
+    const point = curvePoint(event);
+    if (point) applyCurvePoint(point);
+  }
+
+  function onCurveUp() {
+    curveDragRef.current = false;
+    toneGestureRef.current = false;
   }
 
   function schedulePaint() {
@@ -140,6 +278,7 @@ export function CropToolModal({
     if (!box || !point) return;
     const hit = hitTest(event.clientX, event.clientY, cropRef.current, box);
     if (!hit) return;
+    if (student) markDirty(student.id);
     event.currentTarget.setPointerCapture(event.pointerId);
     if (hit === "rotate") {
       dragRef.current = {
@@ -193,10 +332,11 @@ export function CropToolModal({
   async function applyOk() {
     const image = imageRef.current;
     if (!image || !src || applying || !image.naturalWidth) return;
+    if (student) markDirty(student.id);
     setApplying(true);
     setError(null);
     try {
-      const blob = await renderCrop(image, cropRef.current);
+      const blob = await renderCrop(image, cropRef.current, toneRef.current);
       clearPreview();
       const url = URL.createObjectURL(blob);
       previewUrlRef.current = url;
@@ -221,6 +361,8 @@ export function CropToolModal({
       const { data } = await api.post<{ student: Student }>(`/admin/students/${student.id}/photo`, body);
       invalidateStudentPhotoCache(student.id);
       onSaved(data.student);
+      setSavedIds((current) => new Set(current).add(student.id));
+      setEditingId((current) => (current === student.id ? null : current));
     } catch {
       setError("Could not save the cropped photo.");
     } finally {
@@ -242,7 +384,7 @@ export function CropToolModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#312E81]/35 px-3 py-4" role="dialog" aria-modal="true" aria-label="Cropping Tool">
-      <div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-[0_18px_48px_rgba(99,102,241,0.16)]">
+      <div className="flex h-[min(92vh,860px)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-[0_18px_48px_rgba(99,102,241,0.16)]">
         <div className="flex items-center justify-between gap-3 border-b border-[#E2E8F0] px-4 py-3">
           <div>
             <h2 className="text-lg font-semibold text-[#334155]">Cropping Tool</h2>
@@ -254,10 +396,10 @@ export function CropToolModal({
           </div>
           <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
         </div>
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[13rem_minmax(0,1fr)]">
-          <aside className="border-b border-[#E2E8F0] bg-[#F7FAFF] p-4 lg:border-b-0 lg:border-r">
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[18rem_minmax(0,1fr)]">
+          <aside className="flex min-h-0 flex-col overflow-hidden border-b border-[#E2E8F0] bg-[#F7FAFF] lg:border-b-0 lg:border-r">
             {field ? (
-              <label className="block text-sm font-semibold text-[#334155]">
+              <label className="block shrink-0 border-b border-[#E2E8F0] p-3 text-sm font-semibold text-[#334155]">
                 {field.label}
                 <select
                   className="input-field mt-2"
@@ -273,17 +415,14 @@ export function CropToolModal({
                   ))}
                 </select>
               </label>
-            ) : (
-              <p className="text-xs text-[#64748B]">No class, group, or designation is configured for this organization.</p>
-            )}
-          </aside>
-          <div className="flex min-h-0 flex-col overflow-hidden">
-            <div className="flex gap-2 overflow-x-auto border-b border-[#E2E8F0] bg-white px-3 py-2">
+            ) : null}
+            <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-2">
               {gallery.map((item, itemIndex) => (
                 <GalleryThumb
                   key={item.id}
                   student={item}
                   active={itemIndex === index}
+                  status={editingId === item.id ? "editing" : savedIds.has(item.id) ? "saved" : null}
                   onClick={() => setIndex(itemIndex)}
                 />
               ))}
@@ -291,25 +430,36 @@ export function CropToolModal({
                 <p className="px-1 py-3 text-xs text-[#64748B]">No photos match this {field?.label.toLowerCase() ?? "filter"}.</p>
               ) : null}
             </div>
-            <div className="flex min-h-0 flex-1 flex-col bg-[#EEF2FF]">
-              <div className="flex min-h-[280px] flex-1 items-center justify-center overflow-auto p-4">
+          </aside>
+          <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[#EEF2FF]">
+              <div ref={workspaceRef} className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-3">
                 {phase === "preview" && previewUrl ? (
-                  <img src={previewUrl} alt="Cropped preview" className="max-h-[54vh] max-w-full object-contain" />
+                  <img
+                    src={previewUrl}
+                    alt="Cropped preview"
+                    className="block h-auto w-auto object-contain"
+                    style={{ maxWidth: frameLimit.width, maxHeight: frameLimit.height }}
+                  />
                 ) : src && student ? (
                   <div
-                    className="relative touch-none px-4 pt-12"
+                    className="relative max-h-full max-w-full touch-none pt-8"
                     onPointerDown={onPointerDown}
                     onPointerMove={onPointerMove}
                     onPointerUp={onPointerUp}
                   >
-                    <div ref={stageRef} className="relative inline-block max-h-[52vh] max-w-full">
+                    <div ref={stageRef} className="relative inline-block max-w-full">
                       <img
                         ref={imageRef}
                         src={src}
                         alt={student.student_name ?? "Photo"}
                         draggable={false}
-                        className="block max-h-[52vh] max-w-full select-none"
-                        onLoad={paintFrame}
+                        className="block h-auto w-auto max-w-full select-none"
+                        style={{ maxWidth: frameLimit.width, maxHeight: frameLimit.height }}
+                        onLoad={() => {
+                          paintFrame();
+                          paintTone();
+                        }}
                       />
                       <div className="pointer-events-none absolute inset-0">
                         <div
@@ -347,7 +497,53 @@ export function CropToolModal({
                   <p className="text-sm text-[#64748B]">{student ? "Loading photo…" : "Choose a photo."}</p>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-2 border-t border-[#E2E8F0] bg-white px-3 py-2">
+              <div className="flex shrink-0 items-center gap-3 border-t border-[#E2E8F0] bg-white px-3 py-2">
+                <canvas
+                  ref={curveRef}
+                  width={112}
+                  height={112}
+                  aria-label="Brightness and contrast curve"
+                  className="h-28 w-28 shrink-0 cursor-crosshair touch-none rounded-md border border-[#E2E8F0] bg-[#F8FAFC]"
+                  onPointerDown={onCurveDown}
+                  onPointerMove={onCurveMove}
+                  onPointerUp={onCurveUp}
+                  onPointerCancel={onCurveUp}
+                />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <label className="flex items-center gap-2 text-[11px] font-semibold text-[#334155]">
+                    Brightness
+                    <input
+                      ref={brightnessInputRef}
+                      type="range"
+                      min={-100}
+                      max={100}
+                      defaultValue={0}
+                      aria-label="Brightness"
+                      className="min-w-0 flex-1 accent-[#6366F1]"
+                      onInput={(event) => applyTone(Number(event.currentTarget.value), toneRef.current.contrast)}
+                      onPointerUp={onCurveUp}
+                    />
+                    <span ref={brightnessLabelRef} className="w-8 text-right text-[#64748B]">0</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-[11px] font-semibold text-[#334155]">
+                    Contrast
+                    <input
+                      ref={contrastInputRef}
+                      type="range"
+                      min={-100}
+                      max={100}
+                      defaultValue={0}
+                      aria-label="Contrast"
+                      className="min-w-0 flex-1 accent-[#6366F1]"
+                      onInput={(event) => applyTone(toneRef.current.brightness, Number(event.currentTarget.value))}
+                      onPointerUp={onCurveUp}
+                    />
+                    <span ref={contrastLabelRef} className="w-8 text-right text-[#64748B]">0</span>
+                  </label>
+                  <button type="button" className="btn-secondary" onClick={resetTone}>Reset</button>
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-[#E2E8F0] bg-white px-3 py-2">
                 <button type="button" className="btn-secondary" disabled={!student || index === 0} onClick={() => setIndex((value) => Math.max(0, value - 1))}>Previous</button>
                 <button type="button" className="btn-secondary" disabled={!student || index >= gallery.length - 1} onClick={() => setIndex((value) => Math.min(gallery.length - 1, value + 1))}>Next</button>
                 {phase === "preview" ? (
@@ -355,6 +551,7 @@ export function CropToolModal({
                     type="button"
                     className="btn-secondary"
                     onClick={() => {
+                      if (student) markDirty(student.id);
                       setPhase("edit");
                       previewBlobRef.current = null;
                       clearPreview();
@@ -383,10 +580,12 @@ export function CropToolModal({
 function GalleryThumb({
   student,
   active,
+  status,
   onClick,
 }: {
   student: Student;
   active: boolean;
+  status: "saved" | "editing" | null;
   onClick: () => void;
 }) {
   const holder = useRef<HTMLButtonElement>(null);
@@ -418,17 +617,24 @@ function GalleryThumb({
       ref={holder}
       type="button"
       onClick={onClick}
-      className={`flex w-[4.5rem] shrink-0 flex-col items-center gap-1 rounded-lg border px-1 py-1 ${
+      className={`flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left ${
         active ? "border-[#8B5CF6] bg-[#F5F3FF]" : "border-[#E2E8F0] bg-white"
       }`}
     >
       {src ? (
-        <img src={src} alt="" className="h-10 w-10 rounded object-cover" />
+        <img src={src} alt="" className="h-11 w-11 shrink-0 rounded object-cover" />
       ) : (
-        <span className="block h-10 w-10 animate-pulse rounded bg-[#EEF2FF]" />
+        <span className="block h-11 w-11 shrink-0 animate-pulse rounded bg-[#EEF2FF]" />
       )}
-      <span className="w-full truncate text-center text-[10px] font-semibold text-[#334155]">
-        {student.photo_id || student.student_name || "Photo"}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-xs font-semibold text-[#334155]">
+          {student.photo_id || student.student_name || "Photo"}
+        </span>
+        {status === "saved" ? (
+          <span className="text-[11px] font-semibold text-[#22C55E]">Saved</span>
+        ) : status === "editing" ? (
+          <span className="text-[11px] font-semibold text-[#F97316]">Editing</span>
+        ) : null}
       </span>
     </button>
   );
@@ -574,7 +780,101 @@ function cursorFor(hit: Hit | null): string {
   return "default";
 }
 
-function renderCrop(image: HTMLImageElement, crop: Crop): Promise<Blob> {
+const CURVE_SIZE = 112;
+const CURVE_PAD = 10;
+
+function toneFilter(brightness: number, contrast: number): string {
+  if (brightness === 0 && contrast === 0) return "none";
+  return `brightness(${1 + brightness / 100}) contrast(${1 + contrast / 100})`;
+}
+
+function clampNumber(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(max, Math.max(min, value));
+}
+
+function toneAt(input: number, brightness: number, contrast: number): number {
+  const bright = 1 + brightness / 100;
+  const slope = 1 + contrast / 100;
+  return clampNumber((input * bright - 0.5) * slope + 0.5, 0, 1);
+}
+
+function drawToneCurve(canvas: HTMLCanvasElement, brightness: number, contrast: number) {
+  const size = CURVE_SIZE;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (canvas.width !== Math.round(size * dpr)) {
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+  }
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(0, 0, size, size);
+  const pad = CURVE_PAD;
+  const plot = size - pad * 2;
+  const xOf = (value: number) => pad + value * plot;
+  const yOf = (value: number) => pad + (1 - value) * plot;
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(xOf(0), yOf(0));
+  ctx.lineTo(xOf(1), yOf(1));
+  ctx.stroke();
+  ctx.strokeStyle = "#6366f1";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let step = 0; step <= 32; step += 1) {
+    const input = step / 32;
+    const x = xOf(input);
+    const y = yOf(toneAt(input, brightness, contrast));
+    if (step === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  const handleX = clampNumber(0.5 + (contrast / 100) * 0.32, 0.08, 0.92);
+  const handleY = toneAt(0.5, brightness, contrast);
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#6366f1";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(xOf(handleX), yOf(handleY), 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+}
+
+function adjustedSource(
+  image: HTMLImageElement,
+  tone: { brightness: number; contrast: number }
+): CanvasImageSource {
+  if (tone.brightness === 0 && tone.contrast === 0) return image;
+  const source = document.createElement("canvas");
+  source.width = image.naturalWidth;
+  source.height = image.naturalHeight;
+  const ctx = source.getContext("2d");
+  if (!ctx) return image;
+  ctx.drawImage(image, 0, 0);
+  const pixels = ctx.getImageData(0, 0, source.width, source.height);
+  const data = pixels.data;
+  const bright = 1 + tone.brightness / 100;
+  const slope = 1 + tone.contrast / 100;
+  for (let index = 0; index < data.length; index += 4) {
+    for (let channel = 0; channel < 3; channel += 1) {
+      let value = data[index + channel] / 255;
+      value = (value * bright - 0.5) * slope + 0.5;
+      data[index + channel] = Math.max(0, Math.min(255, Math.round(value * 255)));
+    }
+  }
+  ctx.putImageData(pixels, 0, 0);
+  return source;
+}
+
+function renderCrop(
+  image: HTMLImageElement,
+  crop: Crop,
+  tone: { brightness: number; contrast: number }
+): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const width = image.naturalWidth;
     const height = image.naturalHeight;
@@ -591,7 +891,23 @@ function renderCrop(image: HTMLImageElement, crop: Crop): Promise<Blob> {
     ctx.translate(output.width / 2, output.height / 2);
     ctx.rotate((-crop.angle * Math.PI) / 180);
     ctx.translate(-crop.cx * width, -crop.cy * height);
-    ctx.drawImage(image, 0, 0);
+    const filter = toneFilter(tone.brightness, tone.contrast);
+    let drew = false;
+    if (filter !== "none") {
+      try {
+        ctx.filter = filter;
+        drew = ctx.filter !== "none" && ctx.filter !== "";
+      } catch {
+        drew = false;
+      }
+    }
+    if (drew) {
+      ctx.drawImage(image, 0, 0);
+      ctx.filter = "none";
+    } else {
+      ctx.filter = "none";
+      ctx.drawImage(adjustedSource(image, tone), 0, 0);
+    }
     output.toBlob((blob) => {
       if (blob) resolve(blob);
       else reject(new Error("Could not encode the photo"));
