@@ -7,6 +7,8 @@ import {
   activeFormFields,
   findClassField,
   findStudentNameField,
+  isClassCategoryField,
+  isPlainPhotoPrompt,
 } from "../utils/formFieldHelpers";
 
 const GENDER_OPTIONS = ["Male", "Female", "Other"] as const;
@@ -192,18 +194,18 @@ export function AddStudentModal({
     const label = field.label;
     const key = field.key;
 
-    if (key === "class_section") {
+    if (isClassCategoryField(field)) {
       return (
         <label key={key} className="block text-sm">
           <span className="mb-1.5 block font-medium text-text-navy">{label} *</span>
-          {classOptions.length > 0 ? (
+          {key === "class_section" && classOptions.length > 0 ? (
             <select
               required
               value={fieldValue(key)}
               onChange={(e) => setField(key, e.target.value)}
               className="input-field"
             >
-              <option value="">Select class</option>
+              <option value="">{`Select ${label}`}</option>
               {classOptions.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -377,7 +379,7 @@ export function AddStudentModal({
                 <p className="mt-1 text-xs text-text-muted">Optional. JPG or PNG, up to 10MB.</p>
               )}
             </div>
-            {fields.map((field) => renderField(field))}
+            {fields.filter((field) => !isPlainPhotoPrompt(field)).map((field) => renderField(field))}
             {error && <div className="alert-error">{error}</div>}
             <div className="flex gap-2 pt-1">
               <button type="button" onClick={onClose} className="btn-secondary flex-1">

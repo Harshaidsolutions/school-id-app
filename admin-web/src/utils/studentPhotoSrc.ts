@@ -10,6 +10,7 @@ const pending: Array<() => void> = [];
 export type PhotoFetchOptions = {
   signal?: AbortSignal;
   thumb?: boolean;
+  version?: string | null;
 };
 
 function drain() {
@@ -40,11 +41,19 @@ function schedule<T>(task: () => Promise<T>, signal?: AbortSignal): Promise<T> {
 
 /** Authenticated photo bytes. The stored URL is often not publicly readable. */
 export function invalidateStudentPhotoCache(studentId: string): void {
-  for (const key of [studentId, `t:${studentId}`, `sig:${studentId}`, `st:${studentId}`]) {
-    const hit = cache.get(key);
-    if (hit) URL.revokeObjectURL(hit);
-    cache.delete(key);
-    inflight.delete(key);
+  for (const key of [...cache.keys()]) {
+    if (
+      key === studentId ||
+      key.startsWith(`${studentId}:`) ||
+      key.startsWith(`t:${studentId}`) ||
+      key.startsWith(`sig:${studentId}`) ||
+      key.startsWith(`st:${studentId}`)
+    ) {
+      const hit = cache.get(key);
+      if (hit) URL.revokeObjectURL(hit);
+      cache.delete(key);
+      inflight.delete(key);
+    }
   }
 }
 
@@ -81,10 +90,13 @@ export async function authenticatedStudentPhotoUrl(
   options?: PhotoFetchOptions
 ): Promise<string | null> {
   const thumb = options?.thumb === true;
-  const cacheKey = thumb ? `t:${studentId}` : studentId;
-  const path = thumb
-    ? `/admin/students/${studentId}/photo?thumb=1`
-    : `/admin/students/${studentId}/photo`;
+  const version = options?.version?.trim() ?? "";
+  const cacheKey = `${thumb ? "t:" : ""}${studentId}:${version}`;
+  const params = new URLSearchParams();
+  if (thumb) params.set("thumb", "1");
+  if (version) params.set("v", version);
+  const query = params.toString();
+  const path = `/admin/students/${studentId}/photo${query ? `?${query}` : ""}`;
   return fetchBlob(path, cacheKey, options);
 }
 

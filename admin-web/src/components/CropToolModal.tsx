@@ -146,14 +146,17 @@ export function CropToolModal({
     previewBlobRef.current = null;
     clearPreview();
     if (!student?.photo_url) return;
-    void authenticatedStudentPhotoUrl(student.id, { signal: controller.signal }).then((url) => {
+    void authenticatedStudentPhotoUrl(student.id, {
+      signal: controller.signal,
+      version: student.updated_at,
+    }).then((url) => {
       if (!cancelled) setSrc(url || "");
     });
     return () => {
       cancelled = true;
       controller.abort();
     };
-  }, [student?.id, student?.photo_url]);
+  }, [student?.id, student?.photo_url, student?.updated_at]);
 
   useEffect(() => {
     if (!student?.photo_cropped) return;
@@ -866,7 +869,11 @@ function GalleryThumb({
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return;
         observer.disconnect();
-        void authenticatedStudentPhotoUrl(student.id, { thumb: true, signal: controller.signal }).then((url) => {
+        void authenticatedStudentPhotoUrl(student.id, {
+          thumb: true,
+          signal: controller.signal,
+          version: student.updated_at,
+        }).then((url) => {
           if (!cancelled && url) setSrc(url);
         });
       },

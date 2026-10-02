@@ -82,17 +82,36 @@ export function allValuesLabel(label: string): string {
   return `All ${trimmed}`;
 }
 
+/** Class only. Section, group, and designation stay separate fields. */
+export function isClassCategoryField(field: FormFieldConfig): boolean {
+  const n = normalizeLabel(field.label);
+  if (n.includes("designation") || n.includes("group") || n.includes("photo") || n.includes("signature")) {
+    return false;
+  }
+  if (n.includes("section") && !n.includes("class")) return false;
+  return (
+    n === "class" ||
+    n.includes("class") ||
+    n.includes("grade") ||
+    n.includes("standard") ||
+    n.includes("batch") ||
+    n.includes("division") ||
+    (field.key === "class_section" && (n === "" || n === "classsection"))
+  );
+}
+
 export function findClassField(fields: FormFieldConfig[]): FormFieldConfig | undefined {
-  return fields.find((f) => {
-    const n = normalizeLabel(f.label);
-    return (
-      f.key === "class_section" ||
-      n === "class" ||
-      n.includes("classsection") ||
-      n.includes("section") ||
-      n.includes("grade")
-    );
-  });
+  return fields.find((field) => isClassCategoryField(field));
+}
+
+/** The picture prompt. Photo number / photo id stays a text field. */
+export function isPlainPhotoPrompt(field: FormFieldConfig): boolean {
+  const n = normalizeLabel(field.label);
+  const photoField =
+    field.key === "photo_id" || (n.includes("photo") && !n.includes("url") && !n.includes("capture"));
+  if (!photoField) return false;
+  if (n.includes("id") || n.includes("number") || n.endsWith("no")) return false;
+  return true;
 }
 
 export function isGenderField(field: FormFieldConfig): boolean {

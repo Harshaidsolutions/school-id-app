@@ -114,6 +114,7 @@ function StudentThumb({ student }: { student: Student }): ReactNode {
         void authenticatedStudentPhotoUrl(student.id, {
           thumb: true,
           signal: controller.signal,
+          version: student.updated_at,
         }).then((url) => {
           if (!cancelled && url) setSrc(url);
         });

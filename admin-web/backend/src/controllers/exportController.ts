@@ -723,7 +723,7 @@ export async function downloadStudentPhoto(
     const filename = `${base}${ext}`;
 
     res.setHeader("Content-Type", image.contentType);
-    res.setHeader("Cache-Control", "private, max-age=600");
+    res.setHeader("Cache-Control", "private, no-cache");
     res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
     res.status(200).send(image.bytes);
   } catch (error) {

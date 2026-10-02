@@ -29,7 +29,7 @@ import {
   parseExtraFields,
   rowToInsertParams,
 } from "../utils/studentFieldAccess";
-import { deriveCanonicalValuesFromExtraFields } from "../utils/excelSchema";
+import { deriveCanonicalValuesFromExtraFields, isClassCategoryField } from "../utils/excelSchema";
 import {
   allocateReusableAddSerial,
   firstIdentityValue,
@@ -481,13 +481,24 @@ export async function createStudentAdmin(
       ([firstName, lastName].filter(Boolean).join(" ").trim() || null);
     if (!studentName) throw new AppError("Student name is required", 400);
 
-    const classSection =
-      bodyVal("classSection", "class_section") ??
-      canonical.class_section ??
-      (instituteId ? "ALL" : "");
-    if (!classSection) {
-      throw new AppError("Class / section is required", 400);
+    const classFields = formFields.filter(
+      (field) => field.enabled !== false && isClassCategoryField(field)
+    );
+    let classSection = "";
+    for (const field of classFields) {
+      const value = String(extraFields[field.key] ?? "").trim();
+      if (value) {
+        classSection = value;
+        break;
+      }
     }
+    if (!classSection) {
+      classSection = (bodyVal("classSection", "class_section") ?? "").trim();
+    }
+    if (classFields.length > 0 && !classSection) {
+      throw new AppError(`${classFields[0]?.label || "Class"} is required`, 400);
+    }
+    if (!classSection && instituteId) classSection = "ALL";
 
     const rowInput: StudentRowInput = {
       excelRow: 0,
@@ -518,6 +529,7 @@ export async function createStudentAdmin(
     rowInput.photoId = photoId;
 
     const params = rowToInsertParams(rowInput, { bulkImport: true });
+    params.classSection = classSection;
     let storedPhotoId: string | null = fromIdentity || requestedPhotoId || null;
 
     const insertSql = `INSERT INTO students
@@ -959,7 +971,10 @@ export async function uploadStudentPhotoAdmin(
         `UPDATE students
          SET photo_url = $1,
              status = 'captured',
-             photo_captured_at = COALESCE(photo_captured_at, NOW()),
+             photo_captured_at = CASE
+               WHEN $3::boolean THEN COALESCE(photo_captured_at, NOW())
+               ELSE NOW()
+             END,
              photo_cropped = $3,
              updated_at = NOW()
          WHERE id = $2

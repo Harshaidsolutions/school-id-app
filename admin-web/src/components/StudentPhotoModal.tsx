@@ -100,14 +100,14 @@ export function StudentPhotoModal({
     if (!assetUrl) return;
     const load = isSignature
       ? authenticatedStudentSignatureUrl(student.id)
-      : authenticatedStudentPhotoUrl(student.id);
+      : authenticatedStudentPhotoUrl(student.id, { version: student.updated_at });
     void load.then((url) => {
       if (!cancelled) setSrc(url || assetUrl);
     });
     return () => {
       cancelled = true;
     };
-  }, [student.id, assetUrl, isSignature]);
+  }, [student.id, student.updated_at, assetUrl, isSignature]);
   if (!assetUrl) return null;
 
   function goPrev(e: MouseEvent<HTMLButtonElement>) {

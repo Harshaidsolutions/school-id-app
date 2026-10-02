@@ -4,6 +4,10 @@ import api from "../api/client";
 import type { ApiErrorBody, Student } from "../types";
 import type { FormFieldConfig } from "../constants/formFields";
 import { activeFormFields } from "../utils/formFieldHelpers";
+import {
+  authenticatedStudentPhotoUrl,
+  invalidateStudentPhotoCache,
+} from "../utils/studentPhotoSrc";
 
 const GENDER_OPTIONS = ["Male", "Female", "Other"] as const;
 const BLOOD_GROUP_OPTIONS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
@@ -52,9 +56,27 @@ export function EditStudentModal({
       }
     }
     setValues(next);
-    setPhotoPreview(student.photo_url);
     setSignaturePreview(student.signature_url ?? null);
   }, [student]);
+
+  useEffect(() => {
+    if (!student.photo_url) {
+      setPhotoPreview(null);
+      return;
+    }
+    let cancelled = false;
+    const controller = new AbortController();
+    void authenticatedStudentPhotoUrl(student.id, {
+      signal: controller.signal,
+      version: student.updated_at,
+    }).then((url) => {
+      if (!cancelled && url) setPhotoPreview(url);
+    });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [student.id, student.photo_url, student.updated_at]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -76,7 +98,13 @@ export function EditStudentModal({
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    if (!["image/jpeg", "image/png"].includes(file.type) || file.size > 10 * 1024 * 1024) {
+      setError("Photo must be a JPG or PNG under 10MB.");
+      return;
+    }
 
+    const localUrl = URL.createObjectURL(file);
+    setPhotoPreview(localUrl);
     setUploadingPhoto(true);
     setError(null);
     try {
@@ -86,9 +114,13 @@ export function EditStudentModal({
         `/admin/students/${student.id}/photo`,
         form
       );
-      setPhotoPreview(data.student.photo_url);
+      invalidateStudentPhotoCache(student.id);
       onSaved(data.student);
     } catch (err) {
+      URL.revokeObjectURL(localUrl);
+      void authenticatedStudentPhotoUrl(student.id, { version: student.updated_at }).then((url) => {
+        setPhotoPreview(url);
+      });
       if (axios.isAxiosError(err)) {
         const body = err.response?.data as ApiErrorBody | undefined;
         setError(body?.message ?? "Failed to upload photo.");
@@ -327,9 +359,15 @@ export function EditStudentModal({
                   No photo
                 </div>
               )}
-              <label className="btn-secondary inline-block cursor-pointer">
+              <label className="btn-secondary relative inline-block cursor-pointer">
                 {uploadingPhoto ? "Uploading…" : photoPreview ? "Replace Photo" : "Upload Photo"}
-                <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => void handlePhotoChange(e)} disabled={uploadingPhoto} />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                  onChange={(e) => void handlePhotoChange(e)}
+                  disabled={uploadingPhoto}
+                />
               </label>
             </div>
 

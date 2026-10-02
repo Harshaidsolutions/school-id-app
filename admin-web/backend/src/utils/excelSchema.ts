@@ -88,6 +88,24 @@ function isClassHeader(normalized: string): boolean {
   );
 }
 
+/** Class column only. A section, group, or designation column is not class. */
+export function isClassCategoryField(field: { key: string; label: string }): boolean {
+  const n = normalizeHeaderForMatch(field.label);
+  if (n.includes("designation") || n.includes("group") || n.includes("photo") || n.includes("signature")) {
+    return false;
+  }
+  if (n.includes("section") && !n.includes("class")) return false;
+  return (
+    n === "class" ||
+    n.includes("class") ||
+    n.includes("grade") ||
+    n.includes("standard") ||
+    n.includes("batch") ||
+    n.includes("division") ||
+    (field.key === "class_section" && (n === "" || n === "classsection"))
+  );
+}
+
 function isPhoneHeader(normalized: string): boolean {
   if (normalized.includes("contact") && !normalized.includes("phone")) {
     return false;
