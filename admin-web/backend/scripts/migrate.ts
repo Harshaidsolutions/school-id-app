@@ -82,9 +82,10 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash
       ON password_reset_tokens (token_hash);
 
-    -- Teacher/institute owner login by username (email remains required for admins)
+    -- Teacher, institute, and organization usernames may repeat.
+    -- Admin usernames are kept unique further down.
     ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
-    CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_unique
+    CREATE INDEX IF NOT EXISTS users_username_lower_idx
       ON users (lower(username))
       WHERE username IS NOT NULL;
 
