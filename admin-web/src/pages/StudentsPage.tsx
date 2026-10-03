@@ -10,7 +10,6 @@ import { AddStudentModal } from "../components/AddStudentModal";
 import { DeleteOptionsModal, type DeleteJob } from "../components/DeleteOptionsModal";
 import { BulkUploadModal } from "../components/BulkUploadModal";
 import { DownloadPhotosModal } from "../components/DownloadPhotosModal";
-import { BulkModeButtons } from "../components/BulkActionBar";
 import { OtpConfirmModal } from "../components/OtpConfirmModal";
 import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
 import type { ApiErrorBody, NamedCount, RecordFacets, School, Student, StudentsResponse } from "../types";
@@ -940,37 +939,49 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               >
                 Filter
               </button>
-              {selecting || filtered.length > 0 ? (
-                <div className="bulk-inline-actions">
-                  <BulkModeButtons
-                    selecting={selecting}
-                    selectedCount={filtered.filter((student) => selectedIds.has(student.id)).length}
-                    deleting={bulkDeleting}
-                    onStart={() => setSelecting(true)}
-                    onCancel={() => {
-                      setSelectedIds(new Set());
-                      setSelecting(false);
-                      setOtpOpen(false);
-                    }}
-                    onConfirm={() => {
-                      if (filtered.filter((student) => selectedIds.has(student.id)).length === 0) {
-                        return;
-                      }
-                      setOtpOpen(true);
-                    }}
-                  />
-                </div>
-              ) : null}
             </div>
 
-            <button
-              type="button"
-              disabled={!orgId}
-              onClick={handleAddStudent}
-              className="detail-toolbar-row2-add detail-toolbar-btn"
-            >
-              {isInstitute ? "Add Member" : "Add Student"}
-            </button>
+            <div className="detail-toolbar-row2-actions">
+              {selecting ? (
+                <button
+                  type="button"
+                  className="btn-primary shrink-0 disabled:opacity-50"
+                  disabled={filtered.filter((student) => selectedIds.has(student.id)).length === 0 || bulkDeleting}
+                  onClick={() => {
+                    if (filtered.filter((student) => selectedIds.has(student.id)).length === 0) return;
+                    setOtpOpen(true);
+                  }}
+                >
+                  {bulkDeleting ? "Deleting…" : "Bulk Delete"}
+                </button>
+              ) : filtered.length > 0 ? (
+                <button type="button" className="btn-secondary shrink-0" onClick={() => setSelecting(true)}>
+                  Bulk Delete
+                </button>
+              ) : null}
+              <button
+                type="button"
+                disabled={!orgId}
+                onClick={handleAddStudent}
+                className="detail-toolbar-btn"
+              >
+                {isInstitute ? "Add Member" : "Add Student"}
+              </button>
+              {selecting ? (
+                <button
+                  type="button"
+                  className="btn-secondary shrink-0"
+                  disabled={bulkDeleting}
+                  onClick={() => {
+                    setSelectedIds(new Set());
+                    setSelecting(false);
+                    setOtpOpen(false);
+                  }}
+                >
+                  Cancel
+                </button>
+              ) : null}
+            </div>
           </div>
           {filterOpen
             ? createPortal(

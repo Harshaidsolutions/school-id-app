@@ -11,7 +11,8 @@ type Hit = Handle | "move" | "rotate";
 type Drag =
   | { kind: "move"; startX: number; startY: number; origin: Crop }
   | { kind: "resize"; handle: Handle; startX: number; startY: number; origin: Crop }
-  | { kind: "rotate"; startPointer: number; origin: Crop };
+  | { kind: "rotate"; startPointer: number; origin: Crop }
+  | { kind: "create"; startX: number; startY: number; origin: Crop };
 
 const HANDLES: Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 const MIN_SIZE = 0.04;
@@ -159,10 +160,14 @@ export function CropToolModal({
   }, [student?.id, student?.photo_url, student?.updated_at]);
 
   useEffect(() => {
-    if (!student?.photo_cropped) return;
-    setCropArmed(false);
+    if (browsing || !student?.photo_cropped) return;
+    const nextIndex = gallery.findIndex((item) => item.photo_cropped !== true);
+    if (nextIndex >= 0) {
+      setIndex(nextIndex);
+      return;
+    }
     setBrowsing(true);
-  }, [student?.id, student?.photo_cropped]);
+  }, [browsing, student?.id, student?.photo_cropped, gallery]);
 
   useLayoutEffect(() => {
     if (toneStudentRef.current !== student?.id) {
@@ -200,7 +205,7 @@ export function CropToolModal({
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     return () => observer.disconnect();
-  }, [phase, student?.id, src]);
+  }, [phase, student?.id, src, browsing]);
 
   function markDirty(studentId: string) {
     setEditingId(studentId);
@@ -278,6 +283,22 @@ export function CropToolModal({
     toneGestureRef.current = false;
   }
 
+  function resetWorkspace() {
+    cropRef.current = { ...FULL };
+    historyRef.current = [];
+    setCropArmed(false);
+    setPhase("edit");
+    previewBlobRef.current = null;
+    clearPreview();
+    toneRef.current = { brightness: 0, contrast: 0 };
+    toneGestureRef.current = false;
+    setLimitWidth("");
+    setLimitHeight("");
+    limitRef.current = { width: null, height: null };
+    paintTone();
+    paintFrame();
+  }
+
   function endToneGesture() {
     toneGestureRef.current = false;
   }
@@ -315,7 +336,7 @@ export function CropToolModal({
   }
 
   function rotateCrop(delta: number) {
-    if (!student || !cropArmed || phase !== "edit") return;
+    if (!student || phase !== "edit") return;
     rememberCrop();
     markDirty(student.id);
     cropRef.current = { ...cropRef.current, angle: cropRef.current.angle + delta };
@@ -357,10 +378,20 @@ export function CropToolModal({
   }
 
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (phase !== "edit" || !cropArmed) return;
+    if (phase !== "edit" || !student || student.photo_cropped) return;
     const box = stageRef.current?.getBoundingClientRect();
     const point = pointOf(event);
     if (!box || !point) return;
+    if (!cropArmed) {
+      const next = { cx: point.x, cy: point.y, w: MIN_SIZE, h: MIN_SIZE, angle: cropRef.current.angle };
+      cropRef.current = next;
+      setCropArmed(true);
+      markDirty(student.id);
+      event.currentTarget.setPointerCapture(event.pointerId);
+      dragRef.current = { kind: "create", startX: point.x, startY: point.y, origin: next };
+      paintFrame();
+      return;
+    }
     const hit = hitTest(event.clientX, event.clientY, cropRef.current, box);
     if (!hit) return;
     rememberCrop();
@@ -401,6 +432,26 @@ export function CropToolModal({
     }
     const point = pointOf(event);
     if (!point) return;
+    if (drag.kind === "create") {
+      const left = Math.min(drag.startX, point.x);
+      const top = Math.min(drag.startY, point.y);
+      const w = Math.max(MIN_SIZE, Math.abs(point.x - drag.startX));
+      const h = Math.max(MIN_SIZE, Math.abs(point.y - drag.startY));
+      cropRef.current = limitCrop(
+        clampCrop({
+          cx: left + w / 2,
+          cy: top + h / 2,
+          w,
+          h,
+          angle: drag.origin.angle,
+        }),
+        imageRef.current,
+        limitRef.current
+      );
+      event.currentTarget.style.cursor = "crosshair";
+      schedulePaint();
+      return;
+    }
     const dx = point.x - drag.startX;
     const dy = point.y - drag.startY;
     const next =
@@ -501,23 +552,20 @@ export function CropToolModal({
   }
 
   const shell = layout === "page"
-    ? "flex min-h-[70vh] flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white"
+    ? "flex min-h-0 flex-1 flex-col overflow-hidden"
     : "fixed inset-0 z-50 flex items-center justify-center bg-[#312E81]/35 px-3 py-4";
 
   return (
     <div className={shell} role={layout === "page" ? undefined : "dialog"} aria-modal={layout === "page" ? undefined : true} aria-label="Cropping Tool">
-      <div className={layout === "page" ? "flex min-h-0 flex-1 flex-col" : "flex h-[min(92vh,860px)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white"}>
-        <div className="flex items-center justify-between gap-3 border-b border-[#E2E8F0] px-4 py-3">
-          <div>
-            <h2 className="text-lg font-semibold text-[#334155]">Cropping Tool</h2>
-            <p className="text-xs text-[#64748B]">
+      <div className={layout === "page" ? "flex min-h-0 flex-1 overflow-hidden" : "flex h-[min(92vh,860px)] w-full max-w-6xl overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white"}>
+        <aside className="flex w-[17.5rem] shrink-0 flex-col gap-3 overflow-y-auto border-r border-[#E2E8F0] bg-white p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="min-w-0 truncate text-xs font-semibold text-[#64748B]">
               {student && !browsing ? student.student_name ?? "Student" : `${gallery.length} photo${gallery.length === 1 ? "" : "s"}`}
               {student && !browsing && student.photo_id ? ` · Photo ${student.photo_id}` : ""}
             </p>
+            <button type="button" className="btn-secondary shrink-0 px-3 py-1.5 text-sm" onClick={onClose}>Back</button>
           </div>
-          <button type="button" className="btn-secondary px-3 py-1.5 text-sm" onClick={onClose}>Back</button>
-        </div>
-        <div className="flex flex-wrap items-end gap-3 border-b border-[#E2E8F0] bg-[#F7FAFF] px-4 py-3">
           {field ? (
             <label className="min-w-[12rem] text-xs font-semibold text-[#334155]">
               {field.label}
@@ -562,7 +610,48 @@ export function CropToolModal({
               ))}
             </select>
           </label>
-        </div>
+          {!browsing ? (
+            <>
+              <label className="text-xs font-semibold text-[#334155]">
+                Width
+                <input value={limitWidth} inputMode="numeric" aria-label="Crop width" className="input-field mt-1" onChange={(event) => updateCropLimit("width", event.target.value)} />
+              </label>
+              <label className="text-xs font-semibold text-[#334155]">
+                Height
+                <input value={limitHeight} inputMode="numeric" aria-label="Crop height" className="input-field mt-1" onChange={(event) => updateCropLimit("height", event.target.value)} />
+              </label>
+              <label className="text-xs font-semibold text-[#334155]">
+                Rotate
+                <select
+                  aria-label="Rotate"
+                  className="input-field mt-1"
+                  defaultValue=""
+                  disabled={phase !== "edit" || student?.photo_cropped === true}
+                  onChange={(event) => {
+                    const value = event.currentTarget.value;
+                    event.currentTarget.value = "";
+                    if (value === "left") rotateCrop(-90);
+                    if (value === "right") rotateCrop(90);
+                  }}
+                >
+                  <option value="">Choose rotation</option>
+                  <option value="left">Rotate Left</option>
+                  <option value="right">Rotate Right</option>
+                </select>
+              </label>
+              <button type="button" className="btn-secondary" onClick={resetWorkspace}>Reset</button>
+              <button type="button" className="btn-secondary" onClick={leaveEditor}>Photos</button>
+              {phase === "preview" ? (
+                <button type="button" className="btn-secondary" onClick={() => { if (student) markDirty(student.id); setPhase("edit"); previewBlobRef.current = null; clearPreview(); }}>Edit crop</button>
+              ) : (
+                <button type="button" className="btn-secondary" disabled={!src || applying || !cropArmed} onClick={() => void applyOk()}>{applying ? "Preparing…" : "OK"}</button>
+              )}
+              <button type="button" className="btn-primary" disabled={phase !== "preview" || saving} onClick={() => void saveCrop()}>{saving ? "Saving…" : "Save"}</button>
+              <p className="text-[11px] font-medium text-[#64748B]">Drag on the photo to crop. Shift+Z undo · Shift+S save</p>
+            </>
+          ) : null}
+        </aside>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {browsing ? (
           <div className="grid grid-cols-2 gap-3 overflow-y-auto p-4 md:grid-cols-3 xl:grid-cols-4">
             {gallery.map((item, itemIndex) => (
@@ -724,61 +813,10 @@ export function CropToolModal({
                 </div>
               ) : null}
             </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-[#E2E8F0] bg-white px-3 py-1.5">
-              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" onClick={leaveEditor}>Back</button>
-              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!src || phase !== "edit" || student?.photo_cropped === true} onClick={() => { if (!student || student.photo_cropped) return; setCropArmed(true); markDirty(student.id); }}>Crop</button>
-              <select
-                aria-label="Rotate"
-                className="h-8 rounded-[10px] border border-[#BFDBFE] bg-white px-2 text-sm font-semibold text-[#2563EB]"
-                defaultValue=""
-                disabled={!cropArmed || phase !== "edit"}
-                onChange={(event) => {
-                  const value = event.currentTarget.value;
-                  event.currentTarget.value = "";
-                  if (value === "left") rotateCrop(-90);
-                  if (value === "right") rotateCrop(90);
-                }}
-              >
-                <option value="">Rotate</option>
-                <option value="left">Rotate Left</option>
-                <option value="right">Rotate Right</option>
-              </select>
-              <label className="flex items-center gap-1 text-xs font-semibold text-[#334155]">
-                Width
-                <input value={limitWidth} inputMode="numeric" aria-label="Crop width" className="h-8 w-16 rounded-[10px] border border-[#E2E8F0] px-2 text-sm" onChange={(event) => updateCropLimit("width", event.target.value)} />
-              </label>
-              <label className="flex items-center gap-1 text-xs font-semibold text-[#334155]">
-                Height
-                <input value={limitHeight} inputMode="numeric" aria-label="Crop height" className="h-8 w-16 rounded-[10px] border border-[#E2E8F0] px-2 text-sm" onChange={(event) => updateCropLimit("height", event.target.value)} />
-              </label>
-              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!student || index === 0} onClick={() => { setCropArmed(false); setIndex((value) => Math.max(0, value - 1)); }}>Previous</button>
-              <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!student || index >= gallery.length - 1} onClick={() => { setCropArmed(false); setIndex((value) => Math.min(gallery.length - 1, value + 1)); }}>Next</button>
-              {phase === "preview" ? (
-                <button
-                  type="button"
-                  className="btn-secondary px-3 py-1.5 text-sm"
-                  onClick={() => {
-                    if (student) markDirty(student.id);
-                    setPhase("edit");
-                    previewBlobRef.current = null;
-                    clearPreview();
-                  }}
-                >
-                  Back
-                </button>
-              ) : (
-                <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={!src || applying || !cropArmed} onClick={() => void applyOk()}>
-                  {applying ? "Preparing…" : "OK"}
-                </button>
-              )}
-              <button type="button" className="btn-primary px-3 py-1.5 text-sm" disabled={phase !== "preview" || saving} onClick={() => void saveCrop()}>
-                {saving ? "Saving…" : "Save"}
-              </button>
-              <span className="text-[11px] font-medium text-[#64748B]">Shift+Z undo · Shift+S save</span>
-            </div>
             {error ? <p className="bg-white px-3 pb-2 text-sm text-[#DC2626]">{error}</p> : null}
           </div>
         )}
+        </div>
       </div>
     </div>
   );
@@ -820,29 +858,37 @@ function limitCrop(
   image: HTMLImageElement | null,
   limit: { width: number | null; height: number | null }
 ): Crop {
-  if (!image?.naturalWidth || !image.naturalHeight) return clampCrop(crop);
-  const maxWidth = limit.width && limit.width > 0 ? Math.min(1, limit.width / image.naturalWidth) : null;
-  const maxHeight = limit.height && limit.height > 0 ? Math.min(1, limit.height / image.naturalHeight) : null;
-  let width = crop.w;
-  let height = crop.h;
-  if (maxWidth != null && maxHeight != null) {
-    width = maxWidth;
-    height = maxHeight;
-  } else {
-    width = Math.max(MIN_SIZE, width);
-    height = Math.max(MIN_SIZE, height);
-    if (maxWidth != null) width = Math.min(width, maxWidth);
-    if (maxHeight != null) height = Math.min(height, maxHeight);
+  const clamped = clampCrop(crop);
+  if (!image?.naturalWidth || !image.naturalHeight) return clamped;
+  const widthLimit = limit.width && limit.width > 0 ? limit.width : null;
+  const heightLimit = limit.height && limit.height > 0 ? limit.height : null;
+  if (widthLimit != null && heightLimit != null) {
+    const ratio = (widthLimit / heightLimit) * (image.naturalHeight / image.naturalWidth);
+    let width = clamped.w;
+    let height = clamped.h;
+    if (width / Math.max(height, 0.0001) > ratio) width = height * ratio;
+    else height = width / ratio;
+    if (width > 1) {
+      height /= width;
+      width = 1;
+    }
+    if (height > 1) {
+      width /= height;
+      height = 1;
+    }
+    width = Math.min(1, Math.max(MIN_SIZE, width));
+    height = Math.min(1, Math.max(MIN_SIZE, height));
+    if (width / height > ratio) width = height * ratio;
+    else height = width / ratio;
+    return clampCrop({ ...clamped, w: width, h: height });
   }
-  width = Math.min(1, Math.max(1 / image.naturalWidth, width));
-  height = Math.min(1, Math.max(1 / image.naturalHeight, height));
-  return {
-    ...crop,
-    w: width,
-    h: height,
-    cx: Math.min(1 - width / 2, Math.max(width / 2, crop.cx)),
-    cy: Math.min(1 - height / 2, Math.max(height / 2, crop.cy)),
-  };
+  let width = clamped.w;
+  let height = clamped.h;
+  if (widthLimit != null) width = Math.min(width, widthLimit / image.naturalWidth);
+  if (heightLimit != null) height = Math.min(height, heightLimit / image.naturalHeight);
+  width = Math.min(1, Math.max(MIN_SIZE, width));
+  height = Math.min(1, Math.max(MIN_SIZE, height));
+  return clampCrop({ ...clamped, w: width, h: height });
 }
 
 function GalleryThumb({

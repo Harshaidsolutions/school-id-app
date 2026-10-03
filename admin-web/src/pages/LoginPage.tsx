@@ -213,7 +213,24 @@ function SuperAdminContacts({
   const mail = email?.trim() || null;
   if (!chat && !mail) return null;
   return (
-    <div className="flex w-full items-stretch justify-center gap-3">
+    <div className="flex w-full flex-col gap-2">
+      {mail ? (
+        <a
+          className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#EFF6FF]"
+          href={`mailto:${mail}`}
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EFF6FF] text-[#2563EB]">
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <path d="M3 7l9 7 9-7" />
+            </svg>
+          </span>
+          <span className="min-w-0 text-left">
+            <span className="block text-[11px] font-semibold text-[#1E293B]">Email</span>
+            <span className="block truncate text-[11px] font-medium text-[#64748B]">{mail}</span>
+          </span>
+        </a>
+      ) : null}
       {chat ? (
         <a
           className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#F0FDF4]"
@@ -229,24 +246,6 @@ function SuperAdminContacts({
           <span className="min-w-0 text-left">
             <span className="block text-[11px] font-semibold text-[#1E293B]">WhatsApp</span>
             <span className="block truncate text-[11px] font-medium text-[#64748B]">{formatWhatsApp(chat)}</span>
-          </span>
-        </a>
-      ) : null}
-      {chat && mail ? <span className="my-1 w-px shrink-0 bg-[#E2E8F0]" aria-hidden /> : null}
-      {mail ? (
-        <a
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#EFF6FF]"
-          href={`mailto:${mail}`}
-        >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EFF6FF] text-[#2563EB]">
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <rect x="3" y="5" width="18" height="14" rx="2" />
-              <path d="M3 7l9 7 9-7" />
-            </svg>
-          </span>
-          <span className="min-w-0 text-left">
-            <span className="block text-[11px] font-semibold text-[#1E293B]">Email</span>
-            <span className="block truncate text-[11px] font-medium text-[#64748B]">{mail}</span>
           </span>
         </a>
       ) : null}

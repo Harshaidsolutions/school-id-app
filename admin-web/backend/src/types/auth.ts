@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "teacher" | "institute_staff";
+export type UserRole = "admin" | "teacher" | "institute_staff" | "organization_staff";
 
 export interface User {
   id: string;
@@ -18,6 +18,7 @@ export interface JWTPayload {
   role: UserRole;
   schoolId: string | null;
   instituteId?: string | null;
+  organizationId?: string | null;
   assignedClass: string | null;
   assignedSection: string | null;
   isSuperAdmin?: boolean;
@@ -42,6 +43,7 @@ export interface AuthUser {
   role: UserRole;
   schoolId: string | null;
   instituteId?: string | null;
+  organizationId?: string | null;
   assignedClass: string | null;
   assignedSection: string | null;
   isSuperAdmin?: boolean;

@@ -2,9 +2,10 @@ export interface AuthUser {
   id: string;
   email: string;
   username?: string | null;
-  role: "admin" | "teacher" | "institute_staff";
+  role: "admin" | "teacher" | "institute_staff" | "organization_staff";
   schoolId: string | null;
   instituteId?: string | null;
+  organizationId?: string | null;
   assignedClass: string | null;
   assignedSection: string | null;
 }

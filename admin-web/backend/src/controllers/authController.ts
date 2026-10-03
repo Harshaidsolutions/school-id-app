@@ -63,18 +63,22 @@ export async function login(
       User & {
         school_is_active: boolean | null;
         institute_is_active: boolean | null;
+        organization_id: string | null;
+        organization_is_active: boolean | null;
       }
     >(
       `SELECT u.id, u.email, u.username, u.password_hash, u.role, u.school_id, u.institute_id,
-              u.assigned_class, u.assigned_section, u.created_at,
+              u.organization_id, u.assigned_class, u.assigned_section, u.created_at,
               u.display_name, u.phone, u.photo_url,
               COALESCE(u.is_super_admin, false) AS is_super_admin,
               COALESCE(u.is_active, true) AS is_active,
               s.is_active AS school_is_active,
-              i.is_active AS institute_is_active
+              i.is_active AS institute_is_active,
+              org.is_active AS organization_is_active
        FROM users u
        LEFT JOIN schools s ON s.id = u.school_id
        LEFT JOIN institutes i ON i.id = u.institute_id
+       LEFT JOIN organizations org ON org.id = u.organization_id
        WHERE lower(u.email) = lower($1)
           OR (u.username IS NOT NULL AND lower(u.username) = lower($1))
        ORDER BY
@@ -122,6 +126,9 @@ export async function login(
         instituteIsActive: user.institute_is_active,
       });
     }
+    if (user.role === "organization_staff" && user.organization_is_active === false) {
+      throw new AppError("This organization account is disabled.", 403);
+    }
 
     const isSuperAdmin =
       user.role === "admin"
@@ -139,6 +146,7 @@ export async function login(
       role: user.role,
       schoolId: user.school_id,
       instituteId: user.institute_id,
+      organizationId: user.organization_id,
       assignedClass: user.assigned_class,
       assignedSection: user.assigned_section,
       isSuperAdmin: isSuperAdmin || undefined,
@@ -161,6 +169,7 @@ export async function login(
         role: user.role,
         schoolId: user.school_id,
         instituteId: user.institute_id,
+        organizationId: user.organization_id,
         assignedClass: user.assigned_class,
         assignedSection: user.assigned_section,
         displayName: profile.display_name ?? null,

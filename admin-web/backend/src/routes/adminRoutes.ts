@@ -106,6 +106,13 @@ import {
 } from "../controllers/catalogController";
 import { uploadCatalogFile, uploadCatalogMedia } from "../middleware/upload";
 import {
+  createOrganization,
+  createOrganizationForm,
+  downloadOrganizationSubmissionPhoto,
+  getOrganizationWorkspaceAdmin,
+  listOrganizations,
+} from "../controllers/organizationPortalController";
+import {
   changeManagedAdminPassword,
   createManagedAdmin,
   deleteManagedAdmin,
@@ -124,6 +131,15 @@ const router = Router();
 router.use(authMiddleware, requireRole("admin"));
 
 router.get("/profile", getAdminProfile);
+
+router.get("/organizations", listOrganizations);
+router.post("/organizations", createOrganization);
+router.get("/organizations/:id", getOrganizationWorkspaceAdmin);
+router.post("/organizations/:id/forms", createOrganizationForm);
+router.get(
+  "/organizations/:id/submissions/:submissionId/fields/:fieldId/photo",
+  downloadOrganizationSubmissionPhoto
+);
 
 // Dashboard
 router.get("/dashboard-summary", getDashboardSummary);

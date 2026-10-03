@@ -39,6 +39,7 @@ export function authMiddleware(
       role: decoded.role,
       schoolId: decoded.schoolId ?? null,
       instituteId: decoded.instituteId ?? null,
+      organizationId: decoded.organizationId ?? null,
       assignedClass: decoded.assignedClass ?? null,
       assignedSection: decoded.assignedSection ?? null,
       isSuperAdmin: decoded.isSuperAdmin === true,

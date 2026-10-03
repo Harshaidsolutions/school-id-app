@@ -15,6 +15,7 @@ import type { MainTabParamList, RootStackParamList } from "./types";
 import { spacing } from "../theme/colors";
 import { textStyles } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
+import { useAuth } from "../auth/AuthContext";
 import { moderateScale, icons } from "../theme/responsive";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -118,8 +119,10 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 }
 
 export function MainTabs() {
+  const { user } = useAuth();
   return (
     <Tab.Navigator
+      initialRouteName={user?.role === "organization_staff" ? "IdCards" : "Home"}
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >

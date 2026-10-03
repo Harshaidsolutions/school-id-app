@@ -26,6 +26,7 @@ import { sortClassSections } from "../utils/classSort";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
 import { greetingForNow } from "../utils/greeting";
 import { InstituteMembersPanel } from "../components/InstituteMembersPanel";
+import { OrganizationCardsPanel } from "../components/OrganizationCardsPanel";
 import { isInstituteUser } from "../utils/orgContext";
 import { useAuth } from "../auth/AuthContext";
 import {
@@ -39,7 +40,7 @@ import {
  */
 const ID_CARDS_SORT_KEY = "teacher_id_cards_sort_dir";
 
-export function IdCardsScreen() {
+function SchoolIdCardsScreen() {
   const styles = useIdCardsStyles();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -348,6 +349,12 @@ export function IdCardsScreen() {
       </Modal>
     </View>
   );
+}
+
+export function IdCardsScreen() {
+  const { user } = useAuth();
+  if (user?.role === "organization_staff") return <OrganizationCardsPanel />;
+  return <SchoolIdCardsScreen />;
 }
 
 function useIdCardsStyles() {

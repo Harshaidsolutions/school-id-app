@@ -47,7 +47,7 @@ export function CropToolPage() {
     : `/students?schoolId=${encodeURIComponent(schoolId)}&schoolName=${encodeURIComponent(orgName)}`;
 
   return (
-    <div className="app-page flex min-h-0 flex-col">
+    <div className="app-page flex min-h-0 flex-1 flex-col">
       <Link to={back} className="mb-3 inline-flex w-fit text-sm font-semibold text-button-blue hover:underline">
         ← Back to {isInstitute ? "Members" : "Students"}
       </Link>

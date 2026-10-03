@@ -18,7 +18,9 @@ import { OrganizationInfoPage } from "./pages/OrganizationInfoPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { VerifyOtpPage } from "./pages/VerifyOtpPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
-import { BrochuresPage, ExtraSection2Page } from "./pages/CatalogPages";
+import { BrochuresPage } from "./pages/CatalogPages";
+import { OrganizationDetailPage, OrganizationPortalPage } from "./pages/OrganizationPortalPage";
+import { PublicOrgFormPage } from "./pages/PublicOrgFormPage";
 import { AdminManagementPage } from "./pages/AdminManagementPage";
 import { ChildAdminDetailPage } from "./pages/ChildAdminDetailPage";
 
@@ -29,6 +31,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/org-form/:token" element={<PublicOrgFormPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/verify-otp" element={<VerifyOtpPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -52,7 +55,8 @@ export default function App() {
               <Route path="/brochures" element={<BrochuresPage />} />
               <Route path="/extra-1" element={<AdminManagementPage />} />
               <Route path="/extra-1/:id" element={<ChildAdminDetailPage />} />
-              <Route path="/extra-2" element={<ExtraSection2Page />} />
+              <Route path="/extra-2" element={<OrganizationPortalPage />} />
+              <Route path="/extra-2/:id" element={<OrganizationDetailPage />} />
               <Route path="/students" element={<StudentsPage mode="school" />} />
               <Route path="/institute-members" element={<StudentsPage mode="institute" />} />
               <Route path="/bulk-upload" element={<BulkUploadPage />} />

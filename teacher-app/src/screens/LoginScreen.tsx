@@ -77,8 +77,12 @@ export function LoginScreen(_props: Props) {
         password,
       });
 
-      if (data.user.role !== "teacher" && data.user.role !== "institute_staff") {
-        setError("This app is for school and institute accounts only.");
+      if (
+        data.user.role !== "teacher" &&
+        data.user.role !== "institute_staff" &&
+        data.user.role !== "organization_staff"
+      ) {
+        setError("This app is for school, institute, and organization accounts.");
         return;
       }
 

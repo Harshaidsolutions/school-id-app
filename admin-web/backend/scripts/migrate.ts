@@ -99,7 +99,7 @@ async function migrate() {
     -- Allow institute_staff role
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
     ALTER TABLE users ADD CONSTRAINT users_role_check
-      CHECK (role = ANY (ARRAY['admin'::text, 'teacher'::text, 'institute_staff'::text]));
+      CHECK (role = ANY (ARRAY['admin'::text, 'teacher'::text, 'institute_staff'::text, 'organization_staff'::text]));
 
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
@@ -795,6 +795,72 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS idx_students_institute_crop_queue
       ON students (institute_id, photo_captured_at)
       WHERE photo_cropped = false AND photo_url IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS organizations (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      name TEXT NOT NULL,
+      phone TEXT,
+      owner_admin_id UUID,
+      owner_username_plain TEXT,
+      owner_password_plain TEXT,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_organizations_owner ON organizations (owner_admin_id);
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL;
+    CREATE INDEX IF NOT EXISTS idx_users_organization ON users (organization_id);
+
+    CREATE TABLE IF NOT EXISTS organization_forms (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      public_token TEXT NOT NULL UNIQUE,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_organization_forms_org ON organization_forms (organization_id);
+    CREATE INDEX IF NOT EXISTS idx_organization_forms_token ON organization_forms (public_token);
+
+    CREATE TABLE IF NOT EXISTS organization_form_fields (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      form_id UUID NOT NULL REFERENCES organization_forms(id) ON DELETE CASCADE,
+      field_name TEXT NOT NULL,
+      field_type TEXT NOT NULL,
+      field_order INTEGER NOT NULL,
+      required BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_organization_form_fields_form
+      ON organization_form_fields (form_id, field_order);
+
+    CREATE TABLE IF NOT EXISTS organization_submissions (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      form_id UUID NOT NULL REFERENCES organization_forms(id) ON DELETE CASCADE,
+      organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_organization_submissions_org
+      ON organization_submissions (organization_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_organization_submissions_form
+      ON organization_submissions (form_id, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS organization_submission_values (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      submission_id UUID NOT NULL REFERENCES organization_submissions(id) ON DELETE CASCADE,
+      field_id UUID NOT NULL REFERENCES organization_form_fields(id) ON DELETE CASCADE,
+      text_value TEXT,
+      photo_url TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE (submission_id, field_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_organization_submission_values_submission
+      ON organization_submission_values (submission_id);
+    CREATE INDEX IF NOT EXISTS idx_organization_submission_values_field
+      ON organization_submission_values (field_id);
   `);
 
   console.log("Migration completed successfully.");

@@ -19,7 +19,7 @@ const NAV: NavItem[] = [
   { label: "Dashboard", icon: "dashboard", to: "/" },
   { label: "Schools", icon: "school", to: "/schools" },
   { label: "Institutes", icon: "institute", to: "/institutes" },
-  { label: "Organization", icon: "extra", to: "/extra-2", superOnly: true },
+  { label: "Organization", icon: "extra", to: "/extra-2" },
   { label: "Templates", icon: "templates", to: "/templates" },
   { label: "Models", icon: "model", to: "/models" },
   { label: "Brochures", icon: "brochure", to: "/brochures" },
@@ -313,7 +313,7 @@ export function AppLayout() {
   const isOrgDetailListPage =
     (location.pathname === "/students" && Boolean(studentsSchoolId)) ||
     (location.pathname === "/institute-members" && Boolean(instituteId));
-  const useLockedPageScroll = isOrgListPage || isOrgDetailListPage;
+  const useLockedPageScroll = isOrgListPage || isOrgDetailListPage || location.pathname === "/crop-tool";
   const showCenteredHeading = true;
 
   const sidebarContent = (
