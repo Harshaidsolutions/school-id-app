@@ -183,6 +183,9 @@ export function LoginPage() {
   );
 }
 
+/** Same admin WhatsApp already used by the app when the profile number is empty. */
+const CONFIGURED_ADMIN_WHATSAPP = "7799881779";
+
 function waDigits(value: string): string {
   const digits = value.replace(/\D/g, "");
   if (digits.length === 10) return `91${digits}`;
@@ -209,14 +212,14 @@ function SuperAdminContacts({
   phone: string | null;
   whatsapp: string | null;
 }) {
-  const chat = whatsapp?.trim() || phone?.trim() || null;
+  const chat = whatsapp?.trim() || phone?.trim() || CONFIGURED_ADMIN_WHATSAPP;
   const mail = email?.trim() || null;
   if (!chat && !mail) return null;
   return (
-    <div className="flex w-full flex-col gap-2">
+    <div className="flex w-full items-start gap-3">
       {mail ? (
         <a
-          className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#EFF6FF]"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#EFF6FF]"
           href={`mailto:${mail}`}
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EFF6FF] text-[#2563EB]">

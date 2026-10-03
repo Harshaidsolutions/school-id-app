@@ -108,7 +108,7 @@ export function OrganizationPortalPage() {
   }
 
   return (
-    <div className="app-page space-y-4">
+    <div className="app-page school-list-page admin-scroll-root">
       <PageActions
         search={<SearchInput value={search} onChange={setSearch} placeholder="Search organizations…" />}
         actions={<button type="button" className="btn-primary" onClick={() => setOpen(true)}>Add Organization</button>}

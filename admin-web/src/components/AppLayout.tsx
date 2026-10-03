@@ -309,7 +309,9 @@ export function AppLayout() {
     }
   }
   const isOrgListPage =
-    location.pathname === "/schools" || location.pathname === "/institutes";
+    location.pathname === "/schools" ||
+    location.pathname === "/institutes" ||
+    location.pathname === "/extra-2";
   const isOrgDetailListPage =
     (location.pathname === "/students" && Boolean(studentsSchoolId)) ||
     (location.pathname === "/institute-members" && Boolean(instituteId));

@@ -648,15 +648,45 @@ export async function getSuperAdminContacts(
       instagram_url: string | null;
       youtube_url: string | null;
     }>(
-      `SELECT email, phone, whatsapp, facebook_url, instagram_url, youtube_url
-       FROM users
-       WHERE role = 'admin'
-         AND (
-           COALESCE(is_super_admin, false) = true
-           OR lower(trim(email)) = $1
-         )
-       ORDER BY COALESCE(is_super_admin, false) DESC, created_at ASC NULLS LAST
-       LIMIT 1`,
+      `SELECT
+         preferred.email,
+         preferred.facebook_url,
+         preferred.instagram_url,
+         preferred.youtube_url,
+         COALESCE(NULLIF(TRIM(preferred.phone), ''), numbers.phone) AS phone,
+         COALESCE(NULLIF(TRIM(preferred.whatsapp), ''), numbers.whatsapp, NULLIF(TRIM(preferred.phone), ''), numbers.phone) AS whatsapp
+       FROM (
+         SELECT email, phone, whatsapp, facebook_url, instagram_url, youtube_url
+         FROM users
+         WHERE role = 'admin'
+           AND (
+             COALESCE(is_super_admin, false) = true
+             OR lower(trim(email)) = $1
+           )
+         ORDER BY COALESCE(is_super_admin, false) DESC, created_at ASC NULLS LAST
+         LIMIT 1
+       ) preferred
+       CROSS JOIN (
+         SELECT
+           (
+             SELECT NULLIF(TRIM(phone), '')
+             FROM users
+             WHERE role = 'admin'
+               AND COALESCE(is_super_admin, false) = true
+               AND NULLIF(TRIM(phone), '') IS NOT NULL
+             ORDER BY created_at ASC NULLS LAST
+             LIMIT 1
+           ) AS phone,
+           (
+             SELECT NULLIF(TRIM(whatsapp), '')
+             FROM users
+             WHERE role = 'admin'
+               AND COALESCE(is_super_admin, false) = true
+               AND NULLIF(TRIM(whatsapp), '') IS NOT NULL
+             ORDER BY created_at ASC NULLS LAST
+             LIMIT 1
+           ) AS whatsapp
+       ) numbers`,
       [SUPER_ADMIN_EMAIL]
     );
     const row = result.rows[0];

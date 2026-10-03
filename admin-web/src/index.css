@@ -856,6 +856,20 @@
     box-sizing: border-box;
   }
 
+  .detail-toolbar-row2-actions {
+    flex-wrap: nowrap;
+    height: var(--toolbar-control-height);
+    overflow: visible;
+  }
+
+  .detail-toolbar-row2-actions .detail-toolbar-btn,
+  .detail-toolbar-row2-actions .btn-secondary,
+  .detail-toolbar-row2-actions .btn-primary {
+    width: auto;
+    max-width: none;
+    flex: 0 0 auto;
+  }
+
   .detail-toolbar-btn-primary {
     border-color: transparent;
     color: #fff;
