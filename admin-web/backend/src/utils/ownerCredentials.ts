@@ -50,7 +50,7 @@ export async function assertOwnerPasswordAvailable(
   client: Queryable,
   username: string,
   password: string,
-  exclude?: { schoolId?: string; instituteId?: string; userId?: string }
+  exclude?: { schoolId?: string; instituteId?: string; organizationId?: string; userId?: string }
 ): Promise<void> {
   const trimmedUser = username.trim();
   const trimmedPassword = password;
@@ -74,16 +74,23 @@ export async function assertOwnerPasswordAvailable(
          AND lower(btrim(owner_username_plain)) = lower(btrim($1))
          AND ($3::uuid IS NULL OR id <> $3::uuid)
        UNION ALL
+       SELECT owner_password_plain, NULL::text
+       FROM organizations
+       WHERE owner_username_plain IS NOT NULL
+         AND lower(btrim(owner_username_plain)) = lower(btrim($1))
+         AND ($4::uuid IS NULL OR id <> $4::uuid)
+       UNION ALL
        SELECT password_plain, password_hash
        FROM users
        WHERE username IS NOT NULL
          AND lower(btrim(username)) = lower(btrim($1))
-         AND ($4::uuid IS NULL OR id <> $4::uuid)
+         AND ($5::uuid IS NULL OR id <> $5::uuid)
      ) accounts`,
     [
       trimmedUser,
       exclude?.schoolId ?? null,
       exclude?.instituteId ?? null,
+      exclude?.organizationId ?? null,
       exclude?.userId ?? null,
     ]
   );

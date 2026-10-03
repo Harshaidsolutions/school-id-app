@@ -585,33 +585,49 @@ export async function updateOrganization(req: Request, res: Response, next: Next
     await assertOrganizationOwned(scope, organizationId);
     const name = String(req.body.name ?? "").trim();
     const phone = String(req.body.phone ?? "").trim();
-    const password = req.body.password !== undefined ? String(req.body.password) : "";
+    const username = String(req.body.username ?? "").trim();
+    const password = String(req.body.password ?? "");
     if (!name) throw new AppError("Organization name is required", 400);
     if (!phone) throw new AppError("Phone number is required", 400);
+    if (!username) throw new AppError("Username is required", 400);
+    if (!password) throw new AppError("Password is required", 400);
     await client.query("BEGIN");
-    if (password) {
-      const current = await client.query<{ owner_username_plain: string | null }>(
-        `SELECT owner_username_plain FROM organizations WHERE id = $1`,
-        [organizationId]
-      );
-      const username = current.rows[0]?.owner_username_plain ?? "";
-      await assertOwnerPasswordAvailable(client, username, password);
-      const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const owner = await client.query<{ id: string }>(
+      `SELECT id
+       FROM users
+       WHERE organization_id = $1 AND role = 'organization_staff'
+       ORDER BY COALESCE(is_owner, false) DESC, created_at ASC NULLS LAST
+       LIMIT 1`,
+      [organizationId]
+    );
+    await assertOwnerPasswordAvailable(client, username, password, {
+      organizationId,
+      userId: owner.rows[0]?.id,
+    });
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const updated = await client.query(
+      `UPDATE organizations
+       SET name = $1, phone = $2, owner_username_plain = $3, owner_password_plain = $4, updated_at = NOW()
+       WHERE id = $5
+       RETURNING id, name, phone, is_active, created_at, owner_username_plain AS username, owner_password_plain AS password`,
+      [name, phone, username, password, organizationId]
+    );
+    if (owner.rows[0]) {
       await client.query(
-        `UPDATE organizations SET owner_password_plain = $1, updated_at = NOW() WHERE id = $2`,
-        [password, organizationId]
+        `UPDATE users
+         SET username = $1, password_hash = $2, password_plain = $3
+         WHERE id = $4`,
+        [username, passwordHash, password, owner.rows[0].id]
       );
+    } else {
+      const preferredEmail = looksLikeEmail(username) ? username.toLowerCase() : syntheticOwnerEmail(username);
+      const email = await allocateOwnerEmail(client, preferredEmail);
       await client.query(
-        `UPDATE users SET password_hash = $1, password_plain = $2 WHERE organization_id = $3 AND role = 'organization_staff'`,
-        [passwordHash, password, organizationId]
+        `INSERT INTO users (email, username, password_hash, password_plain, role, organization_id, is_owner)
+         VALUES ($1, $2, $3, $4, 'organization_staff', $5, true)`,
+        [email, username, passwordHash, password, organizationId]
       );
     }
-    const updated = await client.query(
-      `UPDATE organizations SET name = $1, phone = $2, updated_at = NOW()
-       WHERE id = $3
-       RETURNING id, name, phone, is_active, created_at, owner_username_plain AS username, owner_password_plain AS password`,
-      [name, phone, organizationId]
-    );
     await client.query("COMMIT");
     res.json({ organization: updated.rows[0] });
   } catch (error) {

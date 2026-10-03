@@ -95,6 +95,7 @@ export function CropToolModal({
   const [cropArmed, setCropArmed] = useState(false);
   const [limitWidth, setLimitWidth] = useState("");
   const [limitHeight, setLimitHeight] = useState("");
+  const [limitUnit, setLimitUnit] = useState<CropUnit>("cm");
   const imageRef = useRef<HTMLImageElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -343,21 +344,38 @@ export function CropToolModal({
     paintFrame();
   }
 
-  function updateCropLimit(axis: "width" | "height", raw: string) {
-    const cleaned = raw.replace(/[^\d]/g, "").slice(0, 5);
-    if (axis === "width") setLimitWidth(cleaned);
-    else setLimitHeight(cleaned);
-    const width = axis === "width" ? Number(cleaned) : Number(limitWidth);
-    const height = axis === "height" ? Number(cleaned) : Number(limitHeight);
+  function applyCropLimit(widthRaw: string, heightRaw: string) {
+    const width = Number(widthRaw);
+    const height = Number(heightRaw);
     limitRef.current = {
       width: Number.isFinite(width) && width > 0 ? width : null,
       height: Number.isFinite(height) && height > 0 ? height : null,
     };
-    if (cropArmed) {
+    if (cropArmed && limitRef.current.width != null && limitRef.current.height != null) {
       rememberCrop();
       cropRef.current = limitCrop(cropRef.current, imageRef.current, limitRef.current);
       paintFrame();
     }
+  }
+
+  function updateCropLimit(axis: "width" | "height", raw: string) {
+    const cleaned = parseMeasure(raw);
+    const width = axis === "width" ? cleaned : limitWidth;
+    const height = axis === "height" ? cleaned : limitHeight;
+    if (axis === "width") setLimitWidth(cleaned);
+    else setLimitHeight(cleaned);
+    applyCropLimit(width, height);
+  }
+
+  function changeCropUnit(next: CropUnit) {
+    if (next === limitUnit) return;
+    const factor = limitUnit === "cm" ? 1 / CM_PER_INCH : CM_PER_INCH;
+    const width = convertMeasure(limitWidth, factor);
+    const height = convertMeasure(limitHeight, factor);
+    setLimitUnit(next);
+    setLimitWidth(width);
+    setLimitHeight(height);
+    applyCropLimit(width, height);
   }
 
   function schedulePaint() {
@@ -612,21 +630,27 @@ export function CropToolModal({
           </label>
           {!browsing ? (
             <>
+              <label className="min-w-[7rem] text-xs font-semibold text-[#334155]">
+                Unit
+                <select
+                  aria-label="Crop size unit"
+                  className="input-field mt-1"
+                  value={limitUnit}
+                  onChange={(event) => changeCropUnit(event.target.value === "in" ? "in" : "cm")}
+                >
+                  <option value="cm">cm</option>
+                  <option value="in">inches</option>
+                </select>
+              </label>
               <label className="text-xs font-semibold text-[#334155]">
                 Width
-                <span className="mt-1 flex items-center gap-2">
-                  <input value={limitWidth} inputMode="numeric" aria-label="Crop width ratio" className="input-field" onChange={(event) => updateCropLimit("width", event.target.value)} />
-                  <span className="shrink-0 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-2 text-xs font-semibold text-[#334155]">ratio</span>
-                </span>
+                <input value={limitWidth} inputMode="decimal" aria-label="Crop width" className="input-field mt-1" onChange={(event) => updateCropLimit("width", event.target.value)} />
               </label>
               <label className="text-xs font-semibold text-[#334155]">
                 Height
-                <span className="mt-1 flex items-center gap-2">
-                  <input value={limitHeight} inputMode="numeric" aria-label="Crop height ratio" className="input-field" onChange={(event) => updateCropLimit("height", event.target.value)} />
-                  <span className="shrink-0 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-2 text-xs font-semibold text-[#334155]">ratio</span>
-                </span>
+                <input value={limitHeight} inputMode="decimal" aria-label="Crop height" className="input-field mt-1" onChange={(event) => updateCropLimit("height", event.target.value)} />
               </label>
-              <p className="text-[11px] font-medium text-[#64748B]">20 and 24 mean a 20:24 crop ratio. The photo is not stretched.</p>
+              <p className="text-[11px] font-medium text-[#64748B]">Choose cm or inches, then enter width and height. The photo is not stretched.</p>
               <label className="text-xs font-semibold text-[#334155]">
                 Rotate
                 <select
@@ -860,6 +884,26 @@ function formatCaptureHour(hour: number): string {
   return `${label.format(start)} – ${label.format(end)}`;
 }
 
+const CM_PER_INCH = 2.54;
+
+type CropUnit = "cm" | "in";
+
+function parseMeasure(raw: string): string {
+  const cleaned = raw.replace(/[^\d.]/g, "");
+  const dot = cleaned.indexOf(".");
+  if (dot === -1) return cleaned.slice(0, 5);
+  const whole = cleaned.slice(0, dot).slice(0, 4);
+  const fraction = cleaned.slice(dot + 1).replace(/\./g, "").slice(0, 2);
+  return `${whole}.${fraction}`;
+}
+
+function convertMeasure(raw: string, factor: number): string {
+  const value = Number(raw);
+  if (!raw || !Number.isFinite(value) || value <= 0) return raw;
+  const converted = Math.round(value * factor * 100) / 100;
+  return String(converted);
+}
+
 function limitCrop(
   crop: Crop,
   image: HTMLImageElement | null,
@@ -869,6 +913,7 @@ function limitCrop(
   if (!image?.naturalWidth || !image.naturalHeight) return clamped;
   const widthLimit = limit.width && limit.width > 0 ? limit.width : null;
   const heightLimit = limit.height && limit.height > 0 ? limit.height : null;
+  if (widthLimit == null || heightLimit == null) return clamped;
   if (widthLimit != null && heightLimit != null) {
     const ratio = (widthLimit / heightLimit) * (image.naturalHeight / image.naturalWidth);
     let width = clamped.w;
@@ -889,13 +934,7 @@ function limitCrop(
     else height = width / ratio;
     return clampCrop({ ...clamped, w: width, h: height });
   }
-  let width = clamped.w;
-  let height = clamped.h;
-  if (widthLimit != null) width = Math.min(width, widthLimit / image.naturalWidth);
-  if (heightLimit != null) height = Math.min(height, heightLimit / image.naturalHeight);
-  width = Math.min(1, Math.max(MIN_SIZE, width));
-  height = Math.min(1, Math.max(MIN_SIZE, height));
-  return clampCrop({ ...clamped, w: width, h: height });
+  return clamped;
 }
 
 function GalleryThumb({

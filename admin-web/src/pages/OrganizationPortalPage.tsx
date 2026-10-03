@@ -411,7 +411,8 @@ function EditOrganizationModal({
 }) {
   const [name, setName] = useState(organization.name);
   const [phone, setPhone] = useState(organization.phone ?? "");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState(organization.username ?? "");
+  const [password, setPassword] = useState(organization.password ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -423,7 +424,8 @@ function EditOrganizationModal({
       const { data } = await api.patch<{ organization: OrganizationRow }>(`/admin/organizations/${organization.id}`, {
         name,
         phone,
-        ...(password ? { password } : {}),
+        username: username.trim(),
+        password,
       });
       onSaved({ ...organization, ...data.organization });
     } catch (err) {
@@ -438,8 +440,9 @@ function EditOrganizationModal({
         <h2 className="text-lg font-bold">Edit Organization</h2>
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Organization Name *</span><input required className="input-field" value={name} onChange={(event) => setName(event.target.value)} /></label>
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Phone Number *</span><input required className="input-field" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
-        <label className="block text-sm"><span className="mb-1.5 block font-medium">Username</span><input className="input-field" value={organization.username ?? ""} readOnly /></label>
-        <label className="block text-sm"><span className="mb-1.5 block font-medium">New Password</span><input type="password" className="input-field" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+        <label className="block text-sm"><span className="mb-1.5 block font-medium">Username *</span><input required className="input-field" value={username} onChange={(event) => setUsername(event.target.value)} /></label>
+        <label className="block text-sm"><span className="mb-1.5 block font-medium">Password *</span><input required type="text" className="input-field" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+        <p className="text-xs text-text-muted">The organization uses this username and password to log in to the app.</p>
         {error ? <div className="alert-error">{error}</div> : null}
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
@@ -482,9 +485,10 @@ function AddOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
         <h2 className="text-lg font-bold">Add Organization</h2>
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Organization Name *</span><input required className="input-field" value={name} onChange={(event) => setName(event.target.value)} /></label>
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Phone Number *</span><input required className="input-field" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
-        <label className="block text-sm"><span className="mb-1.5 block font-medium">Username *</span><input required className="input-field" value={username} onChange={(event) => setUsername(event.target.value)} /></label>
-        <label className="block text-sm"><span className="mb-1.5 block font-medium">Password *</span><input required type="password" className="input-field" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
-        <label className="block text-sm"><span className="mb-1.5 block font-medium">Confirm Password *</span><input required type="password" className="input-field" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></label>
+        <label className="block text-sm"><span className="mb-1.5 block font-medium">Username *</span><input required className="input-field" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="off" /></label>
+        <label className="block text-sm"><span className="mb-1.5 block font-medium">Password *</span><input required type="text" className="input-field" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" /></label>
+        <label className="block text-sm"><span className="mb-1.5 block font-medium">Confirm Password *</span><input required type="text" className="input-field" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" /></label>
+        <p className="text-xs text-text-muted">Enter the username and password this organization will use to log in to the app.</p>
         {error ? <div className="alert-error">{error}</div> : null}
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
