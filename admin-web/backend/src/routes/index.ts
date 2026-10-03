@@ -8,6 +8,7 @@ import {
   submitPublicOrganizationForm,
   updateOrganizationAppSubmission,
 } from "../controllers/organizationPortalController";
+import { getTeacherBranding } from "../controllers/customerBrandController";
 import { authMiddleware, requireRole } from "../middleware/auth";
 import { uploadStudentPhoto } from "../middleware/upload";
 import authRoutes from "./authRoutes";
@@ -28,6 +29,12 @@ router.post(
   "/public/org-forms/:token",
   uploadStudentPhoto.any(),
   submitPublicOrganizationForm
+);
+router.get(
+  "/organization-app/branding",
+  authMiddleware,
+  requireRole("organization_staff"),
+  getTeacherBranding
 );
 router.get(
   "/organization-app",

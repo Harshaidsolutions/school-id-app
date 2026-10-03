@@ -41,6 +41,7 @@ type Props = {
   showPhotoCapture?: boolean;
   instituteMode?: boolean;
   onInputFocus?: (nativeTarget: number) => void;
+  onCancel?: () => void;
 };
 
 export function AddStudentForm({
@@ -50,13 +51,14 @@ export function AddStudentForm({
   showPhotoCapture = false,
   instituteMode = false,
   onInputFocus,
+  onCancel,
 }: Props) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { scale, hp } = useResponsiveLayout();
   const photoSize = scale(140);
   const pickerMaxHeight = hp(38);
-  const { fields: formFields } = useFormConfig();
+  const { fields: formFields, loading: fieldsLoading } = useFormConfig();
   const displayFields = formFields.filter(
     (field) => field.enabled !== false && field.key !== "signature_upload"
   );
@@ -247,6 +249,19 @@ export function AddStudentForm({
     },
   ];
 
+  if (instituteMode && !fieldsLoading && displayFields.length === 0) {
+    return (
+      <View style={{ gap: 16, paddingVertical: 24 }}>
+        <Text style={{ color: colors.text, fontFamily: fonts.semiBold, fontSize: 16, textAlign: "center" }}>
+          Please upload Excel
+        </Text>
+        <Pressable onPress={onCancel} style={{ alignSelf: "center", paddingHorizontal: 18, paddingVertical: 10 }}>
+          <Text style={{ color: colors.brandGreen, fontFamily: fonts.semiBold }}>Cancel</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <View>
       {showHeading ? (
@@ -384,6 +399,12 @@ export function AddStudentForm({
 
       {error ? (
         <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>
+      ) : null}
+
+      {instituteMode && onCancel ? (
+        <Pressable onPress={onCancel} style={{ alignSelf: "center", marginTop: 8, padding: 10 }}>
+          <Text style={{ color: colors.textMuted, fontFamily: fonts.semiBold }}>Cancel</Text>
+        </Pressable>
       ) : null}
 
       <SubmitGradientButton

@@ -24,12 +24,14 @@ export function CropToolModal({
   onClose,
   onSaved,
   layout = "page",
+  storageKey = "crop",
 }: {
   students: Student[];
   categories: ConfiguredCategoryField[];
   onClose: () => void;
   onSaved: (student: Student) => void;
   layout?: "page" | "modal";
+  storageKey?: string;
 }) {
   const field = useMemo(() => primaryCategory(categories), [categories]);
   const [cropView, setCropView] = useState<"uncropped" | "cropped">("uncropped");
@@ -96,6 +98,8 @@ export function CropToolModal({
   const [limitWidth, setLimitWidth] = useState("");
   const [limitHeight, setLimitHeight] = useState("");
   const [limitUnit, setLimitUnit] = useState<CropUnit>("cm");
+  const [sizeLocked, setSizeLocked] = useState(false);
+  const sizeReady = useRef(false);
   const imageRef = useRef<HTMLImageElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -126,6 +130,27 @@ export function CropToolModal({
   }, [gallery.length, index]);
 
   useEffect(() => {
+    sizeReady.current = false;
+    const saved = readCropSize(storageKey);
+    setLimitWidth(saved.width);
+    setLimitHeight(saved.height);
+    setLimitUnit(saved.unit);
+    setSizeLocked(saved.locked);
+    const width = Number(saved.width);
+    const height = Number(saved.height);
+    limitRef.current = {
+      width: Number.isFinite(width) && width > 0 ? width : null,
+      height: Number.isFinite(height) && height > 0 ? height : null,
+    };
+    sizeReady.current = true;
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!sizeReady.current) return;
+    writeCropSize(storageKey, { width: limitWidth, height: limitHeight, unit: limitUnit, locked: sizeLocked });
+  }, [storageKey, limitWidth, limitHeight, limitUnit, sizeLocked]);
+
+  useEffect(() => {
     return () => {
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
       if (paintRef.current) cancelAnimationFrame(paintRef.current);
@@ -148,10 +173,7 @@ export function CropToolModal({
     previewBlobRef.current = null;
     clearPreview();
     if (!student?.photo_url) return;
-    void authenticatedStudentPhotoUrl(student.id, {
-      signal: controller.signal,
-      version: student.updated_at,
-    }).then((url) => {
+    void loadCropPhoto(student, controller.signal).then((url) => {
       if (!cancelled) setSrc(url || "");
     });
     return () => {
@@ -293,9 +315,6 @@ export function CropToolModal({
     clearPreview();
     toneRef.current = { brightness: 0, contrast: 0 };
     toneGestureRef.current = false;
-    setLimitWidth("");
-    setLimitHeight("");
-    limitRef.current = { width: null, height: null };
     paintTone();
     paintFrame();
   }
@@ -359,6 +378,7 @@ export function CropToolModal({
   }
 
   function updateCropLimit(axis: "width" | "height", raw: string) {
+    if (sizeLocked) return;
     const cleaned = parseMeasure(raw);
     const width = axis === "width" ? cleaned : limitWidth;
     const height = axis === "height" ? cleaned : limitHeight;
@@ -368,8 +388,8 @@ export function CropToolModal({
   }
 
   function changeCropUnit(next: CropUnit) {
-    if (next === limitUnit) return;
-    const factor = limitUnit === "cm" ? 1 / CM_PER_INCH : CM_PER_INCH;
+    if (sizeLocked || next === limitUnit) return;
+    const factor = toMillimeters(1, limitUnit) / toMillimeters(1, next);
     const width = convertMeasure(limitWidth, factor);
     const height = convertMeasure(limitHeight, factor);
     setLimitUnit(next);
@@ -517,7 +537,10 @@ export function CropToolModal({
       body.append("markCropped", "1");
       const savedIndex = gallery.findIndex((item) => item.id === student.id);
       const hasNext = savedIndex >= 0 && savedIndex + 1 < gallery.length;
-      const { data } = await api.post<{ student: Student }>(`/admin/students/${student.id}/photo`, body);
+      const { data } = await api.post<{ student: Student }>(
+        isOrganizationCropPhoto(student) ? student.photo_url! : `/admin/students/${student.id}/photo`,
+        body
+      );
       if (!data.student?.photo_cropped) {
         throw new Error("Crop status was not saved");
       }
@@ -636,21 +659,26 @@ export function CropToolModal({
                   aria-label="Crop size unit"
                   className="input-field mt-1"
                   value={limitUnit}
-                  onChange={(event) => changeCropUnit(event.target.value === "in" ? "in" : "cm")}
+                  disabled={sizeLocked}
+                  onChange={(event) => changeCropUnit(event.target.value === "in" ? "in" : event.target.value === "mm" ? "mm" : "cm")}
                 >
-                  <option value="cm">cm</option>
                   <option value="in">inches</option>
+                  <option value="cm">cm</option>
+                  <option value="mm">mm</option>
                 </select>
               </label>
               <label className="text-xs font-semibold text-[#334155]">
                 Width
-                <input value={limitWidth} inputMode="decimal" aria-label="Crop width" className="input-field mt-1" onChange={(event) => updateCropLimit("width", event.target.value)} />
+                <input value={limitWidth} inputMode="decimal" aria-label="Crop width" disabled={sizeLocked} className="input-field mt-1" onChange={(event) => updateCropLimit("width", event.target.value)} />
               </label>
               <label className="text-xs font-semibold text-[#334155]">
                 Height
-                <input value={limitHeight} inputMode="decimal" aria-label="Crop height" className="input-field mt-1" onChange={(event) => updateCropLimit("height", event.target.value)} />
+                <input value={limitHeight} inputMode="decimal" aria-label="Crop height" disabled={sizeLocked} className="input-field mt-1" onChange={(event) => updateCropLimit("height", event.target.value)} />
               </label>
-              <p className="text-[11px] font-medium text-[#64748B]">Choose cm or inches, then enter width and height. The photo is not stretched.</p>
+              <button type="button" className="btn-secondary" onClick={() => setSizeLocked((locked) => !locked)}>
+                {sizeLocked ? "Locked" : "Lock"}
+              </button>
+              <p className="text-[11px] font-medium text-[#64748B]">Choose inches, cm, or mm, then enter width and height. Lock keeps that size until you unlock it. The photo is not stretched.</p>
               <label className="text-xs font-semibold text-[#334155]">
                 Rotate
                 <select
@@ -884,9 +912,52 @@ function formatCaptureHour(hour: number): string {
   return `${label.format(start)} – ${label.format(end)}`;
 }
 
-const CM_PER_INCH = 2.54;
+const MM_PER_INCH = 25.4;
 
-type CropUnit = "cm" | "in";
+type CropUnit = "cm" | "in" | "mm";
+
+type SavedCropSize = { width: string; height: string; unit: CropUnit; locked: boolean };
+
+function cropStorageKey(storageKey: string): string {
+  return `school-id-crop-size:${storageKey}`;
+}
+
+function readCropSize(storageKey: string): SavedCropSize {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(cropStorageKey(storageKey)) ?? "") as Partial<SavedCropSize>;
+    const unit = parsed.unit === "in" || parsed.unit === "mm" || parsed.unit === "cm" ? parsed.unit : "cm";
+    return {
+      width: typeof parsed.width === "string" ? parsed.width : "",
+      height: typeof parsed.height === "string" ? parsed.height : "",
+      unit,
+      locked: parsed.locked === true,
+    };
+  } catch {
+    return { width: "", height: "", unit: "cm", locked: false };
+  }
+}
+
+function writeCropSize(storageKey: string, value: SavedCropSize): void {
+  localStorage.setItem(cropStorageKey(storageKey), JSON.stringify(value));
+}
+
+function toMillimeters(value: number, unit: CropUnit): number {
+  if (unit === "mm") return value;
+  if (unit === "cm") return value * 10;
+  return value * MM_PER_INCH;
+}
+
+function isOrganizationCropPhoto(student: Student): boolean {
+  return (student.photo_url ?? "").includes("/admin/organizations/");
+}
+
+async function loadCropPhoto(student: Student, signal?: AbortSignal, thumb = false): Promise<string> {
+  if (!isOrganizationCropPhoto(student)) {
+    return (await authenticatedStudentPhotoUrl(student.id, { signal, thumb, version: student.updated_at })) ?? "";
+  }
+  const { data } = await api.get(student.photo_url!, { responseType: "blob", signal });
+  return URL.createObjectURL(data as Blob);
+}
 
 function parseMeasure(raw: string): string {
   const cleaned = raw.replace(/[^\d.]/g, "");
@@ -961,11 +1032,7 @@ function GalleryThumb({
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return;
         observer.disconnect();
-        void authenticatedStudentPhotoUrl(student.id, {
-          thumb: true,
-          signal: controller.signal,
-          version: student.updated_at,
-        }).then((url) => {
+        void loadCropPhoto(student, controller.signal, true).then((url) => {
           if (!cancelled && url) setSrc(url);
         });
       },

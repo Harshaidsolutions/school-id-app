@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState, type FormEvent } from "react";
+import { useMemo, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
@@ -35,6 +35,7 @@ type DraftField = {
 type SubmissionRow = {
   id: string;
   serial: number;
+  photoCropped?: boolean;
   values: Record<string, { text: string | null; hasPhoto: boolean }>;
 };
 
@@ -204,18 +205,36 @@ export function OrganizationDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"all" | "pending" | "captured">("all");
+  const [tab, setTab] = useState<"all" | "pending" | "captured" | "pending-data">("all");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [visibility, setVisibility] = useState<Record<string, boolean>>({});
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [photoFilter, setPhotoFilter] = useState<"any" | "yes" | "no">("any");
+  const excelInputRef = useRef<HTMLInputElement>(null);
   const [selecting, setSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [otpOpen, setOtpOpen] = useState(false);
 
   async function load() {
     const { data } = await api.get<{
-      organization: { name: string };
+      organization: {
+        name: string;
+        phone?: string | null;
+        address?: string | null;
+        instructions?: string | null;
+        field_visibility?: Record<string, boolean> | null;
+      };
       form: { link: string; fields: FormField[] } | null;
       submissions: SubmissionRow[];
     }>(`/admin/organizations/${id}`);
     setName(data.organization.name);
+    setPhone(data.organization.phone ?? "");
+    setAddress(data.organization.address ?? "");
+    setInstructions(data.organization.instructions ?? "");
+    setVisibility(data.organization.field_visibility ?? {});
     setLink(data.form?.link ?? null);
     setFields(data.form?.fields ?? []);
     setSubmissions(data.submissions ?? []);
@@ -245,20 +264,33 @@ export function OrganizationDetailPage() {
   }
 
   const photoFields = fields.filter((field) => field.field_type === "photo");
+  const textFields = fields.filter((field) => field.field_type !== "photo");
   function hasAllPhotos(row: SubmissionRow) {
-    if (photoFields.length === 0) return true;
+    if (photoFields.length === 0) return false;
     return photoFields.every((field) => row.values[field.id]?.hasPhoto);
   }
+  function missingData(row: SubmissionRow) {
+    return textFields.some((field) => !(row.values[field.id]?.text ?? "").trim());
+  }
+  const counts = {
+    all: submissions.length,
+    pending: submissions.filter((row) => !hasAllPhotos(row)).length,
+    captured: submissions.filter((row) => hasAllPhotos(row)).length,
+    pendingData: submissions.filter((row) => missingData(row)).length,
+  };
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return submissions.filter((row) => {
       const captured = hasAllPhotos(row);
       if (tab === "captured" && !captured) return false;
       if (tab === "pending" && captured) return false;
+      if (tab === "pending-data" && !missingData(row)) return false;
+      if (photoFilter === "yes" && !captured) return false;
+      if (photoFilter === "no" && captured) return false;
       if (!query) return true;
       return fields.some((field) => (row.values[field.id]?.text ?? "").toLowerCase().includes(query));
     });
-  }, [submissions, search, tab, fields, photoFields]);
+  }, [submissions, search, tab, fields, photoFields, textFields, photoFilter]);
 
   async function shareLink() {
     if (!link) return;
@@ -270,31 +302,147 @@ export function OrganizationDetailPage() {
     setNotice("Link copied.");
   }
 
+  async function uploadExcel(file: File) {
+    const body = new FormData();
+    body.append("file", file);
+    await api.post(`/admin/organizations/${id}/excel`, body);
+    setNotice("Excel uploaded.");
+    await load();
+  }
+
+  async function downloadExcel() {
+    const response = await api.get(`/admin/organizations/${id}/excel`, { responseType: "blob" });
+    const url = URL.createObjectURL(response.data as Blob);
+    const linkNode = document.createElement("a");
+    linkNode.href = url;
+    linkNode.download = `${name || "organization"}-records.xlsx`;
+    linkNode.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function downloadPhotos() {
+    let saved = 0;
+    for (const row of submissions) {
+      for (const field of photoFields) {
+        if (!row.values[field.id]?.hasPhoto) continue;
+        const response = await api.get(`/admin/organizations/${id}/submissions/${row.id}/fields/${field.id}/photo`, { responseType: "blob" });
+        const url = URL.createObjectURL(response.data as Blob);
+        const linkNode = document.createElement("a");
+        linkNode.href = url;
+        linkNode.download = `${row.serial}-${field.field_name}.jpg`;
+        linkNode.click();
+        URL.revokeObjectURL(url);
+        saved += 1;
+      }
+    }
+    setNotice(saved > 0 ? `Downloaded ${saved} photo${saved === 1 ? "" : "s"}.` : "No photos to download.");
+  }
+
+  async function saveDetails() {
+    await api.patch(`/admin/organizations/${id}/details`, {
+      phone,
+      address,
+      instructions,
+      fieldVisibility: visibility,
+    });
+    setNotice("Organization info saved.");
+    setInfoOpen(false);
+  }
+
+  function openFields() {
+    setDrafts(fields.length > 0 ? fields.map((field) => ({ fieldName: field.field_name, fieldType: field.field_type === "photo" ? "photo" : "text" })) : [{ fieldName: "", fieldType: "text" }]);
+    setBuilding(true);
+  }
+
   return (
-    <div className="app-page space-y-4">
-      <button type="button" className="text-sm font-semibold text-button-blue" onClick={() => navigate("/extra-2")}>← Organizations</button>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-text-muted">{name}</p>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={() => setBuilding(true)}>Form Setup</button>
-          <button type="button" className="btn-primary" onClick={() => setBuilding(true)}>Create Link</button>
+    <div className="detail-page-shell admin-scroll-root">
+      <button type="button" className="mb-4 text-sm font-semibold text-button-blue" onClick={() => navigate("/extra-2")}>← Organizations</button>
+      <p className="mb-3 text-sm text-text-muted">{name}</p>
+      <div className="detail-toolbar-shell">
+        <div className="detail-toolbar-row1">
+          <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={openFields}>Form Setup</button>
+          <button type="button" className="detail-toolbar-btn" disabled={!id || fields.length === 0} onClick={() => excelInputRef.current?.click()}>Upload Excel</button>
+          <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => void downloadExcel().catch((err) => setError(messageOf(err, "Failed to download Excel.")))}>Download Excel</button>
+          <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => void downloadPhotos().catch((err) => setError(messageOf(err, "Failed to download photos.")))}>Download Photos</button>
+          <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => setInfoOpen(true)}>Organization Info</button>
+          <button type="button" className="detail-toolbar-btn" disabled={!id || submissions.length === 0} onClick={() => setSelecting(true)}>Delete Options</button>
+          <button type="button" className="detail-toolbar-btn detail-feature-card detail-feature-card-short detail-toolbar-short-slot" disabled={!id} onClick={() => navigate(`/crop-tool?organizationId=${encodeURIComponent(id)}&organizationName=${encodeURIComponent(name)}`)}>
+            <span className="detail-feature-label">CROPPING TOOL</span>
+          </button>
+          <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-feature-card detail-feature-card-long detail-toolbar-long-slot">
+            <span className="detail-feature-label">ID CARD GENERATOR</span>
+          </div>
+        </div>
+        <div className="detail-toolbar-row2">
+          <div className="detail-status-tabs-inline detail-toolbar-row2-tabs">
+            {([
+              ["all", "All", counts.all],
+              ["pending", "Pending", counts.pending],
+              ["captured", "Captured", counts.captured],
+              ["pending-data", "Pending Data", counts.pendingData],
+            ] as const).map(([key, label, count]) => (
+              <button key={key} type="button" className={`detail-toolbar-status-tab ${tab === key ? "detail-toolbar-status-tab-active" : "detail-toolbar-status-tab-idle"}`} onClick={() => setTab(key)}>
+                {label} ({count})
+              </button>
+            ))}
+          </div>
+          <div className="detail-toolbar-row2-search">
+            <div className="relative min-w-0 flex-1">
+              <input className="input-field w-full text-sm" placeholder="Search…" value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search" />
+            </div>
+          </div>
+          <button type="button" className="btn-secondary detail-toolbar-row2-filter" onClick={() => setFilterOpen((open) => !open)}>Filter</button>
+          <div className="detail-toolbar-row2-actions">
+            {selecting ? (
+              <button type="button" className="btn-primary shrink-0" disabled={selectedIds.size === 0} onClick={() => setOtpOpen(true)}>Bulk Delete</button>
+            ) : (
+              <button type="button" className="btn-secondary shrink-0" disabled={submissions.length === 0} onClick={() => setSelecting(true)}>Bulk Delete</button>
+            )}
+            {selecting ? (
+              <button type="button" className="btn-secondary shrink-0" onClick={() => { setSelecting(false); setSelectedIds(new Set()); setOtpOpen(false); }}>Cancel</button>
+            ) : null}
+            <button type="button" className="detail-toolbar-btn" onClick={openFields}>Create Link</button>
+          </div>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {(["all", "pending", "captured"] as const).map((key) => (
-          <button key={key} type="button" className={tab === key ? "btn-primary" : "btn-secondary"} onClick={() => setTab(key)}>
-            {key === "all" ? "All" : key === "pending" ? "Pending" : "Captured"} ({key === "all" ? submissions.length : submissions.filter((row) => (key === "captured" ? hasAllPhotos(row) : !hasAllPhotos(row))).length})
-          </button>
-        ))}
-        <input className="input-field min-w-[12rem] flex-1" placeholder="Search…" value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search" />
-        <button type="button" className="btn-secondary" onClick={() => setSelecting(true)}>Bulk Delete</button>
-        {selecting ? (
-          <button type="button" className="btn-secondary" onClick={() => { setSelecting(false); setSelectedIds(new Set()); setOtpOpen(false); }}>Cancel</button>
-        ) : null}
-        {selecting ? (
-          <button type="button" className="btn-primary" disabled={selectedIds.size === 0} onClick={() => setOtpOpen(true)}>Delete selected</button>
-        ) : null}
-      </div>
+      <input ref={excelInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (file) void uploadExcel(file).catch((err) => setError(messageOf(err, "Failed to upload Excel.")));
+      }} />
+      {filterOpen ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-3">
+          <span className="text-sm font-medium">Photo</span>
+          {(["any", "yes", "no"] as const).map((value) => (
+            <button key={value} type="button" className={photoFilter === value ? "btn-primary" : "btn-secondary"} onClick={() => setPhotoFilter(value)}>
+              {value === "any" ? "Any" : value === "yes" ? "Has photo" : "Missing photo"}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {infoOpen ? (
+        <form className="mt-3 space-y-3 rounded-2xl border border-border bg-white p-4" onSubmit={(event) => { event.preventDefault(); void saveDetails().catch((err) => setError(messageOf(err, "Failed to save organization info."))); }}>
+          <h2 className="text-lg font-bold">Organization Info</h2>
+          <label className="block text-sm"><span className="mb-1.5 block font-medium">Phone</span><input className="input-field" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
+          <label className="block text-sm"><span className="mb-1.5 block font-medium">Address</span><input className="input-field" value={address} onChange={(event) => setAddress(event.target.value)} /></label>
+          <label className="block text-sm"><span className="mb-1.5 block font-medium">Instructions</span><textarea className="input-field min-h-24" value={instructions} onChange={(event) => setInstructions(event.target.value)} /></label>
+          {([
+            ["required_details", "Required Details"],
+            ["detail_phone", "Phone"],
+            ["detail_address", "Address"],
+            ["detail_instructions", "Instructions"],
+          ] as const).map(([key, label]) => (
+            <label key={key} className="flex items-center justify-between gap-3 text-sm">
+              <span>{label}</span>
+              <input type="checkbox" checked={visibility[key] !== false} onChange={(event) => setVisibility((current) => ({ ...current, [key]: event.target.checked }))} />
+            </label>
+          ))}
+          <div className="flex justify-end gap-2">
+            <button type="button" className="btn-secondary" onClick={() => setInfoOpen(false)}>Cancel</button>
+            <button type="submit" className="btn-primary">Save</button>
+          </div>
+        </form>
+      ) : null}
       {error ? <div className="alert-error">{error}</div> : null}
       {notice ? <div className="alert-success">{notice}</div> : null}
       {link ? (

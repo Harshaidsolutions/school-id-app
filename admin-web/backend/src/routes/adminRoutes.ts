@@ -110,14 +110,18 @@ import {
   createOrganizationForm,
   deleteOrganization,
   deleteOrganizationSubmissions,
+  downloadOrganizationExcel,
   downloadOrganizationSubmissionPhoto,
   getOrganizationWorkspaceAdmin,
   listOrganizations,
   requestOrganizationDeleteOtp,
+  replaceOrganizationSubmissionPhoto,
   requestOrganizationSubmissionDeleteOtp,
   setOrganizationActive,
   setOrganizationCapturePolicy,
   updateOrganization,
+  updateOrganizationDetails,
+  uploadOrganizationExcel,
 } from "../controllers/organizationPortalController";
 import {
   changeManagedAdminPassword,
@@ -150,6 +154,14 @@ router.post("/organizations/:id/submissions/bulk-delete/request-otp", requestOrg
 router.post("/organizations/:id/submissions/bulk-delete", deleteOrganizationSubmissions);
 router.get("/organizations/:id", getOrganizationWorkspaceAdmin);
 router.post("/organizations/:id/forms", createOrganizationForm);
+router.post("/organizations/:id/excel", uploadExcel.single("file"), uploadOrganizationExcel);
+router.get("/organizations/:id/excel", downloadOrganizationExcel);
+router.patch("/organizations/:id/details", updateOrganizationDetails);
+router.post(
+  "/organizations/:id/submissions/:submissionId/fields/:fieldId/photo",
+  uploadStudentPhoto.single("photo"),
+  replaceOrganizationSubmissionPhoto
+);
 router.get(
   "/organizations/:id/submissions/:submissionId/fields/:fieldId/photo",
   downloadOrganizationSubmissionPhoto

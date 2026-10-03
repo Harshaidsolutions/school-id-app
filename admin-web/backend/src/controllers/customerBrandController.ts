@@ -38,7 +38,8 @@ export async function getTeacherBranding(
        FROM users me
        LEFT JOIN schools s ON s.id = me.school_id
        LEFT JOIN institutes i ON i.id = me.institute_id
-       LEFT JOIN users owner ON owner.id = COALESCE(s.owner_admin_id, i.owner_admin_id)
+       LEFT JOIN organizations o ON o.id = me.organization_id
+       LEFT JOIN users owner ON owner.id = COALESCE(s.owner_admin_id, i.owner_admin_id, o.owner_admin_id)
          AND owner.role = 'admin'
        WHERE me.id = $1
        LIMIT 1`,

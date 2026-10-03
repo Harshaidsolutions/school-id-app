@@ -810,6 +810,9 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS idx_organizations_owner ON organizations (owner_admin_id);
     ALTER TABLE organizations ADD COLUMN IF NOT EXISTS allow_screenshot BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE organizations ADD COLUMN IF NOT EXISTS allow_screen_recording BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE organizations ADD COLUMN IF NOT EXISTS address TEXT;
+    ALTER TABLE organizations ADD COLUMN IF NOT EXISTS instructions TEXT;
+    ALTER TABLE organizations ADD COLUMN IF NOT EXISTS field_visibility JSONB NOT NULL DEFAULT '{}'::jsonb;
 
     ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL;
     CREATE INDEX IF NOT EXISTS idx_users_organization ON users (organization_id);
@@ -849,6 +852,7 @@ async function migrate() {
       ON organization_submissions (organization_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_organization_submissions_form
       ON organization_submissions (form_id, created_at DESC);
+    ALTER TABLE organization_submissions ADD COLUMN IF NOT EXISTS photo_cropped BOOLEAN NOT NULL DEFAULT false;
 
     CREATE TABLE IF NOT EXISTS organization_submission_values (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

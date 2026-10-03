@@ -41,7 +41,7 @@ export function whatsAppDigits(value: string | null): string | null {
 }
 
 export function useCustomerBrand() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [brand, setBrand] = useState<CustomerBrand>(emptyBrand());
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -58,7 +58,7 @@ export function useCustomerBrand() {
     setError(null);
     try {
       const { data } = await api.get<{ branding: Partial<CustomerBrand> }>(
-        "/teacher/branding"
+        user?.role === "organization_staff" ? "/organization-app/branding" : "/teacher/branding"
       );
       const next = data.branding ?? {};
       if (next.source !== "child") {
@@ -86,7 +86,7 @@ export function useCustomerBrand() {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.role]);
 
   useEffect(() => {
     void reload();

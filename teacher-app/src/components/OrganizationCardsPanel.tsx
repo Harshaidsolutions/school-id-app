@@ -12,6 +12,7 @@ type Submission = {
   serial: number;
   values: Record<string, { text: string | null; hasPhoto: boolean }>;
 };
+type CardTab = "all" | "pending" | "captured" | "pending-data";
 
 export function OrganizationCardsPanel() {
   const { colors } = useTheme();
@@ -20,6 +21,10 @@ export function OrganizationCardsPanel() {
   const [link, setLink] = useState<string | null>(null);
   const [fields, setFields] = useState<Field[]>([]);
   const [rows, setRows] = useState<Submission[]>([]);
+  const [visibility, setVisibility] = useState<Record<string, boolean>>({});
+  const [details, setDetails] = useState({ phone: "", address: "", instructions: "" });
+  const [tab, setTab] = useState<CardTab>("all");
+  const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -34,11 +39,21 @@ export function OrganizationCardsPanel() {
         link: string | null;
         fields: Field[];
         submissions: Submission[];
+        phone?: string | null;
+        address?: string | null;
+        instructions?: string | null;
+        fieldVisibility?: Record<string, boolean>;
       }>("/organization-app");
       setName(data.organizationName);
       setLink(data.link);
       setFields(data.fields ?? []);
       setRows(data.submissions ?? []);
+      setVisibility(data.fieldVisibility ?? {});
+      setDetails({
+        phone: data.phone ?? "",
+        address: data.address ?? "",
+        instructions: data.instructions ?? "",
+      });
       setError(null);
     } catch (err) {
       setError(getErrorMessage(err, "Could not load organization records."));
@@ -51,10 +66,61 @@ export function OrganizationCardsPanel() {
     void load();
   }, [load]);
 
+  const photoFields = fields.filter((field) => field.field_type === "photo");
+  const textFields = fields.filter((field) => field.field_type !== "photo");
+  function captured(row: Submission) {
+    return photoFields.length > 0 && photoFields.every((field) => row.values[field.id]?.hasPhoto);
+  }
+  function missingData(row: Submission) {
+    return textFields.some((field) => !(row.values[field.id]?.text ?? "").trim());
+  }
+  const visible = rows.filter((row) => {
+    if (tab === "captured" && !captured(row)) return false;
+    if (tab === "pending" && captured(row)) return false;
+    if (tab === "pending-data" && !missingData(row)) return false;
+    const query = search.trim().toLowerCase();
+    if (!query) return true;
+    return fields.some((field) => (row.values[field.id]?.text ?? "").toLowerCase().includes(query));
+  });
+  const counts = {
+    all: rows.length,
+    pending: rows.filter((row) => !captured(row)).length,
+    captured: rows.filter((row) => captured(row)).length,
+    pendingData: rows.filter((row) => missingData(row)).length,
+  };
+  const showDetails = visibility.required_details !== false;
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 16, gap: 12 }}>
       <Text style={{ fontFamily: fonts.bold, fontSize: 22, color: colors.text }}>{name}</Text>
       <Text style={{ fontFamily: fonts.medium, color: colors.textMuted }}>ID Cards</Text>
+      {showDetails ? (
+        <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 12, backgroundColor: colors.surface, gap: 4 }}>
+          <Text style={{ fontFamily: fonts.semiBold, color: colors.text }}>Required Details</Text>
+          {visibility.detail_phone !== false && details.phone ? <Text style={{ color: colors.text }}>{details.phone}</Text> : null}
+          {visibility.detail_address !== false && details.address ? <Text style={{ color: colors.text }}>{details.address}</Text> : null}
+          {visibility.detail_instructions !== false && details.instructions ? <Text style={{ color: colors.text }}>{details.instructions}</Text> : null}
+        </View>
+      ) : null}
+      <TextInput
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search"
+        placeholderTextColor={colors.textMuted}
+        style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, color: colors.text, backgroundColor: colors.surface }}
+      />
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {([
+          ["all", `All (${counts.all})`],
+          ["pending", `Pending (${counts.pending})`],
+          ["captured", `Captured (${counts.captured})`],
+          ["pending-data", `Pending Data (${counts.pendingData})`],
+        ] as const).map(([key, label]) => (
+          <Pressable key={key} onPress={() => setTab(key)} style={{ borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: tab === key ? colors.brandGreen : colors.surface, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ color: tab === key ? "#fff" : colors.text, fontFamily: fonts.semiBold }}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
       {link ? (
         <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 12, backgroundColor: colors.surface }}>
           <Text style={{ fontFamily: fonts.medium, color: colors.text }} numberOfLines={2}>{link}</Text>
@@ -70,7 +136,7 @@ export function OrganizationCardsPanel() {
       )}
       {loading ? <Text style={{ color: colors.textMuted }}>Loading…</Text> : null}
       {error ? <Text style={{ color: colors.danger }}>{error}</Text> : null}
-      {rows.map((row) => {
+      {visible.map((row) => {
         const editing = editingId === row.id;
         return (
         <View key={row.id} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 12, backgroundColor: colors.surface, gap: 6 }}>

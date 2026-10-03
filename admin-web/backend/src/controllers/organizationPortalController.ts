@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import * as XLSX from "xlsx";
 import type { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
@@ -74,6 +75,60 @@ function photoPath(organizationId: string, submissionId: string, fieldId: string
   return `organizations/${organizationId}/${submissionId}/${fieldId}.jpg`;
 }
 
+async function activeOrganizationForm(organizationId: string) {
+  const active = await pool.query<{ id: string; public_token: string; is_active: boolean }>(
+    `SELECT id, public_token, is_active
+     FROM organization_forms
+     WHERE organization_id = $1 AND is_active = true
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [organizationId]
+  );
+  if (active.rows[0]) return active.rows[0];
+  const latest = await pool.query<{ id: string; public_token: string; is_active: boolean }>(
+    `SELECT id, public_token, is_active
+     FROM organization_forms
+     WHERE organization_id = $1
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [organizationId]
+  );
+  const row = latest.rows[0];
+  if (!row) return null;
+  await pool.query(`UPDATE organization_forms SET is_active = true, updated_at = NOW() WHERE id = $1`, [row.id]);
+  return { ...row, is_active: true };
+}
+
+async function reattachOrganizationSubmissions(organizationId: string, activeFormId: string): Promise<void> {
+  const forms = await pool.query<{ id: string }>(
+    `SELECT id FROM organization_forms WHERE organization_id = $1 AND id <> $2`,
+    [organizationId, activeFormId]
+  );
+  if (forms.rows.length === 0) return;
+  const activeFields = await loadFields(activeFormId);
+  for (const form of forms.rows) {
+    const oldFields = await loadFields(form.id);
+    for (const oldField of oldFields) {
+      const match = activeFields.find(
+        (field) =>
+          field.field_type === oldField.field_type &&
+          field.field_name.trim().toLowerCase() === oldField.field_name.trim().toLowerCase()
+      );
+      if (!match || match.id === oldField.id) continue;
+      await pool.query(
+        `UPDATE organization_submission_values SET field_id = $1 WHERE field_id = $2`,
+        [match.id, oldField.id]
+      );
+    }
+    await pool.query(
+      `UPDATE organization_submissions
+       SET form_id = $1
+       WHERE organization_id = $2 AND form_id = $3`,
+      [activeFormId, organizationId, form.id]
+    );
+  }
+}
+
 async function loadFields(formId: string): Promise<FormField[]> {
   const result = await pool.query<FormField>(
     `SELECT id, field_name, field_type, field_order, required
@@ -86,8 +141,8 @@ async function loadFields(formId: string): Promise<FormField[]> {
 }
 
 async function loadSubmissionRows(organizationId: string, formId: string) {
-  const submissions = await pool.query<{ id: string; created_at: string }>(
-    `SELECT id, created_at
+  const submissions = await pool.query<{ id: string; created_at: string; photo_cropped: boolean }>(
+    `SELECT id, created_at, COALESCE(photo_cropped, false) AS photo_cropped
      FROM organization_submissions
      WHERE organization_id = $1 AND form_id = $2
      ORDER BY created_at ASC`,
@@ -111,6 +166,7 @@ async function loadSubmissionRows(organizationId: string, formId: string) {
     id: row.id,
     serial: index + 1,
     createdAt: row.created_at,
+    photoCropped: row.photo_cropped === true,
     values: Object.fromEntries(
       (bySubmission.get(row.id) ?? []).map((value) => [
         value.field_id,
@@ -202,19 +258,14 @@ export async function getOrganizationWorkspaceAdmin(req: Request, res: Response,
     if (!organizationId) throw new AppError("Organization id is required", 400);
     await assertOrganizationOwned(scope, organizationId);
     const org = await pool.query(
-      `SELECT id, name, phone, is_active, created_at, owner_username_plain AS username
+      `SELECT id, name, phone, address, instructions, is_active, created_at,
+              owner_username_plain AS username,
+              COALESCE(field_visibility, '{}'::jsonb) AS field_visibility
        FROM organizations WHERE id = $1 LIMIT 1`,
       [organizationId]
     );
-    const form = await pool.query(
-      `SELECT id, public_token, is_active, created_at
-       FROM organization_forms
-       WHERE organization_id = $1
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [organizationId]
-    );
-    const current = form.rows[0];
+    const current = await activeOrganizationForm(organizationId);
+    if (current) await reattachOrganizationSubmissions(organizationId, current.id);
     const fields = current ? await loadFields(current.id) : [];
     const submissions = current ? await loadSubmissionRows(organizationId, current.id) : [];
     res.json({
@@ -255,27 +306,62 @@ export async function createOrganizationForm(req: Request, res: Response, next: 
         throw new AppError("Field type must be Text/Data or Image/Photo", 400);
       }
     }
-    const token = crypto.randomBytes(18).toString("base64url");
     await client.query("BEGIN");
-    await client.query(
-      `UPDATE organization_forms SET is_active = false, updated_at = NOW() WHERE organization_id = $1`,
+    const existing = await client.query<{ id: string; public_token: string; is_active: boolean }>(
+      `SELECT id, public_token, is_active
+       FROM organization_forms
+       WHERE organization_id = $1 AND is_active = true
+       ORDER BY created_at DESC
+       LIMIT 1`,
       [organizationId]
     );
-    const inserted = await client.query(
-      `INSERT INTO organization_forms (organization_id, public_token)
-       VALUES ($1, $2)
-       RETURNING id, public_token, is_active`,
-      [organizationId, token]
-    );
-    const form = inserted.rows[0];
-    for (const field of fields) {
-      await client.query(
-        `INSERT INTO organization_form_fields (form_id, field_name, field_type, field_order, required)
-         VALUES ($1, $2, $3, $4, true)`,
-        [form.id, field.name, field.type, field.order]
+    let form = existing.rows[0];
+    if (!form) {
+      const token = crypto.randomBytes(18).toString("base64url");
+      const inserted = await client.query<{ id: string; public_token: string; is_active: boolean }>(
+        `INSERT INTO organization_forms (organization_id, public_token)
+         VALUES ($1, $2)
+         RETURNING id, public_token, is_active`,
+        [organizationId, token]
       );
+      form = inserted.rows[0]!;
+    }
+    const currentFields = await loadFields(form.id);
+    const kept = new Set<string>();
+    for (const field of fields) {
+      const match = currentFields.find(
+        (item) => !kept.has(item.id) && item.field_name.trim().toLowerCase() === field.name.toLowerCase()
+      );
+      if (match) {
+        kept.add(match.id);
+        await client.query(
+          `UPDATE organization_form_fields
+           SET field_name = $1, field_type = $2, field_order = $3, required = true
+           WHERE id = $4`,
+          [field.name, field.type, field.order, match.id]
+        );
+      } else {
+        await client.query(
+          `INSERT INTO organization_form_fields (form_id, field_name, field_type, field_order, required)
+           VALUES ($1, $2, $3, $4, true)`,
+          [form.id, field.name, field.type, field.order]
+        );
+      }
+    }
+    for (const oldField of currentFields) {
+      if (kept.has(oldField.id)) continue;
+      const used = await client.query(
+        `SELECT 1 FROM organization_submission_values
+         WHERE field_id = $1 AND (NULLIF(TRIM(text_value), '') IS NOT NULL OR photo_url IS NOT NULL)
+         LIMIT 1`,
+        [oldField.id]
+      );
+      if (!used.rows[0]) {
+        await client.query(`DELETE FROM organization_form_fields WHERE id = $1`, [oldField.id]);
+      }
     }
     await client.query("COMMIT");
+    await reattachOrganizationSubmissions(organizationId, form.id);
     const savedFields = await loadFields(form.id);
     res.status(201).json({
       form: {
@@ -428,6 +514,166 @@ async function sendSubmissionPhoto(
   res.status(200).send(object.bytes);
 }
 
+export async function replaceOrganizationSubmissionPhoto(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const organizationId = routeParam(req.params.id);
+    const submissionId = routeParam(req.params.submissionId);
+    const fieldId = routeParam(req.params.fieldId);
+    const file = req.file;
+    if (!organizationId || !submissionId || !fieldId || !file) throw new AppError("Photo is required", 400);
+    await assertOrganizationOwned(scope, organizationId);
+    const owned = await pool.query(
+      `SELECT 1 FROM organization_submissions WHERE id = $1 AND organization_id = $2 LIMIT 1`,
+      [submissionId, organizationId]
+    );
+    if (!owned.rows[0]) throw new AppError("Record not found", 404);
+    const path = photoPath(organizationId, submissionId, fieldId);
+    await uploadBufferToBucket(STUDENT_PHOTOS_BUCKET, path, file.buffer, file.mimetype || "image/jpeg");
+    await pool.query(
+      `INSERT INTO organization_submission_values (submission_id, field_id, photo_url)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (submission_id, field_id)
+       DO UPDATE SET photo_url = EXCLUDED.photo_url`,
+      [submissionId, fieldId, path]
+    );
+    await pool.query(
+      `UPDATE organization_submissions
+       SET photo_cropped = true, updated_at = NOW()
+       WHERE id = $1 AND organization_id = $2`,
+      [submissionId, organizationId]
+    );
+    res.json({
+      student: {
+        id: `${submissionId}:${fieldId}`,
+        photo_url: `/admin/organizations/${organizationId}/submissions/${submissionId}/fields/${fieldId}/photo`,
+        photo_cropped: true,
+        updated_at: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadOrganizationExcel(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const client = await pool.connect();
+  try {
+    const scope = await requireAdminScope(req);
+    const organizationId = routeParam(req.params.id);
+    const file = req.file;
+    if (!organizationId || !file) throw new AppError("Excel file is required", 400);
+    await assertOrganizationOwned(scope, organizationId);
+    const current = await activeOrganizationForm(organizationId);
+    if (!current) throw new AppError("Create the organization fields before uploading Excel", 400);
+    const fields = await loadFields(current.id);
+    const textFields = fields.filter((field) => field.field_type === "text");
+    if (textFields.length === 0) throw new AppError("Add at least one text field before uploading Excel", 400);
+    const workbook = XLSX.read(file.buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0] ?? ""];
+    if (!sheet) throw new AppError("Excel file has no readable sheet", 400);
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+    if (rows.length === 0) throw new AppError("Excel file has no data rows", 400);
+    await client.query("BEGIN");
+    let inserted = 0;
+    for (const row of rows) {
+      const submissionId = crypto.randomUUID();
+      await client.query(
+        `INSERT INTO organization_submissions (id, form_id, organization_id) VALUES ($1, $2, $3)`,
+        [submissionId, current.id, organizationId]
+      );
+      for (const field of fields) {
+        const raw = row[field.field_name] ?? row[field.field_name.trim()] ?? "";
+        await client.query(
+          `INSERT INTO organization_submission_values (submission_id, field_id, text_value, photo_url)
+           VALUES ($1, $2, $3, NULL)`,
+          [submissionId, field.id, field.field_type === "photo" ? null : String(raw).trim() || null]
+        );
+      }
+      inserted += 1;
+    }
+    await client.query("COMMIT");
+    res.status(201).json({ status: "ok", inserted });
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    next(error);
+  } finally {
+    client.release();
+  }
+}
+
+export async function downloadOrganizationExcel(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const organizationId = routeParam(req.params.id);
+    if (!organizationId) throw new AppError("Organization id is required", 400);
+    await assertOrganizationOwned(scope, organizationId);
+    const current = await activeOrganizationForm(organizationId);
+    const fields = current ? await loadFields(current.id) : [];
+    const submissions = current ? await loadSubmissionRows(organizationId, current.id) : [];
+    const rows = submissions.map((row) => {
+      const record: Record<string, string> = { "S.No": String(row.serial) };
+      for (const field of fields) {
+        const value = row.values[field.id];
+        record[field.field_name] = field.field_type === "photo" ? (value?.hasPhoto ? "Photo" : "") : value?.text ?? "";
+      }
+      return record;
+    });
+    const sheet = XLSX.utils.json_to_sheet(rows.length > 0 ? rows : [{ "S.No": "" }]);
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, sheet, "Records");
+    const bytes = XLSX.write(book, { type: "buffer", bookType: "xlsx" }) as Buffer;
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=\"organization-records.xlsx\"");
+    res.status(200).send(bytes);
+  } catch (error) {
+    next(error);
+  }
+}
+
+const ORGANIZATION_DETAIL_KEYS = ["required_details", "detail_phone", "detail_address", "detail_instructions"] as const;
+
+export async function updateOrganizationDetails(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const organizationId = routeParam(req.params.id);
+    if (!organizationId) throw new AppError("Organization id is required", 400);
+    await assertOrganizationOwned(scope, organizationId);
+    const current = await pool.query<{ field_visibility: Record<string, boolean> | null }>(
+      `SELECT COALESCE(field_visibility, '{}'::jsonb) AS field_visibility FROM organizations WHERE id = $1`,
+      [organizationId]
+    );
+    const visibility = { ...(current.rows[0]?.field_visibility ?? {}) };
+    const incoming = req.body.fieldVisibility ?? req.body.field_visibility;
+    if (incoming && typeof incoming === "object" && !Array.isArray(incoming)) {
+      for (const key of ORGANIZATION_DETAIL_KEYS) {
+        if (Object.prototype.hasOwnProperty.call(incoming, key)) visibility[key] = incoming[key] !== false;
+      }
+    }
+    const phone = req.body.phone !== undefined ? String(req.body.phone ?? "").trim() : undefined;
+    const address = req.body.address !== undefined ? String(req.body.address ?? "").trim() : undefined;
+    const instructions = req.body.instructions !== undefined ? String(req.body.instructions ?? "").trim() : undefined;
+    const updated = await pool.query(
+      `UPDATE organizations
+       SET phone = COALESCE($2, phone),
+           address = COALESCE($3, address),
+           instructions = COALESCE($4, instructions),
+           field_visibility = $5::jsonb,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING phone, address, instructions, COALESCE(field_visibility, '{}'::jsonb) AS field_visibility`,
+      [organizationId, phone ?? null, address ?? null, instructions ?? null, JSON.stringify(visibility)]
+    );
+    res.json({ organization: updated.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function downloadOrganizationSubmissionPhoto(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const scope = await requireAdminScope(req);
@@ -447,22 +693,23 @@ export async function getOrganizationAppWorkspace(req: Request, res: Response, n
     const organizationId = req.user?.organizationId;
     if (!organizationId) throw new AppError("Organization login is required", 403);
     const org = await pool.query(
-      `SELECT id, name, is_active FROM organizations WHERE id = $1 LIMIT 1`,
+      `SELECT id, name, phone, address, instructions, is_active,
+              COALESCE(field_visibility, '{}'::jsonb) AS field_visibility
+       FROM organizations WHERE id = $1 LIMIT 1`,
       [organizationId]
     );
     const organization = org.rows[0];
     if (!organization || organization.is_active === false) throw new AppError("Organization not found", 404);
-    const form = await pool.query(
-      `SELECT id, public_token, is_active FROM organization_forms
-       WHERE organization_id = $1 AND is_active = true
-       ORDER BY created_at DESC LIMIT 1`,
-      [organizationId]
-    );
-    const current = form.rows[0];
+    const current = await activeOrganizationForm(organizationId);
+    if (current) await reattachOrganizationSubmissions(organizationId, current.id);
     const fields = current ? await loadFields(current.id) : [];
     const submissions = current ? await loadSubmissionRows(organizationId, current.id) : [];
     res.json({
       organizationName: organization.name,
+      phone: organization.phone,
+      address: organization.address,
+      instructions: organization.instructions,
+      fieldVisibility: organization.field_visibility ?? {},
       link: current ? `${publicOrigin(req)}/org-form/${current.public_token}` : null,
       fields,
       submissions,

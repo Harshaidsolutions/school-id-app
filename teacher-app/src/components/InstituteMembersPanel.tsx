@@ -432,6 +432,7 @@ export function InstituteMembersPanel({
                   instituteMode
                   showHeading={false}
                   showPhotoCapture
+                  onCancel={() => setAddModalVisible(false)}
                   onInputFocus={(target) =>
                     scrollToFocusedInput(addScrollRef, target)
                   }
