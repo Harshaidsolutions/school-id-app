@@ -12,7 +12,12 @@ import { requireAdminScope, type AdminScope } from "../utils/adminScope";
 import {
   allocateOwnerEmail,
   assertOwnerPasswordAvailable,
+  ownerPasswordSelect,
+  ownerUserLateralJoin,
+  ownerUsernameSelect,
 } from "../utils/ownerCredentials";
+import { captureAllowedFromBody, parseBooleanField } from "../utils/parseBoolean";
+import { requestAdminActionOtp, verifyAdminActionOtp } from "../utils/adminOtp";
 import { routeParam } from "../utils/routeParams";
 
 const SALT_ROUNDS = 10;
@@ -124,8 +129,15 @@ export async function listOrganizations(req: Request, res: Response, next: NextF
     const values: unknown[] = [];
     const owner = ownerFilter(scope, values);
     const result = await pool.query(
-      `SELECT o.id, o.name, o.phone, o.is_active, o.created_at, o.owner_username_plain AS username
+      `SELECT o.id, o.name, o.phone,
+              COALESCE(o.is_active, true) AS is_active,
+              COALESCE(o.allow_screenshot, true) AS allow_screenshot,
+              COALESCE(o.allow_screen_recording, true) AS allow_screen_recording,
+              o.created_at,
+              ${ownerUsernameSelect("o.owner_username_plain")} AS username,
+              ${ownerPasswordSelect("o.owner_password_plain")} AS password
        FROM organizations o
+       ${ownerUserLateralJoin("o", "organization_id")}
        WHERE ${owner}
        ORDER BY o.created_at DESC`,
       values
@@ -144,8 +156,9 @@ export async function createOrganization(req: Request, res: Response, next: Next
     const username = String(req.body.username ?? req.body.ownerName ?? "").trim();
     const password = String(req.body.password ?? "");
     const confirmPassword = req.body.confirmPassword !== undefined ? String(req.body.confirmPassword) : undefined;
-    const phone = String(req.body.phone ?? "").trim() || null;
+    const phone = String(req.body.phone ?? req.body.phoneNumber ?? "").trim();
     if (!name) throw new AppError("Organization name is required", 400);
+    if (!phone) throw new AppError("Phone number is required", 400);
     if (!username) throw new AppError("Username is required", 400);
     if (!password) throw new AppError("Password is required", 400);
     if (confirmPassword !== undefined && password !== confirmPassword) {
@@ -501,6 +514,224 @@ export async function updateOrganizationAppSubmission(req: Request, res: Respons
     );
     await client.query("COMMIT");
     res.json({ status: "ok" });
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    next(error);
+  } finally {
+    client.release();
+  }
+}
+
+async function adminEmail(adminUserId: string): Promise<string> {
+  const result = await pool.query<{ email: string }>(
+    `SELECT email FROM users WHERE id = $1 AND role = 'admin' LIMIT 1`,
+    [adminUserId]
+  );
+  const email = result.rows[0]?.email?.trim();
+  if (!email) throw new AppError("Admin account email is required to send OTP", 400);
+  return email;
+}
+
+export async function setOrganizationActive(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const organizationId = routeParam(req.params.id);
+    if (!organizationId) throw new AppError("Organization id is required", 400);
+    await assertOrganizationOwned(scope, organizationId);
+    if (req.body.is_active === undefined && req.body.isActive === undefined) {
+      throw new AppError("is_active is required", 400);
+    }
+    const isActive = parseBooleanField(req.body.is_active ?? req.body.isActive, true);
+    const updated = await pool.query(
+      `UPDATE organizations SET is_active = $1, updated_at = NOW() WHERE id = $2 RETURNING id, is_active`,
+      [isActive, organizationId]
+    );
+    res.json({ status: "ok", organization: updated.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function setOrganizationCapturePolicy(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const organizationId = routeParam(req.params.id);
+    if (!organizationId) throw new AppError("Organization id is required", 400);
+    await assertOrganizationOwned(scope, organizationId);
+    const allowCapture = captureAllowedFromBody(req.body);
+    const updated = await pool.query(
+      `UPDATE organizations
+       SET allow_screenshot = $1, allow_screen_recording = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, allow_screenshot, allow_screen_recording`,
+      [allowCapture, organizationId]
+    );
+    res.json({ status: "ok", organization: updated.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const client = await pool.connect();
+  try {
+    const scope = await requireAdminScope(req);
+    const organizationId = routeParam(req.params.id);
+    if (!organizationId) throw new AppError("Organization id is required", 400);
+    await assertOrganizationOwned(scope, organizationId);
+    const name = String(req.body.name ?? "").trim();
+    const phone = String(req.body.phone ?? "").trim();
+    const password = req.body.password !== undefined ? String(req.body.password) : "";
+    if (!name) throw new AppError("Organization name is required", 400);
+    if (!phone) throw new AppError("Phone number is required", 400);
+    await client.query("BEGIN");
+    if (password) {
+      const current = await client.query<{ owner_username_plain: string | null }>(
+        `SELECT owner_username_plain FROM organizations WHERE id = $1`,
+        [organizationId]
+      );
+      const username = current.rows[0]?.owner_username_plain ?? "";
+      await assertOwnerPasswordAvailable(client, username, password);
+      const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+      await client.query(
+        `UPDATE organizations SET owner_password_plain = $1, updated_at = NOW() WHERE id = $2`,
+        [password, organizationId]
+      );
+      await client.query(
+        `UPDATE users SET password_hash = $1, password_plain = $2 WHERE organization_id = $3 AND role = 'organization_staff'`,
+        [passwordHash, password, organizationId]
+      );
+    }
+    const updated = await client.query(
+      `UPDATE organizations SET name = $1, phone = $2, updated_at = NOW()
+       WHERE id = $3
+       RETURNING id, name, phone, is_active, created_at, owner_username_plain AS username, owner_password_plain AS password`,
+      [name, phone, organizationId]
+    );
+    await client.query("COMMIT");
+    res.json({ organization: updated.rows[0] });
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    next(error);
+  } finally {
+    client.release();
+  }
+}
+
+export async function requestOrganizationDeleteOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const scope = await requireAdminScope(req);
+    const organizationId = routeParam(req.params.id);
+    if (!organizationId) throw new AppError("Organization id is required", 400);
+    await assertOrganizationOwned(scope, organizationId);
+    const organization = await pool.query<{ name: string }>(
+      `SELECT name FROM organizations WHERE id = $1`,
+      [organizationId]
+    );
+    if (!organization.rows[0]) throw new AppError("Organization not found", 404);
+    const otpResult = await requestAdminActionOtp({
+      adminUserId: req.user.userId,
+      adminEmail: await adminEmail(req.user.userId),
+      actionType: "delete_organization",
+      resourceId: organizationId,
+      emailSubject: `Delete organization confirmation: ${organization.rows[0].name}`,
+      emailIntro: `Confirm permanent deletion of organization "${organization.rows[0].name}" and its forms.`,
+      logPrefix: "[organization-delete]",
+    });
+    res.json({ status: "ok", ...otpResult });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const client = await pool.connect();
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const scope = await requireAdminScope(req);
+    const organizationId = routeParam(req.params.id);
+    if (!organizationId) throw new AppError("Organization id is required", 400);
+    await assertOrganizationOwned(scope, organizationId);
+    const otp = String(req.body?.otp ?? "").trim();
+    await client.query("BEGIN");
+    await verifyAdminActionOtp({
+      adminUserId: req.user.userId,
+      actionType: "delete_organization",
+      resourceId: organizationId,
+      otp,
+    });
+    await client.query(`DELETE FROM users WHERE organization_id = $1`, [organizationId]);
+    await client.query(`DELETE FROM organizations WHERE id = $1`, [organizationId]);
+    await client.query("COMMIT");
+    res.json({ status: "ok", deleted: true });
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    next(error);
+  } finally {
+    client.release();
+  }
+}
+
+export async function requestOrganizationSubmissionDeleteOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const scope = await requireAdminScope(req);
+    const organizationId = routeParam(req.params.id);
+    if (!organizationId) throw new AppError("Organization id is required", 400);
+    await assertOrganizationOwned(scope, organizationId);
+    const otpResult = await requestAdminActionOtp({
+      adminUserId: req.user.userId,
+      adminEmail: await adminEmail(req.user.userId),
+      actionType: "delete_organization_submissions",
+      resourceId: organizationId,
+      emailSubject: "Delete organization records confirmation",
+      emailIntro: "Confirm deletion of the selected organization records.",
+      logPrefix: "[organization-submissions-delete]",
+    });
+    res.json({ status: "ok", ...otpResult });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteOrganizationSubmissions(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const client = await pool.connect();
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const scope = await requireAdminScope(req);
+    const organizationId = routeParam(req.params.id);
+    if (!organizationId) throw new AppError("Organization id is required", 400);
+    await assertOrganizationOwned(scope, organizationId);
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((id: unknown) => String(id)) : [];
+    if (ids.length === 0) throw new AppError("Select at least one record", 400);
+    const otp = String(req.body?.otp ?? "").trim();
+    await client.query("BEGIN");
+    await verifyAdminActionOtp({
+      adminUserId: req.user.userId,
+      actionType: "delete_organization_submissions",
+      resourceId: organizationId,
+      otp,
+    });
+    const deleted = await client.query(
+      `DELETE FROM organization_submissions
+       WHERE organization_id = $1 AND id = ANY($2::uuid[])`,
+      [organizationId, ids]
+    );
+    await client.query("COMMIT");
+    res.json({ status: "ok", deleted: deleted.rowCount ?? 0 });
   } catch (error) {
     try {
       await client.query("ROLLBACK");

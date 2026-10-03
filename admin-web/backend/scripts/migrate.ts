@@ -808,6 +808,8 @@ async function migrate() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_organizations_owner ON organizations (owner_admin_id);
+    ALTER TABLE organizations ADD COLUMN IF NOT EXISTS allow_screenshot BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE organizations ADD COLUMN IF NOT EXISTS allow_screen_recording BOOLEAN NOT NULL DEFAULT true;
 
     ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL;
     CREATE INDEX IF NOT EXISTS idx_users_organization ON users (organization_id);

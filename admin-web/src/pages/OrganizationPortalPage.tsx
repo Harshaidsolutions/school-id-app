@@ -1,15 +1,23 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useMemo, useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
+import { OtpConfirmModal } from "../components/OtpConfirmModal";
+import { PageActions } from "../components/ui/PageActions";
+import { SearchInput } from "../components/ui/SearchInput";
+import { ToggleSwitch } from "../components/ui/ToggleSwitch";
 import type { ApiErrorBody } from "../types";
+import { formatCalendarDate } from "../utils/formatCalendarDate";
 
 type OrganizationRow = {
   id: string;
   name: string;
   phone: string | null;
   username: string | null;
+  password: string | null;
   is_active: boolean;
+  allow_screenshot?: boolean;
+  allow_screen_recording?: boolean;
   created_at: string;
 };
 
@@ -35,6 +43,20 @@ export function OrganizationPortalPage() {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [editTarget, setEditTarget] = useState<OrganizationRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<OrganizationRow | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [captureId, setCaptureId] = useState<string | null>(null);
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return rows;
+    return rows.filter((row) =>
+      [row.name, row.username, row.phone, row.password].some((value) =>
+        (value ?? "").toLowerCase().includes(query)
+      )
+    );
+  }, [rows, search]);
 
   async function load() {
     setLoading(true);
@@ -53,41 +75,119 @@ export function OrganizationPortalPage() {
     void load();
   }, []);
 
+  async function toggleActive(row: OrganizationRow) {
+    setTogglingId(row.id);
+    try {
+      const { data } = await api.patch<{ organization: { is_active: boolean } }>(
+        `/admin/organizations/${row.id}/active`,
+        { is_active: row.is_active === false }
+      );
+      setRows((current) => current.map((item) => item.id === row.id ? { ...item, is_active: data.organization.is_active !== false } : item));
+    } catch (err) {
+      setError(messageOf(err, "Failed to update status."));
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
+  async function toggleCapture(row: OrganizationRow) {
+    const protectedNow = row.allow_screenshot === false || row.allow_screen_recording === false;
+    setCaptureId(row.id);
+    try {
+      const allow = protectedNow;
+      const { data } = await api.patch<{ organization: { allow_screenshot: boolean; allow_screen_recording: boolean } }>(
+        `/admin/organizations/${row.id}/capture`,
+        { allow_screenshot: allow, allow_screen_recording: allow, screen_capture_protection: !allow }
+      );
+      setRows((current) => current.map((item) => item.id === row.id ? { ...item, ...data.organization } : item));
+    } catch (err) {
+      setError(messageOf(err, "Failed to update capture protection."));
+    } finally {
+      setCaptureId(null);
+    }
+  }
+
   return (
-    <div className="app-page">
-      <div className="mb-4 flex items-center justify-end">
-        <button type="button" className="btn-primary" onClick={() => setOpen(true)}>Add Organization</button>
-      </div>
-      {error ? <div className="alert-error mb-4">{error}</div> : null}
-      <div className="overflow-x-auto rounded-2xl border border-border bg-white">
-        <table className="min-w-full text-sm">
-          <thead className="bg-[#F8FAFC] text-left">
+    <div className="app-page space-y-4">
+      <PageActions
+        search={<SearchInput value={search} onChange={setSearch} placeholder="Search organizations…" />}
+        actions={<button type="button" className="btn-primary" onClick={() => setOpen(true)}>Add Organization</button>}
+      />
+      {error ? <div className="alert-error">{error}</div> : null}
+      <div className="card list-table-scroll school-list-table-panel admin-scroll-panel">
+        <table className="list-data-table">
+          <thead>
             <tr>
-              <th className="px-4 py-3">S.No</th>
-              <th className="px-4 py-3">Organization</th>
-              <th className="px-4 py-3">Username</th>
-              <th className="px-4 py-3">Phone</th>
+              <th className="w-10">S.No</th>
+              <th className="w-[22%]">Organization Name</th>
+              <th className="hidden md:table-cell">Username</th>
+              <th>Password</th>
+              <th className="hidden lg:table-cell">Phone</th>
+              <th className="hidden sm:table-cell">Created</th>
+              <th>Status</th>
+              <th>Captured</th>
+              <th className="text-right">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border">
             {loading ? (
-              <tr><td className="px-4 py-8 text-text-muted" colSpan={4}>Loading…</td></tr>
-            ) : rows.length === 0 ? (
-              <tr><td className="px-4 py-8 text-text-muted" colSpan={4}>No organizations yet.</td></tr>
-            ) : rows.map((row, index) => (
-              <tr key={row.id} className="border-t border-border">
-                <td className="px-4 py-3">{index + 1}</td>
-                <td className="px-4 py-3 font-semibold">
-                  <Link className="text-button-blue hover:underline" to={`/extra-2/${row.id}`}>{row.name}</Link>
+              <tr><td className="px-4 py-8 text-center text-text-muted" colSpan={9}>Loading…</td></tr>
+            ) : filtered.length === 0 ? (
+              <tr><td className="px-4 py-8 text-center text-text-muted" colSpan={9}>No organizations yet.</td></tr>
+            ) : filtered.map((row, index) => (
+              <tr key={row.id} className="hover:bg-content-bg/50 align-top">
+                <td className="text-text-muted">{index + 1}</td>
+                <td className="font-medium text-text-navy">
+                  <Link className="line-clamp-2 text-button-blue hover:underline" to={`/extra-2/${row.id}`}>{row.name}</Link>
                 </td>
-                <td className="px-4 py-3">{row.username || "—"}</td>
-                <td className="px-4 py-3">{row.phone || "—"}</td>
+                <td className="hidden md:table-cell">{row.username || "—"}</td>
+                <td className="font-mono text-xs sm:text-sm"><span className="break-all">{row.password || "—"}</span></td>
+                <td className="hidden lg:table-cell">{row.phone || "—"}</td>
+                <td className="hidden text-xs text-text-muted sm:table-cell">{formatCalendarDate(row.created_at)}</td>
+                <td>
+                  <ToggleSwitch checked={row.is_active !== false} disabled={togglingId === row.id} onChange={() => void toggleActive(row)} label={`${row.name} status`} />
+                </td>
+                <td>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-text-muted">Screen Capture Protection</span>
+                    <ToggleSwitch
+                      checked={row.allow_screenshot === false || row.allow_screen_recording === false}
+                      disabled={captureId === row.id}
+                      onChange={() => void toggleCapture(row)}
+                      label={`${row.name} screen capture protection`}
+                    />
+                  </div>
+                </td>
+                <td>
+                  <div className="flex items-center justify-end gap-1">
+                    <button type="button" title="Edit" className="rounded p-1.5 text-text-muted hover:bg-content-bg hover:text-button-blue" onClick={() => setEditTarget(row)}>Edit</button>
+                    <button type="button" title="Delete" className="rounded p-1.5 text-text-muted hover:bg-danger-soft hover:text-danger" onClick={() => setDeleteTarget(row)}>Delete</button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
       {open ? <AddOrganizationModal onClose={() => setOpen(false)} onCreated={() => { setOpen(false); void load(); }} /> : null}
+      {editTarget ? <EditOrganizationModal organization={editTarget} onClose={() => setEditTarget(null)} onSaved={(updated) => { setRows((current) => current.map((item) => item.id === updated.id ? { ...item, ...updated } : item)); setEditTarget(null); }} /> : null}
+      {deleteTarget ? (
+        <OtpConfirmModal
+          title="Delete organization"
+          description={`Delete ${deleteTarget.name} and its forms?`}
+          confirmLabel="Delete"
+          onClose={() => setDeleteTarget(null)}
+          onRequestOtp={async () => {
+            const { data } = await api.post<{ message?: string; devOtp?: string }>(`/admin/organizations/${deleteTarget.id}/request-delete-otp`);
+            return data;
+          }}
+          onConfirm={async (otp) => {
+            await api.delete(`/admin/organizations/${deleteTarget.id}`, { data: { otp } });
+            setRows((current) => current.filter((item) => item.id !== deleteTarget.id));
+            setDeleteTarget(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -103,6 +203,11 @@ export function OrganizationDetailPage() {
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"all" | "pending" | "captured">("all");
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [otpOpen, setOtpOpen] = useState(false);
 
   async function load() {
     const { data } = await api.get<{
@@ -139,6 +244,22 @@ export function OrganizationDetailPage() {
     }
   }
 
+  const photoFields = fields.filter((field) => field.field_type === "photo");
+  function hasAllPhotos(row: SubmissionRow) {
+    if (photoFields.length === 0) return true;
+    return photoFields.every((field) => row.values[field.id]?.hasPhoto);
+  }
+  const visibleRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return submissions.filter((row) => {
+      const captured = hasAllPhotos(row);
+      if (tab === "captured" && !captured) return false;
+      if (tab === "pending" && captured) return false;
+      if (!query) return true;
+      return fields.some((field) => (row.values[field.id]?.text ?? "").toLowerCase().includes(query));
+    });
+  }, [submissions, search, tab, fields, photoFields]);
+
   async function shareLink() {
     if (!link) return;
     if (navigator.share) {
@@ -154,7 +275,25 @@ export function OrganizationDetailPage() {
       <button type="button" className="text-sm font-semibold text-button-blue" onClick={() => navigate("/extra-2")}>← Organizations</button>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-text-muted">{name}</p>
-        <button type="button" className="btn-primary" onClick={() => setBuilding(true)}>Create Link</button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button type="button" className="btn-secondary" onClick={() => setBuilding(true)}>Form Setup</button>
+          <button type="button" className="btn-primary" onClick={() => setBuilding(true)}>Create Link</button>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {(["all", "pending", "captured"] as const).map((key) => (
+          <button key={key} type="button" className={tab === key ? "btn-primary" : "btn-secondary"} onClick={() => setTab(key)}>
+            {key === "all" ? "All" : key === "pending" ? "Pending" : "Captured"} ({key === "all" ? submissions.length : submissions.filter((row) => (key === "captured" ? hasAllPhotos(row) : !hasAllPhotos(row))).length})
+          </button>
+        ))}
+        <input className="input-field min-w-[12rem] flex-1" placeholder="Search…" value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search" />
+        <button type="button" className="btn-secondary" onClick={() => setSelecting(true)}>Bulk Delete</button>
+        {selecting ? (
+          <button type="button" className="btn-secondary" onClick={() => { setSelecting(false); setSelectedIds(new Set()); setOtpOpen(false); }}>Cancel</button>
+        ) : null}
+        {selecting ? (
+          <button type="button" className="btn-primary" disabled={selectedIds.size === 0} onClick={() => setOtpOpen(true)}>Delete selected</button>
+        ) : null}
       </div>
       {error ? <div className="alert-error">{error}</div> : null}
       {notice ? <div className="alert-success">{notice}</div> : null}
@@ -173,15 +312,26 @@ export function OrganizationDetailPage() {
         <table className="min-w-full text-sm">
           <thead className="bg-[#F8FAFC] text-left">
             <tr>
+              {selecting ? <th className="px-4 py-3" /> : null}
               <th className="px-4 py-3">S.No</th>
               {fields.map((field) => <th key={field.id} className="px-4 py-3">{field.field_name}</th>)}
             </tr>
           </thead>
           <tbody>
-            {submissions.length === 0 ? (
-              <tr><td className="px-4 py-8 text-text-muted" colSpan={Math.max(1, fields.length + 1)}>No submissions yet.</td></tr>
-            ) : submissions.map((row) => (
+            {visibleRows.length === 0 ? (
+              <tr><td className="px-4 py-8 text-text-muted" colSpan={Math.max(1, fields.length + (selecting ? 2 : 1))}>No submissions yet.</td></tr>
+            ) : visibleRows.map((row) => (
               <tr key={row.id} className="border-t border-border">
+                {selecting ? (
+                  <td className="px-4 py-3">
+                    <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => setSelectedIds((current) => {
+                      const next = new Set(current);
+                      if (next.has(row.id)) next.delete(row.id);
+                      else next.add(row.id);
+                      return next;
+                    })} aria-label={`Select record ${row.serial}`} />
+                  </td>
+                ) : null}
                 <td className="px-4 py-3">{row.serial}</td>
                 {fields.map((field) => {
                   const value = row.values[field.id];
@@ -198,6 +348,25 @@ export function OrganizationDetailPage() {
           </tbody>
         </table>
       </div>
+      {otpOpen ? (
+        <OtpConfirmModal
+          title="Delete records"
+          description="Delete the selected organization records?"
+          confirmLabel="Delete"
+          onClose={() => setOtpOpen(false)}
+          onRequestOtp={async () => {
+            const { data } = await api.post<{ message?: string; devOtp?: string }>(`/admin/organizations/${id}/submissions/bulk-delete/request-otp`);
+            return data;
+          }}
+          onConfirm={async (otp) => {
+            await api.post(`/admin/organizations/${id}/submissions/bulk-delete`, { ids: [...selectedIds], otp });
+            setSelecting(false);
+            setSelectedIds(new Set());
+            setOtpOpen(false);
+            await load();
+          }}
+        />
+      ) : null}
       {building ? (
         <form className="space-y-3 rounded-2xl border border-border bg-white p-4" onSubmit={(event) => void createForm(event)}>
           {drafts.map((field, index) => (
@@ -227,6 +396,56 @@ export function OrganizationDetailPage() {
           </div>
         </form>
       ) : null}
+    </div>
+  );
+}
+
+function EditOrganizationModal({
+  organization,
+  onClose,
+  onSaved,
+}: {
+  organization: OrganizationRow;
+  onClose: () => void;
+  onSaved: (organization: OrganizationRow) => void;
+}) {
+  const [name, setName] = useState(organization.name);
+  const [phone, setPhone] = useState(organization.phone ?? "");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const { data } = await api.patch<{ organization: OrganizationRow }>(`/admin/organizations/${organization.id}`, {
+        name,
+        phone,
+        ...(password ? { password } : {}),
+      });
+      onSaved({ ...organization, ...data.organization });
+    } catch (err) {
+      setError(messageOf(err, "Failed to update organization."));
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4">
+      <form className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-6" onSubmit={(event) => void submit(event)}>
+        <h2 className="text-lg font-bold">Edit Organization</h2>
+        <label className="block text-sm"><span className="mb-1.5 block font-medium">Organization Name *</span><input required className="input-field" value={name} onChange={(event) => setName(event.target.value)} /></label>
+        <label className="block text-sm"><span className="mb-1.5 block font-medium">Phone Number *</span><input required className="input-field" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
+        <label className="block text-sm"><span className="mb-1.5 block font-medium">Username</span><input className="input-field" value={organization.username ?? ""} readOnly /></label>
+        <label className="block text-sm"><span className="mb-1.5 block font-medium">New Password</span><input type="password" className="input-field" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+        {error ? <div className="alert-error">{error}</div> : null}
+        <div className="flex justify-end gap-2">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="submit" className="btn-primary" disabled={saving}>{saving ? "Saving…" : "Submit"}</button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -262,14 +481,14 @@ function AddOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
       <form className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-6" onSubmit={(event) => void submit(event)}>
         <h2 className="text-lg font-bold">Add Organization</h2>
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Organization Name *</span><input required className="input-field" value={name} onChange={(event) => setName(event.target.value)} /></label>
-        <label className="block text-sm"><span className="mb-1.5 block font-medium">Phone</span><input className="input-field" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
+        <label className="block text-sm"><span className="mb-1.5 block font-medium">Phone Number *</span><input required className="input-field" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Username *</span><input required className="input-field" value={username} onChange={(event) => setUsername(event.target.value)} /></label>
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Password *</span><input required type="password" className="input-field" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Confirm Password *</span><input required type="password" className="input-field" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></label>
         {error ? <div className="alert-error">{error}</div> : null}
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn-primary" disabled={saving}>{saving ? "Saving…" : "Create"}</button>
+          <button type="submit" className="btn-primary" disabled={saving}>{saving ? "Saving…" : "Submit"}</button>
         </div>
       </form>
     </div>

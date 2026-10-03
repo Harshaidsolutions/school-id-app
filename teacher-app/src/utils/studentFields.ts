@@ -243,7 +243,7 @@ export const STUDENT_DETAIL_FIELDS: StudentFieldDef[] = [
     label: "Class",
     getValue: (s, classSection) => s.class_section ?? classSection ?? null,
   },
-  { key: "photo_id", label: "Photo ID" },
+  { key: "photo_id", label: "PHOTO" },
   { key: "roll_no", label: "Roll No." },
   { key: "dob", label: "DOB" },
   { key: "gender", label: "Gender" },

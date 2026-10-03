@@ -108,9 +108,16 @@ import { uploadCatalogFile, uploadCatalogMedia } from "../middleware/upload";
 import {
   createOrganization,
   createOrganizationForm,
+  deleteOrganization,
+  deleteOrganizationSubmissions,
   downloadOrganizationSubmissionPhoto,
   getOrganizationWorkspaceAdmin,
   listOrganizations,
+  requestOrganizationDeleteOtp,
+  requestOrganizationSubmissionDeleteOtp,
+  setOrganizationActive,
+  setOrganizationCapturePolicy,
+  updateOrganization,
 } from "../controllers/organizationPortalController";
 import {
   changeManagedAdminPassword,
@@ -134,6 +141,13 @@ router.get("/profile", getAdminProfile);
 
 router.get("/organizations", listOrganizations);
 router.post("/organizations", createOrganization);
+router.patch("/organizations/:id", updateOrganization);
+router.patch("/organizations/:id/active", setOrganizationActive);
+router.patch("/organizations/:id/capture", setOrganizationCapturePolicy);
+router.post("/organizations/:id/request-delete-otp", requestOrganizationDeleteOtp);
+router.delete("/organizations/:id", deleteOrganization);
+router.post("/organizations/:id/submissions/bulk-delete/request-otp", requestOrganizationSubmissionDeleteOtp);
+router.post("/organizations/:id/submissions/bulk-delete", deleteOrganizationSubmissions);
 router.get("/organizations/:id", getOrganizationWorkspaceAdmin);
 router.post("/organizations/:id/forms", createOrganizationForm);
 router.get(

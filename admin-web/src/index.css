@@ -389,7 +389,7 @@
   }
 
   .detail-toolbar-row2-search {
-    grid-column: 5 / 7;
+    grid-column: 5 / 6;
     grid-row: 2;
     position: relative;
     display: flex;
@@ -430,7 +430,7 @@
   }
 
   .detail-toolbar-row2-filter {
-    grid-column: 8 / 9;
+    grid-column: 6 / 7;
     grid-row: 2;
     min-width: 0;
     width: 100%;
@@ -462,7 +462,10 @@
     justify-content: flex-end;
     gap: 0.375rem;
     min-width: 0;
-    height: var(--toolbar-control-height);
+    height: auto;
+    min-height: var(--toolbar-control-height);
+    overflow: visible;
+    flex-wrap: wrap;
   }
 
   .detail-toolbar-row2-actions .btn-primary,

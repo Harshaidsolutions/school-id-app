@@ -614,12 +614,19 @@ export function CropToolModal({
             <>
               <label className="text-xs font-semibold text-[#334155]">
                 Width
-                <input value={limitWidth} inputMode="numeric" aria-label="Crop width" className="input-field mt-1" onChange={(event) => updateCropLimit("width", event.target.value)} />
+                <span className="mt-1 flex items-center gap-2">
+                  <input value={limitWidth} inputMode="numeric" aria-label="Crop width ratio" className="input-field" onChange={(event) => updateCropLimit("width", event.target.value)} />
+                  <span className="shrink-0 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-2 text-xs font-semibold text-[#334155]">ratio</span>
+                </span>
               </label>
               <label className="text-xs font-semibold text-[#334155]">
                 Height
-                <input value={limitHeight} inputMode="numeric" aria-label="Crop height" className="input-field mt-1" onChange={(event) => updateCropLimit("height", event.target.value)} />
+                <span className="mt-1 flex items-center gap-2">
+                  <input value={limitHeight} inputMode="numeric" aria-label="Crop height ratio" className="input-field" onChange={(event) => updateCropLimit("height", event.target.value)} />
+                  <span className="shrink-0 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-2 text-xs font-semibold text-[#334155]">ratio</span>
+                </span>
               </label>
+              <p className="text-[11px] font-medium text-[#64748B]">20 and 24 mean a 20:24 crop ratio. The photo is not stretched.</p>
               <label className="text-xs font-semibold text-[#334155]">
                 Rotate
                 <select

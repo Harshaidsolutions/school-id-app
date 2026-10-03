@@ -263,14 +263,17 @@ export function DynamicStudentFieldList({
         </>
       ) : null}
       {lockIdentityFields ? (
-        <Field label={configuredNameLabel} colors={colors}>
+        <Field label={configuredNameLabel} colors={colors} required>
           <TextInput
             style={inputStyle}
-            value={studentName}
-            editable={false}
-            showSoftInputOnFocus={false}
-            caretHidden
+            value={[firstName, lastName].filter(Boolean).join(" ") || studentName}
+            onChangeText={(value) => {
+              onFirstNameChange(value);
+              onLastNameChange("");
+            }}
             placeholderTextColor={colors.textSubtle}
+            autoCapitalize="words"
+            {...focus}
           />
         </Field>
       ) : null}
@@ -280,9 +283,14 @@ export function DynamicStudentFieldList({
         const label = shownLabel(field);
         if (
           (kind === "photo" || labelKind === "photo") &&
+          field.key !== "photo_id" &&
           !isIdentityAliasLabel(field.label)
         ) {
-          return null;
+          return (
+            <Field key={field.key} label={label} colors={colors}>
+              <Text style={{ color: colors.textMuted, fontSize: 13 }}>Use the photo above.</Text>
+            </Field>
+          );
         }
         if (lockIdentityFields && isIdentityAliasLabel(field.label)) {
           return null;

@@ -931,15 +931,15 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   className="input-field w-full pl-10 text-sm"
                 />
               </div>
-              <button
-                ref={filterButtonRef}
-                type="button"
-                className="btn-secondary shrink-0"
-                onClick={() => setFilterOpen((open) => !open)}
-              >
-                Filter
-              </button>
             </div>
+            <button
+              ref={filterButtonRef}
+              type="button"
+              className="btn-secondary detail-toolbar-row2-filter"
+              onClick={() => setFilterOpen((open) => !open)}
+            >
+              Filter
+            </button>
 
             <div className="detail-toolbar-row2-actions">
               {selecting ? (
@@ -954,11 +954,11 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                 >
                   {bulkDeleting ? "Deleting…" : "Bulk Delete"}
                 </button>
-              ) : filtered.length > 0 ? (
-                <button type="button" className="btn-secondary shrink-0" onClick={() => setSelecting(true)}>
+              ) : (
+                <button type="button" className="btn-secondary shrink-0" disabled={!orgId || filtered.length === 0} onClick={() => setSelecting(true)}>
                   Bulk Delete
                 </button>
-              ) : null}
+              )}
               <button
                 type="button"
                 disabled={!orgId}

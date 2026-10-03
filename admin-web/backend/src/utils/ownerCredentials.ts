@@ -4,8 +4,8 @@
  */
 
 export const ownerUserLateralJoin = (
-  orgAlias: "s" | "i",
-  linkColumn: "school_id" | "institute_id"
+  orgAlias: "s" | "i" | "o",
+  linkColumn: "school_id" | "institute_id" | "organization_id"
 ): string => `
   LEFT JOIN LATERAL (
     SELECT u.id, u.username, u.email, u.password_plain
