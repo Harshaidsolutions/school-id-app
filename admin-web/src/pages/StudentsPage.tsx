@@ -959,14 +959,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   Bulk Delete
                 </button>
               )}
-              <button
-                type="button"
-                disabled={!orgId}
-                onClick={handleAddStudent}
-                className="detail-toolbar-btn"
-              >
-                {isInstitute ? "Add Member" : "Add Student"}
-              </button>
               {selecting ? (
                 <button
                   type="button"
@@ -981,6 +973,14 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   Cancel
                 </button>
               ) : null}
+              <button
+                type="button"
+                disabled={!orgId}
+                onClick={handleAddStudent}
+                className="detail-toolbar-btn"
+              >
+                {isInstitute ? "Add Member" : "Add Student"}
+              </button>
             </div>
           </div>
           {filterOpen

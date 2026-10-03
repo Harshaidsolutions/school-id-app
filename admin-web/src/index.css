@@ -366,9 +366,17 @@
     align-items: stretch;
   }
 
-  .detail-toolbar-row1,
-  .detail-toolbar-row2 {
+  .detail-toolbar-row1 {
     display: contents;
+  }
+
+  .detail-toolbar-row2 {
+    display: flex;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
   }
 
   .detail-toolbar-row1 > * {
@@ -380,25 +388,23 @@
 
   /* Row 2: one status label under each of the first four buttons, then search through the long box, add under the short box */
   .detail-toolbar-row2-tabs {
-    grid-column: 1 / 5;
-    grid-row: 2;
+    flex: 0 0 auto;
     min-width: 0;
-    width: 100%;
+    width: max-content;
     height: var(--toolbar-control-height);
     box-sizing: border-box;
   }
 
   .detail-toolbar-row2-search {
-    grid-column: 5 / 6;
-    grid-row: 2;
+    flex: 1 1 auto;
     position: relative;
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
     gap: 0.5rem;
-    min-width: 0;
-    max-width: 100%;
-    width: 100%;
+    min-width: 12rem;
+    width: auto;
+    max-width: none;
     height: var(--toolbar-control-height);
     min-height: var(--toolbar-control-height);
     overflow: hidden;
@@ -430,10 +436,9 @@
   }
 
   .detail-toolbar-row2-filter {
-    grid-column: 6 / 7;
-    grid-row: 2;
+    flex: 0 0 auto;
     min-width: 0;
-    width: 100%;
+    width: auto;
     height: var(--toolbar-control-height);
     box-sizing: border-box;
   }
@@ -455,17 +460,16 @@
   }
 
   .detail-toolbar-row2-actions {
-    grid-column: 7 / 9;
-    grid-row: 2;
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 0.375rem;
     min-width: 0;
-    height: auto;
-    min-height: var(--toolbar-control-height);
+    width: auto;
+    height: var(--toolbar-control-height);
     overflow: visible;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .detail-toolbar-row2-actions .btn-primary,
@@ -603,6 +607,20 @@
     gap: 0;
     overflow: visible;
     box-sizing: border-box;
+  }
+
+  .detail-toolbar-row2 > .detail-status-tabs-inline {
+    display: flex;
+    flex: 0 0 auto;
+    width: max-content;
+    max-width: none;
+  }
+
+  .detail-toolbar-row2 > .detail-status-tabs-inline > .detail-toolbar-status-tab {
+    width: auto;
+    min-width: max-content;
+    padding-left: 0.7rem;
+    padding-right: 0.7rem;
   }
 
   .detail-toolbar-status-tab {
