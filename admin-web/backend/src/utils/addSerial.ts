@@ -91,3 +91,35 @@ export async function allocateReusableAddSerial(
 
   return `ADD_${String(issued).padStart(3, "0")}`;
 }
+
+/** Next organization record number: ADD_000, ADD_001. Deleted numbers are not reused. */
+export async function allocateOrganizationAddSerial(
+  client: PoolClient,
+  organizationId: string
+): Promise<string> {
+  await client.query(`SELECT id FROM organizations WHERE id = $1::uuid FOR UPDATE`, [organizationId]);
+  const [org, existing] = await Promise.all([
+    client.query<{ photo_capture_seq: number }>(
+      `SELECT photo_capture_seq FROM organizations WHERE id = $1::uuid`,
+      [organizationId]
+    ),
+    client.query<{ photo_number: string | null }>(
+      `SELECT photo_number FROM organization_submissions WHERE organization_id = $1`,
+      [organizationId]
+    ),
+  ]);
+  let highest = -1;
+  for (const row of existing.rows) {
+    const match = ADD_PHOTO_ID.exec(String(row.photo_number ?? "").trim());
+    if (!match) continue;
+    const serial = Number(match[1]);
+    if (Number.isFinite(serial)) highest = Math.max(highest, serial);
+  }
+  const current = org.rows[0]?.photo_capture_seq ?? 0;
+  const issued = current === 0 && highest < 0 ? 0 : Math.max(current, highest) + 1;
+  await client.query(
+    `UPDATE organizations SET photo_capture_seq = $2 WHERE id = $1::uuid`,
+    [organizationId, issued]
+  );
+  return `ADD_${String(issued).padStart(3, "0")}`;
+}

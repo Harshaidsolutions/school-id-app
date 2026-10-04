@@ -1,13 +1,18 @@
 import { useMemo, useEffect, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
+import { DeleteOptionsModal, type DeleteJob } from "../components/DeleteOptionsModal";
+import { DownloadPhotosModal } from "../components/DownloadPhotosModal";
+import { ExcelDownloadModal } from "../components/ExcelDownloadModal";
 import { OtpConfirmModal } from "../components/OtpConfirmModal";
 import { PageActions } from "../components/ui/PageActions";
 import { SearchInput } from "../components/ui/SearchInput";
 import { ToggleSwitch } from "../components/ui/ToggleSwitch";
 import type { ApiErrorBody } from "../types";
 import { formatCalendarDate } from "../utils/formatCalendarDate";
+import { isPhotoNumberLabel, isSignatureLabel, organizationCategoryFields } from "../utils/organizationGroups";
 
 type OrganizationRow = {
   id: string;
@@ -26,6 +31,7 @@ type FormField = {
   field_name: string;
   field_type: string;
   enabled?: boolean;
+  required?: boolean;
 };
 
 type DraftField = {
@@ -33,12 +39,15 @@ type DraftField = {
   fieldName: string;
   fieldType: "text" | "photo";
   enabled: boolean;
+  required: boolean;
 };
 
 type SubmissionRow = {
   id: string;
   serial: number;
+  photoNumber?: string;
   photoCropped?: boolean;
+  createdAt?: string;
   values: Record<string, { text: string | null; hasPhoto: boolean }>;
 };
 
@@ -202,7 +211,7 @@ export function OrganizationDetailPage() {
   const [name, setName] = useState("");
   const [link, setLink] = useState<string | null>(null);
   const [fields, setFields] = useState<FormField[]>([]);
-  const [drafts, setDrafts] = useState<DraftField[]>([{ fieldName: "", fieldType: "text", enabled: true }]);
+  const [drafts, setDrafts] = useState<DraftField[]>([{ fieldName: "", fieldType: "text", enabled: true, required: true }]);
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -215,11 +224,22 @@ export function OrganizationDetailPage() {
   const [visibility, setVisibility] = useState<Record<string, boolean>>({});
   const [infoOpen, setInfoOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [photoFilter, setPhotoFilter] = useState<"any" | "yes" | "no">("any");
+  const [photoFilter, setPhotoFilter] = useState("");
+  const [pendingDataFilter, setPendingDataFilter] = useState("");
+  const [capturedOn, setCapturedOn] = useState("");
+  const [groupFilters, setGroupFilters] = useState<Record<string, string>>({});
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
   const excelInputRef = useRef<HTMLInputElement>(null);
   const [selecting, setSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [otpOpen, setOtpOpen] = useState(false);
+  const [excelOpen, setExcelOpen] = useState(false);
+  const [photosOpen, setPhotosOpen] = useState(false);
+  const [deleteOptionsOpen, setDeleteOptionsOpen] = useState(false);
+  const [deleteJob, setDeleteJob] = useState<DeleteJob | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [editingRow, setEditingRow] = useState<SubmissionRow | null>(null);
+  const [editDraft, setEditDraft] = useState<Record<string, string>>({});
 
   async function load() {
     const { data } = await api.get<{
@@ -259,6 +279,7 @@ export function OrganizationDetailPage() {
           fieldName: field.fieldName.trim(),
           fieldType: field.fieldType,
           enabled: field.enabled !== false,
+          required: field.required !== false,
         })) }
       );
       setLink(data.form.link);
@@ -273,10 +294,14 @@ export function OrganizationDetailPage() {
 
   const activeFields = fields.filter((field) => field.enabled !== false);
   const photoFields = activeFields.filter((field) => field.field_type === "photo");
-  const textFields = activeFields.filter((field) => field.field_type !== "photo");
+  const imageFields = photoFields.filter((field) => !isSignatureLabel(field.field_name));
+  const signatureFields = photoFields.filter((field) => isSignatureLabel(field.field_name));
+  const captureFields = imageFields.length > 0 ? imageFields : photoFields;
+  const textFields = activeFields.filter((field) => field.field_type !== "photo" && !isPhotoNumberLabel(field.field_name));
+  const numberLabel = activeFields.find((field) => isPhotoNumberLabel(field.field_name))?.field_name ?? "Photo Number";
   function hasAllPhotos(row: SubmissionRow) {
-    if (photoFields.length === 0) return false;
-    return photoFields.every((field) => row.values[field.id]?.hasPhoto);
+    if (captureFields.length === 0) return false;
+    return captureFields.every((field) => row.values[field.id]?.hasPhoto);
   }
   function missingData(row: SubmissionRow) {
     return textFields.some((field) => !(row.values[field.id]?.text ?? "").trim());
@@ -294,12 +319,59 @@ export function OrganizationDetailPage() {
       if (tab === "captured" && !captured) return false;
       if (tab === "pending" && captured) return false;
       if (tab === "pending-data" && !missingData(row)) return false;
-      if (photoFilter === "yes" && !captured) return false;
-      if (photoFilter === "no" && captured) return false;
+      if (photoFilter === "captured" && !captured) return false;
+      if (photoFilter === "uncaptured" && captured) return false;
+      if (pendingDataFilter === "yes" && !missingData(row)) return false;
+      if (pendingDataFilter === "no" && missingData(row)) return false;
+      if (capturedOn && !(row.createdAt ?? "").startsWith(capturedOn)) return false;
+      for (const [fieldId, value] of Object.entries(groupFilters)) {
+        if (value && (row.values[fieldId]?.text ?? "").trim() !== value) return false;
+      }
       if (!query) return true;
-      return activeFields.some((field) => (row.values[field.id]?.text ?? "").toLowerCase().includes(query));
+      return (row.photoNumber ?? "").toLowerCase().includes(query) || activeFields.some((field) => (row.values[field.id]?.text ?? "").toLowerCase().includes(query));
     });
-  }, [submissions, search, tab, activeFields, photoFields, textFields, photoFilter]);
+  }, [submissions, search, tab, activeFields, captureFields, textFields, photoFilter, pendingDataFilter, capturedOn, groupFilters]);
+  const categories = useMemo(() => organizationCategoryFields(activeFields), [activeFields]);
+  const categoryFields = useMemo(() => {
+    return categories
+      .map((field) => {
+        const counts = new Map<string, number>();
+        for (const row of submissions) {
+          const value = (row.values[field.key]?.text ?? "").trim();
+          if (!value) continue;
+          counts.set(value, (counts.get(value) ?? 0) + 1);
+        }
+        return {
+          label: field.label,
+          key: field.key,
+          options: [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([name, count]) => ({ name, count, key: field.key })),
+        };
+      });
+  }, [categories, submissions]);
+  const photoCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const row of submissions) {
+      const day = (row.createdAt ?? "").slice(0, 10);
+      if (!day) continue;
+      const photos = imageFields.filter((field) => row.values[field.id]?.hasPhoto).length;
+      if (photos > 0) counts[day] = (counts[day] ?? 0) + photos;
+    }
+    return counts;
+  }, [submissions, imageFields]);
+  const signatureCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const row of submissions) {
+      const day = (row.createdAt ?? "").slice(0, 10);
+      if (!day) continue;
+      const photos = signatureFields.filter((field) => row.values[field.id]?.hasPhoto).length;
+      if (photos > 0) counts[day] = (counts[day] ?? 0) + photos;
+    }
+    return counts;
+  }, [submissions, signatureFields]);
+  const captureDates = useMemo(
+    () => Object.entries(photoCounts).map(([name, count]) => ({ name, count })),
+    [photoCounts]
+  );
 
   async function shareLink() {
     if (!link) return;
@@ -319,8 +391,16 @@ export function OrganizationDetailPage() {
     await load();
   }
 
-  async function downloadExcel() {
-    const response = await api.get(`/admin/organizations/${id}/excel`, { responseType: "blob" });
+  async function downloadExcel(job?: { scope: string; date?: string; classSection?: string; fieldKey?: string }) {
+    const response = await api.get(`/admin/organizations/${id}/excel`, {
+      responseType: "blob",
+      params: {
+        scope: job?.scope ?? "all",
+        date: job?.date,
+        fieldId: job?.fieldKey,
+        value: job?.classSection,
+      },
+    });
     const url = URL.createObjectURL(response.data as Blob);
     const linkNode = document.createElement("a");
     linkNode.href = url;
@@ -329,10 +409,16 @@ export function OrganizationDetailPage() {
     URL.revokeObjectURL(url);
   }
 
-  async function downloadPhotos() {
+  async function downloadPhotos(job?: { asset: "photo" | "signature"; date?: string; classSection?: string; fieldKey?: string }) {
     let saved = 0;
-    for (const row of submissions) {
-      for (const field of photoFields) {
+    const assetFields = (job?.asset === "signature" ? signatureFields : imageFields);
+    const rows = submissions.filter((row) => {
+      if (job?.date && !(row.createdAt ?? "").startsWith(job.date)) return false;
+      if (job?.fieldKey && job.classSection && (row.values[job.fieldKey]?.text ?? "").trim() !== job.classSection) return false;
+      return true;
+    });
+    for (const row of rows) {
+      for (const field of assetFields) {
         if (!row.values[field.id]?.hasPhoto) continue;
         const response = await api.get(`/admin/organizations/${id}/submissions/${row.id}/fields/${field.id}/photo`, { responseType: "blob" });
         const url = URL.createObjectURL(response.data as Blob);
@@ -359,7 +445,7 @@ export function OrganizationDetailPage() {
   }
 
   function openFields() {
-    setDrafts(fields.length > 0 ? fields.map((field) => ({ id: field.id, fieldName: field.field_name, fieldType: field.field_type === "photo" ? "photo" : "text", enabled: field.enabled !== false })) : [{ fieldName: "", fieldType: "text", enabled: true }]);
+    setDrafts(fields.length > 0 ? fields.map((field) => ({ id: field.id, fieldName: field.field_name, fieldType: field.field_type === "photo" ? "photo" : "text", enabled: field.enabled !== false, required: field.required !== false })) : [{ fieldName: "", fieldType: "text", enabled: true, required: true }]);
     setBuilding(true);
   }
 
@@ -371,10 +457,10 @@ export function OrganizationDetailPage() {
         <div className="detail-toolbar-row1">
           <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={openFields}>Form Setup</button>
           <button type="button" className="detail-toolbar-btn" disabled={!id || fields.length === 0} onClick={() => excelInputRef.current?.click()}>Upload Excel</button>
-          <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => void downloadExcel().catch((err) => setError(messageOf(err, "Failed to download Excel.")))}>Download Excel</button>
-          <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => void downloadPhotos().catch((err) => setError(messageOf(err, "Failed to download photos.")))}>Download Photos</button>
+          <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => setExcelOpen(true)}>Download Excel</button>
+          <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => setPhotosOpen(true)}>Download Photos</button>
           <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => setInfoOpen(true)}>Organization Info</button>
-          <button type="button" className="detail-toolbar-btn" disabled={!id || submissions.length === 0} onClick={() => setSelecting(true)}>Delete Options</button>
+          <button type="button" className="detail-toolbar-btn" disabled={!id || submissions.length === 0} onClick={() => setDeleteOptionsOpen(true)}>Delete Options</button>
           <button type="button" className="detail-toolbar-btn detail-feature-card detail-feature-card-short detail-toolbar-short-slot" disabled={!id} onClick={() => navigate(`/crop-tool?organizationId=${encodeURIComponent(id)}&organizationName=${encodeURIComponent(name)}`)}>
             <span className="detail-feature-icon bg-white/20 text-white" aria-hidden>
               <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -417,10 +503,10 @@ export function OrganizationDetailPage() {
               <input className="input-field w-full pl-10 text-sm" placeholder="Search…" value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search" />
             </div>
           </div>
-          <button type="button" className="btn-secondary detail-toolbar-row2-filter" onClick={() => setFilterOpen((open) => !open)}>Filter</button>
+          <button ref={filterButtonRef} type="button" className="btn-secondary detail-toolbar-row2-filter" onClick={() => setFilterOpen((open) => !open)}>Filter</button>
           <div className="detail-toolbar-row2-actions">
             {selecting ? (
-              <button type="button" className="btn-primary shrink-0" disabled={selectedIds.size === 0} onClick={() => setOtpOpen(true)}>Bulk Delete</button>
+              <button type="button" className="btn-primary shrink-0" disabled={selectedIds.size === 0} onClick={() => { setDeleteJob(null); setOtpOpen(true); }}>Bulk Delete</button>
             ) : (
               <button type="button" className="btn-secondary shrink-0" disabled={submissions.length === 0} onClick={() => setSelecting(true)}>Bulk Delete</button>
             )}
@@ -436,15 +522,28 @@ export function OrganizationDetailPage() {
         event.target.value = "";
         if (file) void uploadExcel(file).catch((err) => setError(messageOf(err, "Failed to upload Excel.")));
       }} />
-      {filterOpen ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-3">
-          <span className="text-sm font-medium">Photo</span>
-          {(["any", "yes", "no"] as const).map((value) => (
-            <button key={value} type="button" className={photoFilter === value ? "btn-primary" : "btn-secondary"} onClick={() => setPhotoFilter(value)}>
-              {value === "any" ? "Any" : value === "yes" ? "Has photo" : "Missing photo"}
-            </button>
-          ))}
-        </div>
+      {filterOpen ? createPortal(
+        <OrganizationFilterPanel
+          anchor={filterButtonRef.current}
+          onClose={() => setFilterOpen(false)}
+          capturedOn={capturedOn}
+          setCapturedOn={setCapturedOn}
+          captureDates={captureDates}
+          categories={categoryFields}
+          groupFilters={groupFilters}
+          setGroupFilters={setGroupFilters}
+          photoFilter={photoFilter}
+          setPhotoFilter={setPhotoFilter}
+          pendingDataFilter={pendingDataFilter}
+          setPendingDataFilter={setPendingDataFilter}
+          onClear={() => {
+            setCapturedOn("");
+            setGroupFilters({});
+            setPhotoFilter("");
+            setPendingDataFilter("");
+          }}
+        />,
+        document.body
       ) : null}
       {infoOpen ? (
         <form className="mt-3 space-y-3 rounded-2xl border border-border bg-white p-4" onSubmit={(event) => { event.preventDefault(); void saveDetails().catch((err) => setError(messageOf(err, "Failed to save organization info."))); }}>
@@ -460,7 +559,7 @@ export function OrganizationDetailPage() {
           ] as const).map(([key, label]) => (
             <label key={key} className="flex items-center justify-between gap-3 text-sm">
               <span>{label}</span>
-              <input type="checkbox" checked={visibility[key] !== false} onChange={(event) => setVisibility((current) => ({ ...current, [key]: event.target.checked }))} />
+              <ToggleSwitch checked={visibility[key] !== false} label={label} onChange={() => setVisibility((current) => ({ ...current, [key]: current[key] === false }))} />
             </label>
           ))}
           <div className="flex justify-end gap-2">
@@ -505,14 +604,16 @@ export function OrganizationDetailPage() {
                 </th>
               ) : null}
               <th className="col-sno">S.NO.</th>
-              {activeFields.map((field) => (
+              <th className="col-field">{numberLabel}</th>
+              {activeFields.filter((field) => !isPhotoNumberLabel(field.field_name)).map((field) => (
                 <th key={field.id} className={field.field_type === "photo" ? "col-photo" : "col-field"}>{field.field_name}</th>
               ))}
+              <th className="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border bg-white">
             {visibleRows.length === 0 ? (
-              <tr><td className="px-4 py-10 text-center text-text-muted" colSpan={Math.max(1, activeFields.length + (selecting ? 2 : 1))}>No submissions yet.</td></tr>
+              <tr><td className="px-4 py-10 text-center text-text-muted" colSpan={Math.max(1, activeFields.length + (selecting ? 3 : 2))}>No submissions yet.</td></tr>
             ) : visibleRows.map((row) => (
               <tr key={row.id} className="hover:bg-content-bg/50">
                 {selecting ? (
@@ -526,7 +627,8 @@ export function OrganizationDetailPage() {
                   </td>
                 ) : null}
                 <td className="col-sno text-text-muted">{row.serial}</td>
-                {activeFields.map((field) => {
+                <td className="col-field">{row.photoNumber || "—"}</td>
+                {activeFields.filter((field) => !isPhotoNumberLabel(field.field_name)).map((field) => {
                   const value = row.values[field.id];
                   return (
                     <td key={field.id} className={field.field_type === "photo" ? "col-photo" : "col-field"}>
@@ -536,6 +638,14 @@ export function OrganizationDetailPage() {
                     </td>
                   );
                 })}
+                <td className="col-actions">
+                  <button type="button" className="text-sm font-semibold text-button-blue" onClick={() => {
+                    const next: Record<string, string> = {};
+                    for (const field of textFields) next[field.id] = row.values[field.id]?.text ?? "";
+                    setEditDraft(next);
+                    setEditingRow(row);
+                  }}>Edit</button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -543,28 +653,132 @@ export function OrganizationDetailPage() {
       </div>
       {otpOpen ? (
         <OtpConfirmModal
-          title="Delete records"
-          description="Delete the selected organization records?"
+          title={deleteJob?.kind === "photos" ? "Delete photos" : "Delete records"}
+          description={deleteJob?.label ?? "Delete the selected organization records?"}
           confirmLabel="Delete"
-          onClose={() => setOtpOpen(false)}
+          onClose={() => { setOtpOpen(false); setDeleteJob(null); }}
           onRequestOtp={async () => {
             const { data } = await api.post<{ message?: string; devOtp?: string }>(`/admin/organizations/${id}/submissions/bulk-delete/request-otp`);
             return data;
           }}
           onConfirm={async (otp) => {
-            await api.post(`/admin/organizations/${id}/submissions/bulk-delete`, { ids: [...selectedIds], otp });
+            const ids = deleteJob ? submissions.filter((row) => {
+              if (deleteJob.date && !(row.createdAt ?? "").startsWith(deleteJob.date)) return false;
+              if (deleteJob.fieldKey && deleteJob.classSection && (row.values[deleteJob.fieldKey]?.text ?? "").trim() !== deleteJob.classSection) return false;
+              const captured = hasAllPhotos(row);
+              if (deleteJob.dataScope === "captured" && !captured) return false;
+              if (deleteJob.dataScope === "uncaptured" && captured) return false;
+              if (deleteJob.dataScope === "pending-data" && !missingData(row)) return false;
+              if (deleteJob.photoScope === "captured" && !captured) return false;
+              if (deleteJob.photoScope === "pending" && captured) return false;
+              return true;
+            }).map((row) => row.id) : [...selectedIds];
+            await api.post(`/admin/organizations/${id}/submissions/bulk-delete`, { ids, otp, photosOnly: deleteJob?.kind === "photos" });
             setSelecting(false);
             setSelectedIds(new Set());
+            setDeleteJob(null);
             setOtpOpen(false);
             await load();
           }}
         />
       ) : null}
+      {excelOpen ? (
+        <ExcelDownloadModal
+          downloading={exporting}
+          categoryFields={categoryFields}
+          captureDates={captureDates}
+          counts={{
+            all: counts.all,
+            captured: counts.captured,
+            pending: counts.pending,
+            "pending-data": counts.pendingData,
+            "captured-pending-data": submissions.filter((row) => hasAllPhotos(row) && missingData(row)).length,
+            "uncaptured-pending-data": submissions.filter((row) => !hasAllPhotos(row) && missingData(row)).length,
+          }}
+          onClose={() => setExcelOpen(false)}
+          onDownload={(job) => {
+            setExporting(true);
+            void downloadExcel(job)
+              .then(() => setExcelOpen(false))
+              .catch((err) => setError(messageOf(err, "Failed to download Excel.")))
+              .finally(() => setExporting(false));
+          }}
+        />
+      ) : null}
+      {photosOpen ? (
+        <DownloadPhotosModal
+          downloading={exporting}
+          photoCounts={photoCounts}
+          signatureCounts={signatureCounts}
+          showSignature={signatureFields.length > 0 && Object.values(signatureCounts).some((count) => count > 0)}
+          categoryFields={categoryFields}
+          onClose={() => setPhotosOpen(false)}
+          onDownload={(job) => {
+            setExporting(true);
+            void downloadPhotos(job)
+              .then(() => setPhotosOpen(false))
+              .catch((err) => setError(messageOf(err, "Failed to download photos.")))
+              .finally(() => setExporting(false));
+          }}
+        />
+      ) : null}
+      {deleteOptionsOpen ? (
+        <DeleteOptionsModal
+          photoCounts={photoCounts}
+          categoryFields={categoryFields}
+          counts={{
+            allPhotos: submissions.filter((row) => imageFields.some((field) => row.values[field.id]?.hasPhoto)).length,
+            allData: submissions.length,
+            capturedData: counts.captured,
+            uncapturedData: counts.pending,
+          }}
+          onClose={() => setDeleteOptionsOpen(false)}
+          onChoose={(job) => {
+            setDeleteJob(job);
+            setDeleteOptionsOpen(false);
+            setOtpOpen(true);
+          }}
+        />
+      ) : null}
+      {editingRow ? (
+        <form
+          className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void api.patch(`/admin/organizations/${id}/submissions/${editingRow.id}`, { values: editDraft })
+              .then(() => load())
+              .then(() => setEditingRow(null))
+              .catch((err) => setError(messageOf(err, "Failed to save this record.")));
+          }}
+        >
+          <div className="max-h-[85vh] w-full max-w-lg space-y-3 overflow-y-auto rounded-2xl bg-white p-6">
+            <h2 className="text-lg font-bold">Edit record</h2>
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-medium">{numberLabel}</span>
+              <input className="input-field" value={editingRow.photoNumber || ""} readOnly />
+            </label>
+            {activeFields.filter((field) => !isPhotoNumberLabel(field.field_name)).map((field) => (
+              <label key={field.id} className="block text-sm">
+                <span className="mb-1.5 block font-medium">{field.field_name}</span>
+                {field.field_type === "photo" ? (
+                  <span className="text-text-muted">{editingRow.values[field.id]?.hasPhoto ? "Photo uploaded" : "No photo"}</span>
+                ) : (
+                  <input className="input-field" value={editDraft[field.id] ?? ""} onChange={(event) => setEditDraft((current) => ({ ...current, [field.id]: event.target.value }))} />
+                )}
+              </label>
+            ))}
+            <div className="flex justify-end gap-2">
+              <button type="button" className="btn-secondary" onClick={() => setEditingRow(null)}>Cancel</button>
+              <button type="submit" className="btn-primary">Save</button>
+            </div>
+          </div>
+        </form>
+      ) : null}
       {building ? (
         <form className="space-y-3 rounded-2xl border border-border bg-white p-4" onSubmit={(event) => void createForm(event)}>
           <h2 className="text-lg font-bold">Form Setup</h2>
           {drafts.map((field, index) => (
-            <div key={field.id ?? index} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <div key={field.id ?? index} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
               <label className="text-sm">
                 <span className="mb-1.5 block font-medium">Field Name</span>
                 <input required className="input-field" value={field.fieldName} onChange={(event) => {
@@ -591,10 +805,20 @@ export function OrganizationDetailPage() {
                   }}
                 />
               </label>
+              <label className="flex items-center gap-2 pb-2 text-sm">
+                <span className="font-medium">Required</span>
+                <ToggleSwitch
+                  checked={field.required !== false}
+                  label={`${field.fieldName || "Field"} required`}
+                  onChange={() => {
+                    setDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, required: item.required === false } : item));
+                  }}
+                />
+              </label>
             </div>
           ))}
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-secondary" onClick={() => setDrafts((current) => [...current, { fieldName: "", fieldType: "text", enabled: true }])}>Add Field</button>
+            <button type="button" className="btn-secondary" onClick={() => setDrafts((current) => [...current, { fieldName: "", fieldType: "text", enabled: true, required: true }])}>Add Field</button>
             <button type="submit" className="btn-primary">{link ? "Save" : "Generate Link"}</button>
             <button type="button" className="btn-secondary" onClick={() => setBuilding(false)}>Cancel</button>
           </div>
@@ -733,6 +957,112 @@ function OrgPhoto({
   }, [organizationId, submissionId, fieldId]);
   if (!src) return <span className="text-text-muted">Photo</span>;
   return <img alt={alt} className="h-14 w-14 rounded-lg object-cover" src={src} />;
+}
+
+function OrganizationFilterPanel({
+  anchor,
+  onClose,
+  capturedOn,
+  setCapturedOn,
+  captureDates,
+  categories,
+  groupFilters,
+  setGroupFilters,
+  photoFilter,
+  setPhotoFilter,
+  pendingDataFilter,
+  setPendingDataFilter,
+  onClear,
+}: {
+  anchor: HTMLElement | null;
+  onClose: () => void;
+  capturedOn: string;
+  setCapturedOn: (value: string) => void;
+  captureDates: { name: string; count: number }[];
+  categories: { label: string; key: string; options: { name: string; count: number }[] }[];
+  groupFilters: Record<string, string>;
+  setGroupFilters: (value: Record<string, string>) => void;
+  photoFilter: string;
+  setPhotoFilter: (value: string) => void;
+  pendingDataFilter: string;
+  setPendingDataFilter: (value: string) => void;
+  onClear: () => void;
+}) {
+  const [box, setBox] = useState({ top: 0, left: 0, width: 360 });
+  useEffect(() => {
+    function place() {
+      if (!anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      const width = Math.min(560, Math.max(280, window.innerWidth - 16));
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+      const top = Math.min(rect.bottom + 8, window.innerHeight - 16);
+      setBox({ top, left, width });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [anchor]);
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    function onDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (anchor?.contains(target)) return;
+      if (document.getElementById("organization-filter-panel")?.contains(target)) return;
+      onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [anchor, onClose]);
+  if (!anchor) return null;
+  return (
+    <div id="organization-filter-panel" className="rounded-xl border border-border bg-white p-3 shadow-xl" style={{ position: "fixed", top: box.top, left: box.left, width: box.width, zIndex: 60, maxHeight: "70vh", overflow: "auto" }}>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="min-w-[9.5rem] flex-1 text-xs font-medium text-text-navy">
+          Capture date
+          <select value={capturedOn} onChange={(event) => setCapturedOn(event.target.value)} className="input-field mt-1">
+            <option value="">All</option>
+            {captureDates.map((item) => <option key={item.name} value={item.name}>{item.name} — {item.count}</option>)}
+          </select>
+        </label>
+        {categories.map((field) => (
+          <label key={field.key} className="min-w-[9.5rem] flex-1 text-xs font-medium text-text-navy">
+            {field.label}
+            <select value={groupFilters[field.key] ?? ""} onChange={(event) => setGroupFilters({ ...groupFilters, [field.key]: event.target.value })} className="input-field mt-1">
+              <option value="">All</option>
+              {field.options.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
+            </select>
+          </label>
+        ))}
+        <label className="min-w-[9.5rem] flex-1 text-xs font-medium text-text-navy">
+          Photo
+          <select value={photoFilter} onChange={(event) => setPhotoFilter(event.target.value)} className="input-field mt-1">
+            <option value="">All</option>
+            <option value="captured">Captured</option>
+            <option value="uncaptured">Uncaptured</option>
+          </select>
+        </label>
+        <label className="min-w-[9.5rem] flex-1 text-xs font-medium text-text-navy">
+          Required data
+          <select value={pendingDataFilter} onChange={(event) => setPendingDataFilter(event.target.value)} className="input-field mt-1">
+            <option value="">All</option>
+            <option value="yes">Pending</option>
+            <option value="no">Complete</option>
+          </select>
+        </label>
+        <button type="button" className="btn-secondary" onClick={onClear}>Clear Filters</button>
+      </div>
+    </div>
+  );
 }
 
 function SearchIcon() {

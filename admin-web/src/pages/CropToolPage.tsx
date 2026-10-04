@@ -4,7 +4,8 @@ import api from "../api/client";
 import { CropToolModal } from "../components/CropToolModal";
 import { sortFormFields, type FormFieldConfig } from "../constants/formFields";
 import type { Student, StudentsResponse } from "../types";
-import { configuredCategoryFields } from "../utils/formFieldHelpers";
+import { configuredCategoryFields, type ConfiguredCategoryField } from "../utils/formFieldHelpers";
+import { isPhotoNumberLabel, isSignatureLabel, organizationCategoryFields } from "../utils/organizationGroups";
 
 export function CropToolPage() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export function CropToolPage() {
   const isOrganization = Boolean(organizationId);
   const [students, setStudents] = useState<Student[]>([]);
   const [fields, setFields] = useState<FormFieldConfig[]>([]);
+  const [organizationCategories, setOrganizationCategories] = useState<ConfiguredCategoryField[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,11 +30,15 @@ export function CropToolPage() {
     if (organizationId) {
       setLoading(true);
       void api.get<{
-        submissions: Array<{ id: string; serial: number; photoCropped?: boolean; createdAt?: string; values: Record<string, { hasPhoto: boolean }> }>;
-        form: { fields: Array<{ id: string; field_name: string; field_type: string }> } | null;
+        submissions: Array<{ id: string; serial: number; photoNumber?: string; photoCropped?: boolean; createdAt?: string; values: Record<string, { text?: string | null; hasPhoto: boolean }> }>;
+        form: { fields: Array<{ id: string; field_name: string; field_type: string; enabled?: boolean }> } | null;
       }>(`/admin/organizations/${organizationId}`).then(({ data }) => {
         if (cancelled) return;
-        const photoFields = (data.form?.fields ?? []).filter((field) => field.field_type === "photo");
+        const formFields = (data.form?.fields ?? []).filter((field) => field.enabled !== false);
+        const photoFields = formFields.filter((field) => field.field_type === "photo" && !isSignatureLabel(field.field_name));
+        const groupFields = organizationCategoryFields(formFields);
+        const groupField = groupFields.find((field) => field.kind === "class") ?? groupFields[0];
+        const nameField = formFields.find((field) => field.field_type === "text" && /name/i.test(field.field_name) && !isPhotoNumberLabel(field.field_name));
         const mapped: Student[] = [];
         for (const row of data.submissions ?? []) {
           for (const field of photoFields) {
@@ -40,15 +46,16 @@ export function CropToolPage() {
             mapped.push({
               id: `${row.id}:${field.id}`,
               school_id: null,
-              class_section: null,
+              class_section: groupField ? (row.values[groupField.key]?.text ?? null) : null,
               roll_no: null,
-              student_name: `S.No ${row.serial}`,
+              student_name: nameField ? (row.values[nameField.id]?.text ?? null) : `S.No ${row.serial}`,
               parent_name: null,
               parent_phone: null,
               address: null,
-              photo_id: String(row.serial),
+              photo_id: row.photoNumber || String(row.serial),
               photo_url: `/admin/organizations/${organizationId}/submissions/${row.id}/fields/${field.id}/photo`,
               photo_cropped: row.photoCropped === true,
+              photo_captured_at: row.createdAt ?? null,
               status: row.photoCropped ? "captured" : "pending",
               import_batch_id: null,
               printed_at: null,
@@ -59,6 +66,7 @@ export function CropToolPage() {
         }
         setStudents(mapped);
         setFields([]);
+        setOrganizationCategories(groupField ? [{ kind: groupField.kind, key: "class_section", label: groupField.label }] : []);
       }).finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -101,7 +109,7 @@ export function CropToolPage() {
           layout="page"
           storageKey={organizationId ? `organization:${organizationId}` : instituteId ? `institute:${instituteId}` : `school:${schoolId}`}
           students={students}
-          categories={configuredCategoryFields(fields)}
+          categories={isOrganization ? organizationCategories : configuredCategoryFields(fields)}
           onClose={() => navigate(back)}
           onSaved={(student) => {
             if (!student.photo_cropped) return;

@@ -814,6 +814,7 @@ async function migrate() {
     ALTER TABLE organizations ADD COLUMN IF NOT EXISTS address TEXT;
     ALTER TABLE organizations ADD COLUMN IF NOT EXISTS instructions TEXT;
     ALTER TABLE organizations ADD COLUMN IF NOT EXISTS field_visibility JSONB NOT NULL DEFAULT '{}'::jsonb;
+    ALTER TABLE organizations ADD COLUMN IF NOT EXISTS photo_capture_seq INTEGER NOT NULL DEFAULT 0;
 
     ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL;
     CREATE INDEX IF NOT EXISTS idx_users_organization ON users (organization_id);
@@ -855,6 +856,33 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS idx_organization_submissions_form
       ON organization_submissions (form_id, created_at DESC);
     ALTER TABLE organization_submissions ADD COLUMN IF NOT EXISTS photo_cropped BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE organization_submissions ADD COLUMN IF NOT EXISTS photo_number TEXT;
+    WITH numbered AS (
+      SELECT id,
+             organization_id,
+             ROW_NUMBER() OVER (PARTITION BY organization_id ORDER BY created_at ASC, id ASC) - 1 AS n
+      FROM organization_submissions
+      WHERE photo_number IS NULL OR btrim(photo_number) = ''
+    )
+    UPDATE organization_submissions s
+    SET photo_number = 'ADD_' || lpad(numbered.n::text, 3, '0')
+    FROM numbered
+    WHERE s.id = numbered.id
+      AND NOT EXISTS (
+        SELECT 1 FROM organization_submissions other
+        WHERE other.organization_id = numbered.organization_id
+          AND other.photo_number = 'ADD_' || lpad(numbered.n::text, 3, '0')
+          AND other.id <> s.id
+      );
+    UPDATE organizations o
+    SET photo_capture_seq = GREATEST(
+      COALESCE(o.photo_capture_seq, 0),
+      COALESCE((
+        SELECT MAX((regexp_match(s.photo_number, '^ADD_([0-9]+)$'))[1]::integer)
+        FROM organization_submissions s
+        WHERE s.organization_id = o.id
+      ), -1)
+    );
 
     CREATE TABLE IF NOT EXISTS organization_submission_values (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

@@ -99,7 +99,7 @@ export function CropToolModal({
   const [limitHeight, setLimitHeight] = useState("");
   const [limitUnit, setLimitUnit] = useState<CropUnit>("cm");
   const [sizeLocked, setSizeLocked] = useState(false);
-  const sizeReady = useRef(false);
+  const [sizeHydrated, setSizeHydrated] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -130,7 +130,7 @@ export function CropToolModal({
   }, [gallery.length, index]);
 
   useEffect(() => {
-    sizeReady.current = false;
+    setSizeHydrated(false);
     const saved = readCropSize(storageKey);
     setLimitWidth(saved.width);
     setLimitHeight(saved.height);
@@ -142,13 +142,13 @@ export function CropToolModal({
       width: Number.isFinite(width) && width > 0 ? width : null,
       height: Number.isFinite(height) && height > 0 ? height : null,
     };
-    sizeReady.current = true;
+    setSizeHydrated(true);
   }, [storageKey]);
 
   useEffect(() => {
-    if (!sizeReady.current) return;
+    if (!sizeHydrated) return;
     writeCropSize(storageKey, { width: limitWidth, height: limitHeight, unit: limitUnit, locked: sizeLocked });
-  }, [storageKey, limitWidth, limitHeight, limitUnit, sizeLocked]);
+  }, [sizeHydrated, storageKey, limitWidth, limitHeight, limitUnit, sizeLocked]);
 
   useEffect(() => {
     return () => {
@@ -651,34 +651,38 @@ export function CropToolModal({
               ))}
             </select>
           </label>
+          <label className="min-w-[7rem] text-xs font-semibold text-[#334155]">
+            Unit
+            <select
+              aria-label="Crop size unit"
+              className="input-field mt-1"
+              value={limitUnit}
+              disabled={sizeLocked}
+              onChange={(event) => changeCropUnit(event.target.value === "in" ? "in" : event.target.value === "mm" ? "mm" : "cm")}
+            >
+              <option value="in">Inches</option>
+              <option value="cm">Centimeters</option>
+              <option value="mm">Millimeters</option>
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-[#334155]">
+            Width
+            <input value={limitWidth} inputMode="decimal" aria-label="Crop width" disabled={sizeLocked} className="input-field mt-1" onChange={(event) => updateCropLimit("width", event.target.value)} />
+          </label>
+          <label className="text-xs font-semibold text-[#334155]">
+            Height
+            <input value={limitHeight} inputMode="decimal" aria-label="Crop height" disabled={sizeLocked} className="input-field mt-1" onChange={(event) => updateCropLimit("height", event.target.value)} />
+          </label>
+          <button type="button" className="btn-secondary" onClick={() => setSizeLocked((locked) => !locked)}>
+            {sizeLocked ? "Unlock" : "Lock"}
+          </button>
+          <p className="text-[11px] font-medium text-[#64748B]">
+            {limitWidth && limitHeight
+              ? `${limitWidth} × ${limitHeight} ${limitUnit === "in" ? "inches" : limitUnit === "mm" ? "mm" : "cm"}${sizeLocked ? ", locked" : ""}`
+              : "Choose inches, centimeters, or millimeters, then enter width and height."}
+          </p>
           {!browsing ? (
             <>
-              <label className="min-w-[7rem] text-xs font-semibold text-[#334155]">
-                Unit
-                <select
-                  aria-label="Crop size unit"
-                  className="input-field mt-1"
-                  value={limitUnit}
-                  disabled={sizeLocked}
-                  onChange={(event) => changeCropUnit(event.target.value === "in" ? "in" : event.target.value === "mm" ? "mm" : "cm")}
-                >
-                  <option value="in">inches</option>
-                  <option value="cm">cm</option>
-                  <option value="mm">mm</option>
-                </select>
-              </label>
-              <label className="text-xs font-semibold text-[#334155]">
-                Width
-                <input value={limitWidth} inputMode="decimal" aria-label="Crop width" disabled={sizeLocked} className="input-field mt-1" onChange={(event) => updateCropLimit("width", event.target.value)} />
-              </label>
-              <label className="text-xs font-semibold text-[#334155]">
-                Height
-                <input value={limitHeight} inputMode="decimal" aria-label="Crop height" disabled={sizeLocked} className="input-field mt-1" onChange={(event) => updateCropLimit("height", event.target.value)} />
-              </label>
-              <button type="button" className="btn-secondary" onClick={() => setSizeLocked((locked) => !locked)}>
-                {sizeLocked ? "Locked" : "Lock"}
-              </button>
-              <p className="text-[11px] font-medium text-[#64748B]">Choose inches, cm, or mm, then enter width and height. Lock keeps that size until you unlock it. The photo is not stretched.</p>
               <label className="text-xs font-semibold text-[#334155]">
                 Rotate
                 <select

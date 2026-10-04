@@ -20,6 +20,7 @@ import {
 import { captureAllowedFromBody, parseBooleanField } from "../utils/parseBoolean";
 import { requestAdminActionOtp, verifyAdminActionOtp } from "../utils/adminOtp";
 import { routeParam } from "../utils/routeParams";
+import { allocateOrganizationAddSerial } from "../utils/addSerial";
 
 const SALT_ROUNDS = 10;
 
@@ -146,8 +147,8 @@ async function loadFields(formId: string): Promise<FormField[]> {
 }
 
 async function loadSubmissionRows(organizationId: string, formId: string) {
-  const submissions = await pool.query<{ id: string; created_at: string; photo_cropped: boolean }>(
-    `SELECT id, created_at, COALESCE(photo_cropped, false) AS photo_cropped
+  const submissions = await pool.query<{ id: string; created_at: string; photo_cropped: boolean; photo_number: string | null }>(
+    `SELECT id, created_at, COALESCE(photo_cropped, false) AS photo_cropped, photo_number
      FROM organization_submissions
      WHERE organization_id = $1 AND form_id = $2
      ORDER BY created_at ASC`,
@@ -170,6 +171,7 @@ async function loadSubmissionRows(organizationId: string, formId: string) {
   return submissions.rows.map((row, index) => ({
     id: row.id,
     serial: index + 1,
+    photoNumber: row.photo_number ?? "",
     createdAt: row.created_at,
     photoCropped: row.photo_cropped === true,
     values: Object.fromEntries(
@@ -299,11 +301,12 @@ export async function createOrganizationForm(req: Request, res: Response, next: 
     await assertOrganizationOwned(scope, organizationId);
     const rawFields = Array.isArray(req.body.fields) ? req.body.fields : [];
     const fields = rawFields
-      .map((field: { id?: string; fieldName?: string; fieldType?: string; name?: string; type?: string; enabled?: boolean }, index: number) => ({
+      .map((field: { id?: string; fieldName?: string; fieldType?: string; name?: string; type?: string; enabled?: boolean; required?: boolean }, index: number) => ({
         id: typeof field.id === "string" ? field.id : "",
         name: String(field.fieldName ?? field.name ?? "").trim(),
         type: String(field.fieldType ?? field.type ?? "").trim().toLowerCase(),
         enabled: field.enabled !== false,
+        required: field.required !== false,
         order: index,
       }))
       .filter((field: { name: string; type: string }) => field.name);
@@ -344,15 +347,15 @@ export async function createOrganizationForm(req: Request, res: Response, next: 
         kept.add(match.id);
         await client.query(
           `UPDATE organization_form_fields
-           SET field_name = $1, field_type = $2, field_order = $3, required = true, enabled = $4
-           WHERE id = $5`,
-          [field.name, field.type, field.order, field.enabled, match.id]
+           SET field_name = $1, field_type = $2, field_order = $3, required = $4, enabled = $5
+           WHERE id = $6`,
+          [field.name, field.type, field.order, field.required, field.enabled, match.id]
         );
       } else {
         await client.query(
           `INSERT INTO organization_form_fields (form_id, field_name, field_type, field_order, required, enabled)
-           VALUES ($1, $2, $3, $4, true, $5)`,
-          [form.id, field.name, field.type, field.order, field.enabled]
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [form.id, field.name, field.type, field.order, field.required, field.enabled]
         );
       }
     }
@@ -469,9 +472,10 @@ export async function submitPublicOrganizationForm(req: Request, res: Response, 
       photoValues.set(field.id, path);
     }
     await client.query("BEGIN");
+    const photoNumber = await allocateOrganizationAddSerial(client, row.organization_id);
     await client.query(
-      `INSERT INTO organization_submissions (id, form_id, organization_id) VALUES ($1, $2, $3)`,
-      [submissionId, row.id, row.organization_id]
+      `INSERT INTO organization_submissions (id, form_id, organization_id, photo_number) VALUES ($1, $2, $3, $4)`,
+      [submissionId, row.id, row.organization_id, photoNumber]
     );
     for (const field of fields) {
       await client.query(
@@ -586,9 +590,10 @@ export async function uploadOrganizationExcel(req: Request, res: Response, next:
     let inserted = 0;
     for (const row of rows) {
       const submissionId = crypto.randomUUID();
+      const photoNumber = await allocateOrganizationAddSerial(client, organizationId);
       await client.query(
-        `INSERT INTO organization_submissions (id, form_id, organization_id) VALUES ($1, $2, $3)`,
-        [submissionId, current.id, organizationId]
+        `INSERT INTO organization_submissions (id, form_id, organization_id, photo_number) VALUES ($1, $2, $3, $4)`,
+        [submissionId, current.id, organizationId, photoNumber]
       );
       for (const field of fields) {
         const raw = row[field.field_name] ?? row[field.field_name.trim()] ?? "";
@@ -622,10 +627,14 @@ export async function downloadOrganizationExcel(req: Request, res: Response, nex
     await assertOrganizationOwned(scope, organizationId);
     const current = await activeOrganizationForm(organizationId);
     const fields = enabledFields(current ? await loadFields(current.id) : []);
-    const submissions = current ? await loadSubmissionRows(organizationId, current.id) : [];
+    const submissions = (current ? await loadSubmissionRows(organizationId, current.id) : []).filter((row) =>
+      submissionMatchesQuery(row, fields, req.query)
+    );
+    const numberLabel = fields.find((field) => isLockedPhotoNumber(field.field_name))?.field_name ?? "Photo Number";
     const rows = submissions.map((row) => {
-      const record: Record<string, string> = { "S.No": String(row.serial) };
+      const record: Record<string, string> = { "S.No": String(row.serial), [numberLabel]: row.photoNumber };
       for (const field of fields) {
+        if (isLockedPhotoNumber(field.field_name)) continue;
         const value = row.values[field.id];
         record[field.field_name] = field.field_type === "photo" ? (value?.hasPhoto ? "Photo" : "") : value?.text ?? "";
       }
@@ -731,6 +740,35 @@ function isLockedPhotoNumber(name: string): boolean {
   return /photo\s*(number|no\.?|id)\b/i.test(name);
 }
 
+function submissionMatchesQuery(
+  row: {
+    createdAt: string;
+    photoNumber: string;
+    values: Record<string, { text: string | null; hasPhoto: boolean }>;
+  },
+  fields: FormField[],
+  query: Request["query"]
+): boolean {
+  const scope = String(query.scope ?? "all");
+  const photoFields = fields.filter((field) => field.field_type === "photo" && !/signature/i.test(field.field_name));
+  const textFields = fields.filter((field) => field.field_type === "text" && !isLockedPhotoNumber(field.field_name));
+  const captured = photoFields.length > 0 && photoFields.every((field) => row.values[field.id]?.hasPhoto);
+  const pendingData = textFields.some((field) => !(row.values[field.id]?.text ?? "").trim());
+  if (scope === "captured" && !captured) return false;
+  if (scope === "pending" && captured) return false;
+  if (scope === "pending-data" && !pendingData) return false;
+  if (scope === "captured-pending-data" && (!captured || !pendingData)) return false;
+  if (scope === "uncaptured-pending-data" && (captured || !pendingData)) return false;
+  const fieldId = String(query.fieldId ?? "");
+  const value = String(query.value ?? "");
+  if (fieldId && value) {
+    if ((row.values[fieldId]?.text ?? "").trim() !== value) return false;
+  }
+  const date = String(query.date ?? "");
+  if (date && !String(row.createdAt).startsWith(date)) return false;
+  return true;
+}
+
 export async function updateOrganizationAppSubmission(req: Request, res: Response, next: NextFunction): Promise<void> {
   const client = await pool.connect();
   try {
@@ -756,6 +794,56 @@ export async function updateOrganizationAppSubmission(req: Request, res: Respons
       if (!Object.prototype.hasOwnProperty.call(values, field.id)) continue;
       const text = String(values[field.id] ?? "").trim();
       if (field.required && !text) throw new AppError(`${field.field_name} is required`, 400);
+      await client.query(
+        `UPDATE organization_submission_values
+         SET text_value = $1
+         WHERE submission_id = $2 AND field_id = $3`,
+        [text || null, submissionId, field.id]
+      );
+    }
+    await client.query(
+      `UPDATE organization_submissions SET updated_at = NOW() WHERE id = $1 AND organization_id = $2`,
+      [submissionId, organizationId]
+    );
+    await client.query("COMMIT");
+    res.json({ status: "ok" });
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    next(error);
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateOrganizationSubmissionAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const client = await pool.connect();
+  try {
+    const scope = await requireAdminScope(req);
+    const organizationId = routeParam(req.params.id);
+    const submissionId = routeParam(req.params.submissionId);
+    if (!organizationId || !submissionId) throw new AppError("Record is required", 400);
+    await assertOrganizationOwned(scope, organizationId);
+    const owned = await pool.query<{ form_id: string }>(
+      `SELECT form_id FROM organization_submissions WHERE id = $1 AND organization_id = $2 LIMIT 1`,
+      [submissionId, organizationId]
+    );
+    const submission = owned.rows[0];
+    if (!submission) throw new AppError("Record not found", 404);
+    const fields = await loadFields(submission.form_id);
+    const incoming = req.body?.values;
+    if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) {
+      throw new AppError("Updated fields are required", 400);
+    }
+    const values = incoming as Record<string, unknown>;
+    await client.query("BEGIN");
+    for (const field of fields) {
+      if (field.enabled === false || field.field_type !== "text" || isLockedPhotoNumber(field.field_name)) continue;
+      if (!Object.prototype.hasOwnProperty.call(values, field.id)) continue;
+      const text = String(values[field.id] ?? "").trim();
       await client.query(
         `UPDATE organization_submission_values
          SET text_value = $1
@@ -996,6 +1084,25 @@ export async function deleteOrganizationSubmissions(req: Request, res: Response,
       resourceId: organizationId,
       otp,
     });
+    if (req.body?.photosOnly === true) {
+      await client.query(
+        `UPDATE organization_submission_values v
+         SET photo_url = NULL
+         FROM organization_form_fields f
+         WHERE v.field_id = f.id
+           AND v.submission_id = ANY($2::uuid[])
+           AND f.field_type = 'photo'
+           AND f.field_name NOT ILIKE '%signature%'
+           AND EXISTS (
+             SELECT 1 FROM organization_submissions s
+             WHERE s.id = v.submission_id AND s.organization_id = $1
+           )`,
+        [organizationId, ids]
+      );
+      await client.query("COMMIT");
+      res.json({ status: "ok", cleared: ids.length });
+      return;
+    }
     const deleted = await client.query(
       `DELETE FROM organization_submissions
        WHERE organization_id = $1 AND id = ANY($2::uuid[])`,

@@ -121,6 +121,7 @@ import {
   setOrganizationCapturePolicy,
   updateOrganization,
   updateOrganizationDetails,
+  updateOrganizationSubmissionAdmin,
   uploadOrganizationExcel,
 } from "../controllers/organizationPortalController";
 import {
@@ -152,6 +153,7 @@ router.post("/organizations/:id/request-delete-otp", requestOrganizationDeleteOt
 router.delete("/organizations/:id", deleteOrganization);
 router.post("/organizations/:id/submissions/bulk-delete/request-otp", requestOrganizationSubmissionDeleteOtp);
 router.post("/organizations/:id/submissions/bulk-delete", deleteOrganizationSubmissions);
+router.patch("/organizations/:id/submissions/:submissionId", updateOrganizationSubmissionAdmin);
 router.get("/organizations/:id", getOrganizationWorkspaceAdmin);
 router.post("/organizations/:id/forms", createOrganizationForm);
 router.post("/organizations/:id/excel", uploadExcel.single("file"), uploadOrganizationExcel);

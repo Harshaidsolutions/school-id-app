@@ -11,6 +11,7 @@ type Field = { id: string; field_name: string; field_type: string };
 type Submission = {
   id: string;
   serial: number;
+  photoNumber?: string;
   values: Record<string, { text: string | null; hasPhoto: boolean }>;
 };
 type CardTab = "all" | "pending" | "captured" | "pending-data";
@@ -98,9 +99,9 @@ export function OrganizationCardsPanel() {
       {showDetails ? (
         <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 12, backgroundColor: colors.surface, gap: 4 }}>
           <Text style={{ fontFamily: fonts.semiBold, color: colors.text }}>Required Details</Text>
-          {visibility.detail_phone !== false && details.phone ? <Text style={{ color: colors.text }}>{details.phone}</Text> : null}
-          {visibility.detail_address !== false && details.address ? <Text style={{ color: colors.text }}>{details.address}</Text> : null}
-          {visibility.detail_instructions !== false && details.instructions ? <Text style={{ color: colors.text }}>{details.instructions}</Text> : null}
+          {visibility.detail_phone !== false ? <Text style={{ color: colors.text }}>{details.phone || "—"}</Text> : null}
+          {visibility.detail_address !== false ? <Text style={{ color: colors.text }}>{details.address || "—"}</Text> : null}
+          {visibility.detail_instructions !== false ? <Text style={{ color: colors.text }}>{details.instructions || "—"}</Text> : null}
         </View>
       ) : null}
       <TextInput
@@ -174,14 +175,15 @@ export function OrganizationCardsPanel() {
               </Pressable>
             )}
           </View>
-          {fields.map((field) => {
-            const locked = isLockedPhotoNumber(field.field_name);
+          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{fields.find((field) => isLockedPhotoNumber(field.field_name))?.field_name ?? "Photo Number"}</Text>
+          <Text style={{ color: colors.text, fontFamily: fonts.medium }}>{row.photoNumber || "—"}</Text>
+          {fields.filter((field) => !isLockedPhotoNumber(field.field_name)).map((field) => {
             return (
             <View key={field.id}>
               <Text style={{ color: colors.textMuted, fontSize: 12 }}>{field.field_name}</Text>
               {field.field_type === "photo" && row.values[field.id]?.hasPhoto ? (
                 <SubmissionPhoto submissionId={row.id} fieldId={field.id} />
-              ) : editing && field.field_type === "text" && !locked ? (
+              ) : editing && field.field_type === "text" ? (
                 <TextInput
                   value={draft[field.id] ?? ""}
                   onChangeText={(text) => setDraft((current) => ({ ...current, [field.id]: text }))}
