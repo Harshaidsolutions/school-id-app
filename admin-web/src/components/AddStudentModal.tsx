@@ -341,12 +341,27 @@ export function AddStudentModal({
     );
   }
 
+  const instituteNeedsExcel = Boolean(instituteId) && fields.length === 0;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4 py-8">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4 py-8"
+      onClick={instituteNeedsExcel ? onClose : undefined}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(event) => event.stopPropagation()}
+      >
         <h2 className="page-heading text-xl">{instituteId ? "Add Member" : "Add Student"}</h2>
         {fields.length === 0 ? (
-          <p className="mt-4 text-sm text-text-muted">Upload Excel first to configure form fields.</p>
+          instituteId ? (
+            <div className="mt-4">
+              <p className="text-sm text-text-muted">Upload an Excel file to import members and configure fields.</p>
+              <button type="button" className="btn-secondary mt-4" onClick={onClose}>Cancel</button>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-text-muted">Upload Excel first to configure form fields.</p>
+          )
         ) : (
           <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
             <div className="text-sm">

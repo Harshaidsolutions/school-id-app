@@ -251,14 +251,16 @@ export function AddStudentForm({
 
   if (instituteMode && !fieldsLoading && displayFields.length === 0) {
     return (
-      <View style={{ gap: 16, paddingVertical: 24 }}>
-        <Text style={{ color: colors.text, fontFamily: fonts.semiBold, fontSize: 16, textAlign: "center" }}>
-          Please upload Excel
-        </Text>
-        <Pressable onPress={onCancel} style={{ alignSelf: "center", paddingHorizontal: 18, paddingVertical: 10 }}>
-          <Text style={{ color: colors.brandGreen, fontFamily: fonts.semiBold }}>Cancel</Text>
+      <Pressable onPress={onCancel} style={{ flex: 1, minHeight: 280, justifyContent: "center", paddingVertical: 24 }}>
+        <Pressable onPress={() => undefined} style={{ gap: 16 }}>
+          <Text style={{ color: colors.text, fontFamily: fonts.semiBold, fontSize: 16, textAlign: "center" }}>
+            Please upload Excel
+          </Text>
+          <Pressable onPress={onCancel} style={{ alignSelf: "center", paddingHorizontal: 18, paddingVertical: 10 }}>
+            <Text style={{ color: colors.brandGreen, fontFamily: fonts.semiBold }}>Cancel</Text>
+          </Pressable>
         </Pressable>
-      </View>
+      </Pressable>
     );
   }
 

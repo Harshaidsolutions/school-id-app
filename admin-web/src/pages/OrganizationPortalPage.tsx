@@ -1,8 +1,9 @@
 import { useMemo, useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
+import { BulkModeButtons } from "../components/BulkActionBar";
 import { DeleteOptionsModal, type DeleteJob } from "../components/DeleteOptionsModal";
 import { DownloadPhotosModal } from "../components/DownloadPhotosModal";
 import { ExcelDownloadModal } from "../components/ExcelDownloadModal";
@@ -61,6 +62,10 @@ export function OrganizationPortalPage() {
   const [deleteTarget, setDeleteTarget] = useState<OrganizationRow | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [captureId, setCaptureId] = useState<string | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return rows;
@@ -124,43 +129,114 @@ export function OrganizationPortalPage() {
     <div className="app-page school-list-page admin-scroll-root">
       <PageActions
         search={<SearchInput value={search} onChange={setSearch} placeholder="Search organizations…" />}
-        actions={<button type="button" className="btn-primary" onClick={() => setOpen(true)}>Add Organization</button>}
+        actions={
+          <>
+            {selecting || filtered.length > 0 ? (
+              <BulkModeButtons
+                cancelOnRight
+                selecting={selecting}
+                selectedCount={filtered.filter((row) => selectedIds.has(row.id)).length}
+                deleting={bulkDeleting}
+                onStart={() => setSelecting(true)}
+                onCancel={() => {
+                  setSelectedIds(new Set());
+                  setSelecting(false);
+                  setOtpOpen(false);
+                }}
+                onConfirm={() => {
+                  if (filtered.filter((row) => selectedIds.has(row.id)).length === 0) return;
+                  setOtpOpen(true);
+                }}
+              />
+            ) : null}
+            <button type="button" className="btn-primary" onClick={() => setOpen(true)}>+ Add Organization</button>
+          </>
+        }
       />
-      {error ? <div className="alert-error">{error}</div> : null}
+      {error ? <div className="mb-4 alert-error">{error}</div> : null}
       <div className="card list-table-scroll school-list-table-panel admin-scroll-panel">
         <table className="list-data-table">
           <thead>
             <tr>
-              <th className="w-10">S.No</th>
-              <th className="w-[22%]">Organization Name</th>
-              <th className="hidden md:table-cell">Username</th>
-              <th>Password</th>
-              <th className="hidden lg:table-cell">Phone</th>
-              <th className="hidden sm:table-cell">Created</th>
-              <th>Status</th>
-              <th>Captured</th>
-              <th className="text-right">Actions</th>
+              {selecting ? (
+                <th className="bulk-check-cell">
+                  <input
+                    type="checkbox"
+                    className="bulk-check"
+                    aria-label="Select all organizations"
+                    checked={filtered.length > 0 && filtered.every((row) => selectedIds.has(row.id))}
+                    onChange={() => {
+                      setSelectedIds((prev) => {
+                        const all = filtered.every((row) => prev.has(row.id));
+                        if (all) return new Set();
+                        return new Set(filtered.map((row) => row.id));
+                      });
+                    }}
+                  />
+                </th>
+              ) : null}
+              <th className="w-10 px-2 py-3 sm:px-3">S.NO.</th>
+              <th className="w-[22%] px-2 py-3 sm:px-3">Organization Name</th>
+              <th className="hidden w-[14%] px-2 py-3 md:table-cell sm:px-3">Username</th>
+              <th className="w-[16%] px-2 py-3 sm:px-3">Password</th>
+              <th className="hidden w-[12%] px-2 py-3 lg:table-cell sm:px-3">Phone</th>
+              <th className="hidden w-[14%] px-2 py-3 sm:table-cell sm:px-3">Created</th>
+              <th className="w-16 px-2 py-3 sm:px-3">Status</th>
+              <th className="px-2 py-3 sm:px-3">Capture</th>
+              <th className="w-24 px-2 py-3 text-right sm:px-3">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {loading ? (
-              <tr><td className="px-4 py-8 text-center text-text-muted" colSpan={9}>Loading…</td></tr>
+              <tr>
+                <td colSpan={selecting ? 10 : 9} className="px-4 py-10 text-center text-text-muted">Loading…</td>
+              </tr>
             ) : filtered.length === 0 ? (
-              <tr><td className="px-4 py-8 text-center text-text-muted" colSpan={9}>No organizations yet.</td></tr>
+              <tr>
+                <td colSpan={selecting ? 10 : 9} className="px-4 py-10 text-center text-text-muted">
+                  No organizations yet — click Add Organization to get started.
+                </td>
+              </tr>
             ) : filtered.map((row, index) => (
               <tr key={row.id} className="hover:bg-content-bg/50 align-top">
-                <td className="text-text-muted">{index + 1}</td>
-                <td className="font-medium text-text-navy">
-                  <Link className="line-clamp-2 text-button-blue hover:underline" to={`/extra-2/${row.id}`}>{row.name}</Link>
+                {selecting ? (
+                  <td className="bulk-check-cell">
+                    <input
+                      type="checkbox"
+                      className="bulk-check"
+                      aria-label={`Select ${row.name}`}
+                      checked={selectedIds.has(row.id)}
+                      onChange={() => {
+                        setSelectedIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(row.id)) next.delete(row.id);
+                          else next.add(row.id);
+                          return next;
+                        });
+                      }}
+                    />
+                  </td>
+                ) : null}
+                <td className="px-2 py-3 text-text-muted sm:px-3">{index + 1}</td>
+                <td className="px-2 py-3 font-medium text-text-navy sm:px-3">
+                  <Link
+                    className="line-clamp-2 text-button-blue hover:underline"
+                    to={`/extra-2/${row.id}?organizationName=${encodeURIComponent(row.name)}`}
+                  >
+                    {row.name}
+                  </Link>
+                  <div className="mt-1 text-xs text-text-muted md:hidden">{row.username || "—"}</div>
                 </td>
-                <td className="hidden md:table-cell">{row.username || "—"}</td>
-                <td className="font-mono text-xs sm:text-sm"><span className="break-all">{row.password || "—"}</span></td>
-                <td className="hidden lg:table-cell">{row.phone || "—"}</td>
-                <td className="hidden text-xs text-text-muted sm:table-cell">{formatCalendarDate(row.created_at)}</td>
-                <td>
+                <td className="hidden truncate px-2 py-3 text-text md:table-cell sm:px-3">{row.username || "—"}</td>
+                <td className="px-2 py-3 font-mono text-xs text-text sm:px-3 sm:text-sm">
+                  <span className="break-all">{row.password || "—"}</span>
+                </td>
+                <td className="hidden truncate px-2 py-3 text-text lg:table-cell sm:px-3">{row.phone || "—"}</td>
+                <td className="hidden px-2 py-3 text-xs text-text-muted sm:table-cell sm:px-3">{formatCalendarDate(row.created_at)}</td>
+                <td className="px-2 py-3 sm:px-3">
                   <ToggleSwitch checked={row.is_active !== false} disabled={togglingId === row.id} onChange={() => void toggleActive(row)} label={`${row.name} status`} />
                 </td>
-                <td>
+                <td className="px-2 py-3 sm:px-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-text-muted">Screen Capture Protection</span>
                     <ToggleSwitch
@@ -171,10 +247,14 @@ export function OrganizationPortalPage() {
                     />
                   </div>
                 </td>
-                <td>
+                <td className="px-2 py-3 sm:px-3">
                   <div className="flex items-center justify-end gap-1">
-                    <button type="button" title="Edit" className="rounded p-1.5 text-text-muted hover:bg-content-bg hover:text-button-blue" onClick={() => setEditTarget(row)}>Edit</button>
-                    <button type="button" title="Delete" className="rounded p-1.5 text-text-muted hover:bg-danger-soft hover:text-danger" onClick={() => setDeleteTarget(row)}>Delete</button>
+                    <button type="button" title="Edit" className="rounded p-1.5 text-text-muted hover:bg-content-bg hover:text-button-blue" onClick={() => setEditTarget(row)}>
+                      <EditIcon />
+                    </button>
+                    <button type="button" title="Delete" className="rounded p-1.5 text-text-muted hover:bg-danger-soft hover:text-danger" onClick={() => setDeleteTarget(row)}>
+                      <TrashIcon />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -201,6 +281,41 @@ export function OrganizationPortalPage() {
           }}
         />
       ) : null}
+      {otpOpen ? (
+        <OtpConfirmModal
+          title="Delete organizations"
+          description={`Remove ${filtered.filter((row) => selectedIds.has(row.id)).length} selected organization(s) and their related records.`}
+          confirmLabel="Delete selected"
+          onClose={() => {
+            if (!bulkDeleting) setOtpOpen(false);
+          }}
+          onRequestOtp={async () => {
+            const ids = filtered.filter((row) => selectedIds.has(row.id)).map((row) => row.id);
+            const { data } = await api.post<{ message?: string; devOtp?: string }>("/admin/organizations/bulk-delete/request-otp", { ids });
+            return { message: data.message, devOtp: data.devOtp };
+          }}
+          onConfirm={async (otp) => {
+            const ids = filtered.filter((row) => selectedIds.has(row.id)).map((row) => row.id);
+            setBulkDeleting(true);
+            try {
+              const { data } = await api.post<{ deleted?: string[] }>("/admin/organizations/bulk-delete", { ids, otp });
+              const deleted = new Set(data.deleted ?? ids);
+              setRows((current) => current.filter((row) => !deleted.has(row.id)));
+              setSelectedIds(new Set());
+              setSelecting(false);
+              setOtpOpen(false);
+            } catch (err) {
+              if (axios.isAxiosError(err)) {
+                const body = err.response?.data as ApiErrorBody | undefined;
+                throw new Error(body?.message ?? "Failed to delete organizations.");
+              }
+              throw new Error("Failed to delete organizations.");
+            } finally {
+              setBulkDeleting(false);
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -208,6 +323,7 @@ export function OrganizationPortalPage() {
 export function OrganizationDetailPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [name, setName] = useState("");
   const [link, setLink] = useState<string | null>(null);
   const [fields, setFields] = useState<FormField[]>([]);
@@ -266,6 +382,13 @@ export function OrganizationDetailPage() {
   useEffect(() => {
     void load().catch((err) => setError(messageOf(err, "Failed to open organization.")));
   }, [id]);
+
+  useEffect(() => {
+    if (!name || searchParams.get("organizationName") === name) return;
+    const next = new URLSearchParams(searchParams);
+    next.set("organizationName", name);
+    setSearchParams(next, { replace: true });
+  }, [name, searchParams, setSearchParams]);
 
   async function createForm(event: FormEvent) {
     event.preventDefault();
@@ -451,15 +574,19 @@ export function OrganizationDetailPage() {
 
   return (
     <div className="detail-page-shell admin-scroll-root">
-      <button type="button" className="mb-4 text-sm font-semibold text-button-blue" onClick={() => navigate("/extra-2")}>← Organizations</button>
-      <p className="mb-3 text-sm text-text-muted">{name}</p>
+      <Link
+        to="/extra-2"
+        className="mb-4 inline-flex w-fit max-w-full shrink-0 items-center gap-1.5 self-start text-sm font-semibold text-button-blue hover:underline"
+      >
+        ← Back to Organizations
+      </Link>
       <div className="detail-toolbar-shell">
         <div className="detail-toolbar-row1">
           <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={openFields}>Form Setup</button>
           <button type="button" className="detail-toolbar-btn" disabled={!id || fields.length === 0} onClick={() => excelInputRef.current?.click()}>Upload Excel</button>
           <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => setExcelOpen(true)}>Download Excel</button>
           <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => setPhotosOpen(true)}>Download Photos</button>
-          <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => setInfoOpen(true)}>Organization Info</button>
+          <button type="button" className="detail-toolbar-btn" style={{ wordBreak: "normal", whiteSpace: "nowrap", letterSpacing: 0 }} disabled={!id} onClick={() => setInfoOpen(true)}>Organization Info</button>
           <button type="button" className="detail-toolbar-btn" disabled={!id || submissions.length === 0} onClick={() => setDeleteOptionsOpen(true)}>Delete Options</button>
           <button type="button" className="detail-toolbar-btn detail-feature-card detail-feature-card-short detail-toolbar-short-slot" disabled={!id} onClick={() => navigate(`/crop-tool?organizationId=${encodeURIComponent(id)}&organizationName=${encodeURIComponent(name)}`)}>
             <span className="detail-feature-icon bg-white/20 text-white" aria-hidden>
@@ -571,7 +698,7 @@ export function OrganizationDetailPage() {
       {error ? <div className="alert-error">{error}</div> : null}
       {notice ? <div className="alert-success">{notice}</div> : null}
       {link ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-white p-4">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <input readOnly className="input-field min-w-0 flex-1" value={link} onFocus={(event) => event.currentTarget.select()} />
           <button type="button" className="btn-secondary" onClick={(event) => {
             const input = event.currentTarget.parentElement?.querySelector("input");
@@ -778,7 +905,7 @@ export function OrganizationDetailPage() {
         <form className="space-y-3 rounded-2xl border border-border bg-white p-4" onSubmit={(event) => void createForm(event)}>
           <h2 className="text-lg font-bold">Form Setup</h2>
           {drafts.map((field, index) => (
-            <div key={field.id ?? index} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
+            <div key={field.id ?? index} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto_auto] sm:items-end">
               <label className="text-sm">
                 <span className="mb-1.5 block font-medium">Field Name</span>
                 <input required className="input-field" value={field.fieldName} onChange={(event) => {
@@ -815,6 +942,27 @@ export function OrganizationDetailPage() {
                   }}
                 />
               </label>
+              <div className="flex gap-1 pb-2">
+                <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={index === 0} onClick={() => {
+                  setDrafts((current) => {
+                    const next = [...current];
+                    const [item] = next.splice(index, 1);
+                    next.splice(index - 1, 0, item);
+                    return next;
+                  });
+                }}>Up</button>
+                <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={index === drafts.length - 1} onClick={() => {
+                  setDrafts((current) => {
+                    const next = [...current];
+                    const [item] = next.splice(index, 1);
+                    next.splice(index + 1, 0, item);
+                    return next;
+                  });
+                }}>Down</button>
+                <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={drafts.length === 1} onClick={() => {
+                  setDrafts((current) => current.filter((_, itemIndex) => itemIndex !== index));
+                }}>Remove</button>
+              </div>
             </div>
           ))}
           <div className="flex flex-wrap gap-2">
@@ -1070,6 +1218,27 @@ function SearchIcon() {
     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <circle cx="11" cy="11" r="7" />
       <path d="M20 20l-3-3" />
+    </svg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
     </svg>
   );
 }

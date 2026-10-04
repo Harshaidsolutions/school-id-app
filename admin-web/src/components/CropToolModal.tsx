@@ -147,6 +147,10 @@ export function CropToolModal({
 
   useEffect(() => {
     if (!sizeHydrated) return;
+    if (!limitWidth.trim() && !limitHeight.trim()) {
+      const existing = readCropSize(storageKey);
+      if (existing.width || existing.height) return;
+    }
     writeCropSize(storageKey, { width: limitWidth, height: limitHeight, unit: limitUnit, locked: sizeLocked });
   }, [sizeHydrated, storageKey, limitWidth, limitHeight, limitUnit, sizeLocked]);
 
@@ -776,6 +780,15 @@ export function CropToolModal({
                       className="block h-auto w-auto max-w-full select-none object-contain"
                       style={{ maxWidth: frameLimit.width, maxHeight: frameLimit.height }}
                       onLoad={() => {
+                        const limit = limitRef.current;
+                        if (limit.width != null && limit.height != null) {
+                          cropRef.current = limitCrop(
+                            { cx: 0.5, cy: 0.5, w: 1, h: 1, angle: cropRef.current.angle },
+                            imageRef.current,
+                            limit
+                          );
+                          setCropArmed(true);
+                        }
                         paintFrame();
                         paintTone();
                       }}
@@ -871,7 +884,7 @@ export function CropToolModal({
                     />
                     <span ref={contrastLabelRef} className="w-8 text-right tabular-nums text-[#64748B]">0</span>
                   </label>
-                  <button type="button" className="btn-secondary mt-3 px-3 py-1.5 text-sm" onClick={resetTone}>Reset</button>
+                  <button type="button" className="btn-secondary mt-3 px-3 py-1.5 text-sm" onClick={resetTone}>Reset Adjustments</button>
                 </div>
               ) : null}
             </div>

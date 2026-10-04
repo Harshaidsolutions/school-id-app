@@ -113,7 +113,9 @@ import {
   downloadOrganizationExcel,
   downloadOrganizationSubmissionPhoto,
   getOrganizationWorkspaceAdmin,
+  bulkDeleteOrganizations,
   listOrganizations,
+  requestOrganizationBulkDeleteOtp,
   requestOrganizationDeleteOtp,
   replaceOrganizationSubmissionPhoto,
   requestOrganizationSubmissionDeleteOtp,
@@ -146,6 +148,8 @@ router.get("/profile", getAdminProfile);
 
 router.get("/organizations", listOrganizations);
 router.post("/organizations", createOrganization);
+router.post("/organizations/bulk-delete/request-otp", requestOrganizationBulkDeleteOtp);
+router.post("/organizations/bulk-delete", bulkDeleteOrganizations);
 router.patch("/organizations/:id", updateOrganization);
 router.patch("/organizations/:id/active", setOrganizationActive);
 router.patch("/organizations/:id/capture", setOrganizationCapturePolicy);

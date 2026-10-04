@@ -21,6 +21,7 @@ import { captureAllowedFromBody, parseBooleanField } from "../utils/parseBoolean
 import { requestAdminActionOtp, verifyAdminActionOtp } from "../utils/adminOtp";
 import { routeParam } from "../utils/routeParams";
 import { allocateOrganizationAddSerial } from "../utils/addSerial";
+import { bulkResourceId, parseBulkIds } from "../utils/bulkIds";
 
 const SALT_ROUNDS = 10;
 
@@ -369,6 +370,8 @@ export async function createOrganizationForm(req: Request, res: Response, next: 
       );
       if (!used.rows[0]) {
         await client.query(`DELETE FROM organization_form_fields WHERE id = $1`, [oldField.id]);
+      } else {
+        await client.query(`UPDATE organization_form_fields SET enabled = false WHERE id = $1`, [oldField.id]);
       }
     }
     await client.query("COMMIT");
@@ -973,6 +976,76 @@ export async function updateOrganization(req: Request, res: Response, next: Next
     }
     await client.query("COMMIT");
     res.json({ organization: updated.rows[0] });
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    next(error);
+  } finally {
+    client.release();
+  }
+}
+
+export async function requestOrganizationBulkDeleteOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const ids = parseBulkIds(req.body?.ids, "organization");
+    const scope = await requireAdminScope(req);
+    for (const organizationId of ids) await assertOrganizationOwned(scope, organizationId);
+    const otpResult = await requestAdminActionOtp({
+      adminUserId: req.user.userId,
+      adminEmail: await adminEmail(req.user.userId),
+      actionType: "delete_organization_bulk",
+      resourceId: bulkResourceId(ids),
+      emailSubject: "Confirm organization deletion",
+      emailIntro: `Confirm deletion of ${ids.length} organization${ids.length === 1 ? "" : "s"} and related records.`,
+      logPrefix: "[organization-bulk-delete]",
+    });
+    res.json({ status: "ok", ...otpResult });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function bulkDeleteOrganizations(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const client = await pool.connect();
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const ids = parseBulkIds(req.body?.ids, "organization");
+    const scope = await requireAdminScope(req);
+    for (const organizationId of ids) await assertOrganizationOwned(scope, organizationId);
+    const otp = String(req.body?.otp ?? "").trim();
+    await verifyAdminActionOtp({
+      adminUserId: req.user.userId,
+      actionType: "delete_organization_bulk",
+      resourceId: bulkResourceId(ids),
+      otp,
+    });
+    await client.query("BEGIN");
+    const locked = await client.query<{ id: string; owner_admin_id: string | null }>(
+      `SELECT id, owner_admin_id FROM organizations WHERE id = ANY($1::uuid[]) FOR UPDATE`,
+      [ids]
+    );
+    if (locked.rows.length !== ids.length) throw new AppError("One or more organizations were not found", 404);
+    if (!scope.isSuperAdmin) {
+      for (const row of locked.rows) {
+        if (row.owner_admin_id !== scope.adminUserId) throw new AppError("Organization not found", 404);
+      }
+    }
+    await client.query(`DELETE FROM users WHERE organization_id = ANY($1::uuid[])`, [ids]);
+    const deleted = await client.query<{ id: string }>(
+      `DELETE FROM organizations WHERE id = ANY($1::uuid[]) RETURNING id`,
+      [ids]
+    );
+    await client.query("COMMIT");
+    res.json({
+      status: "ok",
+      deleted: deleted.rows.map((row) => row.id),
+      deletedCount: deleted.rows.length,
+      failedCount: 0,
+    });
   } catch (error) {
     try {
       await client.query("ROLLBACK");

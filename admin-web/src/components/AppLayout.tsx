@@ -213,9 +213,12 @@ export function AppLayout() {
   const studentsSchoolName = searchParams.get("schoolName");
   const instituteId = searchParams.get("instituteId");
   const instituteName = searchParams.get("instituteName");
+  const organizationId = location.pathname.match(/^\/extra-2\/([^/]+)$/)?.[1] ?? "";
+  const organizationName = searchParams.get("organizationName");
+  const isOrganizationDetail = Boolean(organizationId);
 
   const inOrgContext = Boolean(studentsSchoolId || instituteId);
-  const hideSidebar = ORG_CONTEXT_PATHS.has(location.pathname) && inOrgContext;
+  const hideSidebar = (ORG_CONTEXT_PATHS.has(location.pathname) && inOrgContext) || isOrganizationDetail;
 
   useEffect(() => {
     setMobileOpen(false);
@@ -233,7 +236,9 @@ export function AppLayout() {
       ? studentsSchoolName
       : isInstituteDetail && instituteName
         ? instituteName
-        : baseTitle;
+        : isOrganizationDetail && organizationName
+          ? organizationName
+          : baseTitle;
 
   const isDashboard = location.pathname === "/";
 
@@ -314,7 +319,8 @@ export function AppLayout() {
     location.pathname === "/extra-2";
   const isOrgDetailListPage =
     (location.pathname === "/students" && Boolean(studentsSchoolId)) ||
-    (location.pathname === "/institute-members" && Boolean(instituteId));
+    (location.pathname === "/institute-members" && Boolean(instituteId)) ||
+    isOrganizationDetail;
   const useLockedPageScroll = isOrgListPage || isOrgDetailListPage || location.pathname === "/crop-tool";
   const showCenteredHeading = true;
 
@@ -383,10 +389,10 @@ export function AppLayout() {
             useLockedPageScroll ? "" : "sticky top-0"
           }`}
         >
-          {hideSidebar && (isSchoolDetail || isInstituteDetail) ? (
+          {hideSidebar && (isSchoolDetail || isInstituteDetail || isOrganizationDetail) ? (
             <button
               type="button"
-              onClick={() => navigate(isInstituteDetail ? "/institutes" : "/schools")}
+              onClick={() => navigate(isOrganizationDetail ? "/extra-2" : isInstituteDetail ? "/institutes" : "/schools")}
               className="rounded-lg p-2 text-text-navy hover:bg-content-bg lg:hidden"
               aria-label="Back to list"
             >
