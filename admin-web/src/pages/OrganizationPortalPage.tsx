@@ -25,11 +25,14 @@ type FormField = {
   id: string;
   field_name: string;
   field_type: string;
+  enabled?: boolean;
 };
 
 type DraftField = {
+  id?: string;
   fieldName: string;
   fieldType: "text" | "photo";
+  enabled: boolean;
 };
 
 type SubmissionRow = {
@@ -199,7 +202,7 @@ export function OrganizationDetailPage() {
   const [name, setName] = useState("");
   const [link, setLink] = useState<string | null>(null);
   const [fields, setFields] = useState<FormField[]>([]);
-  const [drafts, setDrafts] = useState<DraftField[]>([{ fieldName: "", fieldType: "text" }]);
+  const [drafts, setDrafts] = useState<DraftField[]>([{ fieldName: "", fieldType: "text", enabled: true }]);
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -251,7 +254,12 @@ export function OrganizationDetailPage() {
     try {
       const { data } = await api.post<{ form: { link: string; fields: FormField[] } }>(
         `/admin/organizations/${id}/forms`,
-        { fields: drafts.filter((field) => field.fieldName.trim()) }
+        { fields: drafts.filter((field) => field.fieldName.trim()).map((field) => ({
+          id: field.id,
+          fieldName: field.fieldName.trim(),
+          fieldType: field.fieldType,
+          enabled: field.enabled !== false,
+        })) }
       );
       setLink(data.form.link);
       setFields(data.form.fields);
@@ -263,8 +271,9 @@ export function OrganizationDetailPage() {
     }
   }
 
-  const photoFields = fields.filter((field) => field.field_type === "photo");
-  const textFields = fields.filter((field) => field.field_type !== "photo");
+  const activeFields = fields.filter((field) => field.enabled !== false);
+  const photoFields = activeFields.filter((field) => field.field_type === "photo");
+  const textFields = activeFields.filter((field) => field.field_type !== "photo");
   function hasAllPhotos(row: SubmissionRow) {
     if (photoFields.length === 0) return false;
     return photoFields.every((field) => row.values[field.id]?.hasPhoto);
@@ -288,9 +297,9 @@ export function OrganizationDetailPage() {
       if (photoFilter === "yes" && !captured) return false;
       if (photoFilter === "no" && captured) return false;
       if (!query) return true;
-      return fields.some((field) => (row.values[field.id]?.text ?? "").toLowerCase().includes(query));
+      return activeFields.some((field) => (row.values[field.id]?.text ?? "").toLowerCase().includes(query));
     });
-  }, [submissions, search, tab, fields, photoFields, textFields, photoFilter]);
+  }, [submissions, search, tab, activeFields, photoFields, textFields, photoFilter]);
 
   async function shareLink() {
     if (!link) return;
@@ -350,7 +359,7 @@ export function OrganizationDetailPage() {
   }
 
   function openFields() {
-    setDrafts(fields.length > 0 ? fields.map((field) => ({ fieldName: field.field_name, fieldType: field.field_type === "photo" ? "photo" : "text" })) : [{ fieldName: "", fieldType: "text" }]);
+    setDrafts(fields.length > 0 ? fields.map((field) => ({ id: field.id, fieldName: field.field_name, fieldType: field.field_type === "photo" ? "photo" : "text", enabled: field.enabled !== false })) : [{ fieldName: "", fieldType: "text", enabled: true }]);
     setBuilding(true);
   }
 
@@ -367,9 +376,23 @@ export function OrganizationDetailPage() {
           <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => setInfoOpen(true)}>Organization Info</button>
           <button type="button" className="detail-toolbar-btn" disabled={!id || submissions.length === 0} onClick={() => setSelecting(true)}>Delete Options</button>
           <button type="button" className="detail-toolbar-btn detail-feature-card detail-feature-card-short detail-toolbar-short-slot" disabled={!id} onClick={() => navigate(`/crop-tool?organizationId=${encodeURIComponent(id)}&organizationName=${encodeURIComponent(name)}`)}>
+            <span className="detail-feature-icon bg-white/20 text-white" aria-hidden>
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 3H3v3M18 3h3v3M6 21H3v-3M18 21h3v-3" />
+                <rect x="7" y="7" width="10" height="10" rx="1" />
+              </svg>
+            </span>
             <span className="detail-feature-label">CROPPING TOOL</span>
           </button>
           <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-feature-card detail-feature-card-long detail-toolbar-long-slot">
+            <span className="detail-feature-icon bg-white/20 text-white" aria-hidden>
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <circle cx="9" cy="11" r="1.6" />
+                <path d="M7 16.5c.6-1.2 1.5-1.8 2.4-1.8s1.6.5 2.1 1.3" />
+                <path d="M13 15h5" />
+              </svg>
+            </span>
             <span className="detail-feature-label">ID CARD GENERATOR</span>
           </div>
         </div>
@@ -388,7 +411,10 @@ export function OrganizationDetailPage() {
           </div>
           <div className="detail-toolbar-row2-search">
             <div className="relative min-w-0 flex-1">
-              <input className="input-field w-full text-sm" placeholder="Search…" value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search" />
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-muted">
+                <SearchIcon />
+              </span>
+              <input className="input-field w-full pl-10 text-sm" placeholder="Search…" value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search" />
             </div>
           </div>
           <button type="button" className="btn-secondary detail-toolbar-row2-filter" onClick={() => setFilterOpen((open) => !open)}>Filter</button>
@@ -454,25 +480,44 @@ export function OrganizationDetailPage() {
             input?.select();
           }}>Select</button>
           <button type="button" className="btn-secondary" onClick={() => void shareLink()}>Share</button>
+          <a className="btn-secondary" href={`https://wa.me/?text=${encodeURIComponent(link)}`} target="_blank" rel="noreferrer">WhatsApp</a>
         </div>
       ) : null}
-      <div className="overflow-x-auto rounded-2xl border border-border bg-white">
-        <table className="min-w-full text-sm">
-          <thead className="bg-[#F8FAFC] text-left">
+      <div className="students-table-scroll admin-scroll-panel">
+        <table className="students-data-table">
+          <thead>
             <tr>
-              {selecting ? <th className="px-4 py-3" /> : null}
-              <th className="px-4 py-3">S.No</th>
-              {fields.map((field) => <th key={field.id} className="px-4 py-3">{field.field_name}</th>)}
+              {selecting ? (
+                <th className="bulk-check-cell">
+                  <input
+                    type="checkbox"
+                    className="bulk-check"
+                    aria-label="Select all records"
+                    checked={visibleRows.length > 0 && visibleRows.every((row) => selectedIds.has(row.id))}
+                    onChange={() => {
+                      setSelectedIds((current) => {
+                        const all = visibleRows.every((row) => current.has(row.id));
+                        if (all) return new Set();
+                        return new Set(visibleRows.map((row) => row.id));
+                      });
+                    }}
+                  />
+                </th>
+              ) : null}
+              <th className="col-sno">S.NO.</th>
+              {activeFields.map((field) => (
+                <th key={field.id} className={field.field_type === "photo" ? "col-photo" : "col-field"}>{field.field_name}</th>
+              ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border bg-white">
             {visibleRows.length === 0 ? (
-              <tr><td className="px-4 py-8 text-text-muted" colSpan={Math.max(1, fields.length + (selecting ? 2 : 1))}>No submissions yet.</td></tr>
+              <tr><td className="px-4 py-10 text-center text-text-muted" colSpan={Math.max(1, activeFields.length + (selecting ? 2 : 1))}>No submissions yet.</td></tr>
             ) : visibleRows.map((row) => (
-              <tr key={row.id} className="border-t border-border">
+              <tr key={row.id} className="hover:bg-content-bg/50">
                 {selecting ? (
-                  <td className="px-4 py-3">
-                    <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => setSelectedIds((current) => {
+                  <td className="bulk-check-cell">
+                    <input type="checkbox" className="bulk-check" checked={selectedIds.has(row.id)} onChange={() => setSelectedIds((current) => {
                       const next = new Set(current);
                       if (next.has(row.id)) next.delete(row.id);
                       else next.add(row.id);
@@ -480,11 +525,11 @@ export function OrganizationDetailPage() {
                     })} aria-label={`Select record ${row.serial}`} />
                   </td>
                 ) : null}
-                <td className="px-4 py-3">{row.serial}</td>
-                {fields.map((field) => {
+                <td className="col-sno text-text-muted">{row.serial}</td>
+                {activeFields.map((field) => {
                   const value = row.values[field.id];
                   return (
-                    <td key={field.id} className="px-4 py-3">
+                    <td key={field.id} className={field.field_type === "photo" ? "col-photo" : "col-field"}>
                       {field.field_type === "photo" ? (
                         value?.hasPhoto ? <OrgPhoto organizationId={id} submissionId={row.id} fieldId={field.id} alt={field.field_name} /> : "—"
                       ) : value?.text || "—"}
@@ -517,8 +562,9 @@ export function OrganizationDetailPage() {
       ) : null}
       {building ? (
         <form className="space-y-3 rounded-2xl border border-border bg-white p-4" onSubmit={(event) => void createForm(event)}>
+          <h2 className="text-lg font-bold">Form Setup</h2>
           {drafts.map((field, index) => (
-            <div key={index} className="grid gap-3 sm:grid-cols-2">
+            <div key={field.id ?? index} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
               <label className="text-sm">
                 <span className="mb-1.5 block font-medium">Field Name</span>
                 <input required className="input-field" value={field.fieldName} onChange={(event) => {
@@ -535,11 +581,21 @@ export function OrganizationDetailPage() {
                   <option value="photo">Image/Photo</option>
                 </select>
               </label>
+              <label className="flex items-center gap-2 pb-2 text-sm">
+                <span className="font-medium">Enabled</span>
+                <ToggleSwitch
+                  checked={field.enabled !== false}
+                  label={`${field.fieldName || "Field"} enabled`}
+                  onChange={() => {
+                    setDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, enabled: item.enabled === false } : item));
+                  }}
+                />
+              </label>
             </div>
           ))}
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-secondary" onClick={() => setDrafts((current) => [...current, { fieldName: "", fieldType: "text" }])}>Add Field</button>
-            <button type="submit" className="btn-primary">Create</button>
+            <button type="button" className="btn-secondary" onClick={() => setDrafts((current) => [...current, { fieldName: "", fieldType: "text", enabled: true }])}>Add Field</button>
+            <button type="submit" className="btn-primary">{link ? "Save" : "Generate Link"}</button>
             <button type="button" className="btn-secondary" onClick={() => setBuilding(false)}>Cancel</button>
           </div>
         </form>
@@ -677,6 +733,15 @@ function OrgPhoto({
   }, [organizationId, submissionId, fieldId]);
   if (!src) return <span className="text-text-muted">Photo</span>;
   return <img alt={alt} className="h-14 w-14 rounded-lg object-cover" src={src} />;
+}
+
+function SearchIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3-3" />
+    </svg>
+  );
 }
 
 function messageOf(err: unknown, fallback: string): string {

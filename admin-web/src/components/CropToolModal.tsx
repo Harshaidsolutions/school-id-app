@@ -183,14 +183,14 @@ export function CropToolModal({
   }, [student?.id, student?.photo_url, student?.updated_at]);
 
   useEffect(() => {
-    if (browsing || !student?.photo_cropped) return;
+    if (browsing || cropView === "cropped" || !student?.photo_cropped) return;
     const nextIndex = gallery.findIndex((item) => item.photo_cropped !== true);
     if (nextIndex >= 0) {
       setIndex(nextIndex);
       return;
     }
     setBrowsing(true);
-  }, [browsing, student?.id, student?.photo_cropped, gallery]);
+  }, [browsing, cropView, student?.id, student?.photo_cropped, gallery]);
 
   useLayoutEffect(() => {
     if (toneStudentRef.current !== student?.id) {
@@ -416,7 +416,7 @@ export function CropToolModal({
   }
 
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (phase !== "edit" || !student || student.photo_cropped) return;
+    if (phase !== "edit" || !student || (student.photo_cropped && cropView !== "cropped")) return;
     const box = stageRef.current?.getBoundingClientRect();
     const point = pointOf(event);
     if (!box || !point) return;
@@ -558,7 +558,7 @@ export function CropToolModal({
   }
 
   async function quickSave() {
-    if (browsing || saving || applying || !student || student.photo_cropped) return;
+    if (browsing || saving || applying || !student || (student.photo_cropped && cropView !== "cropped")) return;
     if (!previewBlobRef.current) await applyOk();
     if (previewBlobRef.current) await saveCrop();
   }
@@ -685,7 +685,7 @@ export function CropToolModal({
                   aria-label="Rotate"
                   className="input-field mt-1"
                   defaultValue=""
-                  disabled={phase !== "edit" || student?.photo_cropped === true}
+                  disabled={phase !== "edit" || (student?.photo_cropped === true && cropView !== "cropped")}
                   onChange={(event) => {
                     const value = event.currentTarget.value;
                     event.currentTarget.value = "";
@@ -729,7 +729,6 @@ export function CropToolModal({
                         : null
                 }
                 onClick={() => {
-                  if (item.photo_cropped) return;
                   setIndex(itemIndex);
                   setCropArmed(false);
                   setBrowsing(false);
@@ -1049,14 +1048,10 @@ function GalleryThumb({
     <button
       ref={holder}
       type="button"
-      disabled={student.photo_cropped === true}
-      onClick={() => {
-        if (student.photo_cropped) return;
-        onClick();
-      }}
+      onClick={onClick}
       className={`flex w-full text-left ${
         large ? "flex-col gap-2 rounded-xl border bg-white p-3" : "items-center gap-2 rounded-lg border px-2 py-1.5"
-      } ${student.photo_cropped ? "cursor-default border-[#BBF7D0] bg-[#F0FDF4]" : active ? "border-[#8B5CF6] bg-[#F5F3FF]" : "border-[#E2E8F0]"}`}
+      } ${student.photo_cropped ? "border-[#BBF7D0] bg-[#F0FDF4]" : active ? "border-[#8B5CF6] bg-[#F5F3FF]" : "border-[#E2E8F0]"}`}
     >
       <span className={large ? "relative block h-40 w-full" : "relative block h-11 w-11 shrink-0"}>
         {src ? (

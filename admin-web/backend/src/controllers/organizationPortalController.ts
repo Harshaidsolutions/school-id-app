@@ -29,7 +29,12 @@ type FormField = {
   field_type: string;
   field_order: number;
   required: boolean;
+  enabled: boolean;
 };
+
+function enabledFields(fields: FormField[]): FormField[] {
+  return fields.filter((field) => field.enabled !== false);
+}
 
 type SubmissionValue = {
   submission_id: string;
@@ -131,7 +136,7 @@ async function reattachOrganizationSubmissions(organizationId: string, activeFor
 
 async function loadFields(formId: string): Promise<FormField[]> {
   const result = await pool.query<FormField>(
-    `SELECT id, field_name, field_type, field_order, required
+    `SELECT id, field_name, field_type, field_order, required, COALESCE(enabled, true) AS enabled
      FROM organization_form_fields
      WHERE form_id = $1
      ORDER BY field_order ASC, created_at ASC`,
@@ -294,9 +299,11 @@ export async function createOrganizationForm(req: Request, res: Response, next: 
     await assertOrganizationOwned(scope, organizationId);
     const rawFields = Array.isArray(req.body.fields) ? req.body.fields : [];
     const fields = rawFields
-      .map((field: { fieldName?: string; fieldType?: string; name?: string; type?: string }, index: number) => ({
+      .map((field: { id?: string; fieldName?: string; fieldType?: string; name?: string; type?: string; enabled?: boolean }, index: number) => ({
+        id: typeof field.id === "string" ? field.id : "",
         name: String(field.fieldName ?? field.name ?? "").trim(),
         type: String(field.fieldType ?? field.type ?? "").trim().toLowerCase(),
+        enabled: field.enabled !== false,
         order: index,
       }))
       .filter((field: { name: string; type: string }) => field.name);
@@ -329,22 +336,23 @@ export async function createOrganizationForm(req: Request, res: Response, next: 
     const currentFields = await loadFields(form.id);
     const kept = new Set<string>();
     for (const field of fields) {
-      const match = currentFields.find(
+      const matchById = field.id ? currentFields.find((item) => item.id === field.id && !kept.has(item.id)) : undefined;
+      const match = matchById ?? currentFields.find(
         (item) => !kept.has(item.id) && item.field_name.trim().toLowerCase() === field.name.toLowerCase()
       );
       if (match) {
         kept.add(match.id);
         await client.query(
           `UPDATE organization_form_fields
-           SET field_name = $1, field_type = $2, field_order = $3, required = true
-           WHERE id = $4`,
-          [field.name, field.type, field.order, match.id]
+           SET field_name = $1, field_type = $2, field_order = $3, required = true, enabled = $4
+           WHERE id = $5`,
+          [field.name, field.type, field.order, field.enabled, match.id]
         );
       } else {
         await client.query(
-          `INSERT INTO organization_form_fields (form_id, field_name, field_type, field_order, required)
-           VALUES ($1, $2, $3, $4, true)`,
-          [form.id, field.name, field.type, field.order]
+          `INSERT INTO organization_form_fields (form_id, field_name, field_type, field_order, required, enabled)
+           VALUES ($1, $2, $3, $4, true, $5)`,
+          [form.id, field.name, field.type, field.order, field.enabled]
         );
       }
     }
@@ -399,7 +407,7 @@ export async function getPublicOrganizationForm(req: Request, res: Response, nex
     if (!row || row.is_active !== true || row.organization_active === false) {
       throw new AppError("This form is not available", 404);
     }
-    const fields = await loadFields(row.id);
+    const fields = enabledFields(await loadFields(row.id));
     res.json({
       organizationName: row.organization_name,
       fields: fields.map((field) => ({
@@ -432,7 +440,7 @@ export async function submitPublicOrganizationForm(req: Request, res: Response, 
     if (!row || row.is_active !== true || row.organization_active === false) {
       throw new AppError("This form is not available", 404);
     }
-    const fields = await loadFields(row.id);
+    const fields = enabledFields(await loadFields(row.id));
     const files = Array.isArray(req.files) ? req.files : [];
     const fileByField = new Map(files.map((file) => [file.fieldname, file]));
     const body = req.body as Record<string, unknown>;
@@ -566,7 +574,7 @@ export async function uploadOrganizationExcel(req: Request, res: Response, next:
     await assertOrganizationOwned(scope, organizationId);
     const current = await activeOrganizationForm(organizationId);
     if (!current) throw new AppError("Create the organization fields before uploading Excel", 400);
-    const fields = await loadFields(current.id);
+    const fields = enabledFields(await loadFields(current.id));
     const textFields = fields.filter((field) => field.field_type === "text");
     if (textFields.length === 0) throw new AppError("Add at least one text field before uploading Excel", 400);
     const workbook = XLSX.read(file.buffer, { type: "buffer" });
@@ -613,7 +621,7 @@ export async function downloadOrganizationExcel(req: Request, res: Response, nex
     if (!organizationId) throw new AppError("Organization id is required", 400);
     await assertOrganizationOwned(scope, organizationId);
     const current = await activeOrganizationForm(organizationId);
-    const fields = current ? await loadFields(current.id) : [];
+    const fields = enabledFields(current ? await loadFields(current.id) : []);
     const submissions = current ? await loadSubmissionRows(organizationId, current.id) : [];
     const rows = submissions.map((row) => {
       const record: Record<string, string> = { "S.No": String(row.serial) };
@@ -702,7 +710,7 @@ export async function getOrganizationAppWorkspace(req: Request, res: Response, n
     if (!organization || organization.is_active === false) throw new AppError("Organization not found", 404);
     const current = await activeOrganizationForm(organizationId);
     if (current) await reattachOrganizationSubmissions(organizationId, current.id);
-    const fields = current ? await loadFields(current.id) : [];
+    const fields = enabledFields(current ? await loadFields(current.id) : []);
     const submissions = current ? await loadSubmissionRows(organizationId, current.id) : [];
     res.json({
       organizationName: organization.name,
@@ -743,7 +751,7 @@ export async function updateOrganizationAppSubmission(req: Request, res: Respons
     const values = incoming as Record<string, unknown>;
     await client.query("BEGIN");
     for (const field of fields) {
-      if (field.field_type !== "text") continue;
+      if (field.enabled === false || field.field_type !== "text") continue;
       if (isLockedPhotoNumber(field.field_name)) continue;
       if (!Object.prototype.hasOwnProperty.call(values, field.id)) continue;
       const text = String(values[field.id] ?? "").trim();

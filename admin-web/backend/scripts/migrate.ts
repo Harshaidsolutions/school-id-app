@@ -841,6 +841,7 @@ async function migrate() {
     );
     CREATE INDEX IF NOT EXISTS idx_organization_form_fields_form
       ON organization_form_fields (form_id, field_order);
+    ALTER TABLE organization_form_fields ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT true;
 
     CREATE TABLE IF NOT EXISTS organization_submissions (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

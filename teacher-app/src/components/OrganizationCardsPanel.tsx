@@ -5,6 +5,7 @@ import api, { getErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { fonts } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
+import { openWhatsAppShare } from "../utils/whatsappBusiness";
 
 type Field = { id: string; field_name: string; field_type: string };
 type Submission = {
@@ -125,10 +126,12 @@ export function OrganizationCardsPanel() {
         <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 12, backgroundColor: colors.surface }}>
           <Text style={{ fontFamily: fonts.medium, color: colors.text }} numberOfLines={2}>{link}</Text>
           <Pressable
-            onPress={() => void Share.share({ message: link, url: link })}
+            onPress={() => {
+              void openWhatsAppShare(link).catch(() => Share.share({ message: link, url: link }));
+            }}
             style={{ marginTop: 10, alignSelf: "flex-start", backgroundColor: colors.brandGreen, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 }}
           >
-            <Text style={{ color: "#fff", fontFamily: fonts.semiBold }}>Share</Text>
+            <Text style={{ color: "#fff", fontFamily: fonts.semiBold }}>WhatsApp</Text>
           </Pressable>
         </View>
       ) : (
