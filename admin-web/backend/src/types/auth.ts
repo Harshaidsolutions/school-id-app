@@ -14,6 +14,7 @@ export interface User {
 }
 
 export interface JWTPayload {
+  credentialVersion?: string;
   userId: string;
   role: UserRole;
   schoolId: string | null;

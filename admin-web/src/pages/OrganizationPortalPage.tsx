@@ -420,7 +420,7 @@ export function OrganizationDetailPage() {
   const photoFields = activeFields.filter((field) => field.field_type === "photo");
   const imageFields = photoFields.filter((field) => !isSignatureLabel(field.field_name));
   const signatureFields = photoFields.filter((field) => isSignatureLabel(field.field_name));
-  const captureFields = imageFields.length > 0 ? imageFields : photoFields;
+  const captureFields = imageFields;
   const textFields = activeFields.filter((field) => field.field_type !== "photo" && !isPhotoNumberLabel(field.field_name));
   const numberLabel = activeFields.find((field) => isPhotoNumberLabel(field.field_name))?.field_name ?? "Photo Number";
   function hasAllPhotos(row: SubmissionRow) {
@@ -428,7 +428,7 @@ export function OrganizationDetailPage() {
     return captureFields.every((field) => row.values[field.id]?.hasPhoto);
   }
   function missingData(row: SubmissionRow) {
-    return textFields.some((field) => !(row.values[field.id]?.text ?? "").trim());
+    return textFields.some((field) => field.required !== false && !(row.values[field.id]?.text ?? "").trim());
   }
   const counts = {
     all: submissions.length,

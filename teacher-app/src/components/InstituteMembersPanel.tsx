@@ -135,17 +135,13 @@ export function InstituteMembersPanel({
     () => students.filter((s) => studentHasPhoto(s)).length,
     [students]
   );
-  const pendingCount = useMemo(
-    () => students.filter((s) => !studentHasPhoto(s) || studentPendingData(s, true)).length,
-    [students]
-  );
   const tabs: { key: TabKey; label: string; color: string; count: number }[] = [
     { key: "all", label: "All", color: colors.brandGreen, count: students.length },
     {
       key: "pending-photos",
       label: "Pending",
       color: colors.brandGreen,
-      count: pendingCount,
+      count: pendingPhotoCount,
     },
     ...(showCapturedSection
       ? [

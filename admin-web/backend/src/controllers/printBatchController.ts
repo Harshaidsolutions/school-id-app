@@ -1,3 +1,4 @@
+import { requireAdminScope, assertSchoolOwnedByAdmin } from "../utils/adminScope";
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
@@ -64,6 +65,8 @@ export async function createPrintBatch(
     if (!schoolId) {
       throw new AppError("Unable to determine school for this print batch", 400);
     }
+
+    await assertSchoolOwnedByAdmin(await requireAdminScope(req), schoolId);
 
     // Create the batch record first so we can name the PDF by its id.
     const batchInsert = await pool.query<{ id: string }>(
@@ -147,6 +150,8 @@ export async function listPrintBatches(
     if (!schoolId) {
       throw new AppError("schoolId is required", 400);
     }
+
+    await assertSchoolOwnedByAdmin(await requireAdminScope(req), String(schoolId));
 
     const result = await pool.query(
       `SELECT id, school_id, student_ids, pdf_url, status, created_by, created_at

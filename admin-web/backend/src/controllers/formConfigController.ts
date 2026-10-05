@@ -1,3 +1,5 @@
+import type { PoolClient } from "pg";
+import { requireAdminScope, assertSchoolOwnedByAdmin, assertInstituteOwnedByAdmin } from "../utils/adminScope";
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
@@ -355,13 +357,14 @@ export async function clearFormConfigForOrg(options: {
 
 export async function persistFormConfigFields(
   options: { schoolId?: string; instituteId?: string },
-  fields: FormFieldConfig[]
+  fields: FormFieldConfig[],
+  db: Pick<PoolClient, "query"> = pool
 ): Promise<void> {
   const { schoolId, instituteId } = options;
   const payload = JSON.stringify(sortFormFields(fields));
 
   if (schoolId) {
-    const updated = await pool.query(
+    const updated = await db.query(
       `UPDATE form_configs
        SET fields = $2::jsonb, updated_at = NOW()
        WHERE school_id = $1::uuid
@@ -369,7 +372,7 @@ export async function persistFormConfigFields(
       [schoolId, payload]
     );
     if ((updated.rowCount ?? 0) === 0) {
-      await pool.query(
+      await db.query(
         `INSERT INTO form_configs (school_id, institute_id, fields)
          VALUES ($1::uuid, NULL, $2::jsonb)`,
         [schoolId, payload]
@@ -379,7 +382,7 @@ export async function persistFormConfigFields(
   }
 
   if (instituteId) {
-    const updated = await pool.query(
+    const updated = await db.query(
       `UPDATE form_configs
        SET fields = $2::jsonb, updated_at = NOW()
        WHERE institute_id = $1::uuid
@@ -387,7 +390,7 @@ export async function persistFormConfigFields(
       [instituteId, payload]
     );
     if ((updated.rowCount ?? 0) === 0) {
-      await pool.query(
+      await db.query(
         `INSERT INTO form_configs (school_id, institute_id, fields)
          VALUES (NULL, $1::uuid, $2::jsonb)`,
         [instituteId, payload]
@@ -485,6 +488,11 @@ export async function getFormConfig(
     if (!schoolId && !instituteId) {
       throw new AppError("schoolId or instituteId is required", 400);
     }
+    if (schoolId && instituteId) throw new AppError("Provide only one organization", 400);
+    const scope = await requireAdminScope(req);
+    if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
+    else await assertInstituteOwnedByAdmin(scope, instituteId!);
+
 
     let fields = await ensureFormConfigForOrg({
       schoolId,
@@ -545,6 +553,11 @@ export async function syncFormConfig(
     if (!schoolId && !instituteId) {
       throw new AppError("schoolId or instituteId is required", 400);
     }
+    if (schoolId && instituteId) throw new AppError("Provide only one organization", 400);
+    const scope = await requireAdminScope(req);
+    if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
+    else await assertInstituteOwnedByAdmin(scope, instituteId!);
+
 
     const fields = await ensureFormConfigForOrg({
       schoolId,
@@ -579,6 +592,11 @@ export async function putFormConfig(
     if (!schoolId && !instituteId) {
       throw new AppError("schoolId or instituteId is required", 400);
     }
+    if (schoolId && instituteId) throw new AppError("Provide only one organization", 400);
+    const scope = await requireAdminScope(req);
+    if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
+    else await assertInstituteOwnedByAdmin(scope, instituteId!);
+
     if (!Array.isArray(fields) || fields.length === 0) {
       throw new AppError("fields array is required", 400);
     }
@@ -685,7 +703,8 @@ export async function loadFormConfigForOrg(options: {
 /** After Excel upload, persist the parsed upload schema into form config. */
 export async function syncFormConfigFromExcelFields(
   options: { schoolId?: string | null; instituteId?: string | null },
-  fields: FormFieldConfig[]
+  fields: FormFieldConfig[],
+  client?: PoolClient
 ): Promise<FormFieldConfig[]> {
   const { schoolId, instituteId } = options;
   if (!schoolId && !instituteId) return [];
@@ -697,15 +716,18 @@ export async function syncFormConfigFromExcelFields(
     });
   }
 
-  const existing = await ensureFormConfigForOrg({
-    schoolId: schoolId ?? undefined,
-    instituteId: instituteId ?? undefined,
-  });
+  const existing = client
+    ? normalizeSavedFields((await client.query<{ fields: unknown }>(
+        `SELECT fields FROM form_configs WHERE ${schoolId ? "school_id" : "institute_id"} = $1::uuid LIMIT 1`,
+        [schoolId || instituteId]
+      )).rows[0]?.fields)
+    : await ensureFormConfigForOrg({ schoolId: schoolId ?? undefined, instituteId: instituteId ?? undefined });
   const merged = mergeExcelSchemaWithSavedFields(existing, fields);
 
   await persistFormConfigFields(
     { schoolId: schoolId ?? undefined, instituteId: instituteId ?? undefined },
-    merged
+    merged,
+    client ?? pool
   );
   return sortFormFields(merged);
 }

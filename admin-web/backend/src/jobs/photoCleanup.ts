@@ -23,6 +23,7 @@ export interface CleanupResult {
  */
 export async function runPhotoCleanup(): Promise<CleanupResult> {
   const result: CleanupResult = { scanned: 0, deleted: 0, failures: [] };
+  if (process.env.PHOTO_CLEANUP_ENABLED !== "true") return result;
 
   const candidates = await pool.query<{
     id: string;
@@ -80,6 +81,7 @@ export async function runPhotoCleanup(): Promise<CleanupResult> {
  * Override with the PHOTO_CLEANUP_CRON env var (standard cron expression).
  */
 export function schedulePhotoCleanup(): void {
+  if (process.env.PHOTO_CLEANUP_ENABLED !== "true") return;
   const expression = process.env.PHOTO_CLEANUP_CRON || "0 2 * * *";
 
   if (!cron.validate(expression)) {

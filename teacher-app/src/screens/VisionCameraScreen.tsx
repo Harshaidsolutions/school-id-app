@@ -271,8 +271,6 @@ export function VisionCameraScreen({ navigation, route }: Props) {
           onFacesDetected={onFacesDetected}
           cameraFacing={facing}
           autoMode
-          windowWidth={screenW}
-          windowHeight={screenH}
           performanceMode="fast"
           trackingEnabled
           minFaceSize={0.12}

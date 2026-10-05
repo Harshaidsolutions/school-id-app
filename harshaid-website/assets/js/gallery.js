@@ -42,7 +42,7 @@ async function loadPublicShowcase() {
                   <span class="file-mark">Brochure</span>
                 </a>`;
               }
-              return `<button class="brochure-card" type="button" data-i="${imageIndex}">
+              return `<button class="brochure-card" type="button" aria-label="Open brochure ${imageIndex + 1}" data-i="${imageIndex}">
                 <img src="${escapeHtml(src)}" alt="" loading="lazy" />
               </button>`;
             })

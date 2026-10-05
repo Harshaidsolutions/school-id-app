@@ -938,7 +938,7 @@ export async function updateTeacherStudent(
 
     res.status(200).json({
       status: "ok",
-      student: toStudentJson(row),
+      student: await presentStudent(row),
     });
   } catch (error) {
     next(error);

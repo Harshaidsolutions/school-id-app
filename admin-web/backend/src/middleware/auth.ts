@@ -1,3 +1,5 @@
+import { createHmac } from "node:crypto";
+import { pool } from "../config/database";
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { AppError } from "./errorHandler";
@@ -11,11 +13,11 @@ function getJwtSecret(): string {
   return secret;
 }
 
-export function authMiddleware(
+export async function authMiddleware(
   req: Request,
   _res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   try {
     const header = req.headers.authorization;
 
@@ -34,15 +36,28 @@ export function authMiddleware(
       throw new AppError("Invalid token payload", 401);
     }
 
+    const result = await pool.query<{
+      role: UserRole; school_id: string | null; institute_id: string | null;
+      organization_id: string | null; assigned_class: string | null;
+      assigned_section: string | null; is_super_admin: boolean; is_active: boolean;
+      password_hash: string;
+    }>(`SELECT role, school_id, institute_id, organization_id, assigned_class,
+               assigned_section, is_super_admin, is_active, password_hash
+        FROM users WHERE id = $1::uuid LIMIT 1`, [decoded.userId]);
+    const current = result.rows[0];
+    if (!current || current.is_active === false || current.role !== decoded.role ||
+        decoded.credentialVersion !== credentialVersion(current.password_hash)) {
+      throw new AppError("Session expired. Please sign in again.", 401);
+    }
     const user: AuthUser = {
       userId: decoded.userId,
-      role: decoded.role,
-      schoolId: decoded.schoolId ?? null,
-      instituteId: decoded.instituteId ?? null,
-      organizationId: decoded.organizationId ?? null,
-      assignedClass: decoded.assignedClass ?? null,
-      assignedSection: decoded.assignedSection ?? null,
-      isSuperAdmin: decoded.isSuperAdmin === true,
+      role: current.role,
+      schoolId: current.school_id,
+      instituteId: current.institute_id,
+      organizationId: current.organization_id,
+      assignedClass: current.assigned_class,
+      assignedSection: current.assigned_section,
+      isSuperAdmin: current.is_super_admin === true,
     };
 
     req.user = user;
@@ -63,7 +78,7 @@ export function authMiddleware(
       return;
     }
 
-    next(new AppError("Authentication failed", 401));
+    next(error);
   }
 }
 
@@ -85,4 +100,9 @@ export function requireRole(...roles: UserRole[]) {
 
 export function signAuthToken(payload: JWTPayload): string {
   return jwt.sign(payload, getJwtSecret(), { expiresIn: "7d" });
+}
+
+/** Password changes invalidate previously issued tokens without exposing a password hash. */
+export function credentialVersion(passwordHash: string): string {
+  return createHmac("sha256", getJwtSecret()).update(passwordHash).digest("hex");
 }

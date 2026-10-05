@@ -1,9 +1,10 @@
+import { requireSuperAdmin, requireAdminScope, assertSchoolOwnedByAdmin } from "../utils/adminScope";
 import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
-import { signAuthToken } from "../middleware/auth";
+import { signAuthToken, credentialVersion } from "../middleware/auth";
 import { sendEmail } from "../utils/email";
 import {
   LoginRequest,
@@ -150,6 +151,7 @@ export async function login(
       assignedClass: user.assigned_class,
       assignedSection: user.assigned_section,
       isSuperAdmin: isSuperAdmin || undefined,
+      credentialVersion: credentialVersion(user.password_hash),
     });
 
     const profile = user as User & {
@@ -224,8 +226,8 @@ export async function setupFirstAdmin(
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     const inserted = await pool.query<User>(
-      `INSERT INTO users (email, password_hash, role, school_id, assigned_class, assigned_section)
-       VALUES ($1, $2, 'admin', NULL, NULL, NULL)
+      `INSERT INTO users (email, password_hash, role, school_id, assigned_class, assigned_section, is_super_admin)
+       VALUES ($1, $2, 'admin', NULL, NULL, NULL, true)
        RETURNING id, email, password_hash, role, school_id, assigned_class, assigned_section, created_at`,
       [email.toLowerCase(), passwordHash]
     );
@@ -298,6 +300,9 @@ export async function register(
     if (password.length < 8) {
       throw new AppError("Password must be at least 8 characters", 400);
     }
+
+    if (role === "admin") await requireSuperAdmin(req);
+    else await assertSchoolOwnedByAdmin(await requireAdminScope(req), schoolId);
 
     const existing = await pool.query<{ id: string }>(
       `SELECT id FROM users WHERE lower(email) = lower($1) LIMIT 1`,

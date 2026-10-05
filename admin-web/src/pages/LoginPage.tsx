@@ -104,7 +104,6 @@ export function LoginPage() {
       brandAccent
       titleClassName="text-[#4CAF50]"
       title="Welcome Admin"
-      onTitlePress={() => navigate("/forgot-password")}
       footer={
         <SuperAdminContacts
           email={contacts.email}
@@ -178,6 +177,7 @@ export function LoginPage() {
         <button type="submit" disabled={loading} className="btn-primary h-10 w-full text-[15px]">
           {loading ? "Logging in…" : "Login"}
         </button>
+        <button type="button" className="w-full text-sm underline" onClick={() => navigate("/forgot-password")}>Forgot password?</button>
       </form>
     </LoginPageLayout>
   );
@@ -230,7 +230,7 @@ function SuperAdminContacts({
           </span>
           <span className="min-w-0 text-left">
             <span className="block text-[11px] font-semibold text-[#1E293B]">Email</span>
-            <span className="block truncate text-[11px] font-medium text-[#64748B]">{mail}</span>
+            <span className="block break-all text-[11px] font-medium text-[#64748B]">{mail}</span>
           </span>
         </a>
       ) : null}

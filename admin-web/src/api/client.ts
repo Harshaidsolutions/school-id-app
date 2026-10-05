@@ -18,6 +18,7 @@ export function getAuthToken(): string | null {
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 120000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -31,6 +32,15 @@ api.interceptors.request.use((config) => {
     delete config.headers["Content-Type"];
   }
   return config;
+});
+
+api.interceptors.response.use((response) => response, (error) => {
+  if (error.response?.status === 401 && authToken &&
+      error.config?.headers?.Authorization === `Bearer ${authToken}`) {
+    setAuthToken(null);
+    window.dispatchEvent(new Event("admin-session-expired"));
+  }
+  return Promise.reject(error);
 });
 
 export default api;

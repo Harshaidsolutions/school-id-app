@@ -163,7 +163,7 @@ export function BulkUploadModal({
         ) : showReplaceConfirm ? (
           <div className="space-y-4 text-center">
             <p className="text-sm text-text-navy">
-              An Excel file already exists. Do you want to replace it?
+              Update matching records and keep photos, or replace uncaptured records. Replacement removes existing records and form settings.
             </p>
             {errorBlock()}
             <div className="flex gap-3">
@@ -186,6 +186,10 @@ export function BulkUploadModal({
                 onClick={() => void performUpload(true)}
               >
                 {loading ? "Uploading…" : "Replace"}
+              </button>
+              <button type="button" className="btn-primary flex-1" disabled={loading || !file}
+                onClick={() => void performUpload(false)}>
+                Update / Add
               </button>
             </div>
           </div>

@@ -56,9 +56,9 @@ export function isNonDataField(field: { key: string; label?: string }): boolean 
 
 export function requiredDataFields(
   fields: FormFieldConfig[],
-  _visibility?: Record<string, boolean> | null
+  visibility?: Record<string, boolean> | null
 ): FormFieldConfig[] {
-  return fields.filter((field) => field.enabled !== false && !isNonDataField(field));
+  return fields.filter((field) => field.enabled !== false && visibility?.[field.key] !== false && !isNonDataField(field));
 }
 
 export function hasAllRequiredFieldData(
@@ -68,6 +68,7 @@ export function hasAllRequiredFieldData(
   institute: boolean
 ): boolean {
   const required = requiredDataFields(fields, visibility);
+  if (fields.length > 0 && required.length === 0) return true;
   if (required.length === 0) {
     return hasCompleteRequiredData({
       studentName: record.student_name == null ? "" : String(record.student_name),

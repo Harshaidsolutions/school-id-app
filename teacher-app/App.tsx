@@ -75,7 +75,7 @@ const AppText = Text as TextWithDefaults;
 
 if (AppText.defaultProps == null) AppText.defaultProps = {};
 
-AppText.defaultProps.allowFontScaling = false;
+AppText.defaultProps.allowFontScaling = true;
 
 AppText.defaultProps.maxFontSizeMultiplier = MAX_FONT_MULT;
 
@@ -91,7 +91,7 @@ const AppInput = TextInput as TextWithDefaults;
 
 if (AppInput.defaultProps == null) AppInput.defaultProps = {};
 
-AppInput.defaultProps.allowFontScaling = false;
+AppInput.defaultProps.allowFontScaling = true;
 
 AppInput.defaultProps.maxFontSizeMultiplier = MAX_FONT_MULT;
 

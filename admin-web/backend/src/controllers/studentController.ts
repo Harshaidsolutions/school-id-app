@@ -163,6 +163,10 @@ export async function bulkUploadStudents(
       throw new AppError("Excel file is required (field name: file)", 400);
     }
 
+    const scope = await requireAdminScope(req);
+    if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
+    else await assertInstituteOwnedByAdmin(scope, instituteId!);
+
     const orgScope = schoolId ? { schoolId } : { instituteId };
 
     let rows;
@@ -201,8 +205,17 @@ export async function bulkUploadStudents(
     );
 
     await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [schoolId || instituteId]);
 
     if (replaceExisting) {
+      const captured = await client.query(
+        `SELECT id FROM students WHERE ${schoolId ? "school_id" : "institute_id"} = $1
+         AND (NULLIF(btrim(photo_url), '') IS NOT NULL OR status = 'printed') LIMIT 1`,
+        [schoolId || instituteId]
+      );
+      if (captured.rowCount) {
+        throw new AppError("This Excel contains captured or printed records. Use a non-replacing upload to preserve photos and record IDs.", 409);
+      }
       if (schoolId) {
         await client.query(`DELETE FROM students WHERE school_id = $1`, [schoolId]);
         await client.query(`DELETE FROM import_batches WHERE school_id = $1`, [schoolId]);
@@ -346,11 +359,10 @@ export async function bulkUploadStudents(
       }
     }
 
-    await client.query("COMMIT");
-
     if (uploadSchema.length > 0) {
-      await syncFormConfigFromExcelFields(orgScope, uploadSchema);
+      await syncFormConfigFromExcelFields(orgScope, uploadSchema, client);
     }
+    await client.query("COMMIT");
 
     res.status(replaceExisting ? 200 : 201).json({
       success: true,
@@ -409,6 +421,10 @@ export async function createStudentAdmin(
     if (schoolId && instituteId) {
       throw new AppError("Provide either schoolId or instituteId, not both", 400);
     }
+
+    const scope = await requireAdminScope(req);
+    if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
+    else await assertInstituteOwnedByAdmin(scope, instituteId!);
 
     const orgScope = schoolId ? { schoolId } : { instituteId };
     const formFields = await loadFormConfigForOrg(orgScope);
@@ -1189,6 +1205,7 @@ export async function requestSchoolExcelDeleteOtp(
 
     const schoolId = routeParam(req.params.schoolId);
     if (!schoolId) throw new AppError("School id is required", 400);
+    await assertSchoolOwnedByAdmin(await requireAdminScope(req), schoolId);
 
     const schoolResult = await pool.query<{ name: string }>(
       `SELECT name FROM schools WHERE id = $1 LIMIT 1`,
@@ -1226,6 +1243,7 @@ export async function deleteSchoolExcelData(
 
     const schoolId = routeParam(req.params.schoolId);
     if (!schoolId) throw new AppError("School id is required", 400);
+    await assertSchoolOwnedByAdmin(await requireAdminScope(req), schoolId);
 
     const otp = String(req.body?.otp ?? "").trim();
     const body = req.body as Record<string, unknown>;
@@ -1290,6 +1308,7 @@ export async function requestInstituteExcelDeleteOtp(
 
     const instituteId = routeParam(req.params.instituteId);
     if (!instituteId) throw new AppError("Institute id is required", 400);
+    await assertInstituteOwnedByAdmin(await requireAdminScope(req), instituteId);
 
     const instituteResult = await pool.query<{ name: string }>(
       `SELECT name FROM institutes WHERE id = $1 LIMIT 1`,
@@ -1327,6 +1346,7 @@ export async function deleteInstituteExcelData(
 
     const instituteId = routeParam(req.params.instituteId);
     if (!instituteId) throw new AppError("Institute id is required", 400);
+    await assertInstituteOwnedByAdmin(await requireAdminScope(req), instituteId);
 
     const otp = String(req.body?.otp ?? "").trim();
     const body = req.body as Record<string, unknown>;
@@ -1385,6 +1405,7 @@ export async function requestSchoolPhotosDeleteOtp(
 
     const schoolId = routeParam(req.params.schoolId);
     if (!schoolId) throw new AppError("School id is required", 400);
+    await assertSchoolOwnedByAdmin(await requireAdminScope(req), schoolId);
 
     const schoolResult = await pool.query<{ name: string }>(
       `SELECT name FROM schools WHERE id = $1 LIMIT 1`,
@@ -1423,6 +1444,7 @@ export async function deleteSchoolPhotosData(
 
     const schoolId = routeParam(req.params.schoolId);
     if (!schoolId) throw new AppError("School id is required", 400);
+    await assertSchoolOwnedByAdmin(await requireAdminScope(req), schoolId);
 
     const otp = String(req.body?.otp ?? "").trim();
     const filter = deleteFilterSql(req.body as Record<string, unknown>, 2);
@@ -1491,6 +1513,7 @@ export async function requestInstitutePhotosDeleteOtp(
 
     const instituteId = routeParam(req.params.instituteId);
     if (!instituteId) throw new AppError("Institute id is required", 400);
+    await assertInstituteOwnedByAdmin(await requireAdminScope(req), instituteId);
 
     const instituteResult = await pool.query<{ name: string }>(
       `SELECT name FROM institutes WHERE id = $1 LIMIT 1`,
@@ -1529,6 +1552,7 @@ export async function deleteInstitutePhotosData(
 
     const instituteId = routeParam(req.params.instituteId);
     if (!instituteId) throw new AppError("Institute id is required", 400);
+    await assertInstituteOwnedByAdmin(await requireAdminScope(req), instituteId);
 
     const otp = String(req.body?.otp ?? "").trim();
     const filter = deleteFilterSql(req.body as Record<string, unknown>, 2);
@@ -1613,7 +1637,7 @@ async function assertStudentsInOrg(
   instituteId: string
 ): Promise<void> {
   if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
-  else await assertInstituteOwnedByAdmin(scope, instituteId);
+  else await assertInstituteOwnedByAdmin(scope, instituteId!);
 
   const found = await pool.query<{
     id: string;

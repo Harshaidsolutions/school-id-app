@@ -271,23 +271,7 @@ export function EditStudentScreen({ navigation, route }: Props) {
         payload
       );
 
-      const updated: TeacherStudent = {
-        ...currentStudent,
-        ...data.student,
-        student_name,
-        class_section: classSection.trim(),
-        roll_no: rollNo.trim() || null,
-        dob: dob.trim() || null,
-        gender: gender.trim() || null,
-        blood_group: bloodGroup.trim() || null,
-        parent_name: fatherName.trim() || null,
-        parent_phone: parentPhone.trim() || null,
-        address: address.trim() || null,
-        father_name: fatherName.trim() || null,
-        custom_1: custom1.trim() || null,
-        custom_2: custom2.trim() || null,
-        custom_3: custom3.trim() || null,
-      };
+      const updated: TeacherStudent = { ...currentStudent, ...data.student };
 
       setSavedStudent(updated);
       setCurrentStudent(updated);

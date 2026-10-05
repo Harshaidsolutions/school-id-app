@@ -889,17 +889,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               </span>
               <span className="detail-feature-label">CROPPING TOOL</span>
             </button>
-            <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-feature-card detail-feature-card-long detail-toolbar-long-slot">
-              <span className="detail-feature-icon bg-white/20 text-white" aria-hidden>
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="5" width="18" height="14" rx="2" />
-                  <circle cx="9" cy="11" r="1.6" />
-                  <path d="M7 16.5c.6-1.2 1.5-1.8 2.4-1.8s1.6.5 2.1 1.3" />
-                  <path d="M13 15h5" />
-                </svg>
-              </span>
-              <span className="detail-feature-label">ID CARD GENERATOR</span>
-            </div>
+
           </div>
 
           <div className="detail-toolbar-row2">

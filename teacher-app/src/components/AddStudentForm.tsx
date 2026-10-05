@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -86,6 +86,10 @@ export function AddStudentForm({
   const [extraValues, setExtraValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const submitBusy = useRef(false);
+  const createdRecord = useRef<TeacherStudent | null>(null);
+  const uploadedPhoto = useRef<string | null>(null);
+  const uploadedSignature = useRef<string | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
   const [signatureUri, setSignatureUri] = useState<string | null>(null);
@@ -197,15 +201,17 @@ export function AddStudentForm({
       return;
     }
 
+    if (submitBusy.current) return;
+    submitBusy.current = true;
     setSaving(true);
     setError(null);
     try {
-      const { data } = await api.post<{ student: TeacherStudent }>(
-        "/teacher/students",
-        payload
-      );
+      const { data } = createdRecord.current
+        ? { data: { student: createdRecord.current } }
+        : await api.post<{ student: TeacherStudent }>("/teacher/students", payload);
+      createdRecord.current = data.student;
 
-      if (photoUri) {
+      if (photoUri && uploadedPhoto.current !== photoUri) {
         const formData = new FormData();
         formData.append("photo", {
           uri: photoUri,
@@ -216,9 +222,10 @@ export function AddStudentForm({
           headers: { "Content-Type": "multipart/form-data" },
           transformRequest: (body) => body,
         });
+        uploadedPhoto.current = photoUri;
       }
 
-      if (signatureUri) {
+      if (signatureUri && uploadedSignature.current !== signatureUri) {
         const formData = new FormData();
         formData.append("signature", {
           uri: signatureUri,
@@ -229,13 +236,17 @@ export function AddStudentForm({
           headers: { "Content-Type": "multipart/form-data" },
           transformRequest: (body) => body,
         });
+        uploadedSignature.current = signatureUri;
       }
 
       setLastClassSection(classSection.trim());
-      onSuccess(data.student);
+      // Return the server's final record, including uploaded photo/signature and status flags.
+      const refreshed = await api.get<{ student: TeacherStudent }>(`/teacher/students/${data.student.id}`);
+      onSuccess(refreshed.data.student);
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to create student."));
+      setError(getErrorMessage(err, createdRecord.current ? "Record saved, but an upload failed. Retry to finish the same record." : "Failed to create student."));
     } finally {
+      submitBusy.current = false;
       setSaving(false);
     }
   }

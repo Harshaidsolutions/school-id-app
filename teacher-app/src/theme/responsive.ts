@@ -10,9 +10,9 @@
  *    while boxes stayed put → wrapping/clipping differed per device.
  * 4. StyleSheet values mixed live % with frozen literals.
  *
- * Fix: linear width ratio vs 390dp design, live window size, no font scaling.
+ * Fix: linear width ratio vs 390dp design, live window size, bounded accessibility font scaling.
  * RN numbers are already density-independent (dp); fontSize is sp only when
- * allowFontScaling is true — we keep it off so type stays proportional.
+ * allowFontScaling is true; allow up to 1.3× for accessibility.
  */
 import { Dimensions, PixelRatio } from "react-native";
 
@@ -128,7 +128,7 @@ export const isSmallPhone = () => windowSize().width < 370;
 export const isLargePhone = () => windowSize().width >= 414;
 
 /** Layout-critical: do not honor system font size (causes per-device drift). */
-export const MAX_FONT_MULT = 1;
+export const MAX_FONT_MULT = 1.3;
 
 /**
  * Icon sizes — always width-scaled (same ratio as typography).

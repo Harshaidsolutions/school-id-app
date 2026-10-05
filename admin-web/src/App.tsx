@@ -1,34 +1,39 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { YearProvider } from "./context/YearContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./components/AppLayout";
-import { LoginPage } from "./pages/LoginPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { StudentsPage } from "./pages/StudentsPage";
-import { BulkUploadPage } from "./pages/BulkUploadPage";
-import { SchoolFormPage, SchoolListPage } from "./pages/SchoolPages";
-import { InstituteFormPage, InstituteListPage } from "./pages/InstitutePages";
-import { TemplatesPage } from "./pages/TemplatesPage";
-import { NotificationsPage } from "./pages/NotificationsPage";
-import { ModelsPage } from "./pages/ModelsPage";
-import { FormSetupPage } from "./pages/FormSetupPage";
-import { CropToolPage } from "./pages/CropToolPage";
-import { OrganizationInfoPage } from "./pages/OrganizationInfoPage";
-import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
-import { VerifyOtpPage } from "./pages/VerifyOtpPage";
-import { ResetPasswordPage } from "./pages/ResetPasswordPage";
-import { BrochuresPage } from "./pages/CatalogPages";
-import { OrganizationDetailPage, OrganizationPortalPage } from "./pages/OrganizationPortalPage";
-import { PublicOrgFormPage } from "./pages/PublicOrgFormPage";
-import { AdminManagementPage } from "./pages/AdminManagementPage";
-import { ChildAdminDetailPage } from "./pages/ChildAdminDetailPage";
+const LoginPage = lazy(() => import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })));
+const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
+const StudentsPage = lazy(() => import("./pages/StudentsPage").then((module) => ({ default: module.StudentsPage })));
+const BulkUploadPage = lazy(() => import("./pages/BulkUploadPage").then((module) => ({ default: module.BulkUploadPage })));
+const SchoolFormPage = lazy(() => import("./pages/SchoolPages").then((module) => ({ default: module.SchoolFormPage })));
+const SchoolListPage = lazy(() => import("./pages/SchoolPages").then((module) => ({ default: module.SchoolListPage })));
+const InstituteFormPage = lazy(() => import("./pages/InstitutePages").then((module) => ({ default: module.InstituteFormPage })));
+const InstituteListPage = lazy(() => import("./pages/InstitutePages").then((module) => ({ default: module.InstituteListPage })));
+const TemplatesPage = lazy(() => import("./pages/TemplatesPage").then((module) => ({ default: module.TemplatesPage })));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage").then((module) => ({ default: module.NotificationsPage })));
+const ModelsPage = lazy(() => import("./pages/ModelsPage").then((module) => ({ default: module.ModelsPage })));
+const FormSetupPage = lazy(() => import("./pages/FormSetupPage").then((module) => ({ default: module.FormSetupPage })));
+const CropToolPage = lazy(() => import("./pages/CropToolPage").then((module) => ({ default: module.CropToolPage })));
+const OrganizationInfoPage = lazy(() => import("./pages/OrganizationInfoPage").then((module) => ({ default: module.OrganizationInfoPage })));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage").then((module) => ({ default: module.ForgotPasswordPage })));
+const VerifyOtpPage = lazy(() => import("./pages/VerifyOtpPage").then((module) => ({ default: module.VerifyOtpPage })));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage").then((module) => ({ default: module.ResetPasswordPage })));
+const BrochuresPage = lazy(() => import("./pages/CatalogPages").then((module) => ({ default: module.BrochuresPage })));
+const OrganizationDetailPage = lazy(() => import("./pages/OrganizationPortalPage").then((module) => ({ default: module.OrganizationDetailPage })));
+const OrganizationPortalPage = lazy(() => import("./pages/OrganizationPortalPage").then((module) => ({ default: module.OrganizationPortalPage })));
+const PublicOrgFormPage = lazy(() => import("./pages/PublicOrgFormPage").then((module) => ({ default: module.PublicOrgFormPage })));
+const AdminManagementPage = lazy(() => import("./pages/AdminManagementPage").then((module) => ({ default: module.AdminManagementPage })));
+const ChildAdminDetailPage = lazy(() => import("./pages/ChildAdminDetailPage").then((module) => ({ default: module.ChildAdminDetailPage })));
 
 export default function App() {
   return (
     <AuthProvider>
       <YearProvider>
       <BrowserRouter>
+        <Suspense fallback={<div role="status" className="p-6">Loading…</div>}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/org-form/:token" element={<PublicOrgFormPage />} />
@@ -64,6 +69,7 @@ export default function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
       </YearProvider>
     </AuthProvider>

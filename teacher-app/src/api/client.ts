@@ -60,4 +60,20 @@ export function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+let onSessionExpired: (() => Promise<void>) | null = null;
+export function setSessionExpiredHandler(handler: (() => Promise<void>) | null) {
+  onSessionExpired = handler;
+}
+let expiring: Promise<void> | null = null;
+api.interceptors.response.use((response) => response, async (error) => {
+  if (error.response?.status === 401 && onSessionExpired) {
+    const currentToken = await getToken();
+    if (currentToken && error.config?.headers?.Authorization === `Bearer ${currentToken}`) {
+      if (!expiring) expiring = onSessionExpired().finally(() => { expiring = null; });
+      await expiring;
+    }
+  }
+  return Promise.reject(error);
+});
+
 export default api;

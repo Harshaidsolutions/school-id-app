@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
-import { Image, ScrollView, Share, Text, TextInput, View } from "react-native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { IdCardsGreenHeader } from "./IdCardsGreenHeader";
+import { IdCardsProgressSection } from "./IdCardsProgressSection";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, FlatList, Image, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { Pressable } from "./Pressable";
 import api, { getErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -7,7 +10,7 @@ import { fonts } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
 import { openWhatsAppShare } from "../utils/whatsappBusiness";
 
-type Field = { id: string; field_name: string; field_type: string };
+type Field = { id: string; field_name: string; field_type: string; required?: boolean };
 type Submission = {
   id: string;
   serial: number;
@@ -18,6 +21,8 @@ type CardTab = "all" | "pending" | "captured" | "pending-data";
 
 export function OrganizationCardsPanel() {
   const { colors } = useTheme();
+  const navigation = useNavigation();
+  const loadingRef = useRef(false);
   const { user } = useAuth();
   const [name, setName] = useState(user?.username ?? "Organization");
   const [link, setLink] = useState<string | null>(null);
@@ -36,7 +41,8 @@ export function OrganizationCardsPanel() {
   const [viewPhoto, setViewPhoto] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     try {
       const { data } = await api.get<{
         organizationName: string;
@@ -62,13 +68,18 @@ export function OrganizationCardsPanel() {
     } catch (err) {
       setError(getErrorMessage(err, "Could not load organization records."));
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     void load();
-  }, [load]);
+    const timer = setInterval(() => {
+      if (AppState.currentState === "active" && !editingId) void load();
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [load, editingId]));
 
   const photoFields = fields.filter((field) => field.field_type === "photo" && !/signature/i.test(field.field_name));
   const textFields = fields.filter((field) => field.field_type !== "photo" && !isLockedPhotoNumber(field.field_name));
@@ -77,7 +88,7 @@ export function OrganizationCardsPanel() {
     return photoFields.length > 0 && photoFields.every((field) => row.values[field.id]?.hasPhoto);
   }
   function missingData(row: Submission) {
-    return textFields.some((field) => !(row.values[field.id]?.text ?? "").trim());
+    return textFields.some((field) => field.required !== false && !(row.values[field.id]?.text ?? "").trim());
   }
   const categoryOptions = categoryField
     ? [...new Set(rows.map((row) => (row.values[categoryField.id]?.text ?? "").trim()).filter(Boolean))].sort()
@@ -101,9 +112,19 @@ export function OrganizationCardsPanel() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 12 }}>
-      <Text style={{ fontFamily: fonts.bold, fontSize: 22, color: colors.text }}>{name}</Text>
-      <Text style={{ fontFamily: fonts.medium, color: colors.textMuted }}>ID Cards</Text>
+    <IdCardsGreenHeader>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 16 }}>
+        <Pressable accessibilityLabel="Back to home" onPress={() => navigation.navigate("Home" as never)}>
+          <Text style={{ color: "#fff", fontFamily: fonts.semiBold }}>Back</Text>
+        </Pressable>
+        <Text style={{ flex: 1, fontFamily: fonts.bold, fontSize: 22, color: "#fff" }}>{name}</Text>
+      </View>
+    </IdCardsGreenHeader>
+    {!loading ? <IdCardsProgressSection captured={counts.captured} total={counts.all} /> : null}
+    <FlatList data={visible} keyExtractor={(row) => row.id}
+      refreshing={loading} onRefresh={() => { setLoading(true); void load(); }}
+      contentContainerStyle={{ padding: 16, gap: 12 }}
+      ListHeaderComponent={<View style={{ gap: 12 }}>
       {showDetails ? (
         <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 12, backgroundColor: colors.surface, gap: 4 }}>
           <Text style={{ fontFamily: fonts.semiBold, color: colors.text }}>Required Details</Text>
@@ -160,7 +181,8 @@ export function OrganizationCardsPanel() {
       )}
       {loading ? <Text style={{ color: colors.textMuted }}>Loading…</Text> : null}
       {error ? <Text style={{ color: colors.danger }}>{error}</Text> : null}
-      {visible.map((row) => {
+      </View>}
+      renderItem={({ item: row }) => {
         const editing = editingId === row.id;
         return (
         <View key={row.id} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 12, backgroundColor: colors.surface, gap: 6 }}>
@@ -217,8 +239,8 @@ export function OrganizationCardsPanel() {
           })}
         </View>
         );
-      })}
-    </ScrollView>
+      }}
+    />
       {viewPhoto ? (
         <Pressable onPress={() => setViewPhoto(null)} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(15,23,42,0.55)", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <Image source={{ uri: viewPhoto }} style={{ width: "100%", height: 420, borderRadius: 16, backgroundColor: "#fff" }} resizeMode="contain" />

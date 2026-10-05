@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { setSessionExpiredHandler } from "../api/client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { AuthUser } from "../types";
 import {
@@ -72,6 +73,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    setSessionExpiredHandler(async () => {
+      invalidateTeacherHomeCache();
+      invalidateStudentsCache();
+      setToken(null);
+      setUser(null);
+      setInstructionsDone(false);
+      await clearAuthStorage();
+    });
+    return () => setSessionExpiredHandler(null);
   }, []);
 
   const login = useCallback(async (nextToken: string, nextUser: AuthUser) => {

@@ -271,7 +271,7 @@ export function StudentFlowModal({
             <Text style={[styles.navBtnText, { color: colors.text }]}>Back</Text>
           </Pressable>
 
-          {allowRecordEdit ? (
+          {(allowRecordEdit || student.pending_data === true) ? (
           <Pressable
             style={[
               styles.navBtn,

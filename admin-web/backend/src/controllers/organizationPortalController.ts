@@ -756,7 +756,7 @@ function submissionMatchesQuery(
   const photoFields = fields.filter((field) => field.field_type === "photo" && !/signature/i.test(field.field_name));
   const textFields = fields.filter((field) => field.field_type === "text" && !isLockedPhotoNumber(field.field_name));
   const captured = photoFields.length > 0 && photoFields.every((field) => row.values[field.id]?.hasPhoto);
-  const pendingData = textFields.some((field) => !(row.values[field.id]?.text ?? "").trim());
+  const pendingData = textFields.some((field) => field.required !== false && !(row.values[field.id]?.text ?? "").trim());
   if (scope === "captured" && !captured) return false;
   if (scope === "pending" && captured) return false;
   if (scope === "pending-data" && !pendingData) return false;

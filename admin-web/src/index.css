@@ -1016,3 +1016,15 @@ body {
   color: #4f46e5;
   font-weight: 700;
 }
+
+/* Keep every detail action reachable on tablet and phone widths. */
+@media (max-width: 1100px) {
+  .detail-toolbar-shell { display: flex; flex-direction: column; }
+  .detail-toolbar-row1 { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .detail-toolbar-row1 > * { flex: 1 1 9rem; width: auto; }
+  .detail-toolbar-row2 { flex-wrap: wrap; height: auto; }
+  .detail-toolbar-row2-search { flex: 1 1 100%; min-width: 0; }
+  .detail-toolbar-row2-tabs { max-width: 100%; height: auto; flex-wrap: wrap; }
+  .detail-toolbar-row2-actions { flex-wrap: wrap; }
+  .detail-toolbar-btn { white-space: normal; height: auto; min-height: 2.5rem; }
+}

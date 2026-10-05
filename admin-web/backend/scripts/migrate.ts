@@ -626,29 +626,9 @@ async function migrate() {
     SET is_active = true
     WHERE role = 'admin' AND is_active IS NULL;
 
-    UPDATE users
-    SET is_super_admin = true
-    WHERE role = 'admin'
-      AND (
-        lower(trim(email)) = 'harshaidsolutions@gmail.com'
-        OR lower(trim(email)) LIKE '%harshaidsolutions%'
-        OR lower(trim(COALESCE(username, ''))) IN (
-          'harsha',
-          'harshaidsolutions',
-          'harshaid',
-          'harshaidsolutions@gmail.com'
-        )
-        OR lower(trim(COALESCE(username, ''))) LIKE '%harshaid%'
-      );
-
-    UPDATE users
-    SET is_super_admin = true
-    WHERE id = (
-      SELECT id FROM users
-      WHERE role = 'admin'
-      ORDER BY created_at ASC NULLS LAST
-      LIMIT 1
-    );
+    -- Existing explicit grants remain intact. Never infer privilege from a username.
+    UPDATE users SET is_super_admin = true
+    WHERE role = 'admin' AND lower(trim(email)) = 'harshaidsolutions@gmail.com';
 
     UPDATE schools s
     SET owner_admin_id = super.id

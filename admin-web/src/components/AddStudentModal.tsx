@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import axios from "axios";
 import api from "../api/client";
 import type { ApiErrorBody, Student } from "../types";
@@ -35,6 +35,10 @@ export function AddStudentModal({
   const [values, setValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const createdRecord = useRef<Student | null>(null);
+  const submitBusy = useRef(false);
+  const uploadedPhoto = useRef<File | null>(null);
+  const uploadedSignature = useRef<File | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
@@ -42,13 +46,16 @@ export function AddStudentModal({
 
   useEffect(() => {
     if (!open) return;
+    createdRecord.current = null;
+    uploadedPhoto.current = null;
+    uploadedSignature.current = null;
     setValues({});
     setError(null);
     setPhotoFile(null);
     setPhotoPreview(null);
     setSignatureFile(null);
     setSignaturePreview(null);
-  }, [open, formFields]);
+  }, [open]);
 
   useEffect(() => {
     if (!photoFile) {
@@ -111,6 +118,8 @@ export function AddStudentModal({
       return;
     }
 
+    if (submitBusy.current) return;
+    submitBusy.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -134,9 +143,12 @@ export function AddStudentModal({
       }
       payload.extra_fields = extraFields;
 
-      const { data } = await api.post<{ student: Student }>("/admin/students", payload);
+      const { data } = createdRecord.current
+        ? { data: { student: createdRecord.current } }
+        : await api.post<{ student: Student }>("/admin/students", payload);
+      createdRecord.current = data.student;
       let student = data.student;
-      if (signatureFile) {
+      if (signatureFile && uploadedSignature.current !== signatureFile) {
         try {
           const form = new FormData();
           form.append("signature", signatureFile);
@@ -146,6 +158,8 @@ export function AddStudentModal({
             { headers: { "Content-Type": "multipart/form-data" } }
           );
           student = uploaded.data.student ?? student;
+          createdRecord.current = student;
+          uploadedSignature.current = signatureFile;
         } catch (err) {
           onCreated(student);
           if (axios.isAxiosError(err)) {
@@ -157,7 +171,7 @@ export function AddStudentModal({
           return;
         }
       }
-      if (photoFile) {
+      if (photoFile && uploadedPhoto.current !== photoFile) {
         try {
           const form = new FormData();
           form.append("photo", photoFile);
@@ -167,6 +181,8 @@ export function AddStudentModal({
             { headers: { "Content-Type": "multipart/form-data" } }
           );
           student = uploaded.data.student ?? student;
+          createdRecord.current = student;
+          uploadedPhoto.current = photoFile;
         } catch (err) {
           onCreated(student);
           if (axios.isAxiosError(err)) {
@@ -186,6 +202,7 @@ export function AddStudentModal({
         setError(body?.message ?? "Failed to add student.");
       } else setError("Failed to add student.");
     } finally {
+      submitBusy.current = false;
       setSaving(false);
     }
   }

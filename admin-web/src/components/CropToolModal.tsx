@@ -120,7 +120,7 @@ export function CropToolModal({
   const tonePaintRef = useRef(0);
   const toneStudentRef = useRef<string | undefined>(undefined);
   const limitRef = useRef<{ width: number | null; height: number | null }>({ width: null, height: null });
-  const historyRef = useRef<Crop[]>([]);
+  const historyRef = useRef<Array<Crop & { brightness: number; contrast: number }>>([]);
   const undoRef = useRef<() => void>(() => {});
   const quickSaveRef = useRef<() => void>(() => {});
   const student = gallery[index] ?? null;
@@ -289,6 +289,7 @@ export function CropToolModal({
       setPhase("edit");
     }
     if (!toneGestureRef.current && student) {
+      rememberCrop();
       toneGestureRef.current = true;
       markDirty(student.id);
     }
@@ -328,7 +329,7 @@ export function CropToolModal({
   }
 
   function rememberCrop() {
-    const current = { ...cropRef.current };
+    const current = { ...cropRef.current, ...toneRef.current };
     const last = historyRef.current[historyRef.current.length - 1];
     if (
       last &&
@@ -336,7 +337,8 @@ export function CropToolModal({
       last.cy === current.cy &&
       last.w === current.w &&
       last.h === current.h &&
-      last.angle === current.angle
+      last.angle === current.angle &&
+      last.brightness === current.brightness && last.contrast === current.contrast
     ) {
       return;
     }
@@ -356,6 +358,8 @@ export function CropToolModal({
     const previous = historyRef.current.pop();
     if (!previous) return;
     cropRef.current = previous;
+    toneRef.current = { brightness: previous.brightness, contrast: previous.contrast };
+    paintTone();
     paintFrame();
   }
 
@@ -590,7 +594,24 @@ export function CropToolModal({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  function canLeaveEditor() {
+    if (saving || applying) return false;
+    if (!editingId || window.confirm("Discard unsaved photo changes?")) {
+      setEditingId(null);
+      return true;
+    }
+    return false;
+  }
+
+  useEffect(() => {
+    if (!editingId) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [editingId]);
+
   function leaveEditor() {
+    if (!canLeaveEditor()) return;
     setCropArmed(false);
     setPhase("edit");
     setBrowsing(true);
@@ -609,12 +630,12 @@ export function CropToolModal({
               {student && !browsing ? student.student_name ?? "Student" : `${gallery.length} photo${gallery.length === 1 ? "" : "s"}`}
               {student && !browsing && student.photo_id ? ` · Photo ${student.photo_id}` : ""}
             </p>
-            <button type="button" className="btn-secondary shrink-0 px-3 py-1.5 text-sm" onClick={onClose}>Back</button>
+            <button type="button" className="btn-secondary shrink-0 px-3 py-1.5 text-sm" onClick={() => { if (canLeaveEditor()) onClose(); }}>Back</button>
           </div>
           {field ? (
             <label className="min-w-[12rem] text-xs font-semibold text-[#334155]">
               {field.label}
-              <select className="input-field mt-1" value={selected} onChange={(event) => { setSelected(event.target.value); setIndex(0); setBrowsing(true); }}>
+              <select className="input-field mt-1" value={selected} onChange={(event) => { if (!canLeaveEditor()) return; setSelected(event.target.value); setIndex(0); setBrowsing(true); }}>
                 <option value="">{`All ${field.label}`}</option>
                 {options.map((value) => (
                   <option key={value} value={value}>{value}</option>
@@ -624,7 +645,7 @@ export function CropToolModal({
           ) : null}
           <label className="min-w-[12rem] text-xs font-semibold text-[#334155]">
             Date
-            <select className="input-field mt-1" value={captureDay} onChange={(event) => { setCaptureDay(event.target.value); setCaptureHour(""); setIndex(0); setBrowsing(true); }}>
+            <select className="input-field mt-1" value={captureDay} onChange={(event) => { if (!canLeaveEditor()) return; setCaptureDay(event.target.value); setCaptureHour(""); setIndex(0); setBrowsing(true); }}>
               <option value="">All dates</option>
               {dateOptions.map(([day, count]) => (
                 <option key={day} value={day}>{formatCaptureDay(day)} ({count})</option>
@@ -637,6 +658,7 @@ export function CropToolModal({
               className="input-field mt-1"
               value={cropView}
               onChange={(event) => {
+                if (!canLeaveEditor()) return;
                 setCropView(event.target.value === "cropped" ? "cropped" : "uncropped");
                 setIndex(0);
                 setBrowsing(true);
@@ -648,7 +670,7 @@ export function CropToolModal({
           </label>
           <label className="min-w-[14rem] text-xs font-semibold text-[#334155]">
             Hour
-            <select className="input-field mt-1" value={captureHour} disabled={!captureDay} onChange={(event) => { setCaptureHour(event.target.value); setIndex(0); setBrowsing(true); }}>
+            <select className="input-field mt-1" value={captureHour} disabled={!captureDay} onChange={(event) => { if (!canLeaveEditor()) return; setCaptureHour(event.target.value); setIndex(0); setBrowsing(true); }}>
               <option value="">{captureDay ? "All hours" : "Select a date first"}</option>
               {hourOptions.map(([hour, count]) => (
                 <option key={hour} value={hour}>{formatCaptureHour(hour)} ({count})</option>
@@ -706,7 +728,7 @@ export function CropToolModal({
                   <option value="right">Rotate Right</option>
                 </select>
               </label>
-              <button type="button" className="btn-secondary" onClick={resetWorkspace}>Reset</button>
+              <button type="button" className="btn-secondary" onClick={() => { if (canLeaveEditor()) resetWorkspace(); }}>Reset</button>
               <button type="button" className="btn-secondary" onClick={leaveEditor}>Photos</button>
               {phase === "preview" ? (
                 <button type="button" className="btn-secondary" onClick={() => { if (student) markDirty(student.id); setPhase("edit"); previewBlobRef.current = null; clearPreview(); }}>Edit crop</button>
@@ -714,6 +736,7 @@ export function CropToolModal({
                 <button type="button" className="btn-secondary" disabled={!src || applying || !cropArmed} onClick={() => void applyOk()}>{applying ? "Preparing…" : "OK"}</button>
               )}
               <button type="button" className="btn-primary" disabled={phase !== "preview" || saving} onClick={() => void saveCrop()}>{saving ? "Saving…" : "Save"}</button>
+              <button type="button" className="btn-secondary" onClick={undoCrop}>Undo</button>
               <p className="text-[11px] font-medium text-[#64748B]">Drag on the photo to crop. Shift+Z undo · Shift+S save</p>
             </>
           ) : null}
@@ -737,6 +760,7 @@ export function CropToolModal({
                         : null
                 }
                 onClick={() => {
+                  if (!canLeaveEditor()) return;
                   setIndex(itemIndex);
                   setCropArmed(false);
                   setBrowsing(false);

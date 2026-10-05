@@ -5,13 +5,6 @@ import { AppError } from "../middleware/errorHandler";
 /** Primary super admin account (matches migrate backfill). */
 export const SUPER_ADMIN_EMAIL = "harshaidsolutions@gmail.com";
 
-const SUPER_ADMIN_USERNAMES = new Set([
-  "harsha",
-  "harshaidsolutions",
-  "harshaid",
-  "harshaidsolutions@gmail.com",
-]);
-
 export type AdminScope = {
   adminUserId: string;
   isSuperAdmin: boolean;
@@ -44,18 +37,7 @@ export function resolveIsSuperAdmin(user: {
   is_super_admin?: boolean | null;
 }): boolean {
   if (user.role !== "admin") return false;
-  if (isDbTrue(user.is_super_admin)) return true;
-  const email = String(user.email ?? "")
-    .trim()
-    .toLowerCase();
-  if (email === SUPER_ADMIN_EMAIL) return true;
-  if (email.includes("harshaidsolutions")) return true;
-  const username = String(user.username ?? "")
-    .trim()
-    .toLowerCase();
-  if (SUPER_ADMIN_USERNAMES.has(username)) return true;
-  if (username.includes("harshaid")) return true;
-  return false;
+  return isDbTrue(user.is_super_admin);
 }
 
 /** Authoritative: can this admin list every school/institute (not only owned)? */
@@ -63,64 +45,20 @@ export async function queryAdminSeesAllOrganizations(
   adminUserId: string
 ): Promise<boolean> {
   const result = await pool.query<{ see_all: boolean }>(
-    `SELECT (
-       COALESCE(u.is_super_admin, false)
-       OR lower(trim(u.email)) = $2
-       OR lower(trim(u.email)) LIKE '%harshaidsolutions%'
-       OR lower(trim(COALESCE(u.username, ''))) = ANY($3::text[])
-       OR lower(trim(COALESCE(u.username, ''))) LIKE '%harshaid%'
-       OR (SELECT COUNT(*)::int FROM users WHERE role = 'admin') <= 1
-       OR u.id = (
-         SELECT id FROM users
-         WHERE role = 'admin'
-         ORDER BY created_at ASC NULLS LAST
-         LIMIT 1
-       )
-     ) AS see_all
-     FROM users u
-     WHERE u.id = $1::uuid AND u.role = 'admin'
-     LIMIT 1`,
-    [adminUserId, SUPER_ADMIN_EMAIL, [...SUPER_ADMIN_USERNAMES]]
+    `SELECT COALESCE(is_super_admin, false) AS see_all FROM users
+     WHERE id = $1::uuid AND role = 'admin' AND is_active = true LIMIT 1`,
+    [adminUserId]
   );
   return isDbTrue(result.rows[0]?.see_all);
 }
 
-const scopeCache = new Map<string, { scope: AdminScope; at: number }>();
-const SCOPE_TTL_MS = 60_000;
-
 export async function loadAdminScope(userId: string): Promise<AdminScope> {
-  const cached = scopeCache.get(userId);
-  if (cached && Date.now() - cached.at < SCOPE_TTL_MS) return cached.scope;
-
-  const result = await pool.query<{ see_all: boolean }>(
-    `SELECT (
-       COALESCE(u.is_super_admin, false)
-       OR lower(trim(u.email)) = $2
-       OR lower(trim(u.email)) LIKE '%harshaidsolutions%'
-       OR lower(trim(COALESCE(u.username, ''))) = ANY($3::text[])
-       OR lower(trim(COALESCE(u.username, ''))) LIKE '%harshaid%'
-       OR (SELECT COUNT(*)::int FROM users WHERE role = 'admin') <= 1
-       OR u.id = (
-         SELECT id FROM users
-         WHERE role = 'admin'
-         ORDER BY created_at ASC NULLS LAST
-         LIMIT 1
-       )
-     ) AS see_all
-     FROM users u
-     WHERE u.id = $1::uuid AND u.role = 'admin'
-     LIMIT 1`,
-    [userId, SUPER_ADMIN_EMAIL, [...SUPER_ADMIN_USERNAMES]]
+  const result = await pool.query<{ is_super_admin: boolean }>(
+    `SELECT is_super_admin FROM users WHERE id = $1::uuid AND role = 'admin'
+     AND is_active = true LIMIT 1`, [userId]
   );
-  if (!result.rows[0]) {
-    throw new AppError("Admin account not found", 403);
-  }
-  const scope: AdminScope = {
-    adminUserId: userId,
-    isSuperAdmin: isDbTrue(result.rows[0].see_all),
-  };
-  scopeCache.set(userId, { scope, at: Date.now() });
-  return scope;
+  if (!result.rows[0]) throw new AppError("Admin account not found", 403);
+  return { adminUserId: userId, isSuperAdmin: isDbTrue(result.rows[0].is_super_admin) };
 }
 
 /** Super admin sees every school/institute; scoped admins see only owned orgs. */
@@ -128,7 +66,6 @@ export async function adminSeesAllOrganizations(
   scope: AdminScope,
   req: Request
 ): Promise<boolean> {
-  if (req.user?.isSuperAdmin === true) return true;
   if (scope.isSuperAdmin) return true;
   return queryAdminSeesAllOrganizations(scope.adminUserId);
 }

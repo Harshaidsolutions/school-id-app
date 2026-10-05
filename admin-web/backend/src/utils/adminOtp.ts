@@ -1,3 +1,4 @@
+import { consumeAttempt } from "../middleware/attemptLimit";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { pool } from "../config/database";
@@ -31,6 +32,8 @@ export async function requestAdminActionOtp(params: {
     emailIntro,
     logPrefix,
   } = params;
+
+  consumeAttempt(`otp-send:${adminUserId}`, 1, 60_000);
 
   await pool.query(
     `UPDATE admin_action_otps
@@ -87,6 +90,8 @@ export async function verifyAdminActionOtp(params: {
   otp: string;
 }): Promise<void> {
   const { adminUserId, actionType, resourceId, otp } = params;
+
+  consumeAttempt(`otp-verify:${adminUserId}:${actionType}:${resourceId}`, 10);
 
   if (!/^\d{6}$/.test(otp.trim())) {
     throw new AppError("A valid 6-digit code is required", 400);

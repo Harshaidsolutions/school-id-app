@@ -12,7 +12,8 @@
     "migrate:photos-to-s3": "tsx scripts/migratePhotosToS3.ts",
     "migrate:supabase-to-rds": "tsx scripts/migrateSupabaseToRds.ts",
     "verify:db-counts": "tsx scripts/verifyDbCounts.ts",
-    "diagnose:admin-scope": "tsx scripts/diagnoseAdminScope.ts"
+    "diagnose:admin-scope": "tsx scripts/diagnoseAdminScope.ts",
+    "test": "npm run build && node --test tests/*.cjs"
   },
   "keywords": [],
   "author": "",
