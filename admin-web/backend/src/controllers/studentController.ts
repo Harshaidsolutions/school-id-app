@@ -871,6 +871,8 @@ export async function listStudentsAdmin(
     const group = typeof req.query.group === "string" ? req.query.group.trim() : "";
     const designation =
       typeof req.query.designation === "string" ? req.query.designation.trim() : "";
+    const department =
+      typeof req.query.department === "string" ? req.query.department.trim() : "";
     const flagged = await withPendingFlags(result.rows);
     const facets = collectRecordFacets(flagged);
     let students = flagged;
@@ -896,6 +898,9 @@ export async function listStudentsAdmin(
     }
     if (designation) {
       students = students.filter((row) => extraFieldValue(row, "designation") === designation);
+    }
+    if (department) {
+      students = students.filter((row) => extraFieldValue(row, "department") === department);
     }
     if (capturedOn) {
       students = students.filter((row) => {

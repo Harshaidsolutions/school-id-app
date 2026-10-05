@@ -456,6 +456,7 @@ async function listPhotoCaptureCounts(
       classes: facets.classes,
       groups: facets.groups,
       designations: facets.designations,
+      departments: facets.departments,
       signatureCounts,
     });
   } catch (error) {

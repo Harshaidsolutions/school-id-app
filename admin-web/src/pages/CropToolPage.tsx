@@ -37,16 +37,21 @@ export function CropToolPage() {
         const formFields = (data.form?.fields ?? []).filter((field) => field.enabled !== false);
         const photoFields = formFields.filter((field) => field.field_type === "photo" && !isSignatureLabel(field.field_name));
         const groupFields = organizationCategoryFields(formFields);
-        const groupField = groupFields.find((field) => field.kind === "class") ?? groupFields[0];
+        const classField = groupFields.find((field) => field.kind === "class");
         const nameField = formFields.find((field) => field.field_type === "text" && /name/i.test(field.field_name) && !isPhotoNumberLabel(field.field_name));
         const mapped: Student[] = [];
         for (const row of data.submissions ?? []) {
+          const extra: Record<string, string | null> = {};
+          for (const groupField of groupFields) {
+            extra[groupField.key] = row.values[groupField.key]?.text ?? null;
+          }
           for (const field of photoFields) {
             if (!row.values[field.id]?.hasPhoto) continue;
             mapped.push({
               id: `${row.id}:${field.id}`,
               school_id: null,
-              class_section: groupField ? (row.values[groupField.key]?.text ?? null) : null,
+              class_section: classField ? (row.values[classField.key]?.text ?? null) : null,
+              extra_fields: extra,
               roll_no: null,
               student_name: nameField ? (row.values[nameField.id]?.text ?? null) : `S.No ${row.serial}`,
               parent_name: null,
@@ -66,7 +71,7 @@ export function CropToolPage() {
         }
         setStudents(mapped);
         setFields([]);
-        setOrganizationCategories(groupField ? [{ kind: groupField.kind, key: "class_section", label: groupField.label }] : []);
+        setOrganizationCategories(groupFields);
       }).finally(() => {
         if (!cancelled) setLoading(false);
       });

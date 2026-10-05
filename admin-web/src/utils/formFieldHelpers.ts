@@ -35,7 +35,7 @@ export function findStudentNameField(fields: FormFieldConfig[]): FormFieldConfig
 }
 
 export type ConfiguredCategoryField = {
-  kind: "class" | "group" | "designation";
+  kind: "class" | "group" | "designation" | "department";
   key: string;
   label: string;
 };
@@ -47,7 +47,9 @@ export function configuredCategoryFields(fields: FormFieldConfig[]): ConfiguredC
     if (field.enabled === false) continue;
     const n = normalizeLabel(field.label);
     if (field.key === "signature_upload" || n.includes("signature") || n.includes("photo")) continue;
-    if (n.includes("designation")) {
+    if (n.includes("department")) {
+      out.push({ kind: "department", key: field.key, label: field.label });
+    } else if (n.includes("designation")) {
       out.push({ kind: "designation", key: field.key, label: field.label });
     } else if (n.includes("group")) {
       out.push({ kind: "group", key: field.key, label: field.label });
@@ -79,6 +81,7 @@ export function allValuesLabel(label: string): string {
   if (/^class$/i.test(trimmed)) return "All Classes";
   if (/^group$/i.test(trimmed)) return "All Groups";
   if (/^designation$/i.test(trimmed)) return "All Designations";
+  if (/^department$/i.test(trimmed)) return "All Departments";
   return `All ${trimmed}`;
 }
 

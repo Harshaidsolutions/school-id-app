@@ -32,6 +32,8 @@ export function OrganizationCardsPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [categoryValue, setCategoryValue] = useState("");
+  const [viewPhoto, setViewPhoto] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,21 +70,26 @@ export function OrganizationCardsPanel() {
     void load();
   }, [load]);
 
-  const photoFields = fields.filter((field) => field.field_type === "photo");
-  const textFields = fields.filter((field) => field.field_type !== "photo");
+  const photoFields = fields.filter((field) => field.field_type === "photo" && !/signature/i.test(field.field_name));
+  const textFields = fields.filter((field) => field.field_type !== "photo" && !isLockedPhotoNumber(field.field_name));
+  const categoryField = fields.find((field) => field.field_type !== "photo" && isCategoryLabel(field.field_name));
   function captured(row: Submission) {
     return photoFields.length > 0 && photoFields.every((field) => row.values[field.id]?.hasPhoto);
   }
   function missingData(row: Submission) {
     return textFields.some((field) => !(row.values[field.id]?.text ?? "").trim());
   }
+  const categoryOptions = categoryField
+    ? [...new Set(rows.map((row) => (row.values[categoryField.id]?.text ?? "").trim()).filter(Boolean))].sort()
+    : [];
   const visible = rows.filter((row) => {
     if (tab === "captured" && !captured(row)) return false;
     if (tab === "pending" && captured(row)) return false;
     if (tab === "pending-data" && !missingData(row)) return false;
+    if (categoryField && categoryValue && (row.values[categoryField.id]?.text ?? "").trim() !== categoryValue) return false;
     const query = search.trim().toLowerCase();
     if (!query) return true;
-    return fields.some((field) => (row.values[field.id]?.text ?? "").toLowerCase().includes(query));
+    return (row.photoNumber ?? "").toLowerCase().includes(query) || fields.some((field) => (row.values[field.id]?.text ?? "").toLowerCase().includes(query));
   });
   const counts = {
     all: rows.length,
@@ -93,7 +100,8 @@ export function OrganizationCardsPanel() {
   const showDetails = visibility.required_details !== false;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 16, gap: 12 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 12 }}>
       <Text style={{ fontFamily: fonts.bold, fontSize: 22, color: colors.text }}>{name}</Text>
       <Text style={{ fontFamily: fonts.medium, color: colors.textMuted }}>ID Cards</Text>
       {showDetails ? (
@@ -111,6 +119,18 @@ export function OrganizationCardsPanel() {
         placeholderTextColor={colors.textMuted}
         style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, color: colors.text, backgroundColor: colors.surface }}
       />
+      {categoryField && categoryOptions.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+          <Pressable onPress={() => setCategoryValue("")} style={{ borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: categoryValue === "" ? colors.brandGreen : colors.surface, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ color: categoryValue === "" ? "#fff" : colors.text, fontFamily: fonts.semiBold }}>{categoryField.field_name}</Text>
+          </Pressable>
+          {categoryOptions.map((option) => (
+            <Pressable key={option} onPress={() => setCategoryValue(option)} style={{ borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: categoryValue === option ? colors.brandGreen : colors.surface, borderWidth: 1, borderColor: colors.border }}>
+              <Text style={{ color: categoryValue === option ? "#fff" : colors.text, fontFamily: fonts.semiBold }}>{option}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         {([
           ["all", `All (${counts.all})`],
@@ -182,7 +202,7 @@ export function OrganizationCardsPanel() {
             <View key={field.id}>
               <Text style={{ color: colors.textMuted, fontSize: 12 }}>{field.field_name}</Text>
               {field.field_type === "photo" && row.values[field.id]?.hasPhoto ? (
-                <SubmissionPhoto submissionId={row.id} fieldId={field.id} />
+                <SubmissionPhoto submissionId={row.id} fieldId={field.id} onOpen={setViewPhoto} />
               ) : editing && field.field_type === "text" ? (
                 <TextInput
                   value={draft[field.id] ?? ""}
@@ -199,6 +219,12 @@ export function OrganizationCardsPanel() {
         );
       })}
     </ScrollView>
+      {viewPhoto ? (
+        <Pressable onPress={() => setViewPhoto(null)} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(15,23,42,0.55)", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <Image source={{ uri: viewPhoto }} style={{ width: "100%", height: 420, borderRadius: 16, backgroundColor: "#fff" }} resizeMode="contain" />
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -206,7 +232,28 @@ function isLockedPhotoNumber(name: string): boolean {
   return /photo\s*(number|no\.?|id)\b/i.test(name);
 }
 
-function SubmissionPhoto({ submissionId, fieldId }: { submissionId: string; fieldId: string }) {
+function isCategoryLabel(name: string): boolean {
+  const normalized = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return (
+    normalized.includes("department") ||
+    normalized.includes("designation") ||
+    normalized.includes("group") ||
+    normalized === "class" ||
+    normalized.includes("classsection") ||
+    normalized.includes("section") ||
+    normalized.includes("grade")
+  );
+}
+
+function SubmissionPhoto({
+  submissionId,
+  fieldId,
+  onOpen,
+}: {
+  submissionId: string;
+  fieldId: string;
+  onOpen?: (uri: string) => void;
+}) {
   const [uri, setUri] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -222,7 +269,11 @@ function SubmissionPhoto({ submissionId, fieldId }: { submissionId: string; fiel
     };
   }, [submissionId, fieldId]);
   if (!uri) return null;
-  return <Image source={{ uri }} style={{ width: 72, height: 72, borderRadius: 8 }} />;
+  return (
+    <Pressable onPress={() => onOpen?.(uri)}>
+      <Image source={{ uri }} style={{ width: 72, height: 72, borderRadius: 8 }} />
+    </Pressable>
+  );
 }
 
 function toBase64(buffer: ArrayBuffer): string {

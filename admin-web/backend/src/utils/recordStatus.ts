@@ -318,8 +318,9 @@ export function sanitizeFieldVisibility(
 
 export type NamedCount = { name: string; count: number; key: string };
 
-function fieldKind(key: string, label: string): "class" | "group" | "designation" | null {
+function fieldKind(key: string, label: string): "class" | "group" | "designation" | "department" | null {
   const text = `${label} ${key}`.toLowerCase().replace(/[^a-z0-9]+/g, " ");
+  if (/\bdepartment\b/.test(text)) return "department";
   if (/\bdesignation\b/.test(text)) return "designation";
   if (/\bgroup\b/.test(text)) return "group";
   if (key === "class_section" || /\b(class|section|grade)\b/.test(text)) return "class";
@@ -344,12 +345,14 @@ export function collectRecordFacets(
   classes: NamedCount[];
   groups: NamedCount[];
   designations: NamedCount[];
+  departments: NamedCount[];
   captureDates: NamedCount[];
 } {
   const buckets = {
     class: new Map<string, { count: number; key: string }>(),
     group: new Map<string, { count: number; key: string }>(),
     designation: new Map<string, { count: number; key: string }>(),
+    department: new Map<string, { count: number; key: string }>(),
   };
   const dates = new Map<string, number>();
 
@@ -389,6 +392,7 @@ export function collectRecordFacets(
     classes: toList(buckets.class),
     groups: toList(buckets.group),
     designations: toList(buckets.designation),
+    departments: toList(buckets.department),
     captureDates: [...dates.entries()]
       .map(([name, count]) => ({ name, count, key: "capture_date" }))
       .sort((a, b) => b.name.localeCompare(a.name)),
@@ -397,7 +401,7 @@ export function collectRecordFacets(
 
 export function extraFieldValue(
   row: { extra_fields?: unknown; field_labels?: unknown },
-  kind: "group" | "designation"
+  kind: "group" | "designation" | "department"
 ): string | null {
   const labels = asRecord(row.field_labels);
   const extras = asRecord(row.extra_fields);

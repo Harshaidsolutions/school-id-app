@@ -356,6 +356,7 @@ export function OrganizationDetailPage() {
   const [exporting, setExporting] = useState(false);
   const [editingRow, setEditingRow] = useState<SubmissionRow | null>(null);
   const [editDraft, setEditDraft] = useState<Record<string, string>>({});
+  const [photoPreview, setPhotoPreview] = useState<{ src: string; alt: string } | null>(null);
 
   async function load() {
     const { data } = await api.get<{
@@ -556,6 +557,16 @@ export function OrganizationDetailPage() {
     setNotice(saved > 0 ? `Downloaded ${saved} photo${saved === 1 ? "" : "s"}.` : "No photos to download.");
   }
 
+  async function downloadRowPhoto(row: SubmissionRow, fieldId: string, fieldName: string) {
+    const response = await api.get(`/admin/organizations/${id}/submissions/${row.id}/fields/${fieldId}/photo`, { responseType: "blob" });
+    const url = URL.createObjectURL(response.data as Blob);
+    const linkNode = document.createElement("a");
+    linkNode.href = url;
+    linkNode.download = `${row.photoNumber || row.serial}-${fieldName}.jpg`;
+    linkNode.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function saveDetails() {
     await api.patch(`/admin/organizations/${id}/details`, {
       phone,
@@ -697,6 +708,11 @@ export function OrganizationDetailPage() {
       ) : null}
       {error ? <div className="alert-error">{error}</div> : null}
       {notice ? <div className="alert-success">{notice}</div> : null}
+      {photoPreview ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4" onClick={() => setPhotoPreview(null)}>
+          <img alt={photoPreview.alt} src={photoPreview.src} className="max-h-[80vh] max-w-full rounded-2xl bg-white object-contain" onClick={(event) => event.stopPropagation()} />
+        </div>
+      ) : null}
       {link ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <input readOnly className="input-field min-w-0 flex-1" value={link} onFocus={(event) => event.currentTarget.select()} />
@@ -735,13 +751,19 @@ export function OrganizationDetailPage() {
               {activeFields.filter((field) => !isPhotoNumberLabel(field.field_name)).map((field) => (
                 <th key={field.id} className={field.field_type === "photo" ? "col-photo" : "col-field"}>{field.field_name}</th>
               ))}
+              <th className="col-captured">Status</th>
+              <th className="col-field">Created</th>
               <th className="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border bg-white">
             {visibleRows.length === 0 ? (
-              <tr><td className="px-4 py-10 text-center text-text-muted" colSpan={Math.max(1, activeFields.length + (selecting ? 3 : 2))}>No submissions yet.</td></tr>
-            ) : visibleRows.map((row) => (
+              <tr><td className="px-4 py-10 text-center text-text-muted" colSpan={Math.max(1, activeFields.filter((field) => !isPhotoNumberLabel(field.field_name)).length + (selecting ? 6 : 5))}>No submissions yet.</td></tr>
+            ) : visibleRows.map((row) => {
+              const captured = hasAllPhotos(row);
+              const created = formatCreated(row.createdAt ?? null);
+              const photoField = imageFields.find((field) => row.values[field.id]?.hasPhoto);
+              return (
               <tr key={row.id} className="hover:bg-content-bg/50">
                 {selecting ? (
                   <td className="bulk-check-cell">
@@ -760,21 +782,60 @@ export function OrganizationDetailPage() {
                   return (
                     <td key={field.id} className={field.field_type === "photo" ? "col-photo" : "col-field"}>
                       {field.field_type === "photo" ? (
-                        value?.hasPhoto ? <OrgPhoto organizationId={id} submissionId={row.id} fieldId={field.id} alt={field.field_name} /> : "—"
+                        value?.hasPhoto ? (
+                          <OrgPhoto
+                            organizationId={id}
+                            submissionId={row.id}
+                            fieldId={field.id}
+                            alt={field.field_name}
+                            onOpen={setPhotoPreview}
+                          />
+                        ) : "—"
                       ) : value?.text || "—"}
                     </td>
                   );
                 })}
+                <td className="col-captured">
+                  {captured ? (
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-green-soft text-royal-green" title="Captured"><CheckIcon /></span>
+                  ) : (
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-warning/10 text-warning" title="Pending"><ClockIcon /></span>
+                  )}
+                </td>
+                <td className="col-field">
+                  {created ? (
+                    <span className="block whitespace-normal text-xs leading-4 text-text">{created.date}<br />{created.time}</span>
+                  ) : "—"}
+                </td>
                 <td className="col-actions">
-                  <button type="button" className="text-sm font-semibold text-button-blue" onClick={() => {
-                    const next: Record<string, string> = {};
-                    for (const field of textFields) next[field.id] = row.values[field.id]?.text ?? "";
-                    setEditDraft(next);
-                    setEditingRow(row);
-                  }}>Edit</button>
+                  <div className="flex items-center justify-end gap-0.5">
+                    <button
+                      type="button"
+                      title="Download photo"
+                      disabled={!photoField}
+                      className="rounded p-1.5 text-text-muted hover:bg-content-bg hover:text-parrot-green disabled:opacity-30"
+                      onClick={() => {
+                        if (!photoField) return;
+                        void downloadRowPhoto(row, photoField.id, photoField.field_name).catch((err) => setError(messageOf(err, "Failed to download the photo.")));
+                      }}
+                    >
+                      <DownloadIcon />
+                    </button>
+                    <button type="button" title="Edit" className="rounded p-1.5 text-text-muted hover:bg-content-bg hover:text-button-blue" onClick={() => {
+                      const next: Record<string, string> = {};
+                      for (const field of textFields) next[field.id] = row.values[field.id]?.text ?? "";
+                      setEditDraft(next);
+                      setEditingRow(row);
+                    }}><EditIcon /></button>
+                    <button type="button" title="Delete" className="rounded p-1.5 text-text-muted hover:bg-danger-soft hover:text-danger" onClick={() => {
+                      setDeleteJob(null);
+                      setSelectedIds(new Set([row.id]));
+                      setOtpOpen(true);
+                    }}><TrashIcon /></button>
+                  </div>
                 </td>
               </tr>
-            ))}
+            );})}
           </tbody>
         </table>
       </div>
@@ -1080,11 +1141,13 @@ function OrgPhoto({
   submissionId,
   fieldId,
   alt,
+  onOpen,
 }: {
   organizationId: string;
   submissionId: string;
   fieldId: string;
   alt: string;
+  onOpen?: (photo: { src: string; alt: string }) => void;
 }) {
   const [src, setSrc] = useState("");
   useEffect(() => {
@@ -1104,7 +1167,57 @@ function OrgPhoto({
     };
   }, [organizationId, submissionId, fieldId]);
   if (!src) return <span className="text-text-muted">Photo</span>;
-  return <img alt={alt} className="h-14 w-14 rounded-lg object-cover" src={src} />;
+  return (
+    <button type="button" title="View photo" onClick={() => onOpen?.({ src, alt })}>
+      <img alt={alt} className="h-14 w-14 rounded-lg object-cover" src={src} />
+    </button>
+  );
+}
+
+function formatCreated(value: string | null): { date: string; time: string } | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const date = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(parsed).replace(/\//g, "-");
+  const time = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(parsed);
+  return { date, time };
+}
+
+function CheckIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+      <path d="M5 12.5l4.2 4.2L19 7.5" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v4l2.5 2" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M12 4v11" />
+      <path d="M7 11l5 5 5-5" />
+      <path d="M5 20h14" />
+    </svg>
+  );
 }
 
 function OrganizationFilterPanel({

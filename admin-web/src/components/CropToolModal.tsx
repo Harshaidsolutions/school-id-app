@@ -1104,11 +1104,17 @@ function primaryCategory(categories: ConfiguredCategoryField[]): ConfiguredCateg
     categories.find((field) => field.kind === "class") ??
     categories.find((field) => field.kind === "group") ??
     categories.find((field) => field.kind === "designation") ??
+    categories.find((field) => field.kind === "department") ??
     null
   );
 }
 
 function categoryValue(student: Student, field: ConfiguredCategoryField): string {
+  const extra = student.extra_fields;
+  if (extra && typeof extra === "object") {
+    const direct = extra[field.key];
+    if (direct != null && String(direct).trim()) return String(direct).trim();
+  }
   const shown = studentFieldDisplay(student, field.key, field.label).trim();
   if (shown && shown !== "—") return shown;
   if (field.kind === "class" && student.class_section?.trim()) return student.class_section.trim();

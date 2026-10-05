@@ -289,6 +289,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [photoClasses, setPhotoClasses] = useState<NamedCount[]>([]);
   const [photoGroups, setPhotoGroups] = useState<NamedCount[]>([]);
   const [photoDesignations, setPhotoDesignations] = useState<NamedCount[]>([]);
+  const [photoDepartments, setPhotoDepartments] = useState<NamedCount[]>([]);
   const [facets, setFacets] = useState<RecordFacets | null>(null);
   const [deleteJob, setDeleteJob] = useState<DeleteJob | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -298,6 +299,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [capturedOn, setCapturedOn] = useState("");
   const [groupFilter, setGroupFilter] = useState("");
   const [designationFilter, setDesignationFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
   const [showDeletePhotosOtp, setShowDeletePhotosOtp] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showDeleteOptions, setShowDeleteOptions] = useState(false);
@@ -381,6 +383,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         if (capturedOn) params.capturedOn = capturedOn;
         if (groupFilter) params.group = groupFilter;
         if (designationFilter) params.designation = designationFilter;
+        if (departmentFilter) params.department = departmentFilter;
         const { data } = await api.get<StudentsResponse>("/admin/students", {
           params,
         });
@@ -403,7 +406,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     return () => {
       cancelled = true;
     };
-  }, [schoolId, instituteId, isInstitute, classFilter, photoFilter, pendingDataFilter, capturedOn, groupFilter, designationFilter]);
+  }, [schoolId, instituteId, isInstitute, classFilter, photoFilter, pendingDataFilter, capturedOn, groupFilter, designationFilter, departmentFilter]);
 
   useEffect(() => {
     if (!orgId) {
@@ -471,12 +474,13 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
 
   const categoryLabels = useMemo(() => {
     const configured = configuredCategoryFields(formFields);
-    const labelFor = (kind: "class" | "group" | "designation") =>
+    const labelFor = (kind: "class" | "group" | "designation" | "department") =>
       configured.find((field) => field.kind === kind)?.label.trim() ?? "";
     return {
       class: labelFor("class"),
       group: labelFor("group"),
       designation: labelFor("designation"),
+      department: labelFor("department"),
     };
   }, [formFields]);
 
@@ -491,6 +495,10 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             ? photoDesignations.length
               ? photoDesignations
               : (facets?.designations ?? [])
+            : field.kind === "department"
+              ? photoDepartments.length
+                ? photoDepartments
+                : (facets?.departments ?? [])
             : photoClasses.length
               ? photoClasses
               : (facets?.classes ?? []);
@@ -502,7 +510,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         ),
       };
     });
-  }, [formFields, facets, photoClasses, photoGroups, photoDesignations]);
+  }, [formFields, facets, photoClasses, photoGroups, photoDesignations, photoDepartments]);
 
   const classOptions = useMemo(() => {
     const fromFacets = facets?.classes.map((item) => item.name) ?? [];
@@ -718,6 +726,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         classes?: NamedCount[];
         groups?: NamedCount[];
         designations?: NamedCount[];
+        departments?: NamedCount[];
         categories?: NamedCount[];
         signatureCounts?: Record<string, number>;
       }>(path)
@@ -726,6 +735,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         setPhotoClasses(data.classes ?? data.categories ?? []);
         setPhotoGroups(data.groups ?? []);
         setPhotoDesignations(data.designations ?? []);
+        setPhotoDepartments(data.departments ?? []);
         setSignatureCounts(data.signatureCounts ?? {});
       })
       .catch(() => {
@@ -733,6 +743,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         setPhotoClasses([]);
         setPhotoGroups([]);
         setPhotoDesignations([]);
+        setPhotoDepartments([]);
         setSignatureCounts({});
       });
   }
@@ -1004,11 +1015,15 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   classLabel={categoryLabels.class}
                   groupLabel={categoryLabels.group}
                   designationLabel={categoryLabels.designation}
+                  departmentFilter={departmentFilter}
+                  setDepartmentFilter={setDepartmentFilter}
+                  departmentLabel={categoryLabels.department}
                   onClear={() => {
                     setCapturedOn("");
                     setClassFilter("");
                     setGroupFilter("");
                     setDesignationFilter("");
+                    setDepartmentFilter("");
                     setPhotoFilter("");
                     setPendingDataFilter("");
                   }}
@@ -1606,6 +1621,9 @@ function StudentFilterPanel({
   setGroupFilter,
   designationFilter,
   setDesignationFilter,
+  departmentFilter,
+  setDepartmentFilter,
+  departmentLabel,
   photoFilter,
   setPhotoFilter,
   pendingDataFilter,
@@ -1626,6 +1644,9 @@ function StudentFilterPanel({
   setGroupFilter: (value: string) => void;
   designationFilter: string;
   setDesignationFilter: (value: string) => void;
+  departmentFilter: string;
+  setDepartmentFilter: (value: string) => void;
+  departmentLabel: string;
   photoFilter: string;
   setPhotoFilter: (value: string) => void;
   pendingDataFilter: string;
@@ -1711,6 +1732,15 @@ function StudentFilterPanel({
         {designationLabel && facets?.designations.length ? (
           <FilterSelect label={designationLabel} value={designationFilter} onChange={setDesignationFilter}>
             {facets.designations.map((item) => (
+              <option key={item.name} value={item.name}>
+                {item.name}
+              </option>
+            ))}
+          </FilterSelect>
+        ) : null}
+        {departmentLabel && facets?.departments?.length ? (
+          <FilterSelect label={departmentLabel} value={departmentFilter} onChange={setDepartmentFilter}>
+            {facets.departments.map((item) => (
               <option key={item.name} value={item.name}>
                 {item.name}
               </option>

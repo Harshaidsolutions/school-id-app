@@ -61,6 +61,7 @@ export interface RecordFacets {
   classes: NamedCount[];
   groups: NamedCount[];
   designations: NamedCount[];
+  departments?: NamedCount[];
   captureDates: NamedCount[];
 }
 
