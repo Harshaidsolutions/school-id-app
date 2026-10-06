@@ -78,7 +78,7 @@ function ownerFilter(scope: AdminScope, values: unknown[]): string {
     : `o.owner_admin_id = $${param}`;
 }
 
-async function assertOrganizationOwned(scope: AdminScope, organizationId: string): Promise<void> {
+export async function assertOrganizationOwned(scope: AdminScope, organizationId: string): Promise<void> {
   const values: unknown[] = [organizationId];
   const owner = ownerFilter(scope, values);
   const row = await pool.query(`SELECT id FROM organizations o WHERE o.id = $1 AND ${owner} LIMIT 1`, values);
@@ -700,7 +700,7 @@ export async function downloadOrganizationExcel(req: Request, res: Response, nex
   }
 }
 
-const ORGANIZATION_DETAIL_KEYS = ["required_details", "detail_phone", "detail_address", "detail_instructions", "allow_record_edit", "show_captured_section"] as const;
+const ORGANIZATION_DETAIL_KEYS = ["detail_year", "detail_phone2", "detail_code", "detail_model", "detail_tags", "detail_template", "detail_logo", "detail_signature", "detail_organization_photo", "required_details", "detail_phone", "detail_address", "detail_instructions", "allow_record_edit", "show_captured_section"] as const;
 
 export async function updateOrganizationDetails(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -758,7 +758,7 @@ export async function getOrganizationAppWorkspace(req: Request, res: Response, n
     const organizationId = req.user?.organizationId;
     if (!organizationId) throw new AppError("Organization login is required", 403);
     const org = await pool.query(
-      `SELECT id, name, phone, address, instructions, is_active,
+      `SELECT id, name, detail_phone AS phone, detail_address AS address, detail_instructions AS instructions, is_active,
               COALESCE(field_visibility, '{}'::jsonb) AS field_visibility
        FROM organizations WHERE id = $1 LIMIT 1`,
       [organizationId]

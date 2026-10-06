@@ -1,3 +1,4 @@
+import { assertOrganizationOwned } from "./organizationPortalController";
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
@@ -19,13 +20,15 @@ import { routeParam } from "../utils/routeParams";
 export async function getSchoolOrganizationInfo(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
+  organizationMode = false
 ): Promise<void> {
   try {
     const schoolId = routeParam(req.params.id);
     if (!schoolId) throw new AppError("School id is required", 400);
     const scope = await requireAdminScope(req);
-    await assertSchoolOwnedByAdmin(scope, schoolId);
+    if (organizationMode) await assertOrganizationOwned(scope, schoolId);
+    else await assertSchoolOwnedByAdmin(scope, schoolId);
 
     const result = await pool.query<
       SchoolRow & { template_name: string | null; template_image_url: string | null }
@@ -40,7 +43,7 @@ export async function getSchoolOrganizationInfo(
               COALESCE(s.show_captured_section, true) AS show_captured_section,
               t.name AS template_name,
               t.image_url AS template_image_url
-       FROM schools s
+       FROM ${organizationMode ? "organizations" : "schools"} s
        LEFT JOIN templates t ON t.id = s.template_id
        WHERE s.id = $1
        LIMIT 1`,

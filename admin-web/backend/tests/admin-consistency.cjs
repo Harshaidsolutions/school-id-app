@@ -71,3 +71,42 @@ test('failed crop commit rolls back and removes the newly uploaded image without
   assert.equal(uploaded.length,1);assert.deepEqual(deleted,uploaded);
  } finally {pool.query=originalQuery;pool.connect=originalConnect;storage.uploadBufferToBucket=originalUpload;storage.deleteFromBucket=originalDelete;}
 });
+
+test('organization required-details reads its own profile and owner-scoped templates', async () => {
+ const {getTeacherOrganization}=require('../dist/controllers/organizationController');
+ const original=pool.query,statements=[];
+ pool.query=async(sql,values)=>{statements.push({sql,values});return {rows:sql.includes('SELECT owner_admin_id')?[{owner_admin_id:'owner'}]:sql.includes('FROM templates')?[]:[{id:'org',name:'Organization',school_code:'ORG',field_visibility:{detail_logo:false}}]}};
+ try {
+  let error,payload;await getTeacherOrganization({user:{role:'organization_staff',organizationId:'org'}},{status(){return this},json(v){payload=v}},e=>error=e);
+  assert.equal(error,undefined);assert.equal(payload.school.school_code,'ORG');
+  assert.ok(statements.some(s=>s.sql.includes('FROM organizations')&&s.values[0]==='org'));
+  assert.ok(!statements.some(s=>s.sql.includes('FROM schools')));
+  assert.deepEqual(statements.find(s=>s.sql.includes('FROM templates')).values,['owner']);
+ }finally{pool.query=original;}
+});
+
+test('organization required-details saves only the authenticated organization profile', async () => {
+ const {updateTeacherOrganization}=require('../dist/controllers/organizationController');
+ const original=pool.query,statements=[];
+ pool.query=async(sql,values)=>{statements.push({sql,values});return {rows:[{id:'org',name:'Org',phone:'old',template_id:null}]}};
+ try{
+  let error,payload;await updateTeacherOrganization({user:{role:'organization_staff',organizationId:'org'},body:{phone:'123',school_code:'ORG-1',year:'2026',address:'Vizag'}},{status(){return this},json(v){payload=v}},e=>error=e);
+  assert.equal(error,undefined);assert.equal(payload.status,'ok');
+  const write=statements.find(s=>s.sql.includes('UPDATE organizations'));assert.ok(write);assert.equal(write.values.at(-1),'org');assert.equal(write.values[0],'123');assert.equal(write.values[2],'ORG-1');
+  assert.ok(!statements.some(s=>s.sql.includes('UPDATE schools')));
+ }finally{pool.query=original;}
+});
+
+test('disabled organizations cannot access shared profile routes', async()=>{
+ const {requireActiveTeacherOrg}=require('../dist/middleware/orgAccess');const original=pool.query;
+ pool.query=async()=>({rows:[{is_active:false}]});
+ try {let error;await requireActiveTeacherOrg({user:{role:'organization_staff',organizationId:'org'}},{},e=>error=e);assert.equal(error.statusCode,403);}
+ finally{pool.query=original;}
+});
+
+test('organization cannot select a template belonging to another admin', async()=>{
+ const {updateTeacherOrganization}=require('../dist/controllers/organizationController');const original=pool.query;let wrote=false;
+ pool.query=async sql=>{if(sql.includes('UPDATE'))wrote=true;return {rows:sql.includes('FROM templates')?[]:sql.includes('SELECT owner_admin_id')?[{owner_admin_id:'owner'}]:[{id:'org',template_id:null}]}};
+ try{let error;await updateTeacherOrganization({user:{role:'organization_staff',organizationId:'org'},body:{template_id:'foreign-template'}},{},e=>error=e);assert.equal(error.statusCode,400);assert.equal(wrote,false);}
+ finally{pool.query=original;}
+});

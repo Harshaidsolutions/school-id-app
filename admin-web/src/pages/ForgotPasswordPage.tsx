@@ -15,7 +15,7 @@ function IconField({
 }) {
   return (
     <label className="block w-full">
-      <span className="mb-1 block text-[13px] font-semibold text-[#1E293B]">{label}</span>
+      <span className="mb-1 block text-[13px] font-semibold text-[#45468C]">{label}</span>
       <div className="relative w-full">
         <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-muted">
           {icon}

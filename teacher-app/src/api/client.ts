@@ -35,7 +35,8 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use(async (config) => {
-  const token = await getToken();
+  const isLogin = config.url?.split("?")[0] === "/auth/login";
+  const token = isLogin ? null : await getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -66,7 +67,7 @@ export function setSessionExpiredHandler(handler: (() => Promise<void>) | null) 
 }
 let expiring: Promise<void> | null = null;
 api.interceptors.response.use((response) => response, async (error) => {
-  if (error.response?.status === 401 && onSessionExpired) {
+  if (error.config?.url !== "/auth/login" && error.response?.status === 401 && onSessionExpired) {
     const currentToken = await getToken();
     if (currentToken && error.config?.headers?.Authorization === `Bearer ${currentToken}`) {
       if (!expiring) expiring = onSessionExpired().finally(() => { expiring = null; });

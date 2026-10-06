@@ -17,7 +17,7 @@ let session: string | null = null;
 let cached: Snapshot | null = null;
 let pending: Promise<void> | null = null;
 
-async function pull(token: string): Promise<void> {
+async function pull(token: string, isOrganization: boolean): Promise<void> {
   if (session !== token) {
     session = token;
     cached = null;
@@ -27,7 +27,7 @@ async function pull(token: string): Promise<void> {
   const task = (async () => {
     // Settings have their own update lifecycle; the form timestamp alone is insufficient.
     const [form, organization] = await Promise.all([
-      api.get<{ fields: FormFieldConfig[] }>("/teacher/form-config"),
+      isOrganization ? Promise.resolve({data:{fields:[] as FormFieldConfig[]}}) : api.get<{ fields: FormFieldConfig[] }>("/teacher/form-config"),
       api.get<{ school?: Settings }>("/teacher/organization"),
     ]);
     if (session !== token) return;
@@ -39,17 +39,18 @@ async function pull(token: string): Promise<void> {
 }
 
 export function useFormConfig(options?: { refreshOnFocus?: boolean }) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const organization = user?.role === "organization_staff";
   const refreshOnFocus = options?.refreshOnFocus !== false;
   const [snapshot, setSnapshot] = useState<Snapshot>({ fields: [], settings: { allow_number_edit: false, allow_record_edit: false } });
   const [loading, setLoading] = useState(true);
   const reload = useCallback(async (silent = false) => {
     if (!token) return;
     if (!silent) setLoading(true);
-    try { await pull(token); } catch {
+    try { await pull(token, organization); } catch {
       // Retain confirmed permissions when offline; never enable edits after a failed fetch.
     } finally { setLoading(false); }
-  }, [token]);
+  }, [token, organization]);
 
   useEffect(() => {
     setSnapshot({ fields: [], settings: { allow_number_edit: false, allow_record_edit: false } });

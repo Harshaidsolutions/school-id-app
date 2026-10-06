@@ -40,6 +40,13 @@ import { getTeacherBranding } from "../controllers/customerBrandController";
 
 const router = Router();
 
+const sharedAccess = [authMiddleware, requireRole("teacher", "institute_staff", "organization_staff"), requireActiveTeacherOrg];
+router.get("/organization", ...sharedAccess, getTeacherOrganization);
+router.put("/organization", ...sharedAccess, optionalUploadSchoolAssets, updateTeacherOrganization);
+router.get("/models", ...sharedAccess, listTeacherModels);
+router.get("/templates", ...sharedAccess, listTeacherTemplates);
+router.post("/templates/:id/select", ...sharedAccess, selectTeacherTemplate);
+
 router.use(
   authMiddleware,
   requireRole("teacher", "institute_staff"),
@@ -49,8 +56,6 @@ router.use(
 router.get("/home", getTeacherHome);
 router.get("/branding", getTeacherBranding);
 router.get("/form-config", getTeacherFormConfig);
-router.get("/organization", getTeacherOrganization);
-router.put("/organization", optionalUploadSchoolAssets, updateTeacherOrganization);
 
 router.get("/students", listTeacherStudents);
 router.get("/students/:id", getTeacherStudent);
@@ -70,9 +75,6 @@ router.delete("/students/:id/photo", deleteStudentPhoto);
 router.get("/students/:id/card-preview", getTeacherCardPreview);
 router.get("/progress", getTeacherProgress);
 
-router.get("/templates", listTeacherTemplates);
-router.post("/templates/:id/select", selectTeacherTemplate);
-router.get("/models", listTeacherModels);
 
 router.get("/notifications", listTeacherNotifications);
 router.post("/notifications/delete-all", deleteAllTeacherNotifications);

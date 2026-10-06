@@ -316,7 +316,6 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
   const [school, setSchool] = useState<SchoolOrganization | null>(null);
   const [institute, setInstitute] = useState<InstituteOrganization | null>(null);
   const [preview, setPreview] = useState<{ label: string; url: string } | null>(null);
-  const [editingDetails, setEditingDetails] = useState(false);
   const [detailSaving, setDetailSaving] = useState(false);
 
   const visibility =
@@ -371,7 +370,7 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
       setLoading(true);
       setError(null);
       try {
-        const path = isOrganization ? `/admin/organizations/${orgId}` : isInstitute
+        const path = isOrganization ? `/admin/organizations/${orgId}/organization-info` : isInstitute
           ? `/admin/institutes/${orgId}/organization-info`
           : `/admin/schools/${orgId}/organization-info`;
         const { data } = await api.get<{ organization: SchoolOrganization | InstituteOrganization }>(path);
@@ -494,13 +493,13 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
                   </div>
                 }
               />
-              {!isOrganization ? <InfoRow label="Year" value={school.year} control={detailSwitch("detail_year")} /> : null}
+              <InfoRow label="Year" value={school.year} control={detailSwitch("detail_year")} />
               <InfoRow label="Phone" value={school.phone} control={detailSwitch("detail_phone")} />
-              {!isOrganization ? <InfoRow label="Secondary Phone" value={school.phone2} control={detailSwitch("detail_phone2")} /> : null}
-              {!isOrganization ? <InfoRow label="School Code" value={school.school_code} control={detailSwitch("detail_code")} /> : null}
+              <InfoRow label="Secondary Phone" value={school.phone2} control={detailSwitch("detail_phone2")} />
+              <InfoRow label={isOrganization ? "Organization Code" : "School Code"} value={school.school_code} control={detailSwitch("detail_code")} />
               <InfoRow label="Address" value={school.address} control={detailSwitch("detail_address")} />
               <InfoRow label="Instructions" value={school.instructions} control={detailSwitch("detail_instructions")} />
-              {!isOrganization ? <>
+              <>
               <OrganizationSelectionBlocks
                 org={school}
                 onPreview={(l, u) => setPreview({ label: l, url: u })}
@@ -516,7 +515,7 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
                 onPreview={(l, u) => setPreview({ label: l, url: u })}
                 control={detailSwitch("detail_organization_photo")}
               />
-              </> : null}
+              </>
             </>
           ) : null}
           {!loading && !error && !school && !institute && (
@@ -543,15 +542,6 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
         />
       ) : null}
 
-      {isOrganization && school ? <div className="centered-page-card mt-5 p-5">
-        <button type="button" className="btn-secondary" onClick={() => setEditingDetails(v => !v)}>{editingDetails ? "Close editor" : "Edit organization details"}</button>
-        {editingDetails ? <form className="mt-4 space-y-4" onSubmit={async e => {
-          e.preventDefault(); setDetailSaving(true); setError(null);
-          const form = new FormData(e.currentTarget);
-          try { const {data} = await api.patch(`/admin/organizations/${orgId}/details`, Object.fromEntries(form)); setSchool(current => current ? {...current,...data.organization} : current); setEditingDetails(false); }
-          catch { setError("Could not save organization details."); } finally {setDetailSaving(false);}
-        }}>{(["phone","address","instructions"] as const).map(key => <label className="block" key={key}>{key[0].toUpperCase()+key.slice(1)}<input name={key} defaultValue={school[key] ?? ""} className="input-field mt-1" /></label>)}<button disabled={detailSaving} className="btn-primary">Save details</button></form> : null}
-      </div> : null}
       <ImagePreviewModal
         open={Boolean(preview)}
         title={preview?.label ?? ""}

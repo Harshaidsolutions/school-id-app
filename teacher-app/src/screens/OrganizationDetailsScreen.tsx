@@ -143,6 +143,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
   const { scale } = useResponsiveLayout();
   const { user } = useAuth();
   const userId = user?.id ?? "";
+  const entityLabel = user?.role === "organization_staff" ? "Organization" : user?.role === "institute_staff" ? "Institute" : "School";
   const { colors } = useTheme();
   const { fieldVisibility } = useFormConfig();
   const showDetail = (key: string) => fieldVisibility[key] !== false;
@@ -472,7 +473,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
     ) {
       return "School Establish Year is required (4-digit year).";
     }
-    if (showDetail("detail_address") && !address.trim()) return "Full School Address is required.";
+    if (showDetail("detail_address") && !address.trim()) return `Full ${entityLabel} Address is required.`;
     return null;
   }
 
@@ -766,7 +767,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
               colors={colors}
               chipIndex={1}
               icon="shield-checkmark"
-              label="School Logo"
+              label={`${entityLabel} Logo`}
               sublabel="Upload school logo"
               uri={orgUploadImageUri(logoUri, school?.id ?? "", "logo")}
               onPress={() => void pickImage("logo")}
@@ -779,7 +780,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
               colors={colors}
               chipIndex={2}
               icon="business"
-              label="School Building Photo"
+              label={`${entityLabel} Building Photo`}
               sublabel="Upload school building photo"
               uri={orgUploadImageUri(orgPhotoUri, school?.id ?? "", "organization")}
               onPress={() => void pickImage("organization")}
@@ -862,7 +863,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
               },
             ]}
           >
-            <SectionHeader title="School Information" icon="school" chipIndex={1} />
+            <SectionHeader title={`${entityLabel} Information`} icon="school" chipIndex={1} />
 
             {!schoolInfoEditing && hasSavedSchoolInfo ? (
               <View style={styles.readOnlyBlock}>
@@ -873,13 +874,13 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
                   <ReadOnlyField colors={colors} label="Phone Number 2" value={phone2 || "—"} />
                 ) : null}
                 {showDetail("detail_code") ? (
-                  <ReadOnlyField colors={colors} label="School Code" value={schoolCode || "—"} />
+                  <ReadOnlyField colors={colors} label={`${entityLabel} Code`} value={schoolCode || "—"} />
                 ) : null}
                 {showDetail("detail_year") ? (
-                  <ReadOnlyField colors={colors} label="School Establish Year" value={establishYear} />
+                  <ReadOnlyField colors={colors} label={`${entityLabel} Establish Year`} value={establishYear} />
                 ) : null}
                 {showDetail("detail_address") ? (
-                  <ReadOnlyField colors={colors} label="Full School Address" value={address} multiline />
+                  <ReadOnlyField colors={colors} label={`Full ${entityLabel} Address`} value={address} multiline />
                 ) : null}
                 {showDetail("detail_instructions") ? (
                 <ReadOnlyField
@@ -929,7 +930,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
             ) : null}
 
             {showDetail("detail_code") ? (
-            <FormField colors={colors} label="School Code" icon="grid" chipIndex={3}>
+            <FormField colors={colors} label={`${entityLabel} Code`} icon="grid" chipIndex={3}>
               <TextInput
                 style={[styles.input, { color: colors.text }]}
                 value={schoolCode}
@@ -944,7 +945,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
             {showDetail("detail_year") ? (
             <FormField
               colors={colors}
-              label="School Establish Year"
+              label={`${entityLabel} Establish Year`}
               icon="calendar"
               chipIndex={0}
             >
@@ -965,7 +966,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
             {showDetail("detail_address") ? (
             <FormField
               colors={colors}
-              label="Full School Address"
+              label={`Full ${entityLabel} Address`}
               icon="location"
               chipIndex={2}
             >

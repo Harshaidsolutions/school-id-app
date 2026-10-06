@@ -173,7 +173,7 @@ export async function assertCatalogRowOwnedByAdmin(
 }
 
 export async function loadOrgOwnerAdminId(
-  orgTable: "schools" | "institutes",
+  orgTable: "schools" | "institutes" | "organizations",
   orgId: string
 ): Promise<string | null> {
   const row = await pool.query<{ owner_admin_id: string | null }>(

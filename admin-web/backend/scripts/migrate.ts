@@ -895,6 +895,28 @@ async function migrate() {
             AND ofield.field_type = 'photo' AND ofield.field_name NOT ILIKE '%signature%') = 1;
   `);
 
+  await pool.query(`
+    ALTER TABLE organizations
+      ADD COLUMN IF NOT EXISTS detail_year TEXT,
+      ADD COLUMN IF NOT EXISTS detail_phone TEXT,
+      ADD COLUMN IF NOT EXISTS detail_phone2 TEXT,
+      ADD COLUMN IF NOT EXISTS detail_code TEXT,
+      ADD COLUMN IF NOT EXISTS detail_address TEXT,
+      ADD COLUMN IF NOT EXISTS detail_instructions TEXT,
+      ADD COLUMN IF NOT EXISTS details_separated BOOLEAN NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS logo_url TEXT,
+      ADD COLUMN IF NOT EXISTS signature_url TEXT,
+      ADD COLUMN IF NOT EXISTS organization_photo_url TEXT,
+      ADD COLUMN IF NOT EXISTS model TEXT,
+      ADD COLUMN IF NOT EXISTS tags TEXT,
+      ADD COLUMN IF NOT EXISTS template_id UUID REFERENCES templates(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS allow_number_edit BOOLEAN NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS allow_record_edit BOOLEAN NOT NULL DEFAULT true,
+      ADD COLUMN IF NOT EXISTS show_captured_section BOOLEAN NOT NULL DEFAULT true;
+    UPDATE organizations SET detail_phone = phone, detail_address = address,
+      detail_instructions = instructions, details_separated = true
+      WHERE details_separated = false;
+  `);
   console.log("Migration completed successfully.");
 }
 

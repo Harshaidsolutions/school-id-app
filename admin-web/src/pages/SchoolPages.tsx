@@ -273,7 +273,7 @@ export function SchoolListPage() {
                   </td>
                   <td className="px-2 py-3 sm:px-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-text-muted">Screen Capture Protection</span>
+                      <span className="capture-protection-label text-xs text-text-muted">Screen capture<br />protection</span>
                       <ToggleSwitch
                         checked={captureProtected(school)}
                         disabled={captureId === school.id}

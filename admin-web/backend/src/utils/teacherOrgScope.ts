@@ -13,6 +13,10 @@ export function getTeacherOrgKind(user: AuthUser): TeacherOrgKind {
 }
 
 export function getTeacherOrgId(user: AuthUser): string {
+  if (user.role === "organization_staff") {
+    if (!user.organizationId) throw new AppError("Account is not linked to an organization", 403);
+    return user.organizationId;
+  }
   if (isInstituteStaff(user)) {
     if (!user.instituteId) {
       throw new AppError(

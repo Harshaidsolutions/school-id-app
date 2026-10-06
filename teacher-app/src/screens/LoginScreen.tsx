@@ -1,3 +1,5 @@
+import axios from "axios";
+import { APP_RELEASE } from "../constants/release";
 import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -69,6 +71,8 @@ export function LoginScreen(_props: Props) {
   }, []);
 
   async function handleLogin() {
+    if (loading) return;
+    if (!username.trim() || !password) { setError("Enter your username and password."); return; }
     setError(null);
     setLoading(true);
     try {
@@ -78,6 +82,9 @@ export function LoginScreen(_props: Props) {
         password,
       });
 
+      if (!data || typeof data.token !== "string" || !data.user?.role) {
+        throw new Error("The login server returned an unexpected response. Please contact support.");
+      }
       if (
         data.user.role !== "teacher" &&
         data.user.role !== "institute_staff" &&
@@ -97,7 +104,13 @@ export function LoginScreen(_props: Props) {
 
       await login(data.token, data.user);
     } catch (err) {
-      setError(getErrorMessage(err, "Login failed. Check your credentials."));
+      const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+      const fallback = status === 401 ? "Username or password was not accepted. Use the account shown by your administrator."
+        : status === 403 ? "This account is disabled or does not have app access. Contact your administrator."
+        : status && status >= 500 ? "The login server is temporarily unavailable. Please try again later."
+        : status === 404 ? "The login service was not found. Please contact support to check your app configuration."
+        : "Could not complete login. Please try again.";
+      setError(getErrorMessage(err, fallback));
     } finally {
       setLoading(false);
     }
@@ -143,6 +156,7 @@ export function LoginScreen(_props: Props) {
 
             <Text style={styles.title}>Welcome Back!</Text>
             <Text style={styles.subtitle}>Login to continue</Text>
+            <Text style={{ color: "#6550A3", fontSize: 11, marginBottom: 12 }}>Version {APP_RELEASE}</Text>
 
             <View style={styles.formGroup}>
               <View style={styles.formRow}>

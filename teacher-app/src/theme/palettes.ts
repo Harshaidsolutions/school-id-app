@@ -21,10 +21,10 @@ export const lightPalette = {
 
   background: "#FAF8F5",
   surface: "#FFFFFF",
-  text: "#1A2233",
-  textPrimary: "#1A2233",
+  text: "#45468C",
+  textPrimary: "#45468C",
   textSecondary: "#8A8F98",
-  textBody: "#4B5563",
+  textBody: "#485989",
   textPlaceholder: "#B0B4BA",
   border: "#F0F0F0",
 
@@ -38,7 +38,7 @@ export const lightPalette = {
   brandGreenLight: "#6FCF57",
   brandGreenDark: "#388E3C",
   brandGreenDeep: "#2E7D32",
-  brandNavy: "#1A2233",
+  brandNavy: "#45468C",
   brandBlue: "#2196F3",
 
   splashGreen: "#4CAF50",
@@ -70,7 +70,7 @@ export const lightPalette = {
 
   textMuted: "#8A8F98",
   textSubtle: "#B0B4BA",
-  textNav: "#1A2233",
+  textNav: "#45468C",
 
   classIconYellow: "#FEF3C7",
   classIconOrange: "rgba(245,129,31,0.12)",
@@ -105,7 +105,7 @@ export const lightPalette = {
   dangerSoft: "#FEE2E2",
   dangerBorder: "#FECACA",
 
-  darkBlue: "#1A2233",
+  darkBlue: "#45468C",
   cameraBg: "#3D2817",
   overlay: "rgba(26,34,51,0.45)",
   overlayHeavy: "rgba(26,34,51,0.6)",

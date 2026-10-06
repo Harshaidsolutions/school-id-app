@@ -1,4 +1,6 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../navigation/types";
 import { IdCardsGreenHeader } from "./IdCardsGreenHeader";
 import { IdCardsProgressSection } from "./IdCardsProgressSection";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -21,7 +23,7 @@ type CardTab = "all" | "pending" | "captured" | "pending-data";
 
 export function OrganizationCardsPanel() {
   const { colors } = useTheme();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const loadingRef = useRef(false);
   const { user } = useAuth();
   const [name, setName] = useState(user?.username ?? "Organization");
@@ -128,12 +130,12 @@ export function OrganizationCardsPanel() {
       contentContainerStyle={{ padding: 16, gap: 12 }}
       ListHeaderComponent={<View style={{ gap: 12 }}>
       {showDetails ? (
-        <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 12, backgroundColor: colors.surface, gap: 4 }}>
-          <Text style={{ fontFamily: fonts.semiBold, color: colors.text }}>Required Details</Text>
+        <Pressable accessibilityRole="button" onPress={() => navigation.navigate("OrganizationDetails")} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 12, backgroundColor: colors.surface, gap: 4 }}>
+          <Text style={{ fontFamily: fonts.semiBold, color: colors.text }}>Required Details →</Text>
           {visibility.detail_phone !== false ? <Text style={{ color: colors.text }}>{details.phone || "—"}</Text> : null}
           {visibility.detail_address !== false ? <Text style={{ color: colors.text }}>{details.address || "—"}</Text> : null}
           {visibility.detail_instructions !== false ? <Text style={{ color: colors.text }}>{details.instructions || "—"}</Text> : null}
-        </View>
+        </Pressable>
       ) : null}
       <TextInput
         value={search}

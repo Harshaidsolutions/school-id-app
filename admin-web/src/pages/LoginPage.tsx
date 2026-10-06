@@ -17,7 +17,7 @@ function IconField({
 }) {
   return (
     <label className="block w-full">
-      <span className="mb-1 block text-[13px] font-semibold text-[#1E293B]">{label}</span>
+      <span className="mb-1 block text-[13px] font-semibold text-[#45468C]">{label}</span>
       <div className="relative w-full">
         <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-muted">
           {icon}
@@ -217,7 +217,7 @@ function SuperAdminContacts({
   const mail = email?.trim() || null;
   if (!chat && !mail) return null;
   return (
-    <div className="flex w-full items-start gap-3">
+    <div className="login-support">
       {mail ? (
         <a
           className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#EFF6FF]"
@@ -230,8 +230,8 @@ function SuperAdminContacts({
             </svg>
           </span>
           <span className="min-w-0 text-left">
-            <span className="block text-[11px] font-semibold text-[#1E293B]">Email</span>
-            <span className="block break-all text-[11px] font-medium text-[#64748B]">{mail}</span>
+            <span className="block text-[11px] font-semibold text-[#45468C]">Email</span>
+            <span className="block whitespace-nowrap text-[11px] font-medium text-[#64748B]">{mail}</span>
           </span>
         </a>
       ) : null}
@@ -248,7 +248,7 @@ function SuperAdminContacts({
             </svg>
           </span>
           <span className="min-w-0 text-left">
-            <span className="block text-[11px] font-semibold text-[#1E293B]">WhatsApp</span>
+            <span className="block text-[11px] font-semibold text-[#45468C]">WhatsApp</span>
             <span className="block truncate text-[11px] font-medium text-[#64748B]">{formatWhatsApp(chat)}</span>
           </span>
         </a>

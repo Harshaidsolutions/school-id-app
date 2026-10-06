@@ -35,11 +35,12 @@ export async function getTeacherOrganization(
   try {
     if (!req.user) throw new AppError("Authentication required", 401);
     const orgId = getTeacherOrgId(req.user);
+    const schoolTable = req.user.role === "organization_staff" ? "organizations" : "schools";
 
     const row = isInstituteStaff(req.user)
       ? (
           await pool.query<InstituteRow>(
-            `SELECT id, name, detail_year AS year, detail_phone AS phone, detail_code AS institute_code,
+            `SELECT id, name, detail_year AS year, detail_phone AS phone, detail_code AS institute_code, detail_code AS school_code,
                     detail_address AS address, detail_instructions AS instructions,
                     logo_url, signature_url, organization_photo_url, model, tags,
                     template_id, created_at,
@@ -67,7 +68,7 @@ export async function getTeacherOrganization(
                     COALESCE(allow_number_edit, true) AS allow_number_edit,
                     COALESCE(allow_record_edit, true) AS allow_record_edit,
                     COALESCE(show_captured_section, true) AS show_captured_section
-             FROM schools
+             FROM ${schoolTable}
              WHERE id = $1
              LIMIT 1`,
             [orgId]
@@ -81,7 +82,7 @@ export async function getTeacherOrganization(
       );
     }
 
-    const orgTable = isInstituteStaff(req.user) ? "institutes" : "schools";
+    const orgTable = isInstituteStaff(req.user) ? "institutes" : schoolTable;
     const ownerAdminId = await loadOrgOwnerAdminId(orgTable, orgId);
     const templates =
       ownerAdminId != null
@@ -96,7 +97,7 @@ export async function getTeacherOrganization(
 
     res.status(200).json({
       status: "ok",
-      orgType: isInstituteStaff(req.user) ? "institute" : "school",
+      orgType: req.user.role === "organization_staff" ? "organization" : isInstituteStaff(req.user) ? "institute" : "school",
       school: row,
       templates: templates.rows,
     });
@@ -116,11 +117,12 @@ export async function updateTeacherOrganization(
   try {
     if (!req.user) throw new AppError("Authentication required", 401);
     const orgId = getTeacherOrgId(req.user);
+    const schoolTable = req.user.role === "organization_staff" ? "organizations" : "schools";
     const instituteUser = isInstituteStaff(req.user);
 
     if (instituteUser) {
       const existing = await pool.query<InstituteRow>(
-        `SELECT id, name, detail_year AS year, detail_phone AS phone, detail_code AS institute_code,
+        `SELECT id, name, detail_year AS year, detail_phone AS phone, detail_code AS institute_code, detail_code AS school_code,
                 detail_address AS address, detail_instructions AS instructions,
                 logo_url, signature_url, organization_photo_url, model, tags, template_id
          FROM institutes WHERE id = $1 LIMIT 1`,
@@ -216,7 +218,7 @@ export async function updateTeacherOrganization(
              detail_year = $11,
              details_separated = true
          WHERE id = $12
-         RETURNING id, name, detail_year AS year, detail_phone AS phone, detail_code AS institute_code,
+         RETURNING id, name, detail_year AS year, detail_phone AS phone, detail_code AS institute_code, detail_code AS school_code,
                    detail_address AS address, detail_instructions AS instructions,
                    logo_url, signature_url, organization_photo_url, model, tags,
                    template_id, created_at`,
@@ -248,7 +250,7 @@ export async function updateTeacherOrganization(
       `SELECT id, name, detail_year AS year, detail_phone AS phone, detail_phone2 AS phone2,
               detail_code AS school_code, detail_address AS address, detail_instructions AS instructions,
               logo_url, signature_url, organization_photo_url, model, tags, template_id
-       FROM schools WHERE id = $1 LIMIT 1`,
+       FROM ${schoolTable} WHERE id = $1 LIMIT 1`,
       [orgId]
     );
     const school = existing.rows[0];
@@ -292,7 +294,7 @@ export async function updateTeacherOrganization(
         : school.template_id;
 
     if (templateId) {
-      const ownerAdminId = await loadOrgOwnerAdminId("schools", orgId);
+      const ownerAdminId = await loadOrgOwnerAdminId(schoolTable, orgId);
       const tpl = await pool.query(
         `SELECT id FROM templates WHERE id = $1 AND owner_admin_id = $2 LIMIT 1`,
         [templateId, ownerAdminId]
@@ -322,7 +324,7 @@ export async function updateTeacherOrganization(
     }
 
     const updated = await pool.query<SchoolRow>(
-      `UPDATE schools
+      `UPDATE ${schoolTable}
        SET detail_phone = $1,
            detail_phone2 = $2,
            detail_code = $3,
@@ -360,7 +362,7 @@ export async function updateTeacherOrganization(
 
     res.status(200).json({
       status: "ok",
-      orgType: "school",
+      orgType: req.user.role === "organization_staff" ? "organization" : "school",
       school: updated.rows[0],
     });
   } catch (error) {

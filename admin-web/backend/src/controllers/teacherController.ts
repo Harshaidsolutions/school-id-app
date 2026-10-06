@@ -1212,7 +1212,7 @@ export async function listTeacherModels(
   try {
     if (!req.user) throw new AppError("Authentication required", 401);
     const orgId = getTeacherOrgId(req.user);
-    const orgTable = isInstituteStaff(req.user) ? "institutes" : "schools";
+    const orgTable = req.user.role === "organization_staff" ? "organizations" : isInstituteStaff(req.user) ? "institutes" : "schools";
     const ownerAdminId = await loadOrgOwnerAdminId(orgTable, orgId);
     if (!ownerAdminId) {
       res.status(200).json({ status: "ok", count: 0, models: [], tags: [] });

@@ -1090,3 +1090,58 @@ button:focus-visible,a:focus-visible { outline: 2px solid #5683e8; outline-offse
   .detail-toolbar-row2 > .detail-status-tabs-inline { flex:1 1 100%; width:100%; flex-wrap:wrap; height:auto; max-height:none; }
   .detail-toolbar-status-tab { flex:1 1 auto; padding-inline:8px; }
 }
+
+/* Bright shared palette. Colored ink retains contrast on light surfaces. */
+:root { --admin-ink:#3f468a; --admin-brand:#6546d7; --admin-line:#dedff6; --color-text:#42518a; --color-text-navy:#3e438e; --color-text-muted:#60739a; --color-button-blue:#5b48d6; --color-border:#dfe5f5; }
+body,.app-shell,.app-main { background:#f7f8ff; color:#42518a; }
+.app-sidebar { background:linear-gradient(165deg,#6049cf,#426bda 64%,#168d9b) !important; border-right:0; }
+.app-sidebar .nav-active { background:#ffffff26 !important; border-color:#ffffff45 !important; }
+.app-sidebar a:hover { background:#ffffff1c; }
+.app-header { background:linear-gradient(100deg,#fff,#f3f0ff) !important; }
+.btn-primary { background:linear-gradient(110deg,#6645d9,#456bda); color:#fff; border:1px solid transparent; }
+.btn-primary:hover { background:linear-gradient(110deg,#5935c9,#335cc7); }
+.btn-secondary,.detail-toolbar-btn { color:#4f4b99; border-color:#dedff5; background:#fff; }
+.btn-secondary:hover,.detail-toolbar-btn:hover { background:#f1edff; border-color:#b8a9ec; }
+.detail-toolbar-shell { padding:16px; box-shadow:0 5px 20px #6954ad08; }
+.detail-toolbar-row1 { align-items:stretch; grid-template-columns:repeat(6,minmax(0,1fr)) repeat(2,minmax(150px,1.15fr)); }
+.detail-toolbar-row1 > * { height:48px; min-height:48px; }
+.detail-feature-card-short,.detail-feature-card-short:hover { background:linear-gradient(120deg,#8552dd,#d04798); color:#fff; border-color:transparent; box-shadow:0 4px 10px #9650c626; }
+.detail-feature-card-long,.detail-feature-card-long:hover { background:linear-gradient(120deg,#087d8b,#168467); color:#fff; border-color:transparent; box-shadow:0 4px 10px #087d8b25; }
+.detail-feature-label { text-transform:none; }
+.detail-toolbar-row2 { align-items:center; }
+:is(.students-data-table,.list-data-table,.models-table,.data-table) thead th { background:#efedfc; color:#514899; white-space:nowrap; vertical-align:middle; }
+:is(.students-data-table,.list-data-table,.models-table,.data-table) tbody td { vertical-align:middle; color:#42518a; }
+.list-data-table { table-layout:auto; }
+.list-data-table td:last-child { white-space:nowrap; }
+.login-brand-panel { background:radial-gradient(ellipse at 5% 100%,#0d9488,transparent 65%),linear-gradient(145deg,#7145c7,#4669d1); }
+.login-heading { color:#5543a3; }
+.login-shell .auth-card { max-width:460px; }
+.login-main-logo { height:112px; width:112px; object-fit:contain; margin:0 0 22px; }
+.login-wordmark img { width:64px; height:64px; }
+.login-support { display:grid; gap:12px; grid-template-columns:1fr; }
+.login-support a { padding:10px; background:#f2f3ff; border:1px solid #e4e3fa; }
+.login-support a span { color:#526599; }
+.crop-tool-shell { min-height:0; border:1px solid #dedff6; border-radius:18px; background:white; }
+.crop-settings { width:260px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-content:start; gap:12px; background:#fcfbff; }
+.crop-settings > :is(div,p) { grid-column:1/-1; }
+.crop-settings > label { min-width:0 !important; font-size:11px; color:#57539a; }
+.crop-settings .input-field { height:38px; min-height:38px; padding:8px; font-size:12px; }
+.crop-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid #dedff6; background:#fff; flex-shrink:0; z-index:2; }
+.crop-actions button { min-height:40px; padding:8px 16px; font-size:13px; }
+.crop-actions .btn-primary { margin-left:auto; min-width:90px; }
+.crop-image-area { min-height:180px; }
+@media(max-width:1280px) { .detail-toolbar-row1 { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+@media(max-width:760px) {
+ .detail-toolbar-row1 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .crop-tool-layout { flex-direction:column; overflow-y:auto; }
+ .crop-settings { width:100%; max-height:220px; flex-shrink:0; border-right:0; border-bottom:1px solid #dedff6; }
+ .crop-tool-layout > div { flex:1 0 400px; overflow:visible; }
+ .crop-actions { position:sticky; top:0; padding:10px; gap:6px; }
+ .crop-actions button { padding:8px 10px; }
+ .login-main-logo { height:96px; width:96px; }
+ .login-support a { font-size:11px; }
+}
+.capture-protection-label { min-width:90px; line-height:1.5; }
+.models-table { table-layout:auto; }
+.models-table th { padding-inline:16px; }
+.crop-settings > label:has(select) { grid-column:1/-1; }

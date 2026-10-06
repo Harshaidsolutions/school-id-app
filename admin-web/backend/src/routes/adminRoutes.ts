@@ -196,7 +196,8 @@ router.delete("/schools/:schoolId/photos", deleteSchoolPhotosData);
 router.get("/schools/:schoolId/download-photos", downloadSchoolPhotosZip);
 router.get("/schools/:schoolId/photo-capture-counts", listSchoolPhotoCaptureCounts);
 router.patch("/schools/:id/app-settings", updateSchoolAppSettings);
-router.get("/schools/:id/organization-info", getSchoolOrganizationInfo);
+router.get("/schools/:id/organization-info", (req,res,next) => getSchoolOrganizationInfo(req,res,next));
+router.get("/organizations/:id/organization-info", (req,res,next) => getSchoolOrganizationInfo(req,res,next,true));
 
 // Institutes
 router.post("/institutes", uploadSchoolAssets, createInstitute);

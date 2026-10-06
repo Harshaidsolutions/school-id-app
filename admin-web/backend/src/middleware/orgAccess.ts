@@ -71,6 +71,12 @@ export async function requireActiveTeacherOrg(
   next: NextFunction
 ): Promise<void> {
   try {
+    if (req.user?.role === "organization_staff") {
+      if (!req.user.organizationId) throw new AppError("Account is not linked to an organization", 403);
+      const result = await pool.query("SELECT is_active FROM organizations WHERE id = $1", [req.user.organizationId]);
+      if (!result.rows[0] || result.rows[0].is_active === false) throw new AppError("Organization is inactive. Contact the administrator.", 403);
+      next(); return;
+    }
     if (
       !req.user ||
       (req.user.role !== "teacher" && req.user.role !== "institute_staff")

@@ -19,7 +19,7 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
       </section>
       <section className="login-form-panel">
         <div className="auth-card">
-          <img src="/app-logo.png" alt="My School ID Card" className="mb-7 h-14 w-auto object-contain" />
+          <img src="/app-logo.png" alt="My School ID Card" className="login-main-logo" />
           <h1 className="login-heading">{onTitlePress ? <button type="button" onClick={onTitlePress} className="login-heading-action" aria-label="Welcome Admin — open password recovery">{title}</button> : title}</h1>
           <p className="mb-8 mt-2 text-sm text-text-muted">Your workspace starts here.</p>
           {children}

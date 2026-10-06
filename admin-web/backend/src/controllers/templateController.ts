@@ -297,7 +297,7 @@ export async function listTeacherTemplates(
         : "";
 
     const orgId = getTeacherOrgId(req.user);
-    const orgTable = isInstituteStaff(req.user) ? "institutes" : "schools";
+    const orgTable = req.user.role === "organization_staff" ? "organizations" : isInstituteStaff(req.user) ? "institutes" : "schools";
     const ownerAdminId = await loadOrgOwnerAdminId(orgTable, orgId);
     if (!ownerAdminId) {
       res.status(200).json({
@@ -333,7 +333,7 @@ export async function listTeacherTemplates(
           [orgId]
         )
       : await pool.query<{ template_id: string | null }>(
-          `SELECT template_id FROM schools WHERE id = $1`,
+          `SELECT template_id FROM ${orgTable} WHERE id = $1`,
           [orgId]
         );
 
@@ -362,7 +362,7 @@ export async function selectTeacherTemplate(
     if (!id) throw new AppError("Template id is required", 400);
 
     const orgId = getTeacherOrgId(req.user);
-    const orgTable = isInstituteStaff(req.user) ? "institutes" : "schools";
+    const orgTable = req.user.role === "organization_staff" ? "organizations" : isInstituteStaff(req.user) ? "institutes" : "schools";
     const ownerAdminId = await loadOrgOwnerAdminId(orgTable, orgId);
     if (!ownerAdminId) {
       throw new AppError("Template not found", 404);
@@ -381,7 +381,7 @@ export async function selectTeacherTemplate(
         orgId,
       ]);
     } else {
-      await pool.query(`UPDATE schools SET template_id = $1 WHERE id = $2`, [
+      await pool.query(`UPDATE ${orgTable} SET template_id = $1 WHERE id = $2`, [
         id,
         orgId,
       ]);
