@@ -22,7 +22,12 @@ function extraApiUrl(): string {
 
 const fromEnv = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/$/, "");
 
-export const SERVER_ORIGIN = (fromEnv || extraApiUrl() || PRODUCTION_ORIGIN).replace(/\/+$/, "").replace(/\/api$/i, "");
+// Older native build folders retained this retired HTTP/IP value in .env.
+// Correct only our known obsolete deployment address, preserving custom dev servers.
+const configuredOrigin = (fromEnv || extraApiUrl() || PRODUCTION_ORIGIN).replace(/\/+$/, "").replace(/\/api$/i, "");
+export const SERVER_ORIGIN = /^https?:\/\/13\.203\.129\.105(?::80)?$/i.test(configuredOrigin)
+  || /^http:\/\/(www\.)?myschoolidcard\.in$/i.test(configuredOrigin)
+  ? PRODUCTION_ORIGIN : configuredOrigin;
 
 export const API_BASE_URL = `${SERVER_ORIGIN}/api`;
 

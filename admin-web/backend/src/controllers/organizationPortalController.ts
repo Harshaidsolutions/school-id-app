@@ -513,6 +513,7 @@ export async function submitPublicOrganizationForm(req: Request, res: Response, 
     } catch {
       /* ignore */
     }
+    await Promise.all(storedPaths.map(path => deleteFromBucket(STUDENT_PHOTOS_BUCKET, path).catch(() => undefined)));
     next(error);
   } finally {
     client.release();
@@ -551,7 +552,8 @@ export async function replaceOrganizationSubmissionPhoto(req: Request, res: Resp
     const submissionId = routeParam(req.params.submissionId);
     const fieldId = routeParam(req.params.fieldId);
     const file = req.file;
-    if (String(req.body?.markCropped) !== "1") throw new AppError("Use crop preview and Save to mark this photo cropped", 400);
+    const markCropped = String(req.body?.markCropped) === "1";
+    if (!markCropped && String(req.body?.replacePhoto) !== "1") throw new AppError("Use crop preview and Save, or Replace photo", 400);
     if (!organizationId || !submissionId || !fieldId || !file) throw new AppError("Photo is required", 400);
     await assertOrganizationOwned(scope, organizationId);
     const owned = await pool.query(
@@ -566,11 +568,11 @@ export async function replaceOrganizationSubmissionPhoto(req: Request, res: Resp
     await client.query("BEGIN");
     await client.query(
       `INSERT INTO organization_submission_values (submission_id, field_id, photo_url, photo_captured_at, photo_cropped)
-       VALUES ($1, $2, $3, NOW(), true)
+       VALUES ($1, $2, $3, NOW(), $4)
        ON CONFLICT (submission_id, field_id)
-       DO UPDATE SET photo_url = EXCLUDED.photo_url, photo_cropped = true,
-         photo_captured_at = COALESCE(organization_submission_values.photo_captured_at, NOW())`,
-      [submissionId, fieldId, path]
+       DO UPDATE SET photo_url = EXCLUDED.photo_url, photo_cropped = EXCLUDED.photo_cropped,
+         photo_captured_at = CASE WHEN $4 THEN COALESCE(organization_submission_values.photo_captured_at, NOW()) ELSE NOW() END`,
+      [submissionId, fieldId, path, markCropped]
     );
     await client.query(
       `UPDATE organization_submissions
@@ -588,7 +590,7 @@ export async function replaceOrganizationSubmissionPhoto(req: Request, res: Resp
       student: {
         id: `${submissionId}:${fieldId}`,
         photo_url: `/admin/organizations/${organizationId}/submissions/${submissionId}/fields/${fieldId}/photo`,
-        photo_cropped: true,
+        photo_cropped: markCropped,
         updated_at: new Date().toISOString(),
       },
     });
@@ -896,6 +898,14 @@ export async function updateOrganizationSubmissionAdmin(req: Request, res: Respo
     }
     const values = incoming as Record<string, unknown>;
     await client.query("BEGIN");
+    if (req.body.photoNumber !== undefined) {
+      const photoNumber = String(req.body.photoNumber).trim();
+      if (!photoNumber || photoNumber.length > 100 || /[\/\\\x00-\x1f]/.test(photoNumber)) throw new AppError("Enter a valid photo number (up to 100 characters, without slashes)", 400);
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [organizationId]);
+      const duplicate = await client.query("SELECT id FROM organization_submissions WHERE organization_id = $1 AND lower(photo_number) = lower($2) AND id <> $3 LIMIT 1", [organizationId, photoNumber, submissionId]);
+      if (duplicate.rows.length) throw new AppError("This photo number already exists in this organization", 409);
+      await client.query("UPDATE organization_submissions SET photo_number = $1 WHERE id = $2 AND organization_id = $3", [photoNumber, submissionId, organizationId]);
+    }
     for (const field of fields) {
       if (field.enabled === false || field.field_type !== "text" || isLockedPhotoNumber(field.field_name)) continue;
       if (!Object.prototype.hasOwnProperty.call(values, field.id)) continue;

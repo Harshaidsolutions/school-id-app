@@ -128,7 +128,7 @@ function SortableFieldRow({
     <li
       ref={setNodeRef}
       style={style}
-      className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 ${
+      className={`form-field-row flex flex-wrap items-center justify-between gap-3 px-5 py-3 ${
         isDragging ? "relative z-10 bg-white shadow-md ring-2 ring-button-blue/30" : ""
       }`}
     >
@@ -186,13 +186,13 @@ function SortableFieldRow({
       </div>
       {onConfigure ? <div className="flex items-center gap-3">
         <select aria-label={`${field.label} type`} className="input-field w-auto" value={field.fieldType ?? "text"} disabled={Boolean(field.organizationFieldId)} onChange={e => onConfigure(rowId, {fieldType:e.target.value as "text"|"photo"})}><option value="text">Text / Data</option><option value="photo">Image / Photo</option></select>
-        <label className="flex items-center gap-2">Required <ToggleSwitch checked={field.required !== false} label={`${field.label} required`} onChange={() => onConfigure(rowId, {required:field.required === false})} /></label>
+        <select aria-label={`${field.label} requirement`} className="input-field w-auto" value={field.required !== false ? "required" : "optional"} onChange={e => onConfigure(rowId, { required: e.target.value === "required" })}><option value="required">Required</option><option value="optional">Optional</option></select>
       </div> : null}
-      <ToggleSwitch
+      <label className="form-field-visibility flex items-center gap-2 text-sm">Visible<ToggleSwitch
         checked={field.enabled}
         onChange={() => onToggle(rowId)}
         label={`${field.label} enabled`}
-      />
+      /></label>
     </li>
   );
 }

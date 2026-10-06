@@ -26,6 +26,7 @@ export function EditStudentModal({
   onSaved: (updated: Student) => void;
 }) {
   const fields = useMemo(() => activeFormFields(formFields), [formFields]);
+  const numberField = fields.find(field => field.key === "photo_id" || /^(id|photoid|photonumber|photono|photoidnumber)$/.test(field.label.toLowerCase().replace(/[^a-z0-9]/g, "")));
   const [values, setValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -161,6 +162,7 @@ export function EditStudentModal({
     setLoading(true);
 
     const payload: Record<string, string | null> = {
+      photo_id: fieldValue(numberField?.key ?? "photo_id").trim() || null,
       student_name: fieldValue("student_name").trim(),
       class_section: fieldValue("class_section").trim(),
       roll_no: fieldValue("roll_no").trim() || null,
@@ -371,6 +373,7 @@ export function EditStudentModal({
               </label>
             </div>
 
+            {!numberField && <label className="block text-sm"><span className="mb-1 block font-medium">Photo Number</span><input className="input-field" value={fieldValue("photo_id")} onChange={event => setField("photo_id", event.target.value)} /></label>}
             {fields.length === 0 ? (
               <p className="text-sm text-text-muted">No Excel fields configured.</p>
             ) : (

@@ -271,7 +271,7 @@ async function syncAndroidMipmaps() {
   let wrote = 0;
   for (const [folder, size] of Object.entries(LEGACY_LAUNCHER)) {
     const dir = path.join(resRoot, folder);
-    if (!fs.existsSync(dir)) continue;
+    fs.mkdirSync(dir, {recursive:true});
     for (const name of ["ic_launcher", "ic_launcher_round"]) {
       removeDuplicateMipmap(path.join(dir, name));
       const dest = path.join(dir, `${name}.webp`);
@@ -282,11 +282,25 @@ async function syncAndroidMipmaps() {
 
   for (const [folder, size] of Object.entries(ADAPTIVE_FOREGROUND)) {
     const dir = path.join(resRoot, folder);
-    if (!fs.existsSync(dir)) continue;
+    fs.mkdirSync(dir, {recursive:true});
     removeDuplicateMipmap(path.join(dir, "ic_launcher_foreground"));
     const dest = path.join(dir, "ic_launcher_foreground.webp");
     await writeResizedIcon(adaptiveFg, dest, size, true);
     wrote++;
+  }
+
+  // Existing native folders may still reference an old foreground drawable.
+  // Replace only launcher resources, preserving signing and Firebase settings.
+  const adaptiveDir = path.join(resRoot, "mipmap-anydpi-v26");
+  fs.mkdirSync(adaptiveDir, {recursive:true});
+  const adaptiveXml = `<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+  <background android:drawable="@android:color/white" />
+  <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>
+`;
+  for (const folder of fs.readdirSync(resRoot).filter(f => /^mipmap-anydpi-v[0-9]+$/.test(f))) {
+    for (const name of ["ic_launcher", "ic_launcher_round"]) fs.writeFileSync(path.join(resRoot, folder, `${name}.xml`), adaptiveXml);
   }
 
   if (wrote > 0) {

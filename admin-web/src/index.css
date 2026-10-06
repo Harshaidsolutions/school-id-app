@@ -1145,3 +1145,65 @@ body,.app-shell,.app-main { background:#f7f8ff; color:#42518a; }
 .models-table { table-layout:auto; }
 .models-table th { padding-inline:16px; }
 .crop-settings > label:has(select) { grid-column:1/-1; }
+
+/* Shared colorful surfaces, with readable mobile controls. */
+.app-main { background:radial-gradient(ellipse at 100% 0,#e4f6fa 0,transparent 38%),radial-gradient(ellipse at 0 35%,#eee8ff 0,transparent 48%),#f8faff; }
+.app-header { border-bottom:2px solid #d9e2ff; }
+.card,.centered-page-card,.panel-right { background:#ffffffed; border:1px solid #dce3fa; box-shadow:0 8px 28px #5c62a80c; }
+.detail-toolbar-shell { background:linear-gradient(120deg,#f3edff,#eff9fc); border-color:#d8dcf4; }
+.detail-toolbar-btn:not(.detail-feature-card-short):not(.detail-feature-card-long) { background:#fff; border-color:#cdcdee; box-shadow:0 2px 5px #564f8e08; font-weight:600; }
+.detail-toolbar-row1 > :nth-child(3),.detail-toolbar-row1 > :nth-child(4) { background:#e6f7f5; color:#196b69; border-color:#bde7df; }
+.detail-toolbar-row1 > :nth-child(6) { background:#fff0f4; color:#a33d67; border-color:#f2d2df; }
+:is(.students-data-table,.list-data-table,.models-table,.data-table) tbody tr:nth-child(even) { background:#f7f9ff; }
+:is(.students-data-table,.list-data-table,.models-table,.data-table) tbody tr:hover { background:#edf4ff; }
+.form-field-row { background:linear-gradient(110deg,#fff,#f8faff); }
+.form-field-row > div:first-child { flex-basis:220px; }
+.login-shell { min-height:100dvh; }
+.login-brand-panel { padding:clamp(24px,4vw,64px); }
+.login-brand-copy { padding:24px 0; }
+.login-form-panel { padding:20px 24px; }
+.login-main-logo { width:96px; height:96px; margin-bottom:12px; }
+.login-caption { margin:6px 0 20px; }
+.login-footer { margin-top:20px; padding-top:16px; }
+.login-shell form { gap:12px; }
+.login-shell form > * { margin-top:0 !important; }
+.login-support { gap:8px; }
+@media (max-width:760px) {
+ .app-main { min-width:0; }
+ .app-header-title { font-size:18px; }
+ .form-field-row { gap:12px; padding:16px; }
+ .form-field-row > div:first-child { flex:1 0 100%; }
+ .form-field-row > div:nth-child(2) { flex:1; min-width:0; gap:8px; }
+ .form-field-row select { min-width:0; width:100%; font-size:14px; }
+ .form-field-row > button { flex-shrink:0; }
+ .login-form-panel { padding:16px 20px; }
+ .login-shell .auth-card { max-width:420px; }
+ .login-main-logo { width:88px; height:88px; }
+ .login-heading { font-size:27px; }
+ .login-caption { margin-bottom:16px; }
+ .login-shell .input-field-icon { font-size:16px; }
+ .detail-toolbar-shell { padding:12px; }
+ .detail-toolbar-btn { font-size:12px; padding:8px; }
+ .detail-toolbar-row2-actions { width:100%; }
+ .detail-toolbar-row2-actions button { flex:1; min-height:42px; }
+ [role=dialog] input:not([type=file]),[role=dialog] select { font-size:16px; }
+}
+@media (max-height:750px) {
+ .login-main-logo { width:72px; height:72px; margin-bottom:8px; }
+ .login-form-panel { padding-block:12px; }
+ .login-caption { margin:4px 0 12px; }
+ .login-footer { margin-top:12px; padding-top:10px; }
+ .login-shell form { gap:10px; }
+ .login-support a { padding:8px; }
+ .login-brand-copy h2 { font-size:36px; }
+}
+@media(max-width:760px) {
+ .app-main { overflow-y:auto !important; }
+ .app-page-content { flex:0 0 auto !important; overflow:visible !important; }
+ .detail-page-shell.admin-scroll-root { height:auto; overflow:visible; flex:0 0 auto; }
+ .students-table-scroll.admin-scroll-panel { flex:0 0 auto; min-height:280px; max-height:65dvh; }
+ .students-data-table .col-actions { position:sticky; right:0; background:#f2f3ff; box-shadow:-3px 0 8px #545b9212; z-index:1; }
+ .students-data-table thead .col-actions { z-index:3; }
+ .form-field-row > div:nth-child(2) { flex:1 0 100%; }
+ .form-field-visibility { margin-left:auto; }
+}

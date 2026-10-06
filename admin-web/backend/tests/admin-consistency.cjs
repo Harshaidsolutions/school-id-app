@@ -110,3 +110,49 @@ test('organization cannot select a template belonging to another admin', async()
  try{let error;await updateTeacherOrganization({user:{role:'organization_staff',organizationId:'org'},body:{template_id:'foreign-template'}},{},e=>error=e);assert.equal(error.statusCode,400);assert.equal(wrote,false);}
  finally{pool.query=original;}
 });
+
+test('raw organization photo replacement clears cropped status and resets capture timestamp',async()=>{
+ const storage=require('../dist/config/storage');
+ const originalQuery=pool.query,originalConnect=pool.connect,originalUpload=storage.uploadBufferToBucket;
+ const statements=[];
+ pool.query=async sql=>({rows:sql.includes('FROM users')?[{is_super_admin:true}]:[{id:'org'}]});
+ pool.connect=async()=>({query:async(sql,values)=>{statements.push({sql,values});return {rows:[]}},release(){}});
+ storage.uploadBufferToBucket=async()=>{};
+ try{
+  let error,payload;await replaceOrganizationSubmissionPhoto({user:{role:'admin',userId:'admin'},params:{id:'org',submissionId:'person',fieldId:'photo'},body:{replacePhoto:'1'},file:{buffer:Buffer.from('image'),mimetype:'image/jpeg'}},{json(v){payload=v}},e=>error=e);
+  assert.equal(error,undefined);assert.equal(payload.student.photo_cropped,false);
+  const imageWrite=statements.find(s=>s.sql.includes('INSERT INTO organization_submission_values'));
+  assert.equal(imageWrite.values[3],false);assert.match(imageWrite.sql,/ELSE NOW\(\) END/);
+ }finally{pool.query=originalQuery;pool.connect=originalConnect;storage.uploadBufferToBucket=originalUpload;}
+});
+
+test('duplicate database violation is a readable 409 response',()=>{
+ const {errorHandler}=require('../dist/middleware/errorHandler');let code,body;
+ const error=Object.assign(new Error('duplicate'),{code:'23505',constraint:'duplicate_record_details'});
+ errorHandler(error,{}, {status(v){code=v;return this},json(v){body=v}},()=>{});
+ assert.equal(code,409);assert.equal(body.message,'Data already exists. Please contact admin.');
+});
+
+test('organization photo number collision rolls back the entire edit',async()=>{
+ const {updateOrganizationSubmissionAdmin}=require('../dist/controllers/organizationPortalController');
+ const q=pool.query,c=pool.connect,statements=[];
+ pool.query=async sql=>({rows:sql.includes('FROM users')?[{is_super_admin:true}]:sql.includes('SELECT form_id')?[{form_id:'form'}]:sql.includes('organization_form_fields')?[]:[{id:'org'}]});
+ pool.connect=async()=>({query:async(sql,values)=>{statements.push(sql);return {rows:sql.includes('lower(photo_number)')?[{id:'existing'}]:[]}},release(){}});
+ try{let error;await updateOrganizationSubmissionAdmin({user:{role:'admin',userId:'admin'},params:{id:'org',submissionId:'person'},body:{photoNumber:'ADD_001',values:{}}},{json(){throw Error('must not report success')}},e=>error=e);
+ assert.equal(error.statusCode,409);assert.ok(statements.includes('ROLLBACK'));assert.ok(!statements.some(s=>s.startsWith('UPDATE')));
+ }finally{pool.query=q;pool.connect=c;}
+});
+
+test('admin can edit the photo number and clear optional data without app edit permission',async()=>{
+ const {updateStudentAdmin}=require('../dist/controllers/studentController');const original=pool.query;let update;
+ const row={id:'person',school_id:'school',institute_id:null,student_name:'Asha',class_section:'6',photo_id:'ADD_001',parent_phone:'123',extra_fields:{photo_id:'ADD_001'},field_labels:{photo_id:'Photo Number'}};
+ pool.query=async(sql,values)=>{
+  if(sql.includes('FROM users'))return {rows:[{is_super_admin:true}]};
+  if(sql.startsWith('UPDATE students')){update={sql,values};return {rows:[row]};}
+  if(sql.includes('FROM students'))return {rows:[row]};
+  return {rows:[]};
+ };
+ try{let error;await updateStudentAdmin({user:{role:'admin',userId:'admin'},params:{id:'person'},body:{photo_id:'CUSTOM_001',parent_phone:null}},{status(){return this},json(){}},e=>error=e);
+ assert.equal(error,undefined);assert.equal(update.values[4],null);assert.equal(update.values[14],'CUSTOM_001');assert.equal(JSON.parse(update.values[12]).photo_id,'CUSTOM_001');assert.doesNotMatch(update.sql,/parent_phone = COALESCE/);
+ }finally{pool.query=original;}
+});

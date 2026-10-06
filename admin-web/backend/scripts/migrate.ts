@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import "dotenv/config";
 import { pool } from "../src/config/database";
 
@@ -917,6 +919,7 @@ async function migrate() {
       detail_instructions = instructions, details_separated = true
       WHERE details_separated = false;
   `);
+  await pool.query(fs.readFileSync(path.join(__dirname, "sql/record-duplicates.sql"), "utf8"));
   console.log("Migration completed successfully.");
 }
 

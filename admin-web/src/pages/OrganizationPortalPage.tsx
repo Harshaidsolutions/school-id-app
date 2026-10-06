@@ -344,6 +344,10 @@ export function OrganizationDetailPage() {
   const [deleteJob, setDeleteJob] = useState<DeleteJob | null>(null);
   const [exporting, setExporting] = useState(false);
   const [editingRow, setEditingRow] = useState<SubmissionRow | null>(null);
+  const [editNumber, setEditNumber] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editBusy, setEditBusy] = useState(false);
+  const [editPhotos, setEditPhotos] = useState<Record<string, File>>({});
   const [editDraft, setEditDraft] = useState<Record<string, string>>({});
   const [photoPreview, setPhotoPreview] = useState<{ src: string; alt: string } | null>(null);
 
@@ -719,6 +723,8 @@ export function OrganizationDetailPage() {
                       const next: Record<string, string> = {};
                       for (const field of textFields) next[field.id] = row.values[field.id]?.text ?? "";
                       setEditDraft(next);
+                      setEditNumber(row.photoNumber ?? "");
+                      setEditPhotos({}); setEditError(null);
                       setEditingRow(row);
                     }}><EditIcon /></button>
                     <button type="button" title="Delete" className="rounded p-1.5 text-text-muted hover:bg-danger-soft hover:text-danger" onClick={() => {
@@ -825,33 +831,49 @@ export function OrganizationDetailPage() {
       {editingRow ? (
         <form
           className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4"
-          onSubmit={(event) => {
+          role="dialog" aria-modal="true" aria-label="Edit record"
+          onSubmit={async (event) => {
             event.preventDefault();
-            void api.patch(`/admin/organizations/${id}/submissions/${editingRow.id}`, { values: editDraft })
-              .then(() => load())
-              .then(() => setEditingRow(null))
-              .catch((err) => setError(messageOf(err, "Failed to save this record.")));
+            if (editBusy) return;
+            setEditBusy(true); setEditError(null);
+            try {
+              await api.patch(`/admin/organizations/${id}/submissions/${editingRow.id}`, { values: editDraft, photoNumber: editNumber });
+              for (const [fieldId, photo] of Object.entries(editPhotos)) {
+                const body = new FormData(); body.append("photo", photo); body.append("replacePhoto", "1");
+                await api.post(`/admin/organizations/${id}/submissions/${editingRow.id}/fields/${fieldId}/photo`, body);
+              }
+              await load(); setEditingRow(null);
+            } catch (err) { setEditError(messageOf(err, "Save did not finish. Some changes may have saved; retry the remaining changes.")); }
+            finally { setEditBusy(false); }
           }}
         >
           <div className="max-h-[85vh] w-full max-w-lg space-y-3 overflow-y-auto rounded-2xl bg-white p-6">
             <h2 className="text-lg font-bold">Edit record</h2>
+            {editError && <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">{editError}</p>}
             <label className="block text-sm">
               <span className="mb-1.5 block font-medium">{numberLabel}</span>
-              <input className="input-field" value={editingRow.photoNumber || ""} readOnly />
+              <input required maxLength={100} className="input-field" value={editNumber} onChange={event => setEditNumber(event.target.value)} />
             </label>
             {activeFields.filter((field) => !isPhotoNumberLabel(field.field_name)).map((field) => (
               <label key={field.id} className="block text-sm">
                 <span className="mb-1.5 block font-medium">{field.field_name}</span>
                 {field.field_type === "photo" ? (
-                  <span className="text-text-muted">{editingRow.values[field.id]?.hasPhoto ? "Photo uploaded" : "No photo"}</span>
+                  <span className="block rounded-xl border border-border bg-content-bg p-3">
+                    <span className="mb-2 block text-text-muted">{editingRow.values[field.id]?.hasPhoto ? "Replace photo" : "Upload photo"}</span>
+                    <input aria-label={`Replace ${field.field_name}`} type="file" accept="image/jpeg,image/png" className="block w-full min-w-0 text-sm" disabled={editBusy} onChange={event => {
+                      const file = event.target.files?.[0];
+                      if (file) setEditPhotos(current => ({...current, [field.id]: file}));
+                    }} />
+                    <span className="mt-2 block text-xs">A replacement returns this photo to uncropped status.</span>
+                  </span>
                 ) : (
                   <input className="input-field" value={editDraft[field.id] ?? ""} onChange={(event) => setEditDraft((current) => ({ ...current, [field.id]: event.target.value }))} />
                 )}
               </label>
             ))}
             <div className="flex justify-end gap-2">
-              <button type="button" className="btn-secondary" onClick={() => setEditingRow(null)}>Cancel</button>
-              <button type="submit" className="btn-primary">Save</button>
+              <button type="button" disabled={editBusy} className="btn-secondary" onClick={() => setEditingRow(null)}>Cancel</button>
+              <button type="submit" disabled={editBusy} className="btn-primary">{editBusy ? "Saving…" : "Save"}</button>
             </div>
           </div>
         </form>

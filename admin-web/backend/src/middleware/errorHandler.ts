@@ -17,6 +17,10 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
+  if ((err as Error & { constraint?: string }).constraint === "duplicate_record_details") {
+    res.status(409).json({ status: "error", message: "Data already exists. Please contact admin." });
+    return;
+  }
   if (err instanceof multer.MulterError) {
     const message =
       err.code === "LIMIT_FILE_SIZE"

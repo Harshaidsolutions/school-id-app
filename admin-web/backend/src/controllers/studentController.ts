@@ -1,3 +1,4 @@
+import { isPhotoIdentityLabel } from "../utils/photoIdentity";
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
@@ -47,7 +48,6 @@ import {
 } from "../utils/adminScope";
 import { Student, StudentRowInput } from "../types/student";
 import {
-  assertNumberEditAllowed,
   collectRecordFacets,
   extraFieldValue,
   hasAllRequiredFieldData,
@@ -379,7 +379,8 @@ export async function bulkUploadStudents(
       // ignore rollback errors if transaction was never started
     }
     if (error && typeof error === "object" && "code" in error) {
-      const pg = error as { code?: string; message?: string };
+      const pg = error as { code?: string; message?: string; constraint?: string };
+      if (pg.constraint === "duplicate_record_details") { next(error); return; }
       if (pg.code === "42703") {
         next(
           new AppError(
@@ -624,12 +625,7 @@ export async function updateStudentAdmin(
     if (!student) throw new AppError("Student not found", 404);
     await assertStudentOwnedByAdmin(await requireAdminScope(req), student);
 
-    await assertNumberEditAllowed(
-      student.school_id,
-      student.institute_id,
-      req.body as Record<string, unknown>,
-      student.photo_id
-    );
+    // Admins may edit photo numbers; mobile permissions remain enforced separately.
 
     const textValue = (value: unknown): string | null | undefined => {
       if (value === undefined) return undefined;
@@ -669,16 +665,21 @@ export async function updateStudentAdmin(
       : { instituteId: student.institute_id ?? undefined };
     const formFields = await loadFormConfigForOrg(orgScope);
 
-    const rollNo = optional("roll_no", "rollNo") ?? student.roll_no;
-    const parentName = optional("parent_name", "parentName") ?? student.parent_name;
-    const parentPhone = optional("parent_phone", "parentPhone") ?? student.parent_phone;
-    const address = optional("address") ?? student.address;
-    const dob = optionalDate("dob") ?? student.dob;
-    const gender = optional("gender") ?? student.gender;
-    const bloodGroup = optional("blood_group", "bloodGroup") ?? student.blood_group;
-    const custom1 = optional("custom_1", "custom1") ?? student.custom_1;
-    const custom2 = optional("custom_2", "custom2") ?? student.custom_2;
-    const custom3 = optional("custom_3", "custom3") ?? student.custom_3;
+    const nextText = (key: string, previous: string | null | undefined, alt?: string) => {
+      const value = optional(key, alt);
+      return value === undefined ? previous ?? null : value;
+    };
+    const rollNo = nextText("roll_no", student.roll_no, "rollNo");
+    const parentName = nextText("parent_name", student.parent_name, "parentName");
+    const parentPhone = nextText("parent_phone", student.parent_phone, "parentPhone");
+    const address = nextText("address", student.address);
+    const requestedDob = optionalDate("dob");
+    const dob = requestedDob === undefined ? student.dob : requestedDob;
+    const gender = nextText("gender", student.gender);
+    const bloodGroup = nextText("blood_group", student.blood_group, "bloodGroup");
+    const custom1 = nextText("custom_1", student.custom_1, "custom1");
+    const custom2 = nextText("custom_2", student.custom_2, "custom2");
+    const custom3 = nextText("custom_3", student.custom_3, "custom3");
     const photoIdProvided = req.body.photo_id !== undefined || req.body.photoId !== undefined;
     const photoId = photoIdProvided ? textValue(req.body.photo_id ?? req.body.photoId) ?? null : null;
 
@@ -707,20 +708,27 @@ export async function updateStudentAdmin(
       }
     );
 
+    if (photoIdProvided) {
+      const labels = student.field_labels as Record<string, string> | null;
+      for (const key of Object.keys(extraFields)) {
+        if (key === "photo_id" || isPhotoIdentityLabel(labels?.[key] ?? "") || identityFields(formFields).some(field => field.key === key)) extraFields[key] = photoId;
+      }
+    }
+
     const updated = await pool.query<Student>(
       `UPDATE students
        SET student_name = $1,
            class_section = $2,
-           roll_no = COALESCE($3, roll_no),
-           parent_name = COALESCE($4, parent_name),
-           parent_phone = COALESCE($5, parent_phone),
-           address = COALESCE($6, address),
-           dob = COALESCE($7, dob),
-           gender = COALESCE($8, gender),
-           blood_group = COALESCE($9, blood_group),
-           custom_1 = COALESCE($10, custom_1),
-           custom_2 = COALESCE($11, custom_2),
-           custom_3 = COALESCE($12, custom_3),
+           roll_no = $3,
+           parent_name = $4,
+           parent_phone = $5,
+           address = $6,
+           dob = $7,
+           gender = $8,
+           blood_group = $9,
+           custom_1 = $10,
+           custom_2 = $11,
+           custom_3 = $12,
            extra_fields = $13::jsonb,
            photo_id = CASE WHEN $14::boolean THEN $15 ELSE photo_id END,
            updated_at = NOW()

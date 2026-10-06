@@ -687,7 +687,7 @@ export function AppLayout() {
           }`}
         >
           <div
-            className={`min-h-0 min-w-0 max-w-full ${
+            className={`app-page-content min-h-0 min-w-0 max-w-full ${
               useLockedPageScroll
                 ? "flex min-h-0 flex-1 flex-col overflow-hidden px-[clamp(1rem,2.5vw,1.5rem)] pb-4 pt-4"
                 : isDashboard

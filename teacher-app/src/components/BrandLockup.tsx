@@ -103,7 +103,7 @@ export function BrandLockup({
 
   const hColor = harshaColor ?? (variant === "splash" ? "#FFFFFF" : "#F5811F");
   const sColor = solutionsColor ?? (variant === "splash" ? "#FFFFFF" : "#4CAF50");
-  const tColor = taglineColor ?? (variant === "splash" ? "rgba(255,255,255,0.9)" : "#6550A3");
+  const tColor = taglineColor ?? (variant === "splash" ? "rgba(255,255,255,0.9)" : "#8A8F98");
 
   const harshaStyle: TextStyle = {
     fontFamily: fonts.headingExtraBold,

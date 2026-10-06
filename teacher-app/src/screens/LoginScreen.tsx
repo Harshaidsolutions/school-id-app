@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../api/client";
 import axios from "axios";
 import { APP_RELEASE } from "../constants/release";
 import { useEffect, useState } from "react";
@@ -108,7 +109,7 @@ export function LoginScreen(_props: Props) {
       const fallback = status === 401 ? "Username or password was not accepted. Use the account shown by your administrator."
         : status === 403 ? "This account is disabled or does not have app access. Contact your administrator."
         : status && status >= 500 ? "The login server is temporarily unavailable. Please try again later."
-        : status === 404 ? "The login service was not found. Please contact support to check your app configuration."
+        : status === 404 ? `Login service not found at ${API_BASE_URL}. Please send this address to your admin.`
         : "Could not complete login. Please try again.";
       setError(getErrorMessage(err, fallback));
     } finally {
