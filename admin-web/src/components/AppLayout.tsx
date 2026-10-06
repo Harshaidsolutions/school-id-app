@@ -42,6 +42,7 @@ const TITLES: Record<string, string> = {
   "/bulk-upload": "Excel Upload",
   "/form-setup": "Form Setup",
   "/crop-tool": "Cropping Tool",
+  "/organization-info": "Organization Info",
   "/school-info": "School Info",
   "/institute-info": "Institution Info",
 };
@@ -52,6 +53,7 @@ const ORG_CONTEXT_PATHS = new Set([
   "/bulk-upload",
   "/form-setup",
   "/crop-tool",
+  "/organization-info",
   "/school-info",
   "/institute-info",
 ]);
@@ -217,7 +219,7 @@ export function AppLayout() {
   const organizationName = searchParams.get("organizationName");
   const isOrganizationDetail = Boolean(organizationId);
 
-  const inOrgContext = Boolean(studentsSchoolId || instituteId);
+  const inOrgContext = Boolean(studentsSchoolId || instituteId || searchParams.get("organizationId"));
   const hideSidebar = (ORG_CONTEXT_PATHS.has(location.pathname) && inOrgContext) || isOrganizationDetail;
 
   useEffect(() => {

@@ -30,7 +30,7 @@ export function CropToolPage() {
     if (organizationId) {
       setLoading(true);
       void api.get<{
-        submissions: Array<{ id: string; serial: number; photoNumber?: string; photoCropped?: boolean; createdAt?: string; values: Record<string, { text?: string | null; hasPhoto: boolean }> }>;
+        submissions: Array<{ id: string; serial: number; photoNumber?: string; photoCropped?: boolean; createdAt?: string; values: Record<string, { text?: string | null; hasPhoto: boolean; capturedAt?: string | null; photoCropped?: boolean }> }>;
         form: { fields: Array<{ id: string; field_name: string; field_type: string; enabled?: boolean }> } | null;
       }>(`/admin/organizations/${organizationId}`).then(({ data }) => {
         if (cancelled) return;
@@ -38,7 +38,7 @@ export function CropToolPage() {
         const photoFields = formFields.filter((field) => field.field_type === "photo" && !isSignatureLabel(field.field_name));
         const groupFields = organizationCategoryFields(formFields);
         const classField = groupFields.find((field) => field.kind === "class");
-        const nameField = formFields.find((field) => field.field_type === "text" && /name/i.test(field.field_name) && !isPhotoNumberLabel(field.field_name));
+        const nameField = formFields.find((field) => field.field_type === "text" && /^(person|student|member|full|employee)?[ _]*name$/i.test(field.field_name.trim())) ?? formFields.find((field) => field.field_type === "text" && /name/i.test(field.field_name) && !/parent|father|mother|guardian/i.test(field.field_name) && !isPhotoNumberLabel(field.field_name));
         const mapped: Student[] = [];
         for (const row of data.submissions ?? []) {
           const extra: Record<string, string | null> = {};
@@ -59,9 +59,9 @@ export function CropToolPage() {
               address: null,
               photo_id: row.photoNumber || String(row.serial),
               photo_url: `/admin/organizations/${organizationId}/submissions/${row.id}/fields/${field.id}/photo`,
-              photo_cropped: row.photoCropped === true,
-              photo_captured_at: row.createdAt ?? null,
-              status: row.photoCropped ? "captured" : "pending",
+              photo_cropped: row.values[field.id]?.photoCropped === true,
+              photo_captured_at: row.values[field.id]?.capturedAt ?? null,
+              status: "captured",
               import_batch_id: null,
               printed_at: null,
               created_at: row.createdAt ?? null,

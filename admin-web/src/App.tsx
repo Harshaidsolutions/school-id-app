@@ -54,6 +54,7 @@ export default function App() {
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/form-setup" element={<FormSetupPage />} />
               <Route path="/crop-tool" element={<CropToolPage />} />
+              <Route path="/organization-info" element={<OrganizationInfoPage mode="organization" />} />
               <Route path="/school-info" element={<OrganizationInfoPage mode="school" />} />
               <Route path="/institute-info" element={<OrganizationInfoPage mode="institute" />} />
               <Route path="/models" element={<ModelsPage />} />

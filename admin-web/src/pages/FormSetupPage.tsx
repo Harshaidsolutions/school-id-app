@@ -34,8 +34,13 @@ export type { FormFieldConfig };
 async function loadFormFieldsForOrg(options: {
   schoolId: string;
   instituteId: string;
+  organizationId: string;
 }): Promise<FormFieldConfig[]> {
-  const { schoolId, instituteId } = options;
+  const { schoolId, instituteId, organizationId } = options;
+  if (organizationId) {
+    const { data } = await api.get<{form: {fields: Array<{id:string;field_name:string;field_type:"text"|"photo";enabled:boolean;required:boolean}>} | null}>(`/admin/organizations/${organizationId}`);
+    return (data.form?.fields ?? []).map((f,i) => ({key:f.id, organizationFieldId:f.id, label:f.field_name, fieldType:f.field_type, enabled:f.enabled !== false, required:f.required !== false, source:"manual", displayOrder:i}));
+  }
   const orgParams = schoolId ? { schoolId } : { instituteId };
 
   const { data } = await api.get<{
@@ -96,6 +101,7 @@ function SortableFieldRow({
   onCancelEdit,
   onRemove,
   onToggle,
+  onConfigure,
 }: {
   field: FormFieldConfig;
   rowId: string;
@@ -107,6 +113,7 @@ function SortableFieldRow({
   onCancelEdit: () => void;
   onRemove: (rowId: string) => void;
   onToggle: (rowId: string) => void;
+  onConfigure?: (rowId: string, patch: Partial<FormFieldConfig>) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: rowId,
@@ -177,6 +184,10 @@ function SortableFieldRow({
           </div>
         )}
       </div>
+      {onConfigure ? <div className="flex items-center gap-3">
+        <select aria-label={`${field.label} type`} className="input-field w-auto" value={field.fieldType ?? "text"} disabled={Boolean(field.organizationFieldId)} onChange={e => onConfigure(rowId, {fieldType:e.target.value as "text"|"photo"})}><option value="text">Text / Data</option><option value="photo">Image / Photo</option></select>
+        <label className="flex items-center gap-2">Required <ToggleSwitch checked={field.required !== false} label={`${field.label} required`} onChange={() => onConfigure(rowId, {required:field.required === false})} /></label>
+      </div> : null}
       <ToggleSwitch
         checked={field.enabled}
         onChange={() => onToggle(rowId)}
@@ -189,9 +200,10 @@ function SortableFieldRow({
 export function FormSetupPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const organizationId = searchParams.get("organizationId") ?? "";
   const schoolId = searchParams.get("schoolId") ?? "";
   const instituteId = searchParams.get("instituteId") ?? "";
-  const backHref = schoolId
+  const backHref = organizationId ? `/extra-2/${encodeURIComponent(organizationId)}` : schoolId
     ? `/students?schoolId=${encodeURIComponent(schoolId)}${searchParams.get("schoolName") ? `&schoolName=${encodeURIComponent(searchParams.get("schoolName")!)}` : ""}`
     : instituteId
       ? `/institute-members?instituteId=${encodeURIComponent(instituteId)}${searchParams.get("instituteName") ? `&instituteName=${encodeURIComponent(searchParams.get("instituteName")!)}` : ""}`
@@ -212,7 +224,7 @@ export function FormSetupPage() {
   );
 
   useEffect(() => {
-    if (!schoolId && !instituteId) {
+    if (!schoolId && !instituteId && !organizationId) {
       setLoading(false);
       return;
     }
@@ -221,7 +233,7 @@ export function FormSetupPage() {
       setLoading(true);
       setError(null);
       try {
-        const nextFields = await loadFormFieldsForOrg({ schoolId, instituteId });
+        const nextFields = await loadFormFieldsForOrg({ schoolId, instituteId, organizationId });
         if (!cancelled) setFields(nextFields);
       } catch (err) {
         if (!cancelled) {
@@ -241,7 +253,7 @@ export function FormSetupPage() {
     return () => {
       cancelled = true;
     };
-  }, [schoolId, instituteId]);
+  }, [schoolId, instituteId, organizationId]);
 
   function reorderFields(next: FormFieldConfig[]) {
     setFields(withSequentialDisplayOrder(next));
@@ -330,7 +342,7 @@ export function FormSetupPage() {
 
   async function handleSave(event: FormEvent) {
     event.preventDefault();
-    if (!schoolId && !instituteId) {
+    if (!schoolId && !instituteId && !organizationId) {
       setError("Open Form Setup from a school or institute to save field configuration.");
       return;
     }
@@ -343,7 +355,9 @@ export function FormSetupPage() {
     setSuccess(null);
     try {
       const payload = withSequentialDisplayOrder(fields);
-      await api.put("/admin/form-config", {
+      if (organizationId) {
+        await api.post(`/admin/organizations/${organizationId}/forms`, {fields:payload.map(f => ({id:f.organizationFieldId,fieldName:f.label,fieldType:f.fieldType ?? "text",enabled:f.enabled,required:f.required !== false}))});
+      } else await api.put("/admin/form-config", {
         schoolId: schoolId || undefined,
         instituteId: instituteId || undefined,
         fields: payload,
@@ -371,7 +385,7 @@ export function FormSetupPage() {
 
       {loading ? (
         <div className="mt-6 text-sm text-text-muted">Loading form fields from imported data…</div>
-      ) : fields.length === 0 ? (
+      ) : fields.length === 0 && !organizationId ? (
         <div className="centered-page-card px-6 py-12 text-center">
           <p className="text-sm font-medium text-text-navy">No form fields yet</p>
           <p className="mt-2 text-sm text-text-muted">
@@ -381,8 +395,7 @@ export function FormSetupPage() {
       ) : (
         <form onSubmit={handleSave} className="centered-page-card">
           <div className="border-b border-border px-5 py-3 text-center text-xs text-text-muted">
-            Drag fields to reorder. Excel fields can be edited and toggled. Only manually added fields
-            can be deleted.
+            {organizationId ? "Drag fields to reorder. Configure field names, required details, and visibility. Removed fields with existing data are disabled to preserve records." : "Drag fields to reorder. Excel fields can be edited and toggled. Only manually added fields can be deleted."}
           </div>
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -406,6 +419,7 @@ export function FormSetupPage() {
                     onCancelEdit={() => setEditingKey(null)}
                     onRemove={removeField}
                     onToggle={toggleField}
+                    onConfigure={organizationId ? (id, patch) => setFields(current => current.map((f,i) => formFieldRowId(f,i) === id ? {...f,...patch} : f)) : undefined}
                   />
                   );
                 })}

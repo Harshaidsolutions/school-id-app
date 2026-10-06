@@ -879,6 +879,22 @@ async function migrate() {
       ON organization_submission_values (field_id);
   `);
 
+  await pool.query(`
+    ALTER TABLE organization_submission_values ADD COLUMN IF NOT EXISTS photo_captured_at TIMESTAMPTZ;
+    ALTER TABLE organization_submission_values ADD COLUMN IF NOT EXISTS photo_cropped BOOLEAN NOT NULL DEFAULT false;
+    UPDATE organization_submission_values SET photo_captured_at = created_at
+      WHERE photo_url IS NOT NULL AND photo_captured_at IS NULL;
+    -- Legacy record-level crop state is unambiguous only when there is one photo.
+    UPDATE organization_submission_values v SET photo_cropped = true
+      FROM organization_submissions s, organization_form_fields f
+      WHERE v.submission_id = s.id AND v.field_id = f.id AND s.photo_cropped = true
+        AND v.photo_url IS NOT NULL AND f.field_type = 'photo' AND f.field_name NOT ILIKE '%signature%'
+        AND (SELECT COUNT(*) FROM organization_submission_values other
+          JOIN organization_form_fields ofield ON ofield.id = other.field_id
+          WHERE other.submission_id = s.id AND other.photo_url IS NOT NULL
+            AND ofield.field_type = 'photo' AND ofield.field_name NOT ILIKE '%signature%') = 1;
+  `);
+
   console.log("Migration completed successfully.");
 }
 

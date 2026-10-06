@@ -1,3 +1,4 @@
+import { captureDayKey } from "../utils/dateUtils";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import * as XLSX from "xlsx";
@@ -6,6 +7,7 @@ import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
 import {
   readBucketObject,
+  deleteFromBucket,
   STUDENT_PHOTOS_BUCKET,
   uploadBufferToBucket,
 } from "../config/storage";
@@ -43,6 +45,11 @@ type SubmissionValue = {
   field_id: string;
   text_value: string | null;
   photo_url: string | null;
+  photo_captured_at: string | null;
+  photo_cropped: boolean;
+  field_name: string;
+  field_type: string;
+  enabled: boolean;
   created_at: string;
 };
 
@@ -157,9 +164,10 @@ async function loadSubmissionRows(organizationId: string, formId: string) {
   );
   if (submissions.rows.length === 0) return [];
   const values = await pool.query<SubmissionValue>(
-    `SELECT v.submission_id, v.field_id, v.text_value, v.photo_url, s.created_at
-     FROM organization_submission_values v
-     JOIN organization_submissions s ON s.id = v.submission_id
+    `SELECT s.id AS submission_id, f.id AS field_id, v.text_value, v.photo_url, v.photo_captured_at, v.photo_cropped, f.field_name, f.field_type, f.enabled, s.created_at
+     FROM organization_submissions s
+     JOIN organization_form_fields f ON f.form_id = s.form_id
+     LEFT JOIN organization_submission_values v ON v.submission_id = s.id AND v.field_id = f.id
      WHERE s.organization_id = $1 AND s.form_id = $2`,
     [organizationId, formId]
   );
@@ -174,13 +182,17 @@ async function loadSubmissionRows(organizationId: string, formId: string) {
     serial: index + 1,
     photoNumber: row.photo_number ?? "",
     createdAt: row.created_at,
-    photoCropped: row.photo_cropped === true,
+    photoCropped: (bySubmission.get(row.id) ?? []).some(v => Boolean(v.photo_url) && v.enabled !== false && !/signature/i.test(v.field_name)) &&
+      (bySubmission.get(row.id) ?? []).filter(v => v.enabled !== false && v.field_type === "photo" && !/signature/i.test(v.field_name)).every(v => v.photo_cropped === true),
+    capturedAt: (bySubmission.get(row.id) ?? []).filter(v => v.photo_url && v.photo_captured_at && v.enabled !== false && !/signature/i.test(v.field_name)).map(v => new Date(v.photo_captured_at!).toISOString()).sort().slice(-1)[0] ?? null,
     values: Object.fromEntries(
       (bySubmission.get(row.id) ?? []).map((value) => [
         value.field_id,
         {
           text: value.text_value,
           hasPhoto: Boolean(value.photo_url),
+          capturedAt: value.photo_captured_at,
+          photoCropped: value.photo_cropped === true,
         },
       ])
     ),
@@ -345,6 +357,7 @@ export async function createOrganizationForm(req: Request, res: Response, next: 
         (item) => !kept.has(item.id) && item.field_name.trim().toLowerCase() === field.name.toLowerCase()
       );
       if (match) {
+        if (match.field_type !== field.type) throw new AppError("Existing field types cannot be changed. Add a new field instead.", 400);
         kept.add(match.id);
         await client.query(
           `UPDATE organization_form_fields
@@ -482,8 +495,8 @@ export async function submitPublicOrganizationForm(req: Request, res: Response, 
     );
     for (const field of fields) {
       await client.query(
-        `INSERT INTO organization_submission_values (submission_id, field_id, text_value, photo_url)
-         VALUES ($1, $2, $3, $4)`,
+        `INSERT INTO organization_submission_values (submission_id, field_id, text_value, photo_url, photo_captured_at)
+         VALUES ($1, $2, $3, $4, CASE WHEN $4::text IS NOT NULL THEN NOW() ELSE NULL END)`,
         [
           submissionId,
           field.id,
@@ -530,34 +543,47 @@ async function sendSubmissionPhoto(
 }
 
 export async function replaceOrganizationSubmissionPhoto(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const client = await pool.connect();
+  let newPath: string | null = null;
   try {
     const scope = await requireAdminScope(req);
     const organizationId = routeParam(req.params.id);
     const submissionId = routeParam(req.params.submissionId);
     const fieldId = routeParam(req.params.fieldId);
     const file = req.file;
+    if (String(req.body?.markCropped) !== "1") throw new AppError("Use crop preview and Save to mark this photo cropped", 400);
     if (!organizationId || !submissionId || !fieldId || !file) throw new AppError("Photo is required", 400);
     await assertOrganizationOwned(scope, organizationId);
     const owned = await pool.query(
-      `SELECT 1 FROM organization_submissions WHERE id = $1 AND organization_id = $2 LIMIT 1`,
-      [submissionId, organizationId]
+      `SELECT 1 FROM organization_submissions s JOIN organization_form_fields f ON f.form_id = s.form_id
+       WHERE s.id = $1 AND s.organization_id = $2 AND f.id = $3 AND f.field_type = 'photo' AND f.enabled = true LIMIT 1`,
+      [submissionId, organizationId, fieldId]
     );
     if (!owned.rows[0]) throw new AppError("Record not found", 404);
-    const path = photoPath(organizationId, submissionId, fieldId);
+    const path = `organizations/${organizationId}/${submissionId}/${fieldId}-${crypto.randomUUID()}.jpg`;
+    newPath = path;
     await uploadBufferToBucket(STUDENT_PHOTOS_BUCKET, path, file.buffer, file.mimetype || "image/jpeg");
-    await pool.query(
-      `INSERT INTO organization_submission_values (submission_id, field_id, photo_url)
-       VALUES ($1, $2, $3)
+    await client.query("BEGIN");
+    await client.query(
+      `INSERT INTO organization_submission_values (submission_id, field_id, photo_url, photo_captured_at, photo_cropped)
+       VALUES ($1, $2, $3, NOW(), true)
        ON CONFLICT (submission_id, field_id)
-       DO UPDATE SET photo_url = EXCLUDED.photo_url`,
+       DO UPDATE SET photo_url = EXCLUDED.photo_url, photo_cropped = true,
+         photo_captured_at = COALESCE(organization_submission_values.photo_captured_at, NOW())`,
       [submissionId, fieldId, path]
     );
-    await pool.query(
+    await client.query(
       `UPDATE organization_submissions
-       SET photo_cropped = true, updated_at = NOW()
+       SET photo_cropped = NOT EXISTS (SELECT 1 FROM organization_form_fields f
+         LEFT JOIN organization_submission_values v ON v.field_id = f.id AND v.submission_id = $1
+         WHERE f.form_id = organization_submissions.form_id
+         AND f.enabled = true AND f.field_type = 'photo' AND f.field_name NOT ILIKE '%signature%'
+         AND (v.photo_url IS NULL OR v.photo_cropped = false)), updated_at = NOW()
        WHERE id = $1 AND organization_id = $2`,
       [submissionId, organizationId]
     );
+    await client.query("COMMIT");
+    newPath = null;
     res.json({
       student: {
         id: `${submissionId}:${fieldId}`,
@@ -567,8 +593,10 @@ export async function replaceOrganizationSubmissionPhoto(req: Request, res: Resp
       },
     });
   } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    if (newPath) await deleteFromBucket(STUDENT_PHOTOS_BUCKET, newPath).catch(() => undefined);
     next(error);
-  }
+  } finally { client.release(); }
 }
 
 export async function uploadOrganizationExcel(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -589,27 +617,44 @@ export async function uploadOrganizationExcel(req: Request, res: Response, next:
     if (!sheet) throw new AppError("Excel file has no readable sheet", 400);
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
     if (rows.length === 0) throw new AppError("Excel file has no data rows", 400);
+    const normalizeHeader = (value: string) => value.trim().toLowerCase();
+    if (!textFields.some(field => Object.keys(rows[0]).some(key => normalizeHeader(key) === normalizeHeader(field.field_name)))) {
+      throw new AppError("Excel headers must match the configured form fields", 400);
+    }
     await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`organization-import:${organizationId}`]);
+    await client.query(`SELECT id FROM organizations WHERE id = $1 FOR UPDATE`, [organizationId]);
+    const seenNumbers = new Set<string>();
+    let updated = 0;
     let inserted = 0;
     for (const row of rows) {
-      const submissionId = crypto.randomUUID();
-      const photoNumber = await allocateOrganizationAddSerial(client, organizationId);
-      await client.query(
-        `INSERT INTO organization_submissions (id, form_id, organization_id, photo_number) VALUES ($1, $2, $3, $4)`,
-        [submissionId, current.id, organizationId, photoNumber]
-      );
+      const normalized = Object.fromEntries(Object.entries(row).map(([key,value]) => [normalizeHeader(key), value]));
+      const numberField = textFields.find(field => isLockedPhotoNumber(field.field_name));
+      const suppliedNumber = String(normalized[numberField ? normalizeHeader(numberField.field_name) : "photo number"] ?? "").trim();
+      if (suppliedNumber && seenNumbers.has(suppliedNumber)) throw new AppError(`Duplicate photo number in Excel: ${suppliedNumber}`, 400);
+      if (suppliedNumber) seenNumbers.add(suppliedNumber);
+      const existing = suppliedNumber ? await client.query<{id:string}>(`SELECT id FROM organization_submissions WHERE organization_id = $1 AND photo_number = $2`, [organizationId,suppliedNumber]) : {rows:[]};
+      if (existing.rows.length > 1) throw new AppError("Duplicate photo numbers exist. Resolve them before importing.", 409);
+      const submissionId = existing.rows[0]?.id ?? crypto.randomUUID();
+      const photoNumber = suppliedNumber || await allocateOrganizationAddSerial(client, organizationId);
+      if (!existing.rows.length) {
+        await client.query(`INSERT INTO organization_submissions (id, form_id, organization_id, photo_number) VALUES ($1, $2, $3, $4)`, [submissionId, current.id, organizationId, photoNumber]);
+        inserted += 1;
+      } else updated += 1;
       for (const field of fields) {
-        const raw = row[field.field_name] ?? row[field.field_name.trim()] ?? "";
+        if (field.field_type === "photo" || isLockedPhotoNumber(field.field_name)) continue;
+        const header = normalizeHeader(field.field_name);
+        if (!Object.prototype.hasOwnProperty.call(normalized, header)) continue;
+        const raw = normalized[header];
         await client.query(
           `INSERT INTO organization_submission_values (submission_id, field_id, text_value, photo_url)
-           VALUES ($1, $2, $3, NULL)`,
+           VALUES ($1, $2, $3, NULL) ON CONFLICT (submission_id, field_id) DO UPDATE SET text_value = EXCLUDED.text_value`,
           [submissionId, field.id, field.field_type === "photo" ? null : String(raw).trim() || null]
         );
       }
-      inserted += 1;
     }
     await client.query("COMMIT");
-    res.status(201).json({ status: "ok", inserted });
+    res.status(201).json({ status: "ok", inserted, updated });
   } catch (error) {
     try {
       await client.query("ROLLBACK");
@@ -655,7 +700,7 @@ export async function downloadOrganizationExcel(req: Request, res: Response, nex
   }
 }
 
-const ORGANIZATION_DETAIL_KEYS = ["required_details", "detail_phone", "detail_address", "detail_instructions"] as const;
+const ORGANIZATION_DETAIL_KEYS = ["required_details", "detail_phone", "detail_address", "detail_instructions", "allow_record_edit", "show_captured_section"] as const;
 
 export async function updateOrganizationDetails(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -746,8 +791,9 @@ function isLockedPhotoNumber(name: string): boolean {
 function submissionMatchesQuery(
   row: {
     createdAt: string;
+    capturedAt?: string | null;
     photoNumber: string;
-    values: Record<string, { text: string | null; hasPhoto: boolean }>;
+    values: Record<string, { text: string | null; hasPhoto: boolean; capturedAt?: string | null }>;
   },
   fields: FormField[],
   query: Request["query"]
@@ -768,7 +814,7 @@ function submissionMatchesQuery(
     if ((row.values[fieldId]?.text ?? "").trim() !== value) return false;
   }
   const date = String(query.date ?? "");
-  if (date && !String(row.createdAt).startsWith(date)) return false;
+  if (date && !photoFields.some(f => row.values[f.id]?.hasPhoto && captureDayKey(row.values[f.id]?.capturedAt) === date)) return false;
   return true;
 }
 
@@ -785,6 +831,13 @@ export async function updateOrganizationAppSubmission(req: Request, res: Respons
     const submission = owned.rows[0];
     if (!submission) throw new AppError("Record not found", 404);
     const fields = await loadFields(submission.form_id);
+    const settings = await pool.query<{field_visibility: Record<string,boolean>}>(`SELECT field_visibility FROM organizations WHERE id = $1`, [organizationId]);
+    if (settings.rows[0]?.field_visibility?.allow_record_edit === false) {
+      const records = await loadSubmissionRows(organizationId, submission.form_id);
+      const record = records.find(r => r.id === submissionId);
+      const incomplete = fields.some(f => f.enabled !== false && f.required !== false && f.field_type === "text" && !isLockedPhotoNumber(f.field_name) && !record?.values[f.id]?.text?.trim());
+      if (!incomplete) throw new AppError("Editing is disabled for completed records", 403);
+    }
     const incoming = req.body?.values;
     if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) {
       throw new AppError("Updated fields are required", 400);
@@ -798,9 +851,9 @@ export async function updateOrganizationAppSubmission(req: Request, res: Respons
       const text = String(values[field.id] ?? "").trim();
       if (field.required && !text) throw new AppError(`${field.field_name} is required`, 400);
       await client.query(
-        `UPDATE organization_submission_values
-         SET text_value = $1
-         WHERE submission_id = $2 AND field_id = $3`,
+        `INSERT INTO organization_submission_values (text_value, submission_id, field_id)
+         VALUES ($1, $2, $3) ON CONFLICT (submission_id, field_id)
+         DO UPDATE SET text_value = EXCLUDED.text_value`,
         [text || null, submissionId, field.id]
       );
     }
@@ -848,9 +901,9 @@ export async function updateOrganizationSubmissionAdmin(req: Request, res: Respo
       if (!Object.prototype.hasOwnProperty.call(values, field.id)) continue;
       const text = String(values[field.id] ?? "").trim();
       await client.query(
-        `UPDATE organization_submission_values
-         SET text_value = $1
-         WHERE submission_id = $2 AND field_id = $3`,
+        `INSERT INTO organization_submission_values (text_value, submission_id, field_id)
+         VALUES ($1, $2, $3) ON CONFLICT (submission_id, field_id)
+         DO UPDATE SET text_value = EXCLUDED.text_value`,
         [text || null, submissionId, field.id]
       );
     }
@@ -1160,18 +1213,20 @@ export async function deleteOrganizationSubmissions(req: Request, res: Response,
     if (req.body?.photosOnly === true) {
       await client.query(
         `UPDATE organization_submission_values v
-         SET photo_url = NULL
+         SET photo_url = NULL, photo_captured_at = NULL, photo_cropped = false
          FROM organization_form_fields f
          WHERE v.field_id = f.id
            AND v.submission_id = ANY($2::uuid[])
            AND f.field_type = 'photo'
            AND f.field_name NOT ILIKE '%signature%'
+           AND ($3::text IS NULL OR to_char(v.photo_captured_at AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD') = $3)
            AND EXISTS (
              SELECT 1 FROM organization_submissions s
              WHERE s.id = v.submission_id AND s.organization_id = $1
            )`,
-        [organizationId, ids]
+        [organizationId, ids, req.body?.date ? String(req.body.date) : null]
       );
+      await client.query(`UPDATE organization_submissions SET photo_cropped = false, updated_at = NOW() WHERE organization_id = $1 AND id = ANY($2::uuid[])`, [organizationId, ids]);
       await client.query("COMMIT");
       res.json({ status: "ok", cleared: ids.length });
       return;
@@ -1204,5 +1259,49 @@ export async function downloadOrganizationAppPhoto(req: Request, res: Response, 
     await sendSubmissionPhoto(organizationId, submissionId, fieldId, res);
   } catch (error) {
     next(error);
+  }
+}
+
+/** Same single-ZIP download contract as School/Institute; grouping is configured data. */
+export async function downloadOrganizationPhotos(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const organizationId = routeParam(req.params.id);
+    if (!organizationId) throw new AppError("Organization is required", 400);
+    await assertOrganizationOwned(scope, organizationId);
+    const form = await activeOrganizationForm(organizationId);
+    if (!form) throw new AppError("No photos to download", 404);
+    const fields = enabledFields(await loadFields(form.id));
+    const signature = req.query.asset === "signature";
+    const photos = fields.filter(f => f.field_type === "photo" && /signature/i.test(f.field_name) === signature);
+    const records = (await loadSubmissionRows(organizationId, form.id)).filter(row => submissionMatchesQuery(row, fields, {...req.query, date: undefined}));
+    const selected = await pool.query<{submission_id:string;field_id:string;photo_url:string;photo_captured_at:string|null}>(
+      `SELECT v.submission_id, v.field_id, v.photo_url, v.photo_captured_at FROM organization_submission_values v
+       JOIN organization_submissions s ON s.id = v.submission_id WHERE s.organization_id = $1 AND s.form_id = $2 AND v.photo_url IS NOT NULL`, [organizationId, form.id]);
+    const selectedRows = new Map(records.map(row => [row.id,row]));
+    const selectedFields = new Map(photos.map(f => [f.id,f]));
+    const entries = selected.rows.filter(v => selectedRows.has(v.submission_id) && selectedFields.has(v.field_id) &&
+      (!req.query.date || captureDayKey(v.photo_captured_at) === String(req.query.date)));
+    if (!entries.length) throw new AppError("No photos match these filters", 404);
+    const { ZipArchive } = await import("archiver");
+    const archive = new ZipArchive({store:true});
+    archive.on("error", error => { if (!res.headersSent) next(error); else res.destroy(error); });
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="organization-${signature ? "signatures" : "photos"}.zip"`);
+    archive.pipe(res);
+    const safe = (value:string) => value.replace(/[^\p{L}\p{N}_-]/gu,"_").slice(0,100) || "photo";
+    for (const entry of entries) {
+      const object = await readBucketObject(STUDENT_PHOTOS_BUCKET, entry.photo_url);
+      if (!object?.bytes?.length) throw new AppError("A selected photo is unavailable. Retry after checking storage.", 502);
+      const record = selectedRows.get(entry.submission_id)!;
+      const field = selectedFields.get(entry.field_id)!;
+      const group = req.query.fieldId ? record.values[String(req.query.fieldId)]?.text : null;
+      const folder = group ? safe(group) : req.query.date ? safe(String(req.query.date)) : "photos";
+      archive.append(Buffer.from(object.bytes), {name:`${folder}/${safe(record.photoNumber || String(record.serial))}-${safe(field.field_name)}-${record.id.slice(0,8)}-${field.id.slice(0,8)}.jpg`});
+    }
+    await archive.finalize();
+  } catch (error) {
+    if (!res.headersSent) next(error);
+    else res.destroy(error instanceof Error ? error : new Error("Photo download failed"));
   }
 }

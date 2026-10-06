@@ -1,3 +1,6 @@
+import { captureDayKey } from "../utils/captureDay";
+import { IdCardGeneratorButton } from "../components/IdCardGeneratorButton";
+import { BulkUploadModal } from "../components/BulkUploadModal";
 import { useMemo, useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -35,21 +38,14 @@ type FormField = {
   required?: boolean;
 };
 
-type DraftField = {
-  id?: string;
-  fieldName: string;
-  fieldType: "text" | "photo";
-  enabled: boolean;
-  required: boolean;
-};
-
 type SubmissionRow = {
   id: string;
   serial: number;
   photoNumber?: string;
   photoCropped?: boolean;
   createdAt?: string;
-  values: Record<string, { text: string | null; hasPhoto: boolean }>;
+  capturedAt?: string | null;
+  values: Record<string, { text: string | null; hasPhoto: boolean; capturedAt?: string | null; photoCropped?: boolean }>;
 };
 
 export function OrganizationPortalPage() {
@@ -327,28 +323,21 @@ export function OrganizationDetailPage() {
   const [name, setName] = useState("");
   const [link, setLink] = useState<string | null>(null);
   const [fields, setFields] = useState<FormField[]>([]);
-  const [drafts, setDrafts] = useState<DraftField[]>([{ fieldName: "", fieldType: "text", enabled: true, required: true }]);
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
-  const [building, setBuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"all" | "pending" | "captured" | "pending-data">("all");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [instructions, setInstructions] = useState("");
-  const [visibility, setVisibility] = useState<Record<string, boolean>>({});
-  const [infoOpen, setInfoOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [photoFilter, setPhotoFilter] = useState("");
   const [pendingDataFilter, setPendingDataFilter] = useState("");
   const [capturedOn, setCapturedOn] = useState("");
   const [groupFilters, setGroupFilters] = useState<Record<string, string>>({});
   const filterButtonRef = useRef<HTMLButtonElement>(null);
-  const excelInputRef = useRef<HTMLInputElement>(null);
   const [selecting, setSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [otpOpen, setOtpOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [excelOpen, setExcelOpen] = useState(false);
   const [photosOpen, setPhotosOpen] = useState(false);
   const [deleteOptionsOpen, setDeleteOptionsOpen] = useState(false);
@@ -371,10 +360,10 @@ export function OrganizationDetailPage() {
       submissions: SubmissionRow[];
     }>(`/admin/organizations/${id}`);
     setName(data.organization.name);
-    setPhone(data.organization.phone ?? "");
-    setAddress(data.organization.address ?? "");
-    setInstructions(data.organization.instructions ?? "");
-    setVisibility(data.organization.field_visibility ?? {});
+
+
+
+
     setLink(data.form?.link ?? null);
     setFields(data.form?.fields ?? []);
     setSubmissions(data.submissions ?? []);
@@ -390,31 +379,6 @@ export function OrganizationDetailPage() {
     next.set("organizationName", name);
     setSearchParams(next, { replace: true });
   }, [name, searchParams, setSearchParams]);
-
-  async function createForm(event: FormEvent) {
-    event.preventDefault();
-    setError(null);
-    setNotice(null);
-    try {
-      const { data } = await api.post<{ form: { link: string; fields: FormField[] } }>(
-        `/admin/organizations/${id}/forms`,
-        { fields: drafts.filter((field) => field.fieldName.trim()).map((field) => ({
-          id: field.id,
-          fieldName: field.fieldName.trim(),
-          fieldType: field.fieldType,
-          enabled: field.enabled !== false,
-          required: field.required !== false,
-        })) }
-      );
-      setLink(data.form.link);
-      setFields(data.form.fields);
-      setBuilding(false);
-      setNotice("Link created.");
-      await load();
-    } catch (err) {
-      setError(messageOf(err, "Failed to create the link."));
-    }
-  }
 
   const activeFields = fields.filter((field) => field.enabled !== false);
   const photoFields = activeFields.filter((field) => field.field_type === "photo");
@@ -447,7 +411,7 @@ export function OrganizationDetailPage() {
       if (photoFilter === "uncaptured" && captured) return false;
       if (pendingDataFilter === "yes" && !missingData(row)) return false;
       if (pendingDataFilter === "no" && missingData(row)) return false;
-      if (capturedOn && !(row.createdAt ?? "").startsWith(capturedOn)) return false;
+      if (capturedOn && !imageFields.some(f => row.values[f.id]?.hasPhoto && captureDayKey(row.values[f.id]?.capturedAt) === capturedOn)) return false;
       for (const [fieldId, value] of Object.entries(groupFilters)) {
         if (value && (row.values[fieldId]?.text ?? "").trim() !== value) return false;
       }
@@ -475,20 +439,22 @@ export function OrganizationDetailPage() {
   const photoCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const row of submissions) {
-      const day = (row.createdAt ?? "").slice(0, 10);
-      if (!day) continue;
-      const photos = imageFields.filter((field) => row.values[field.id]?.hasPhoto).length;
-      if (photos > 0) counts[day] = (counts[day] ?? 0) + photos;
+      for (const field of imageFields) {
+        const value = row.values[field.id];
+        const day = value?.hasPhoto ? captureDayKey(value.capturedAt) : null;
+        if (day) counts[day] = (counts[day] ?? 0) + 1;
+      }
     }
     return counts;
   }, [submissions, imageFields]);
   const signatureCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const row of submissions) {
-      const day = (row.createdAt ?? "").slice(0, 10);
-      if (!day) continue;
-      const photos = signatureFields.filter((field) => row.values[field.id]?.hasPhoto).length;
-      if (photos > 0) counts[day] = (counts[day] ?? 0) + photos;
+      for (const field of signatureFields) {
+        const value = row.values[field.id];
+        const day = value?.hasPhoto ? captureDayKey(value.capturedAt) : null;
+        if (day) counts[day] = (counts[day] ?? 0) + 1;
+      }
     }
     return counts;
   }, [submissions, signatureFields]);
@@ -505,14 +471,6 @@ export function OrganizationDetailPage() {
     }
     await navigator.clipboard.writeText(link);
     setNotice("Link copied.");
-  }
-
-  async function uploadExcel(file: File) {
-    const body = new FormData();
-    body.append("file", file);
-    await api.post(`/admin/organizations/${id}/excel`, body);
-    setNotice("Excel uploaded.");
-    await load();
   }
 
   async function downloadExcel(job?: { scope: string; date?: string; classSection?: string; fieldKey?: string }) {
@@ -534,27 +492,14 @@ export function OrganizationDetailPage() {
   }
 
   async function downloadPhotos(job?: { asset: "photo" | "signature"; date?: string; classSection?: string; fieldKey?: string }) {
-    let saved = 0;
-    const assetFields = (job?.asset === "signature" ? signatureFields : imageFields);
-    const rows = submissions.filter((row) => {
-      if (job?.date && !(row.createdAt ?? "").startsWith(job.date)) return false;
-      if (job?.fieldKey && job.classSection && (row.values[job.fieldKey]?.text ?? "").trim() !== job.classSection) return false;
-      return true;
+    const response = await api.get(`/admin/organizations/${id}/photos.zip`, {
+      responseType: "blob", params: {asset:job?.asset ?? "photo",date:job?.date,fieldId:job?.fieldKey,value:job?.classSection}
     });
-    for (const row of rows) {
-      for (const field of assetFields) {
-        if (!row.values[field.id]?.hasPhoto) continue;
-        const response = await api.get(`/admin/organizations/${id}/submissions/${row.id}/fields/${field.id}/photo`, { responseType: "blob" });
-        const url = URL.createObjectURL(response.data as Blob);
-        const linkNode = document.createElement("a");
-        linkNode.href = url;
-        linkNode.download = `${row.serial}-${field.field_name}.jpg`;
-        linkNode.click();
-        URL.revokeObjectURL(url);
-        saved += 1;
-      }
-    }
-    setNotice(saved > 0 ? `Downloaded ${saved} photo${saved === 1 ? "" : "s"}.` : "No photos to download.");
+    const url = URL.createObjectURL(response.data as Blob);
+    const anchor = document.createElement("a"); anchor.href = url;
+    anchor.download = `${name || "organization"}-${job?.asset === "signature" ? "signatures" : "photos"}.zip`;
+    anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setNotice("Photo archive downloaded.");
   }
 
   async function downloadRowPhoto(row: SubmissionRow, fieldId: string, fieldName: string) {
@@ -567,21 +512,7 @@ export function OrganizationDetailPage() {
     URL.revokeObjectURL(url);
   }
 
-  async function saveDetails() {
-    await api.patch(`/admin/organizations/${id}/details`, {
-      phone,
-      address,
-      instructions,
-      fieldVisibility: visibility,
-    });
-    setNotice("Organization info saved.");
-    setInfoOpen(false);
-  }
-
-  function openFields() {
-    setDrafts(fields.length > 0 ? fields.map((field) => ({ id: field.id, fieldName: field.field_name, fieldType: field.field_type === "photo" ? "photo" : "text", enabled: field.enabled !== false, required: field.required !== false })) : [{ fieldName: "", fieldType: "text", enabled: true, required: true }]);
-    setBuilding(true);
-  }
+  function openFields() { navigate(`/form-setup?organizationId=${encodeURIComponent(id)}&organizationName=${encodeURIComponent(name)}`); }
 
   return (
     <div className="detail-page-shell admin-scroll-root">
@@ -594,10 +525,10 @@ export function OrganizationDetailPage() {
       <div className="detail-toolbar-shell">
         <div className="detail-toolbar-row1">
           <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={openFields}>Form Setup</button>
-          <button type="button" className="detail-toolbar-btn" disabled={!id || fields.length === 0} onClick={() => excelInputRef.current?.click()}>Upload Excel</button>
+          <button type="button" className="detail-toolbar-btn" disabled={!id || fields.length === 0} onClick={() => setUploadOpen(true)}>Upload Excel</button>
           <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => setExcelOpen(true)}>Download Excel</button>
           <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={() => setPhotosOpen(true)}>Download Photos</button>
-          <button type="button" className="detail-toolbar-btn" style={{ wordBreak: "normal", whiteSpace: "nowrap", letterSpacing: 0 }} disabled={!id} onClick={() => setInfoOpen(true)}>Organization Info</button>
+          <button type="button" className="detail-toolbar-btn" style={{ wordBreak: "normal", whiteSpace: "nowrap", letterSpacing: 0 }} disabled={!id} onClick={() => navigate(`/organization-info?organizationId=${encodeURIComponent(id)}&organizationName=${encodeURIComponent(name)}`)}>Organization Info</button>
           <button type="button" className="detail-toolbar-btn" disabled={!id || submissions.length === 0} onClick={() => setDeleteOptionsOpen(true)}>Delete Options</button>
           <button type="button" className="detail-toolbar-btn detail-feature-card detail-feature-card-short detail-toolbar-short-slot" disabled={!id} onClick={() => navigate(`/crop-tool?organizationId=${encodeURIComponent(id)}&organizationName=${encodeURIComponent(name)}`)}>
             <span className="detail-feature-icon bg-white/20 text-white" aria-hidden>
@@ -608,17 +539,7 @@ export function OrganizationDetailPage() {
             </span>
             <span className="detail-feature-label">CROPPING TOOL</span>
           </button>
-          <div className="detail-toolbar-btn detail-toolbar-btn-placeholder detail-feature-card detail-feature-card-long detail-toolbar-long-slot">
-            <span className="detail-feature-icon bg-white/20 text-white" aria-hidden>
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="5" width="18" height="14" rx="2" />
-                <circle cx="9" cy="11" r="1.6" />
-                <path d="M7 16.5c.6-1.2 1.5-1.8 2.4-1.8s1.6.5 2.1 1.3" />
-                <path d="M13 15h5" />
-              </svg>
-            </span>
-            <span className="detail-feature-label">ID CARD GENERATOR</span>
-          </div>
+          <IdCardGeneratorButton />
         </div>
         <div className="detail-toolbar-row2">
           <div className="detail-status-tabs-inline detail-toolbar-row2-tabs">
@@ -655,11 +576,7 @@ export function OrganizationDetailPage() {
           </div>
         </div>
       </div>
-      <input ref={excelInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => {
-        const file = event.target.files?.[0];
-        event.target.value = "";
-        if (file) void uploadExcel(file).catch((err) => setError(messageOf(err, "Failed to upload Excel.")));
-      }} />
+      <BulkUploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} organizationId={id} orgName={name} onSuccess={() => void load()} />
       {filterOpen ? createPortal(
         <OrganizationFilterPanel
           anchor={filterButtonRef.current}
@@ -683,29 +600,6 @@ export function OrganizationDetailPage() {
         />,
         document.body
       ) : null}
-      {infoOpen ? (
-        <form className="mt-3 space-y-3 rounded-2xl border border-border bg-white p-4" onSubmit={(event) => { event.preventDefault(); void saveDetails().catch((err) => setError(messageOf(err, "Failed to save organization info."))); }}>
-          <h2 className="text-lg font-bold">Organization Info</h2>
-          <label className="block text-sm"><span className="mb-1.5 block font-medium">Phone</span><input className="input-field" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
-          <label className="block text-sm"><span className="mb-1.5 block font-medium">Address</span><input className="input-field" value={address} onChange={(event) => setAddress(event.target.value)} /></label>
-          <label className="block text-sm"><span className="mb-1.5 block font-medium">Instructions</span><textarea className="input-field min-h-24" value={instructions} onChange={(event) => setInstructions(event.target.value)} /></label>
-          {([
-            ["required_details", "Required Details"],
-            ["detail_phone", "Phone"],
-            ["detail_address", "Address"],
-            ["detail_instructions", "Instructions"],
-          ] as const).map(([key, label]) => (
-            <label key={key} className="flex items-center justify-between gap-3 text-sm">
-              <span>{label}</span>
-              <ToggleSwitch checked={visibility[key] !== false} label={label} onChange={() => setVisibility((current) => ({ ...current, [key]: current[key] === false }))} />
-            </label>
-          ))}
-          <div className="flex justify-end gap-2">
-            <button type="button" className="btn-secondary" onClick={() => setInfoOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary">Save</button>
-          </div>
-        </form>
-      ) : null}
       {error ? <div className="alert-error">{error}</div> : null}
       {notice ? <div className="alert-success">{notice}</div> : null}
       {photoPreview ? (
@@ -715,7 +609,7 @@ export function OrganizationDetailPage() {
       ) : null}
       {link ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <input readOnly className="input-field min-w-0 flex-1" value={link} onFocus={(event) => event.currentTarget.select()} />
+          <input readOnly className="input-field min-w-0 basis-full sm:basis-0 flex-1" value={link} onFocus={(event) => event.currentTarget.select()} />
           <button type="button" className="btn-secondary" onClick={(event) => {
             const input = event.currentTarget.parentElement?.querySelector("input");
             input?.focus();
@@ -752,7 +646,7 @@ export function OrganizationDetailPage() {
                 <th key={field.id} className={field.field_type === "photo" ? "col-photo" : "col-field"}>{field.field_name}</th>
               ))}
               <th className="col-captured">Status</th>
-              <th className="col-field">Created</th>
+              <th className="col-field">Captured</th>
               <th className="col-actions">Actions</th>
             </tr>
           </thead>
@@ -761,7 +655,7 @@ export function OrganizationDetailPage() {
               <tr><td className="px-4 py-10 text-center text-text-muted" colSpan={Math.max(1, activeFields.filter((field) => !isPhotoNumberLabel(field.field_name)).length + (selecting ? 6 : 5))}>No submissions yet.</td></tr>
             ) : visibleRows.map((row) => {
               const captured = hasAllPhotos(row);
-              const created = formatCreated(row.createdAt ?? null);
+              const created = formatCreated(row.capturedAt ?? null);
               const photoField = imageFields.find((field) => row.values[field.id]?.hasPhoto);
               return (
               <tr key={row.id} className="hover:bg-content-bg/50">
@@ -851,7 +745,7 @@ export function OrganizationDetailPage() {
           }}
           onConfirm={async (otp) => {
             const ids = deleteJob ? submissions.filter((row) => {
-              if (deleteJob.date && !(row.createdAt ?? "").startsWith(deleteJob.date)) return false;
+              if (deleteJob.date && !imageFields.some(f => row.values[f.id]?.hasPhoto && captureDayKey(row.values[f.id]?.capturedAt) === deleteJob.date)) return false;
               if (deleteJob.fieldKey && deleteJob.classSection && (row.values[deleteJob.fieldKey]?.text ?? "").trim() !== deleteJob.classSection) return false;
               const captured = hasAllPhotos(row);
               if (deleteJob.dataScope === "captured" && !captured) return false;
@@ -861,7 +755,7 @@ export function OrganizationDetailPage() {
               if (deleteJob.photoScope === "pending" && captured) return false;
               return true;
             }).map((row) => row.id) : [...selectedIds];
-            await api.post(`/admin/organizations/${id}/submissions/bulk-delete`, { ids, otp, photosOnly: deleteJob?.kind === "photos" });
+            await api.post(`/admin/organizations/${id}/submissions/bulk-delete`, { ids, otp, photosOnly: deleteJob?.kind === "photos", date: deleteJob?.date });
             setSelecting(false);
             setSelectedIds(new Set());
             setDeleteJob(null);
@@ -962,77 +856,7 @@ export function OrganizationDetailPage() {
           </div>
         </form>
       ) : null}
-      {building ? (
-        <form className="space-y-3 rounded-2xl border border-border bg-white p-4" onSubmit={(event) => void createForm(event)}>
-          <h2 className="text-lg font-bold">Form Setup</h2>
-          {drafts.map((field, index) => (
-            <div key={field.id ?? index} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto_auto] sm:items-end">
-              <label className="text-sm">
-                <span className="mb-1.5 block font-medium">Field Name</span>
-                <input required className="input-field" value={field.fieldName} onChange={(event) => {
-                  setDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, fieldName: event.target.value } : item));
-                }} />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1.5 block font-medium">Field Type</span>
-                <select className="input-field" value={field.fieldType} onChange={(event) => {
-                  const fieldType = event.target.value === "photo" ? "photo" : "text";
-                  setDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, fieldType } : item));
-                }}>
-                  <option value="text">Text/Data</option>
-                  <option value="photo">Image/Photo</option>
-                </select>
-              </label>
-              <label className="flex items-center gap-2 pb-2 text-sm">
-                <span className="font-medium">Enabled</span>
-                <ToggleSwitch
-                  checked={field.enabled !== false}
-                  label={`${field.fieldName || "Field"} enabled`}
-                  onChange={() => {
-                    setDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, enabled: item.enabled === false } : item));
-                  }}
-                />
-              </label>
-              <label className="flex items-center gap-2 pb-2 text-sm">
-                <span className="font-medium">Required</span>
-                <ToggleSwitch
-                  checked={field.required !== false}
-                  label={`${field.fieldName || "Field"} required`}
-                  onChange={() => {
-                    setDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, required: item.required === false } : item));
-                  }}
-                />
-              </label>
-              <div className="flex gap-1 pb-2">
-                <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={index === 0} onClick={() => {
-                  setDrafts((current) => {
-                    const next = [...current];
-                    const [item] = next.splice(index, 1);
-                    next.splice(index - 1, 0, item);
-                    return next;
-                  });
-                }}>Up</button>
-                <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={index === drafts.length - 1} onClick={() => {
-                  setDrafts((current) => {
-                    const next = [...current];
-                    const [item] = next.splice(index, 1);
-                    next.splice(index + 1, 0, item);
-                    return next;
-                  });
-                }}>Down</button>
-                <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={drafts.length === 1} onClick={() => {
-                  setDrafts((current) => current.filter((_, itemIndex) => itemIndex !== index));
-                }}>Remove</button>
-              </div>
-            </div>
-          ))}
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-secondary" onClick={() => setDrafts((current) => [...current, { fieldName: "", fieldType: "text", enabled: true, required: true }])}>Add Field</button>
-            <button type="submit" className="btn-primary">{link ? "Save" : "Generate Link"}</button>
-            <button type="button" className="btn-secondary" onClick={() => setBuilding(false)}>Cancel</button>
-          </div>
-        </form>
-      ) : null}
+
     </div>
   );
 }

@@ -55,6 +55,10 @@ export async function login(
 ): Promise<void> {
   try {
     const { email, password } = req.body as LoginRequest;
+    const audience = req.body.audience;
+    if (audience !== undefined && audience !== "admin" && audience !== "mobile") {
+      throw new AppError("Invalid login audience", 400);
+    }
 
     if (!isNonEmptyString(email) || !isNonEmptyString(password)) {
       throw new AppError("Email and password are required", 400);
@@ -97,6 +101,8 @@ export async function login(
     let user = result.rows[0];
     let passwordMatches = false;
     for (const candidate of result.rows) {
+      if (audience === "admin" && candidate.role !== "admin") continue;
+      if (audience === "mobile" && !["teacher", "institute_staff", "organization_staff"].includes(candidate.role)) continue;
       if (!candidate.password_hash || typeof candidate.password_hash !== "string") {
         continue;
       }

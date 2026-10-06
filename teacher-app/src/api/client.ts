@@ -22,7 +22,7 @@ function extraApiUrl(): string {
 
 const fromEnv = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/$/, "");
 
-export const SERVER_ORIGIN = fromEnv || extraApiUrl() || PRODUCTION_ORIGIN;
+export const SERVER_ORIGIN = (fromEnv || extraApiUrl() || PRODUCTION_ORIGIN).replace(/\/+$/, "").replace(/\/api$/i, "");
 
 export const API_BASE_URL = `${SERVER_ORIGIN}/api`;
 

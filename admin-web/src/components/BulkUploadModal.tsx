@@ -6,6 +6,7 @@ import type { ApiErrorBody, BulkUploadErrorItem, BulkUploadResponse } from "../t
 type Props = {
   open: boolean;
   onClose: () => void;
+  organizationId?: string;
   schoolId?: string;
   instituteId?: string;
   orgName?: string;
@@ -16,6 +17,7 @@ export function BulkUploadModal({
   open,
   onClose,
   schoolId,
+  organizationId,
   instituteId,
   orgName,
   onSuccess,
@@ -28,7 +30,7 @@ export function BulkUploadModal({
   const [hasExistingExcel, setHasExistingExcel] = useState(false);
   const [showReplaceConfirm, setShowReplaceConfirm] = useState(false);
 
-  const orgId = schoolId || instituteId;
+  const orgId = organizationId || schoolId || instituteId;
 
   useEffect(() => {
     if (!open || !orgId) return;
@@ -37,13 +39,14 @@ export function BulkUploadModal({
     setErrors(null);
     setErrorMessage(null);
     setShowReplaceConfirm(false);
+    if (organizationId) { setHasExistingExcel(false); return; }
     void api
       .get<{ importBatchCount?: number }>("/admin/form-config", {
         params: schoolId ? { schoolId } : { instituteId },
       })
       .then((res) => setHasExistingExcel((res.data.importBatchCount ?? 0) > 0))
       .catch(() => setHasExistingExcel(false));
-  }, [open, orgId, schoolId, instituteId]);
+  }, [open, orgId, schoolId, instituteId, organizationId]);
 
   if (!open) return null;
 
@@ -69,19 +72,19 @@ export function BulkUploadModal({
     setSuccessMessage(null);
     try {
       const { data } = await api.post<BulkUploadResponse>(
-        "/admin/students/bulk-upload",
+        organizationId ? `/admin/organizations/${organizationId}/excel` : "/admin/students/bulk-upload",
         formData
       );
 
-      if (data.success) {
+      if (data.success || (organizationId && (data as unknown as {status: string}).status === "ok")) {
         setSuccessMessage(
-          replaceExisting || data.replaced
+          replaceExisting || ("replaced" in data && data.replaced)
             ? "Excel replaced successfully."
             : "Excel uploaded successfully."
         );
         setFile(null);
         setShowReplaceConfirm(false);
-        setHasExistingExcel(true);
+        setHasExistingExcel(!organizationId);
         onSuccess?.();
       } else {
         setErrors(data.errors);

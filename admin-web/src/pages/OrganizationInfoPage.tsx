@@ -300,13 +300,14 @@ function OrganizationSelectionBlocks({
   );
 }
 
-export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "institute" }) {
+export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "institute" | "organization" }) {
   const [searchParams] = useSearchParams();
+  const isOrganization = mode === "organization";
   const isInstitute = mode === "institute";
-  const orgId = searchParams.get(isInstitute ? "instituteId" : "schoolId") ?? "";
-  const orgName = searchParams.get(isInstitute ? "instituteName" : "schoolName") ?? "";
+  const orgId = searchParams.get(isOrganization ? "organizationId" : isInstitute ? "instituteId" : "schoolId") ?? "";
+  const orgName = searchParams.get(isOrganization ? "organizationName" : isInstitute ? "instituteName" : "schoolName") ?? "";
 
-  const backHref = isInstitute
+  const backHref = isOrganization ? `/extra-2/${encodeURIComponent(orgId)}` : isInstitute
     ? `/institute-members?instituteId=${encodeURIComponent(orgId)}${orgName ? `&instituteName=${encodeURIComponent(orgName)}` : ""}`
     : `/students?schoolId=${encodeURIComponent(orgId)}${orgName ? `&schoolName=${encodeURIComponent(orgName)}` : ""}`;
 
@@ -315,6 +316,7 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
   const [school, setSchool] = useState<SchoolOrganization | null>(null);
   const [institute, setInstitute] = useState<InstituteOrganization | null>(null);
   const [preview, setPreview] = useState<{ label: string; url: string } | null>(null);
+  const [editingDetails, setEditingDetails] = useState(false);
   const [detailSaving, setDetailSaving] = useState(false);
 
   const visibility =
@@ -343,7 +345,7 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
     setDetailSaving(true);
     setError(null);
     try {
-      const path = isInstitute
+      const path = isOrganization ? `/admin/organizations/${orgId}/details` : isInstitute
         ? `/admin/institutes/${orgId}/app-settings`
         : `/admin/schools/${orgId}/app-settings`;
       await api.patch(path, { field_visibility: next });
@@ -369,7 +371,7 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
       setLoading(true);
       setError(null);
       try {
-        const path = isInstitute
+        const path = isOrganization ? `/admin/organizations/${orgId}` : isInstitute
           ? `/admin/institutes/${orgId}/organization-info`
           : `/admin/schools/${orgId}/organization-info`;
         const { data } = await api.get<{ organization: SchoolOrganization | InstituteOrganization }>(path);
@@ -394,7 +396,7 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
     return () => {
       cancelled = true;
     };
-  }, [orgId, isInstitute]);
+  }, [orgId, isInstitute, isOrganization]);
 
   const previewImages = useMemo(() => {
     const items: { label: string; url: string }[] = [];
@@ -483,7 +485,7 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
           {!isInstitute && school ? (
             <>
               <InfoRow
-                label="School Name"
+                label={isOrganization ? "Organization Name" : "School Name"}
                 value={school.name}
                 control={
                   <div className="flex items-center gap-2">
@@ -492,12 +494,13 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
                   </div>
                 }
               />
-              <InfoRow label="Year" value={school.year} control={detailSwitch("detail_year")} />
+              {!isOrganization ? <InfoRow label="Year" value={school.year} control={detailSwitch("detail_year")} /> : null}
               <InfoRow label="Phone" value={school.phone} control={detailSwitch("detail_phone")} />
-              <InfoRow label="Secondary Phone" value={school.phone2} control={detailSwitch("detail_phone2")} />
-              <InfoRow label="School Code" value={school.school_code} control={detailSwitch("detail_code")} />
+              {!isOrganization ? <InfoRow label="Secondary Phone" value={school.phone2} control={detailSwitch("detail_phone2")} /> : null}
+              {!isOrganization ? <InfoRow label="School Code" value={school.school_code} control={detailSwitch("detail_code")} /> : null}
               <InfoRow label="Address" value={school.address} control={detailSwitch("detail_address")} />
               <InfoRow label="Instructions" value={school.instructions} control={detailSwitch("detail_instructions")} />
+              {!isOrganization ? <>
               <OrganizationSelectionBlocks
                 org={school}
                 onPreview={(l, u) => setPreview({ label: l, url: u })}
@@ -513,6 +516,7 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
                 onPreview={(l, u) => setPreview({ label: l, url: u })}
                 control={detailSwitch("detail_organization_photo")}
               />
+              </> : null}
             </>
           ) : null}
           {!loading && !error && !school && !institute && (
@@ -525,19 +529,29 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
         <OrgAppSettings
           orgId={orgId}
           institute={isInstitute}
+          organization={isOrganization}
           initialAllowNumberEdit={
             (isInstitute ? institute?.allow_number_edit : school?.allow_number_edit) !== false
           }
           initialAllowRecordEdit={
-            (isInstitute ? institute?.allow_record_edit : school?.allow_record_edit) !== false
+            (isOrganization ? school?.field_visibility?.allow_record_edit : isInstitute ? institute?.allow_record_edit : school?.allow_record_edit) !== false
           }
           initialShowCaptured={
-            (isInstitute ? institute?.show_captured_section : school?.show_captured_section) !==
+            (isOrganization ? school?.field_visibility?.show_captured_section : isInstitute ? institute?.show_captured_section : school?.show_captured_section) !==
             false
           }
         />
       ) : null}
 
+      {isOrganization && school ? <div className="centered-page-card mt-5 p-5">
+        <button type="button" className="btn-secondary" onClick={() => setEditingDetails(v => !v)}>{editingDetails ? "Close editor" : "Edit organization details"}</button>
+        {editingDetails ? <form className="mt-4 space-y-4" onSubmit={async e => {
+          e.preventDefault(); setDetailSaving(true); setError(null);
+          const form = new FormData(e.currentTarget);
+          try { const {data} = await api.patch(`/admin/organizations/${orgId}/details`, Object.fromEntries(form)); setSchool(current => current ? {...current,...data.organization} : current); setEditingDetails(false); }
+          catch { setError("Could not save organization details."); } finally {setDetailSaving(false);}
+        }}>{(["phone","address","instructions"] as const).map(key => <label className="block" key={key}>{key[0].toUpperCase()+key.slice(1)}<input name={key} defaultValue={school[key] ?? ""} className="input-field mt-1" /></label>)}<button disabled={detailSaving} className="btn-primary">Save details</button></form> : null}
+      </div> : null}
       <ImagePreviewModal
         open={Boolean(preview)}
         title={preview?.label ?? ""}

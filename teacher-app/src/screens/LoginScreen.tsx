@@ -73,6 +73,7 @@ export function LoginScreen(_props: Props) {
     setLoading(true);
     try {
       const { data } = await api.post<LoginResponse>("/auth/login", {
+        audience: "mobile",
         email: username.trim(),
         password,
       });

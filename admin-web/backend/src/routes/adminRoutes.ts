@@ -111,6 +111,7 @@ import {
   deleteOrganization,
   deleteOrganizationSubmissions,
   downloadOrganizationExcel,
+  downloadOrganizationPhotos,
   downloadOrganizationSubmissionPhoto,
   getOrganizationWorkspaceAdmin,
   bulkDeleteOrganizations,
@@ -162,6 +163,7 @@ router.get("/organizations/:id", getOrganizationWorkspaceAdmin);
 router.post("/organizations/:id/forms", createOrganizationForm);
 router.post("/organizations/:id/excel", uploadExcel.single("file"), uploadOrganizationExcel);
 router.get("/organizations/:id/excel", downloadOrganizationExcel);
+router.get("/organizations/:id/photos.zip", downloadOrganizationPhotos);
 router.patch("/organizations/:id/details", updateOrganizationDetails);
 router.post(
   "/organizations/:id/submissions/:submissionId/fields/:fieldId/photo",

@@ -1,3 +1,4 @@
+import { IdCardGeneratorButton } from "../components/IdCardGeneratorButton";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -889,6 +890,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               </span>
               <span className="detail-feature-label">CROPPING TOOL</span>
             </button>
+            <IdCardGeneratorButton />
 
           </div>
 

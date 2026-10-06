@@ -77,6 +77,7 @@ export function LoginPage() {
     setLoading(true);
     try {
       const { data } = await api.post<LoginResponse>("/auth/login", {
+        audience: "admin",
         email: username.trim(),
         password,
       });
@@ -102,7 +103,8 @@ export function LoginPage() {
     <LoginPageLayout
       appBrand
       brandAccent
-      titleClassName="text-[#4CAF50]"
+      titleClassName="text-text-navy"
+      onTitlePress={() => navigate("/forgot-password")}
       title="Welcome Admin"
       footer={
         <SuperAdminContacts
@@ -177,7 +179,6 @@ export function LoginPage() {
         <button type="submit" disabled={loading} className="btn-primary h-10 w-full text-[15px]">
           {loading ? "Logging in…" : "Login"}
         </button>
-        <button type="button" className="w-full text-sm underline" onClick={() => navigate("/forgot-password")}>Forgot password?</button>
       </form>
     </LoginPageLayout>
   );

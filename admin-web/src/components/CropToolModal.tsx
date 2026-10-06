@@ -98,7 +98,7 @@ export function CropToolModal({
   const [limitWidth, setLimitWidth] = useState("");
   const [limitHeight, setLimitHeight] = useState("");
   const [limitUnit, setLimitUnit] = useState<CropUnit>("cm");
-  const [sizeLocked, setSizeLocked] = useState(false);
+
   const [sizeHydrated, setSizeHydrated] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -106,6 +106,7 @@ export function CropToolModal({
   const frameRef = useRef<HTMLDivElement>(null);
   const tonePanelRef = useRef<HTMLDivElement>(null);
   const toneButtonRef = useRef<HTMLButtonElement>(null);
+  const toneImageRef = useRef<HTMLImageElement>(null);
   const cropRef = useRef<Crop>({ ...FULL });
   const toneRef = useRef({ brightness: 0, contrast: 0 });
   const toneGestureRef = useRef(false);
@@ -120,7 +121,7 @@ export function CropToolModal({
   const tonePaintRef = useRef(0);
   const toneStudentRef = useRef<string | undefined>(undefined);
   const limitRef = useRef<{ width: number | null; height: number | null }>({ width: null, height: null });
-  const historyRef = useRef<Array<Crop & { brightness: number; contrast: number }>>([]);
+  const historyRef = useRef<Array<Crop & { brightness: number; contrast: number; armed: boolean }>>([]);
   const undoRef = useRef<() => void>(() => {});
   const quickSaveRef = useRef<() => void>(() => {});
   const student = gallery[index] ?? null;
@@ -135,7 +136,7 @@ export function CropToolModal({
     setLimitWidth(saved.width);
     setLimitHeight(saved.height);
     setLimitUnit(saved.unit);
-    setSizeLocked(saved.locked);
+
     const width = Number(saved.width);
     const height = Number(saved.height);
     limitRef.current = {
@@ -151,8 +152,8 @@ export function CropToolModal({
       const existing = readCropSize(storageKey);
       if (existing.width || existing.height) return;
     }
-    writeCropSize(storageKey, { width: limitWidth, height: limitHeight, unit: limitUnit, locked: sizeLocked });
-  }, [sizeHydrated, storageKey, limitWidth, limitHeight, limitUnit, sizeLocked]);
+    writeCropSize(storageKey, { width: limitWidth, height: limitHeight, unit: limitUnit, locked: false });
+  }, [sizeHydrated, storageKey, limitWidth, limitHeight, limitUnit]);
 
   useEffect(() => {
     return () => {
@@ -179,6 +180,8 @@ export function CropToolModal({
     if (!student?.photo_url) return;
     void loadCropPhoto(student, controller.signal).then((url) => {
       if (!cancelled) setSrc(url || "");
+    }).catch(() => {
+      if (!cancelled) setError("Could not load photo. Please try again.");
     });
     return () => {
       cancelled = true;
@@ -250,6 +253,8 @@ export function CropToolModal({
     setPreviewUrl("");
   }
 
+  useLayoutEffect(() => { if (cropArmed) paintFrame(); }, [cropArmed, src, phase]);
+
   function paintFrame() {
     const frame = frameRef.current;
     const crop = cropRef.current;
@@ -259,14 +264,24 @@ export function CropToolModal({
     frame.style.width = `${crop.w * 100}%`;
     frame.style.height = `${crop.h * 100}%`;
     frame.style.transform = `rotate(${crop.angle}deg)`;
+    paintTone();
   }
 
   function paintTone() {
     const { brightness, contrast } = toneRef.current;
-    const image = imageRef.current;
-    if (image) {
-      const filter = toneFilter(brightness, contrast);
-      image.style.filter = filter === "none" ? "" : filter;
+    const image = toneImageRef.current;
+    const base = imageRef.current;
+    if (image && base) {
+      const crop = cropRef.current;
+      const angle = crop.angle * Math.PI / 180;
+      const iw = base.naturalWidth || 1;
+      const ih = base.naturalHeight || 1;
+      const points = [[-1,-1],[1,-1],[1,1],[-1,1]].map(([x,y]) => {
+        const dx = x * crop.w * iw / 2, dy = y * crop.h * ih / 2;
+        return `${100 * (crop.cx + (dx*Math.cos(angle)-dy*Math.sin(angle))/iw)}% ${100 * (crop.cy + (dx*Math.sin(angle)+dy*Math.cos(angle))/ih)}%`;
+      });
+      image.style.clipPath = `polygon(${points.join(",")})`;
+      image.style.filter = toneFilter(brightness, contrast);
     }
     if (brightnessInputRef.current) brightnessInputRef.current.value = String(Math.round(brightness));
     if (contrastInputRef.current) contrastInputRef.current.value = String(Math.round(contrast));
@@ -329,7 +344,7 @@ export function CropToolModal({
   }
 
   function rememberCrop() {
-    const current = { ...cropRef.current, ...toneRef.current };
+    const current = { ...cropRef.current, ...toneRef.current, armed: cropArmed };
     const last = historyRef.current[historyRef.current.length - 1];
     if (
       last &&
@@ -337,7 +352,7 @@ export function CropToolModal({
       last.cy === current.cy &&
       last.w === current.w &&
       last.h === current.h &&
-      last.angle === current.angle &&
+      last.angle === current.angle && last.armed === current.armed &&
       last.brightness === current.brightness && last.contrast === current.contrast
     ) {
       return;
@@ -358,16 +373,17 @@ export function CropToolModal({
     const previous = historyRef.current.pop();
     if (!previous) return;
     cropRef.current = previous;
+    setCropArmed(previous.armed);
     toneRef.current = { brightness: previous.brightness, contrast: previous.contrast };
     paintTone();
     paintFrame();
   }
 
   function rotateCrop(delta: number) {
-    if (!student || phase !== "edit") return;
+    if (!student || phase !== "edit" || !cropArmed) return;
     rememberCrop();
     markDirty(student.id);
-    cropRef.current = { ...cropRef.current, angle: cropRef.current.angle + delta };
+    cropRef.current = limitCrop({ ...cropRef.current, angle: cropRef.current.angle + delta }, imageRef.current, limitRef.current);
     paintFrame();
   }
 
@@ -386,7 +402,7 @@ export function CropToolModal({
   }
 
   function updateCropLimit(axis: "width" | "height", raw: string) {
-    if (sizeLocked) return;
+
     const cleaned = parseMeasure(raw);
     const width = axis === "width" ? cleaned : limitWidth;
     const height = axis === "height" ? cleaned : limitHeight;
@@ -396,7 +412,7 @@ export function CropToolModal({
   }
 
   function changeCropUnit(next: CropUnit) {
-    if (sizeLocked || next === limitUnit) return;
+    if (next === limitUnit) return;
     const factor = toMillimeters(1, limitUnit) / toMillimeters(1, next);
     const width = convertMeasure(limitWidth, factor);
     const height = convertMeasure(limitHeight, factor);
@@ -428,7 +444,8 @@ export function CropToolModal({
     const box = stageRef.current?.getBoundingClientRect();
     const point = pointOf(event);
     if (!box || !point) return;
-    if (!cropArmed) {
+    if (!cropArmed || !hitTest(event.clientX, event.clientY, cropRef.current, box)) {
+      rememberCrop();
       const next = { cx: point.x, cy: point.y, w: MIN_SIZE, h: MIN_SIZE, angle: cropRef.current.angle };
       cropRef.current = next;
       setCropArmed(true);
@@ -463,15 +480,15 @@ export function CropToolModal({
     const drag = dragRef.current;
     if (!box) return;
     if (!drag) {
-      event.currentTarget.style.cursor = cursorFor(hitTest(event.clientX, event.clientY, cropRef.current, box));
+      event.currentTarget.style.cursor = cropArmed ? cursorFor(hitTest(event.clientX, event.clientY, cropRef.current, box)) : "crosshair";
       return;
     }
     if (drag.kind === "rotate") {
       const current = pointerAngle(event.clientX, event.clientY, drag.origin, box);
-      cropRef.current = {
+      cropRef.current = limitCrop({
         ...drag.origin,
         angle: drag.origin.angle + (angleDelta(current, drag.startPointer) * 180) / Math.PI,
-      };
+      }, imageRef.current, limitRef.current);
       event.currentTarget.style.cursor = "grabbing";
       schedulePaint();
       return;
@@ -503,7 +520,7 @@ export function CropToolModal({
     const next =
       drag.kind === "move"
         ? clampCrop({ ...drag.origin, cx: drag.origin.cx + dx, cy: drag.origin.cy + dy })
-        : clampCrop(resizeCrop(drag.origin, drag.handle, dx, dy));
+        : clampCrop(resizeCrop(drag.origin, drag.handle, dx, dy, box.width / box.height));
     cropRef.current = limitCrop(next, imageRef.current, limitRef.current);
     event.currentTarget.style.cursor = cursorFor(drag.kind === "move" ? "move" : drag.handle);
     schedulePaint();
@@ -515,12 +532,15 @@ export function CropToolModal({
 
   async function applyOk() {
     const image = imageRef.current;
-    if (!image || !src || applying || !image.naturalWidth) return;
+    if (!image || !src || applying || !image.naturalWidth || !cropArmed) return;
+    if ((limitWidth || limitHeight) && !(Number(limitWidth) > 0 && Number(limitHeight) > 0)) {
+      setError("Enter both a positive width and height, or clear both for a free crop."); return;
+    }
     if (student) markDirty(student.id);
     setApplying(true);
     setError(null);
     try {
-      const blob = await renderCrop(image, cropRef.current, toneRef.current);
+      const blob = await renderCrop(image, cropRef.current, toneRef.current, { width: toMillimeters(Number(limitWidth), limitUnit), height: toMillimeters(Number(limitHeight), limitUnit) });
       clearPreview();
       const url = URL.createObjectURL(blob);
       previewUrlRef.current = url;
@@ -528,7 +548,7 @@ export function CropToolModal({
       setPreviewUrl(url);
       setPhase("preview");
     } catch {
-      setError("Could not prepare the crop preview.");
+      setError("Could not prepare the crop preview. Use positive dimensions up to 8192 pixels at 300 DPI.");
     } finally {
       setApplying(false);
     }
@@ -683,7 +703,7 @@ export function CropToolModal({
               aria-label="Crop size unit"
               className="input-field mt-1"
               value={limitUnit}
-              disabled={sizeLocked}
+
               onChange={(event) => changeCropUnit(event.target.value === "in" ? "in" : event.target.value === "mm" ? "mm" : "cm")}
             >
               <option value="in">Inches</option>
@@ -693,18 +713,16 @@ export function CropToolModal({
           </label>
           <label className="text-xs font-semibold text-[#334155]">
             Width
-            <input value={limitWidth} inputMode="decimal" aria-label="Crop width" disabled={sizeLocked} className="input-field mt-1" onChange={(event) => updateCropLimit("width", event.target.value)} />
+            <input value={limitWidth} inputMode="decimal" aria-label="Crop width"  className="input-field mt-1" onChange={(event) => updateCropLimit("width", event.target.value)} />
           </label>
           <label className="text-xs font-semibold text-[#334155]">
             Height
-            <input value={limitHeight} inputMode="decimal" aria-label="Crop height" disabled={sizeLocked} className="input-field mt-1" onChange={(event) => updateCropLimit("height", event.target.value)} />
+            <input value={limitHeight} inputMode="decimal" aria-label="Crop height"  className="input-field mt-1" onChange={(event) => updateCropLimit("height", event.target.value)} />
           </label>
-          <button type="button" className="btn-secondary" onClick={() => setSizeLocked((locked) => !locked)}>
-            {sizeLocked ? "Unlock" : "Lock"}
-          </button>
+
           <p className="text-[11px] font-medium text-[#64748B]">
             {limitWidth && limitHeight
-              ? `${limitWidth} × ${limitHeight} ${limitUnit === "in" ? "inches" : limitUnit === "mm" ? "mm" : "cm"}${sizeLocked ? ", locked" : ""}`
+              ? `${limitWidth} × ${limitHeight} ${limitUnit === "in" ? "inches" : limitUnit === "mm" ? "mm" : "cm"} · 300 DPI`
               : "Choose inches, centimeters, or millimeters, then enter width and height."}
           </p>
           {!browsing ? (
@@ -715,7 +733,7 @@ export function CropToolModal({
                   aria-label="Rotate"
                   className="input-field mt-1"
                   defaultValue=""
-                  disabled={phase !== "edit" || (student?.photo_cropped === true && cropView !== "cropped")}
+                  disabled={!cropArmed || phase !== "edit" || (student?.photo_cropped === true && cropView !== "cropped")}
                   onChange={(event) => {
                     const value = event.currentTarget.value;
                     event.currentTarget.value = "";
@@ -804,19 +822,11 @@ export function CropToolModal({
                       className="block h-auto w-auto max-w-full select-none object-contain"
                       style={{ maxWidth: frameLimit.width, maxHeight: frameLimit.height }}
                       onLoad={() => {
-                        const limit = limitRef.current;
-                        if (limit.width != null && limit.height != null) {
-                          cropRef.current = limitCrop(
-                            { cx: 0.5, cy: 0.5, w: 1, h: 1, angle: cropRef.current.angle },
-                            imageRef.current,
-                            limit
-                          );
-                          setCropArmed(true);
-                        }
                         paintFrame();
                         paintTone();
                       }}
                     />
+                    {cropArmed ? <img ref={toneImageRef} src={src} alt="" aria-hidden draggable={false} className="pointer-events-none absolute inset-0 h-full w-full" onLoad={paintTone} /> : null}
                     {cropArmed ? <div className="pointer-events-none absolute inset-0">
                       <div
                         ref={frameRef}
@@ -862,6 +872,7 @@ export function CropToolModal({
                     ? "border-[#C4B5FD] bg-[#F5F3FF] text-[#6366F1]"
                     : "border-[#BFDBFE] bg-white text-[#2563EB]"
                 }`}
+                disabled={!cropArmed || phase !== "edit"}
                 aria-expanded={toneOpen}
                 onClick={() => setToneOpen((open) => !open)}
               >
@@ -1015,37 +1026,23 @@ function convertMeasure(raw: string, factor: number): string {
   return String(converted);
 }
 
-function limitCrop(
-  crop: Crop,
-  image: HTMLImageElement | null,
-  limit: { width: number | null; height: number | null }
-): Crop {
-  const clamped = clampCrop(crop);
-  if (!image?.naturalWidth || !image.naturalHeight) return clamped;
-  const widthLimit = limit.width && limit.width > 0 ? limit.width : null;
-  const heightLimit = limit.height && limit.height > 0 ? limit.height : null;
-  if (widthLimit == null || heightLimit == null) return clamped;
-  if (widthLimit != null && heightLimit != null) {
-    const ratio = (widthLimit / heightLimit) * (image.naturalHeight / image.naturalWidth);
-    let width = clamped.w;
-    let height = clamped.h;
-    if (width / Math.max(height, 0.0001) > ratio) width = height * ratio;
-    else height = width / ratio;
-    if (width > 1) {
-      height /= width;
-      width = 1;
-    }
-    if (height > 1) {
-      width /= height;
-      height = 1;
-    }
-    width = Math.min(1, Math.max(MIN_SIZE, width));
-    height = Math.min(1, Math.max(MIN_SIZE, height));
-    if (width / height > ratio) width = height * ratio;
-    else height = width / ratio;
-    return clampCrop({ ...clamped, w: width, h: height });
+/** Keep the aspect ratio and all rotated corners inside the original image. */
+function limitCrop(crop: Crop, image: HTMLImageElement | null, limit: {width:number|null;height:number|null}): Crop {
+  if (!image?.naturalWidth || !image.naturalHeight) return clampCrop(crop);
+  const aspect = image.naturalWidth / image.naturalHeight;
+  let w = Math.max(0.001, Math.min(1,crop.w));
+  let h = Math.max(0.001, Math.min(1,crop.h));
+  if (limit.width && limit.height) {
+    const ratio = limit.width / limit.height / aspect;
+    if (w / h > ratio) w = h * ratio; else h = w / ratio;
   }
-  return clamped;
+  const angle = crop.angle * Math.PI / 180;
+  const c = Math.abs(Math.cos(angle)), t = Math.abs(Math.sin(angle));
+  const boundW = c*w + t*h/aspect, boundH = t*w*aspect + c*h;
+  const scale = Math.min(1, 1/boundW, 1/boundH);
+  w *= scale; h *= scale;
+  const halfW = (c*w+t*h/aspect)/2, halfH = (t*w*aspect+c*h)/2;
+  return {...crop,w,h,cx:Math.max(halfW,Math.min(1-halfW,crop.cx)),cy:Math.max(halfH,Math.min(1-halfH,crop.cy))};
 }
 
 function GalleryThumb({
@@ -1074,6 +1071,8 @@ function GalleryThumb({
         observer.disconnect();
         void loadCropPhoto(student, controller.signal, true).then((url) => {
           if (!cancelled && url) setSrc(url);
+        }).catch(() => {
+          if (!cancelled) setSrc("");
         });
       },
       { root: node.parentElement, rootMargin: "80px" }
@@ -1197,8 +1196,9 @@ function unrotatePoint(x: number, y: number, degrees: number): { x: number; y: n
   return rotatePoint(x, y, -degrees);
 }
 
-function resizeCrop(origin: Crop, handle: Handle, dx: number, dy: number): Crop {
-  const local = unrotatePoint(dx, dy, origin.angle);
+function resizeCrop(origin: Crop, handle: Handle, dx: number, dy: number, imageAspect: number): Crop {
+  const physical = unrotatePoint(dx * imageAspect, dy, origin.angle);
+  const local = {x: physical.x / imageAspect, y: physical.y};
   const east = handle === "e" || handle === "ne" || handle === "se";
   const west = handle === "w" || handle === "nw" || handle === "sw";
   const north = handle === "n" || handle === "ne" || handle === "nw";
@@ -1223,7 +1223,8 @@ function resizeCrop(origin: Crop, handle: Handle, dx: number, dy: number): Crop 
     dh -= local.y;
     sy += local.y / 2;
   }
-  const shift = rotatePoint(sx, sy, origin.angle);
+  const physicalShift = rotatePoint(sx * imageAspect, sy, origin.angle);
+  const shift = {x:physicalShift.x / imageAspect,y:physicalShift.y};
   return {
     ...origin,
     cx: origin.cx + shift.x,
@@ -1308,14 +1309,21 @@ function adjustedSource(
 function renderCrop(
   image: HTMLImageElement,
   crop: Crop,
-  tone: { brightness: number; contrast: number }
+  tone: { brightness: number; contrast: number },
+  size: { width: number; height: number }
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const width = image.naturalWidth;
     const height = image.naturalHeight;
     const output = document.createElement("canvas");
-    output.width = Math.max(1, Math.round(crop.w * width));
-    output.height = Math.max(1, Math.round(crop.h * height));
+    const measured = size.width > 0 && size.height > 0;
+    const outputWidth = Math.max(1, Math.round(measured ? size.width / 25.4 * 300 : crop.w * width));
+    const outputHeight = Math.max(1, Math.round(measured ? size.height / 25.4 * 300 : crop.h * height));
+    if (outputWidth > 8192 || outputHeight > 8192) {
+      reject(new Error("Crop dimensions exceed 8192 pixels at 300 DPI"));
+      return;
+    }
+    output.width = outputWidth; output.height = outputHeight;
     const ctx = output.getContext("2d");
     if (!ctx) {
       reject(new Error("Canvas is unavailable"));
@@ -1324,6 +1332,8 @@ function renderCrop(
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, output.width, output.height);
     ctx.translate(output.width / 2, output.height / 2);
+    const scale = Math.min(output.width / (crop.w * width), output.height / (crop.h * height));
+    ctx.scale(scale, scale);
     ctx.rotate((-crop.angle * Math.PI) / 180);
     ctx.translate(-crop.cx * width, -crop.cy * height);
     const filter = toneFilter(tone.brightness, tone.contrast);
@@ -1343,9 +1353,25 @@ function renderCrop(
       ctx.filter = "none";
       ctx.drawImage(adjustedSource(image, tone), 0, 0);
     }
-    output.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error("Could not encode the photo"));
+    output.toBlob(async (blob) => {
+      if (!blob) { reject(new Error("Could not encode the photo")); return; }
+      try {
+        // Canvas defaults to 96 DPI. Store the actual physical print density in JFIF.
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        for (let i = 2; i + 16 < bytes.length;) {
+          if (bytes[i] !== 255 || bytes[i + 1] === 218) break;
+          const length = bytes[i + 2] * 256 + bytes[i + 3];
+          if (bytes[i + 1] === 224 && String.fromCharCode(...bytes.slice(i + 4, i + 9)) === "JFIF\0") {
+            bytes[i + 11] = 1;
+            bytes[i + 12] = bytes[i + 14] = 1;
+            bytes[i + 13] = bytes[i + 15] = 44;
+            break;
+          }
+          if (length < 2) break;
+          i += length + 2;
+        }
+        resolve(new Blob([bytes], { type: "image/jpeg" }));
+      } catch (error) { reject(error); }
     }, "image/jpeg", 0.95);
   });
 }

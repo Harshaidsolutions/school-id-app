@@ -81,6 +81,8 @@ export function OrganizationCardsPanel() {
     return () => clearInterval(timer);
   }, [load, editingId]));
 
+  useEffect(() => { if (visibility.show_captured_section === false && tab === "captured") setTab("all"); }, [visibility, tab]);
+
   const photoFields = fields.filter((field) => field.field_type === "photo" && !/signature/i.test(field.field_name));
   const textFields = fields.filter((field) => field.field_type !== "photo" && !isLockedPhotoNumber(field.field_name));
   const categoryField = fields.find((field) => field.field_type !== "photo" && isCategoryLabel(field.field_name));
@@ -158,7 +160,7 @@ export function OrganizationCardsPanel() {
           ["pending", `Pending (${counts.pending})`],
           ["captured", `Captured (${counts.captured})`],
           ["pending-data", `Pending Data (${counts.pendingData})`],
-        ] as const).map(([key, label]) => (
+        ] as const).filter(([key]) => key !== "captured" || visibility.show_captured_section !== false).map(([key, label]) => (
           <Pressable key={key} onPress={() => setTab(key)} style={{ borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: tab === key ? colors.brandGreen : colors.surface, borderWidth: 1, borderColor: colors.border }}>
             <Text style={{ color: tab === key ? "#fff" : colors.text, fontFamily: fonts.semiBold }}>{label}</Text>
           </Pressable>
@@ -202,7 +204,7 @@ export function OrganizationCardsPanel() {
               >
                 <Text style={{ color: colors.brandGreen, fontFamily: fonts.semiBold }}>{saving ? "Saving…" : "Save"}</Text>
               </Pressable>
-            ) : (
+            ) : visibility.allow_record_edit !== false || missingData(row) ? (
               <Pressable onPress={() => {
                 const next: Record<string, string> = {};
                 for (const field of fields) {
@@ -215,7 +217,7 @@ export function OrganizationCardsPanel() {
               }}>
                 <Text style={{ color: colors.brandGreen, fontFamily: fonts.semiBold }}>Edit</Text>
               </Pressable>
-            )}
+            ) : null}
           </View>
           <Text style={{ color: colors.textMuted, fontSize: 12 }}>{fields.find((field) => isLockedPhotoNumber(field.field_name))?.field_name ?? "Photo Number"}</Text>
           <Text style={{ color: colors.text, fontFamily: fonts.medium }}>{row.photoNumber || "—"}</Text>

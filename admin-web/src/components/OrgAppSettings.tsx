@@ -6,12 +6,14 @@ import type { ApiErrorBody } from "../types";
 export function OrgAppSettings({
   orgId,
   institute,
+  organization = false,
   initialAllowNumberEdit,
   initialAllowRecordEdit,
   initialShowCaptured,
 }: {
   orgId: string;
   institute: boolean;
+  organization?: boolean;
   initialAllowNumberEdit: boolean;
   initialAllowRecordEdit: boolean;
   initialShowCaptured: boolean;
@@ -34,20 +36,22 @@ export function OrgAppSettings({
     allowRecordEdit: boolean;
     showCaptured: boolean;
   }) {
+    const previous = {allowNumberEdit, allowRecordEdit, showCaptured};
     setSaving(true);
     setError(null);
     setSaved(null);
     try {
-      const path = institute
+      const path = organization ? `/admin/organizations/${orgId}/details` : institute
         ? `/admin/institutes/${orgId}/app-settings`
         : `/admin/schools/${orgId}/app-settings`;
-      await api.patch(path, {
+      await api.patch(path, organization ? {field_visibility: {allow_record_edit: next.allowRecordEdit, show_captured_section: next.showCaptured}} : {
         allow_number_edit: next.allowNumberEdit,
         allow_record_edit: next.allowRecordEdit,
         show_captured_section: next.showCaptured,
       });
       setSaved("Saved for this organization.");
     } catch (err) {
+      setAllowNumberEdit(previous.allowNumberEdit); setAllowRecordEdit(previous.allowRecordEdit); setShowCaptured(previous.showCaptured);
       if (axios.isAxiosError(err)) {
         const body = err.response?.data as ApiErrorBody | undefined;
         setError(body?.message ?? "Could not save settings.");
