@@ -19,7 +19,6 @@ const NAV: NavItem[] = [
   { label: "Dashboard", icon: "dashboard", to: "/" },
   { label: "Schools", icon: "school", to: "/schools" },
   { label: "Institutes", icon: "institute", to: "/institutes" },
-  { label: "Organization", icon: "extra", to: "/extra-2" },
   { label: "Templates", icon: "templates", to: "/templates" },
   { label: "Models", icon: "model", to: "/models" },
   { label: "Brochures", icon: "brochure", to: "/brochures" },
@@ -552,7 +551,7 @@ export function AppLayout() {
                                 <span className="text-sm font-semibold text-text-navy">{noticeHeadline(notice.title, details)}</span>
                                 <span className="shrink-0 text-xs text-text-muted">
                                   {notice.created_at
-                                    ? new Date(notice.created_at).toLocaleString()
+                                    ? new Intl.DateTimeFormat("en-GB", {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:true,timeZone:"Asia/Kolkata"}).format(new Date(notice.created_at))
                                     : ""}
                                 </span>
                               </button>

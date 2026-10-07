@@ -26,6 +26,7 @@ import { sortClassSections } from "../utils/classSort";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
 import { greetingForNow } from "../utils/greeting";
 import { InstituteMembersPanel } from "../components/InstituteMembersPanel";
+import { SchoolParentLinkCard } from "../components/SchoolParentLinkCard";
 import { OrganizationCardsPanel } from "../components/OrganizationCardsPanel";
 import { isInstituteUser } from "../utils/orgContext";
 import { useAuth } from "../auth/AuthContext";
@@ -179,6 +180,7 @@ function SchoolIdCardsScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        <SchoolParentLinkCard />
         <View style={styles.sectionRow}>
           <Text style={[styles.sectionTitle, { color: colors.brandGreen }]}>
             Select Classes

@@ -275,6 +275,9 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("all");
+  const [parentLink, setParentLink] = useState<string|null>(null);
+  const [parentLinkBusy, setParentLinkBusy] = useState(false);
+  const [parentLinkMessage, setParentLinkMessage] = useState("");
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState("");
   const [photoStudent, setPhotoStudent] = useState<Student | null>(null);
@@ -328,6 +331,17 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     return schools.find((s) => s.id === schoolId)?.name ?? null;
   }, [schools, schoolId, searchParams, isInstitute]);
 
+  useEffect(() => {
+    let cancelled=false;setParentLink(null);setParentLinkMessage("");
+    if(!isInstitute && schoolId) void api.get<{link:string|null}>(`/admin/schools/${schoolId}/parent-link`).then(({data})=>{if(!cancelled)setParentLink(data.link);}).catch(()=>{});
+    return ()=>{cancelled=true;};
+  },[schoolId,isInstitute]);
+  async function createParentLink() {
+    if(parentLinkBusy||!schoolId)return;setParentLinkBusy(true);setParentLinkMessage("");
+    try {const {data}=await api.post<{link:string}>(`/admin/schools/${schoolId}/parent-link`);setParentLink(data.link);}
+    catch(err){setParentLinkMessage(axios.isAxiosError(err)?err.response?.data?.message||"Could not create link.":"Could not create link.");}
+    finally{setParentLinkBusy(false);}
+  }
   const showSchoolPicker = !isInstitute && !searchParams.get("schoolId");
   const isDetailView = isInstitute
     ? Boolean(searchParams.get("instituteId"))
@@ -920,8 +934,8 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               })}
             </div>
 
-            <div className="detail-toolbar-row2-search">
-              <div className="relative min-w-0 flex-1">
+            <div className="detail-toolbar-row2-search flex flex-wrap items-center gap-2">
+              <div className="relative min-w-0 flex-1 sm:max-w-xs">
                 <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-muted">
                   <SearchIcon />
                 </span>
@@ -934,6 +948,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   className="input-field w-full pl-10 text-sm"
                 />
               </div>
+            {!isInstitute && <button type="button" disabled={!schoolId||parentLinkBusy} className="btn-primary shrink-0" onClick={()=>void createParentLink()}>{parentLinkBusy?"Creating…":"Create Link"}</button>}
             </div>
             <button
               ref={filterButtonRef}
@@ -985,6 +1000,14 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                 {isInstitute ? "Add Member" : "Add Student"}
               </button>
             </div>
+          </div>
+          <div className="col-span-full space-y-2">
+            {!isInstitute && parentLink && <div className="col-span-full flex w-full flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-3">
+              <input aria-label="Parent form link" readOnly value={parentLink} className="input-field min-w-0 flex-1" onFocus={event=>event.target.select()}/>
+              <button type="button" className="btn-secondary" onClick={()=>void navigator.clipboard.writeText(parentLink).then(()=>setParentLinkMessage("Link copied.")).catch(()=>setParentLinkMessage("Select the link and copy it."))}>Copy</button>
+              <a className="btn-primary" href={`https://wa.me/?text=${encodeURIComponent(parentLink)}`} target="_blank" rel="noreferrer">Share</a>
+            </div>}
+            {!isInstitute && parentLinkMessage && <p role="status" className="col-span-full text-sm text-text-muted">{parentLinkMessage}</p>}
           </div>
           {filterOpen
             ? createPortal(
@@ -1171,7 +1194,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                 <td colSpan={tableColSpan} className="px-4 py-10 text-center text-text-muted">
                   {isInstitute
                     ? "No members found."
-                    : "No students found. Use Excel Upload above to import a spreadsheet."}
+                    : "No students found. Upload Excel, add a student, or share a parent form link."}
                 </td>
               </tr>
             )}

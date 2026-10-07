@@ -361,6 +361,18 @@ export function AdminManagementPage() {
               required
             />
           </FieldLabel>
+          <FieldLabel label="Password">
+            <input
+              className="input-field w-full"
+              type="text"
+              placeholder="Password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
+          </FieldLabel>
           <FieldLabel label="Email">
             <input
               className="input-field w-full"
@@ -434,18 +446,7 @@ export function AdminManagementPage() {
               onChange={(e) => setForm({ ...form, aboutUs: e.target.value })}
             />
           </FieldLabel>
-          <FieldLabel label="Password" className="block sm:col-span-2">
-            <input
-              className="input-field w-full"
-              type="text"
-              placeholder="Password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required
-              minLength={8}
-              autoComplete="new-password"
-            />
-          </FieldLabel>
+
           <div className="sm:col-span-2">
             <ProfilePhotoField
               previewUrl={createPhotoPreview}
@@ -476,9 +477,9 @@ export function AdminManagementPage() {
             <tr>
               <th className="px-3 py-2 text-left">Name</th>
               <th className="px-3 py-2 text-left">Username</th>
+              <th className="px-3 py-2 text-left">Password</th>
               <th className="px-3 py-2 text-left">Email</th>
               <th className="px-3 py-2 text-left">Phone</th>
-              <th className="px-3 py-2 text-left">Password</th>
               <th className="px-3 py-2 text-left">Status</th>
               <th className="px-3 py-2 text-right">Actions</th>
             </tr>
@@ -508,11 +509,12 @@ export function AdminManagementPage() {
                     </Link>
                   </td>
                   <td className="px-3 py-2">{a.username ?? "—"}</td>
-                  <td className="px-3 py-2">{a.email}</td>
-                  <td className="px-3 py-2">{a.phone ?? "—"}</td>
                   <td className="px-3 py-2 font-mono text-xs break-all">
                     {a.password_plain ?? "—"}
                   </td>
+                  <td className="px-3 py-2">{a.email}</td>
+                  <td className="px-3 py-2">{a.phone ?? "—"}</td>
+
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-text-muted">
@@ -581,7 +583,20 @@ export function AdminManagementPage() {
                   required
                 />
               </FieldLabel>
-              <FieldLabel label="Email">
+              <FieldLabel label="Password">
+                <input
+                  className="input-field w-full"
+                  type="text"
+                  value={editForm.password}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, password: e.target.value })
+                  }
+                  placeholder="New password (optional, OTP required if set)"
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+              </FieldLabel>
+          <FieldLabel label="Email">
                 <input
                   className="input-field w-full"
                   type="email"
@@ -657,19 +672,7 @@ export function AdminManagementPage() {
                   placeholder="About Us (optional)"
                 />
               </FieldLabel>
-              <FieldLabel label="Password">
-                <input
-                  className="input-field w-full"
-                  type="text"
-                  value={editForm.password}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, password: e.target.value })
-                  }
-                  placeholder="New password (optional, OTP required if set)"
-                  minLength={8}
-                  autoComplete="new-password"
-                />
-              </FieldLabel>
+
               <ProfilePhotoField
                 inlineActions
                 previewUrl={

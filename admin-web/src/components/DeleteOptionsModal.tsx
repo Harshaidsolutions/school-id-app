@@ -39,7 +39,6 @@ export function DeleteOptionsModal({
   const [fieldIndex, setFieldIndex] = useState(0);
   const [selected, setSelected] = useState("");
   const [date, setDate] = useState("");
-  const [photoScope, setPhotoScope] = useState<"all" | "pending" | "captured">("all");
   const [dataScope, setDataScope] = useState<"all" | "pending-data" | "captured">("all");
 
   const activeField = categoryFields[fieldIndex];
@@ -54,7 +53,7 @@ export function DeleteOptionsModal({
     setStep("menu");
     setSelected("");
     setDate("");
-    setPhotoScope("all");
+
     setDataScope("all");
   }
 
@@ -62,7 +61,7 @@ export function DeleteOptionsModal({
     setFieldIndex(index);
     setFieldMode(mode);
     setSelected("");
-    setPhotoScope("all");
+
     setDataScope("all");
     setStep("value");
   }
@@ -182,15 +181,7 @@ export function DeleteOptionsModal({
             <label className="block text-sm font-medium text-text-navy">
               {fieldMode === "photos" ? "Photos" : "Data"}
               {fieldMode === "photos" ? (
-                <select
-                  value={photoScope}
-                  onChange={(event) => setPhotoScope(event.target.value as "all" | "pending" | "captured")}
-                  className="input-field mt-1 w-full"
-                >
-                  <option value="all">All Photos</option>
-                  <option value="pending">Pending Photos</option>
-                  <option value="captured">Captured Photos</option>
-                </select>
+                <p className="mt-1 text-sm text-text-muted">Delete existing photos for the selected group. Student records are kept.</p>
               ) : (
                 <select
                   value={dataScope}
@@ -218,10 +209,9 @@ export function DeleteOptionsModal({
                     kind: "photos",
                     classSection,
                     fieldKey,
-                    photoScope,
-                    dataScope:
-                      photoScope === "pending" ? "uncaptured" : photoScope === "captured" ? "captured" : undefined,
-                    label: `Delete ${photoScope} photos for ${valueLabel}`,
+                    photoScope: "all",
+
+                    label: `Delete photos for ${valueLabel}`,
                   });
                   return;
                 }

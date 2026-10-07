@@ -143,3 +143,5 @@ export const uploadCatalogMedia = multer({
   fileFilter: catalogMediaFilter,
   limits: { fileSize: 50 * 1024 * 1024 },
 });
+
+export const uploadParentForm = multer({storage,fileFilter:imageFileFilter,limits:{fileSize:10*1024*1024,files:2,fields:100,fieldSize:8000}});

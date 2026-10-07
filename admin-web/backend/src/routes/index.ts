@@ -1,3 +1,5 @@
+import {getSchoolParentForm,submitSchoolParentForm,limitParentSubmission} from "../controllers/schoolParentFormController";
+import {uploadParentForm} from "../middleware/upload";
 import { Router } from "express";
 import { healthCheck } from "../controllers/healthController";
 import { getPublicShowcase, submitPublicEnquiry } from "../controllers/publicSiteController";
@@ -21,6 +23,8 @@ import teacherRoutes from "./teacherRoutes";
  */
 const router = Router();
 
+router.get("/public/school-forms/:token", getSchoolParentForm);
+router.post("/public/school-forms/:token", limitParentSubmission, uploadParentForm.fields([{name:"student_photo",maxCount:1},{name:"signature_upload",maxCount:1}]), submitSchoolParentForm);
 router.get("/health", healthCheck);
 router.get("/public/showcase", getPublicShowcase);
 router.post("/public/enquiry", submitPublicEnquiry);

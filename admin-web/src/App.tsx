@@ -36,6 +36,7 @@ export default function App() {
         <Suspense fallback={<div role="status" className="p-6">Loading…</div>}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/school-form/:token" element={<PublicOrgFormPage school />} />
           <Route path="/org-form/:token" element={<PublicOrgFormPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/verify-otp" element={<VerifyOtpPage />} />

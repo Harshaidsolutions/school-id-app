@@ -11,8 +11,9 @@ type PublicField = {
   required: boolean;
 };
 
-export function PublicOrgFormPage() {
+export function PublicOrgFormPage({ school = false }: {school?:boolean}) {
   const { token = "" } = useParams();
+  const endpoint = `/public/${school ? "school" : "org"}-forms/${token}`;
   const [organizationName, setOrganizationName] = useState("");
   const [fields, setFields] = useState<PublicField[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
@@ -23,17 +24,18 @@ export function PublicOrgFormPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    void api.get<{ organizationName: string; fields: PublicField[] }>(`/public/org-forms/${token}`)
+    void api.get<{ organizationName: string; fields: PublicField[] }>(endpoint)
       .then(({ data }) => {
         setOrganizationName(data.organizationName);
         setFields(data.fields);
       })
       .catch((err) => setError(messageOf(err, "This form is not available.")))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, school]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     setSaving(true);
     setError(null);
     try {
@@ -46,7 +48,7 @@ export function PublicOrgFormPage() {
           body.append(field.id, values[field.id] ?? "");
         }
       }
-      await api.post(`/public/org-forms/${token}`, body);
+      await api.post(endpoint, body);
       setDone(true);
     } catch (err) {
       setError(messageOf(err, "Could not submit the form."));
@@ -58,9 +60,9 @@ export function PublicOrgFormPage() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-lg items-center px-4 py-8">
       <div className="w-full rounded-2xl border border-border bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-bold text-[#4f46e5]">{organizationName || "Organization form"}</h1>
+        <h1 className="text-xl font-bold text-[#4f46e5]">{organizationName || (school ? "School student form" : "Organization form")}</h1>
         {loading ? <p className="mt-4 text-sm text-text-muted">Loading…</p> : null}
-        {done ? <p className="mt-4 text-sm font-medium text-[#16A34A]">Submitted.</p> : null}
+        {done ? <p className="mt-4 text-sm font-medium text-[#16A34A]">Submitted successfully. Your details have been sent to the {school ? "school" : "organization"}.</p> : null}
         {!loading && !done ? (
           <form className="mt-4 space-y-4" onSubmit={(event) => void submit(event)}>
             {fields.map((field) => (

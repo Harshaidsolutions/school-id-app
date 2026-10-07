@@ -1,3 +1,4 @@
+import {getSchoolParentLink} from "../controllers/schoolParentFormController";
 import { Router } from "express";
 import { authMiddleware, requireRole } from "../middleware/auth";
 import { requireActiveTeacherOrg } from "../middleware/orgAccess";
@@ -40,6 +41,7 @@ import { getTeacherBranding } from "../controllers/customerBrandController";
 
 const router = Router();
 
+router.get("/parent-link", authMiddleware, requireRole("teacher"), requireActiveTeacherOrg, getSchoolParentLink);
 const sharedAccess = [authMiddleware, requireRole("teacher", "institute_staff", "organization_staff"), requireActiveTeacherOrg];
 router.get("/organization", ...sharedAccess, getTeacherOrganization);
 router.put("/organization", ...sharedAccess, optionalUploadSchoolAssets, updateTeacherOrganization);

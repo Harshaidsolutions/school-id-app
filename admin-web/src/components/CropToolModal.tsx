@@ -100,6 +100,7 @@ export function CropToolModal({
   const [limitUnit, setLimitUnit] = useState<CropUnit>("cm");
 
   const [sizeHydrated, setSizeHydrated] = useState(false);
+  const [viewZoom,setViewZoom] = useState({scale:1,x:0,y:0});
   const imageRef = useRef<HTMLImageElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -236,6 +237,31 @@ export function CropToolModal({
     observer.observe(node);
     return () => observer.disconnect();
   }, [phase, student?.id, src, browsing]);
+
+  useEffect(() => {setViewZoom({scale:1,x:0,y:0});},[student?.id,src,phase]);
+  useEffect(() => {
+    const workspace=workspaceRef.current;
+    if(!workspace || phase!=="edit" || browsing)return;
+    const wheel=(event:WheelEvent)=>{
+      const stage=stageRef.current, image=imageRef.current;
+      if(!stage||!image||dragRef.current)return;
+      const box=stage.getBoundingClientRect();
+      if(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom)return;
+      event.preventDefault();
+      const area=workspace.getBoundingClientRect();
+      const px=event.clientX-(area.left+area.width/2),py=event.clientY-(area.top+area.height/2);
+      const delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?area.height:1);
+      setViewZoom(old=>{
+        const scale=Math.min(5,Math.max(1,old.scale*Math.exp(-delta*0.0015)));
+        if(scale===1)return {scale:1,x:0,y:0};
+        const ratio=scale/old.scale;
+        const maxX=image.offsetWidth*(scale-1)/2,maxY=image.offsetHeight*(scale-1)/2;
+        return {scale,x:Math.max(-maxX,Math.min(maxX,px-(px-old.x)*ratio)),y:Math.max(-maxY,Math.min(maxY,py-(py-old.y)*ratio))};
+      });
+    };
+    workspace.addEventListener("wheel",wheel,{passive:false});
+    return ()=>workspace.removeEventListener("wheel",wheel);
+  },[phase,browsing,student?.id,src]);
 
   function markDirty(studentId: string) {
     setEditingId(studentId);
@@ -816,7 +842,7 @@ export function CropToolModal({
                     style={{ maxWidth: frameLimit.width, maxHeight: frameLimit.height }}
                   />
                 ) : src && student ? (
-                  <div ref={stageRef} className="relative inline-block max-h-full max-w-full touch-none">
+                  <div ref={stageRef} className="relative inline-block max-h-full max-w-full touch-none" style={{transform:`translate(${viewZoom.x}px, ${viewZoom.y}px) scale(${viewZoom.scale})`,transformOrigin:"center"}} title="Scroll over the photo to zoom in or out">
                     <img
                       ref={imageRef}
                       src={src}

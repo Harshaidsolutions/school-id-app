@@ -1,3 +1,4 @@
+import {getSchoolParentLink,createSchoolParentLink} from "../controllers/schoolParentFormController";
 import { Router } from "express";
 import { authMiddleware, requireRole } from "../middleware/auth";
 import {
@@ -179,6 +180,8 @@ router.get(
 router.get("/dashboard-summary", getDashboardSummary);
 
 // Schools
+router.get("/schools/:id/parent-link", getSchoolParentLink);
+router.post("/schools/:id/parent-link", createSchoolParentLink);
 router.post("/schools", uploadSchoolAssets, createSchool);
 router.post("/schools-with-owner", createSchoolWithOwner);
 router.get("/schools", listSchools);
