@@ -249,7 +249,8 @@ export function InstituteListPage() {
                   <td className="px-2 py-3 font-medium text-text-navy sm:px-3">
                     <Link
                       to={`/institute-members?instituteId=${institute.id}&instituteName=${encodeURIComponent(institute.name)}`}
-                      className="line-clamp-2 text-button-blue hover:underline"
+                      className="block truncate whitespace-nowrap text-button-blue hover:underline"
+                      title={institute.name}
                     >
                       {institute.name}
                     </Link>

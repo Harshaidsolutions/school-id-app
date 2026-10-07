@@ -335,11 +335,7 @@ export function AppLayout() {
         ) : (
           <div className="px-1 py-1 text-sm">
             {user?.photoUrl ? (
-              <img
-                src={user.photoUrl}
-                alt=""
-                className="mb-2 h-16 w-16 rounded-lg bg-white object-contain"
-              />
+              <div className="mb-3 rounded-lg bg-white px-2 py-1"><HarshaLogo compact src={user.photoUrl} alt="Admin logo" /></div>
             ) : null}
             <div className="text-white/75">Hi</div>
             <div className="font-semibold text-white">

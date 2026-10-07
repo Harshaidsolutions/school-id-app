@@ -12,7 +12,7 @@ const fields = [
   { key: "parent_phone", label: "Phone", enabled: false },
   { key: "photo_id", label: "Photo Number", enabled: true },
 ];
-test("parent schema hides disabled fields and generated number; name/photo mandatory", () => {
+test("parent schema hides disabled fields and generated number; name/photo/class mandatory", () => {
   const result = controller.parentFormFields(fields);
   assert.deepEqual(
     result.fields.map((f) => f.id),
@@ -20,7 +20,7 @@ test("parent schema hides disabled fields and generated number; name/photo manda
   );
   assert.deepEqual(
     result.fields.filter((f) => f.required).map((f) => f.id),
-    ["student_photo", "student_name"],
+    ["student_photo", "student_name", "class_section"],
   );
   assert.throws(
     () => controller.parentFormFields([]),
@@ -47,7 +47,9 @@ test("parent submission inserts school student; duplicate and upload failure rol
     removed = 0,
     queries = [],
     released = 0;
-  pool.query = async () => ({ rows: [{ id: "school-a", name: "School A" }] });
+  pool.query = async () => ({
+    rows: [{ id: "school-a", name: "School A", parent_form_classes: ["6 A"] }],
+  });
   config.loadFormConfigForOrg = async () => fields;
   serial.allocateReusableAddSerial = async () => "ADD_000";
   pool.connect = async () => ({
@@ -76,7 +78,7 @@ test("parent submission inserts school student; duplicate and upload failure rol
     await controller.submitSchoolParentForm(
       {
         params: { token: "a".repeat(48) },
-        body,
+        body: { class_section: "6 A", ...body },
         files: photo
           ? {
               student_photo: [
@@ -108,6 +110,16 @@ test("parent submission inserts school student; duplicate and upload failure rol
       400,
     );
     assert.equal((await submit({ student_name: " " })).error.statusCode, 400);
+    assert.equal(
+      (await submit({ student_name: "Asha", class_section: "" })).error
+        .statusCode,
+      400,
+    );
+    assert.equal(
+      (await submit({ student_name: "Asha", class_section: "injected class" }))
+        .error.statusCode,
+      400,
+    );
     assert.equal(uploads, 0);
     const ok = await submit({
       student_name: "Asha",

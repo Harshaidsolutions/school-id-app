@@ -9,6 +9,7 @@ type PublicField = {
   fieldName: string;
   fieldType: string;
   required: boolean;
+  options?: string[];
 };
 
 export function PublicOrgFormPage({ school = false }: {school?:boolean}) {
@@ -76,6 +77,11 @@ export function PublicOrgFormPage({ school = false }: {school?:boolean}) {
                     className="input-field"
                     onChange={(event) => setFiles((current) => ({ ...current, [field.id]: event.target.files?.[0] ?? null }))}
                   />
+                ) : field.fieldType === "select" ? (
+                  <select required={field.required} className="input-field" value={values[field.id] ?? ""} onChange={event=>setValues(current=>({...current,[field.id]:event.target.value}))}>
+                    <option value="">{field.options?.length ? "Choose class" : "Classes not configured — contact your school"}</option>
+                    {(field.options ?? []).map(option=><option key={option} value={option}>{option}</option>)}
+                  </select>
                 ) : (
                   <input
                     required={field.required}

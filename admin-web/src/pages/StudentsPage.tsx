@@ -276,6 +276,8 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("all");
   const [parentLink, setParentLink] = useState<string|null>(null);
+  const [parentLinkOpen,setParentLinkOpen] = useState(false);
+  const [parentClasses,setParentClasses] = useState("");
   const [parentLinkBusy, setParentLinkBusy] = useState(false);
   const [parentLinkMessage, setParentLinkMessage] = useState("");
   const [search, setSearch] = useState("");
@@ -332,13 +334,13 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   }, [schools, schoolId, searchParams, isInstitute]);
 
   useEffect(() => {
-    let cancelled=false;setParentLink(null);setParentLinkMessage("");
-    if(!isInstitute && schoolId) void api.get<{link:string|null}>(`/admin/schools/${schoolId}/parent-link`).then(({data})=>{if(!cancelled)setParentLink(data.link);}).catch(()=>{});
+    let cancelled=false;setParentLink(null);setParentLinkMessage("");setParentLinkOpen(false);setParentClasses("");
+    if(!isInstitute && schoolId) void api.get<{link:string|null;classes?:string[]}>(`/admin/schools/${schoolId}/parent-link`).then(({data})=>{if(!cancelled){setParentLink(data.link);setParentClasses((data.classes ?? []).join("\n"));}}).catch(()=>{});
     return ()=>{cancelled=true;};
   },[schoolId,isInstitute]);
   async function createParentLink() {
     if(parentLinkBusy||!schoolId)return;setParentLinkBusy(true);setParentLinkMessage("");
-    try {const {data}=await api.post<{link:string}>(`/admin/schools/${schoolId}/parent-link`);setParentLink(data.link);}
+    try {const {data}=await api.post<{link:string}>(`/admin/schools/${schoolId}/parent-link`,{classes:parentClasses.split(/[,\n]/).map(v=>v.trim()).filter(Boolean)});setParentLink(data.link);}
     catch(err){setParentLinkMessage(axios.isAxiosError(err)?err.response?.data?.message||"Could not create link.":"Could not create link.");}
     finally{setParentLinkBusy(false);}
   }
@@ -948,7 +950,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   className="input-field w-full pl-10 text-sm"
                 />
               </div>
-            {!isInstitute && <button type="button" disabled={!schoolId||parentLinkBusy} className="btn-primary shrink-0" onClick={()=>void createParentLink()}>{parentLinkBusy?"Creating…":"Create Link"}</button>}
+            {!isInstitute && <button type="button" disabled={!schoolId} className="btn-primary shrink-0" aria-label="Parent form link options" aria-expanded={parentLinkOpen} onClick={()=>setParentLinkOpen(open=>!open)}>{parentLinkOpen?"−":"+"} Link</button>}
             </div>
             <button
               ref={filterButtonRef}
@@ -1001,14 +1003,18 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               </button>
             </div>
           </div>
-          <div className="col-span-full space-y-2">
+          {!isInstitute && parentLinkOpen && <div className="col-span-full space-y-3 rounded-xl border border-indigo-100 bg-white p-4">
+            <label className="block text-sm font-semibold text-indigo-900">Parent form classes
+              <textarea aria-label="Parent form classes" className="input-field mt-2 min-h-20 w-full" placeholder="One class per line, for example: 1 A, 1 B, 2 A" value={parentClasses} onChange={event=>setParentClasses(event.target.value)}/>
+            </label>
+            <button type="button" className="btn-primary" disabled={parentLinkBusy} onClick={()=>void createParentLink()}>{parentLinkBusy?"Saving…":parentLink?"Save class choices":"Create Link"}</button>
             {!isInstitute && parentLink && <div className="col-span-full flex w-full flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-3">
               <input aria-label="Parent form link" readOnly value={parentLink} className="input-field min-w-0 flex-1" onFocus={event=>event.target.select()}/>
               <button type="button" className="btn-secondary" onClick={()=>void navigator.clipboard.writeText(parentLink).then(()=>setParentLinkMessage("Link copied.")).catch(()=>setParentLinkMessage("Select the link and copy it."))}>Copy</button>
               <a className="btn-primary" href={`https://wa.me/?text=${encodeURIComponent(parentLink)}`} target="_blank" rel="noreferrer">Share</a>
             </div>}
             {!isInstitute && parentLinkMessage && <p role="status" className="col-span-full text-sm text-text-muted">{parentLinkMessage}</p>}
-          </div>
+          </div>}
           {filterOpen
             ? createPortal(
                 <StudentFilterPanel

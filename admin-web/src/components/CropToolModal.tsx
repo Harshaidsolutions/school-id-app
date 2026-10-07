@@ -109,6 +109,8 @@ export function CropToolModal({
   const toneButtonRef = useRef<HTMLButtonElement>(null);
   const toneImageRef = useRef<HTMLImageElement>(null);
   const cropRef = useRef<Crop>({ ...FULL });
+  const previewImageRef = useRef<HTMLImageElement>(null);
+  const acceptedCropRef = useRef<{image:HTMLImageElement;crop:Crop;size:{width:number;height:number}} | null>(null);
   const toneRef = useRef({ brightness: 0, contrast: 0 });
   const toneGestureRef = useRef(false);
   const brightnessInputRef = useRef<HTMLInputElement>(null);
@@ -295,6 +297,7 @@ export function CropToolModal({
 
   function paintTone() {
     const { brightness, contrast } = toneRef.current;
+    if (previewImageRef.current) previewImageRef.current.style.filter = toneFilter(brightness, contrast);
     const image = toneImageRef.current;
     const base = imageRef.current;
     if (image && base) {
@@ -324,11 +327,6 @@ export function CropToolModal({
   }
 
   function beginToneEdit() {
-    if (phase === "preview") {
-      previewBlobRef.current = null;
-      clearPreview();
-      setPhase("edit");
-    }
     if (!toneGestureRef.current && student) {
       rememberCrop();
       toneGestureRef.current = true;
@@ -337,6 +335,7 @@ export function CropToolModal({
   }
 
   function applyTone(brightness: number, contrast: number) {
+    if(saving)return;
     const next = {
       brightness: clampNumber(brightness, -100, 100),
       contrast: clampNumber(contrast, -100, 100),
@@ -566,7 +565,9 @@ export function CropToolModal({
     setApplying(true);
     setError(null);
     try {
-      const blob = await renderCrop(image, cropRef.current, toneRef.current, { width: toMillimeters(Number(limitWidth), limitUnit), height: toMillimeters(Number(limitHeight), limitUnit) });
+      const snapshot = { image, crop: {...cropRef.current}, size: { width: toMillimeters(Number(limitWidth), limitUnit), height: toMillimeters(Number(limitHeight), limitUnit) } };
+      const blob = await renderCrop(image, snapshot.crop, {brightness:0,contrast:0}, snapshot.size);
+      acceptedCropRef.current = snapshot;
       clearPreview();
       const url = URL.createObjectURL(blob);
       previewUrlRef.current = url;
@@ -581,11 +582,12 @@ export function CropToolModal({
   }
 
   async function saveCrop() {
-    const blob = previewBlobRef.current;
-    if (!student || !blob || saving) return;
+    const snapshot = acceptedCropRef.current;
+    if (!student || !previewBlobRef.current || !snapshot || saving) return;
     setSaving(true);
     setError(null);
     try {
+      const blob = await renderCrop(snapshot.image,snapshot.crop,{...toneRef.current},snapshot.size);
       const body = new FormData();
       body.append("photo", blob, `${student.photo_id || student.id}.jpg`);
       body.append("markCropped", "1");
@@ -777,18 +779,6 @@ export function CropToolModal({
           ) : null}
         </aside>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          {!browsing ? <div className="crop-actions" aria-label="Crop actions">
-              <button type="button" className="btn-secondary" onClick={() => { if (canLeaveEditor()) resetWorkspace(); }}>Reset</button>
-              <button type="button" className="btn-secondary" onClick={leaveEditor}>Photos</button>
-              {phase === "preview" ? (
-                <button type="button" className="btn-secondary" onClick={() => { if (student) markDirty(student.id); setPhase("edit"); previewBlobRef.current = null; clearPreview(); }}>Edit crop</button>
-              ) : (
-                <button type="button" className="btn-secondary" disabled={!src || applying || !cropArmed} onClick={() => void applyOk()}>{applying ? "Preparing…" : "OK"}</button>
-              )}
-              <button type="button" className="btn-primary" disabled={phase !== "preview" || saving} onClick={() => void saveCrop()}>{saving ? "Saving…" : "Save"}</button>
-              <button type="button" className="btn-secondary" onClick={undoCrop}>Undo</button>
-
-          </div> : null}
         {browsing ? (
           <div className="grid grid-cols-2 gap-3 overflow-y-auto p-4 md:grid-cols-3 xl:grid-cols-4">
             {gallery.map((item, itemIndex) => (
@@ -836,10 +826,11 @@ export function CropToolModal({
               >
                 {phase === "preview" && previewUrl ? (
                   <img
+                    ref={previewImageRef}
                     src={previewUrl}
                     alt="Cropped preview"
                     className="block h-auto w-auto object-contain"
-                    style={{ maxWidth: frameLimit.width, maxHeight: frameLimit.height }}
+                    style={{ maxWidth: frameLimit.width, maxHeight: frameLimit.height, filter: toneFilter(toneRef.current.brightness,toneRef.current.contrast) }}
                   />
                 ) : src && student ? (
                   <div ref={stageRef} className="relative inline-block max-h-full max-w-full touch-none" style={{transform:`translate(${viewZoom.x}px, ${viewZoom.y}px) scale(${viewZoom.scale})`,transformOrigin:"center"}} title="Scroll over the photo to zoom in or out">
@@ -901,7 +892,7 @@ export function CropToolModal({
                     ? "border-[#C4B5FD] bg-[#F5F3FF] text-[#6366F1]"
                     : "border-[#BFDBFE] bg-white text-[#2563EB]"
                 }`}
-                disabled={!cropArmed || phase !== "edit"}
+                disabled={!cropArmed || saving}
                 aria-expanded={toneOpen}
                 onClick={() => setToneOpen((open) => !open)}
               >
@@ -955,6 +946,18 @@ export function CropToolModal({
             {error ? <p className="bg-white px-3 pb-2 text-sm text-[#DC2626]">{error}</p> : null}
           </div>
         )}
+          {!browsing ? <div className="crop-actions crop-actions-bottom" aria-label="Crop actions">
+              <button type="button" className="btn-secondary" disabled={saving || applying} onClick={() => { if (canLeaveEditor()) resetWorkspace(); }}>Reset</button>
+              <button type="button" className="btn-secondary" disabled={saving || applying} onClick={leaveEditor}>Photos</button>
+              {phase === "preview" ? (
+                <button type="button" className="btn-secondary" disabled={saving || applying} onClick={() => { if (student) markDirty(student.id); setPhase("edit"); previewBlobRef.current = null; clearPreview(); }}>Edit crop</button>
+              ) : (
+                <button type="button" className="btn-secondary" disabled={!src || applying || !cropArmed} onClick={() => void applyOk()}>{applying ? "Preparing…" : "OK"}</button>
+              )}
+              <button type="button" className="btn-primary" disabled={phase !== "preview" || saving} onClick={() => void saveCrop()}>{saving ? "Saving…" : "Save"}</button>
+              <button type="button" className="btn-secondary" disabled={saving || applying} onClick={undoCrop}>Undo</button>
+
+          </div> : null}
         </div>
       </div>
     </div>

@@ -1207,3 +1207,25 @@ body,.app-shell,.app-main { background:#f7f8ff; color:#42518a; }
  .form-field-row > div:nth-child(2) { flex:1 0 100%; }
  .form-field-visibility { margin-left:auto; }
 }
+
+/* Shared school/institute workspace: controls wrap instead of clipping. */
+.detail-toolbar-shell { display:flex; flex-direction:column; gap:16px; }
+.detail-toolbar-row1 { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.detail-toolbar-row1 > * { grid-column:auto; grid-row:auto; width:100%; height:auto; min-height:48px; padding:10px 12px; white-space:normal; overflow:visible; }
+.detail-toolbar-row1 .detail-feature-label { white-space:normal; overflow:visible; text-overflow:clip; line-height:1.3; }
+.detail-toolbar-row2 { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+.detail-toolbar-row2-tabs { flex:1 1 100%; width:100%; height:auto; flex-wrap:wrap; }
+.detail-toolbar-row2-search { flex:0 1 420px; min-width:0; max-width:100%; height:auto; min-height:44px; overflow:visible; }
+.detail-toolbar-row2-search > .relative { min-width:110px; }
+.detail-toolbar-row2-actions { min-height:44px; height:auto; flex-wrap:wrap; }
+.detail-toolbar-row2 .btn-primary,.detail-toolbar-row2 .btn-secondary { min-height:44px; height:auto; }
+.crop-actions-bottom { position:static; border-top:1px solid #dedff6; border-bottom:0; margin-top:auto; }
+@media(max-width:640px) {
+ .detail-toolbar-row1 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .detail-toolbar-row2-search { flex:1 1 100%; }
+ .detail-toolbar-row2-actions { flex:1 1 100%; }
+ .crop-actions-bottom { position:static; padding:8px; gap:6px; }
+ .crop-actions-bottom button { flex:1 1 auto; min-width:0; padding:8px 10px; }
+}
+.detail-page-shell.admin-scroll-root { overflow-y:auto; overflow-x:hidden; }
+.detail-page-shell > .students-table-scroll.admin-scroll-panel { flex:1 0 280px; min-height:280px; }

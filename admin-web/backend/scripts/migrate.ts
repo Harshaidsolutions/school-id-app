@@ -929,6 +929,7 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS teacher_push_tokens_active_organization ON teacher_push_tokens(organization_id) WHERE is_active = true;
   `);
   await pool.query(`ALTER TABLE schools ADD COLUMN IF NOT EXISTS parent_form_token TEXT;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS parent_form_classes JSONB;
     CREATE UNIQUE INDEX IF NOT EXISTS schools_parent_form_token ON schools(parent_form_token) WHERE parent_form_token IS NOT NULL;`);
   console.log("Migration completed successfully.");
 }

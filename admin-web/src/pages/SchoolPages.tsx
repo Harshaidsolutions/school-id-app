@@ -242,7 +242,7 @@ export function SchoolListPage() {
                   <td className="px-2 py-3 font-medium text-text-navy sm:px-3">
                     <Link
                       to={`/students?schoolId=${school.id}&schoolName=${encodeURIComponent(school.name)}`}
-                      className="line-clamp-2 text-button-blue hover:underline"
+                      className="block truncate whitespace-nowrap text-button-blue hover:underline"
                       title={`View students for ${school.name}`}
                     >
                       {school.name}
