@@ -54,8 +54,18 @@ test('new organization image announcement stores and dispatches text and image t
  tokens.loadSnsEndpointsForOrg=async target=>{assert.equal(target.organizationId,'org');return['endpoint']};
  sns.sendSnsPushNotifications=async(endpoints,payload)=>{dispatches.push(payload);return{disabledEndpointArns:[]}};
  tokens.deactivatePushEndpoints=async()=>{};
- try{let error,status;await notifications.createNotification({user:{role:'admin',userId:'admin'},body:{organizationId:'org',title:'Notice',message:'Full text',requestId:'new-key'},file:{size:10,mimetype:'image/png',buffer:Buffer.from('image')}},{status(n){status=n;return this},json(){}},e=>error=e);
+ try{let error,status;await notifications.createNotification({user:{role:'admin',userId:'admin'},body:{organizationId:'org',title:'Notice',message:'Full text',requestId:'new-key'},file:{size:10*1024*1024,mimetype:'image/png',buffer:Buffer.from('image')}},{status(n){status=n;return this},json(){}},e=>error=e);
  await new Promise(resolve=>setImmediate(resolve));assert.equal(error,undefined);assert.equal(status,201);assert.equal(uploads,1);
  assert.deepEqual(insert,[null,null,'org','Notice','Full text','https://example.test/photo.jpg','admin','new-key']);assert.equal(dispatches.length,1);assert.equal(dispatches[0].body,'Full text');assert.equal(dispatches[0].imageUrl,'https://example.test/photo.jpg');
  }finally{pool.query=q;pool.connect=c;storage.uploadBufferToBucket=u;tokens.loadSnsEndpointsForOrg=e;sns.sendSnsPushNotifications=send;tokens.deactivatePushEndpoints=d;}
+});
+
+
+test('notification images above 10 MB are rejected before storage',async()=>{
+ const c=pool.connect,u=storage.uploadBufferToBucket;let uploads=0;
+ pool.connect=async()=>({query:async()=>({rows:[]}),release(){}});
+ storage.uploadBufferToBucket=async()=>{uploads++;return'image'};
+ try{let error;await notifications.createNotification({user:{role:'admin',userId:'admin'},body:{organizationId:'org',title:'Notice',message:'Text'},file:{size:10*1024*1024+1,mimetype:'image/png'}},{},e=>error=e);
+ assert.equal(error.statusCode,400);assert.match(error.message,/10 MB/);assert.equal(uploads,0);
+ }finally{pool.connect=c;storage.uploadBufferToBucket=u;}
 });

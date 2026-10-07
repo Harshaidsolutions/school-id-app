@@ -224,15 +224,22 @@ export function NotificationsPage() {
         </label>
 
         <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-text-navy">Image (optional)</span>
+          <span className="mb-1.5 block font-medium text-text-navy">Image (optional, JPG/PNG up to 10 MB)</span>
           <input
             key={imageFile ? imageFile.name : "no-image"}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png"
             className="input-field"
             onChange={(event) => {
               const file = event.target.files?.[0] ?? null;
               if (imagePreview) URL.revokeObjectURL(imagePreview);
+              if (file && file.size > 10 * 1024 * 1024) {
+                setImageFile(null); setImagePreview(null);
+                event.target.value = "";
+                setSuccess(null); setError("Notification image must be 10 MB or smaller. Please choose a smaller image.");
+                return;
+              }
+              setError(null);
               setImageFile(file);
               setImagePreview(file ? URL.createObjectURL(file) : null);
             }}

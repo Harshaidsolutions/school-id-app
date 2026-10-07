@@ -45,7 +45,7 @@ export async function createNotification(req: Request, res: Response, next: Next
     const requestId = String(req.body.requestId ?? "").trim() || null;
     if (requestId && (requestId.length > 200 || !/^[a-zA-Z0-9:_-]+$/.test(requestId))) throw new AppError("Invalid request identifier", 400);
     if (!title || !message) throw new AppError("Title and message are required", 400);
-    if (req.file && req.file.size > 2 * 1024 * 1024) throw new AppError("Notification image must be 2 MB or smaller", 400);
+    if (req.file && req.file.size > 10 * 1024 * 1024) throw new AppError("Notification image must be 10 MB or smaller", 400);
     const scope = await requireAdminScope(req);
     // Validate ownership before storing any uploaded image or returning a previous send.
     if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
