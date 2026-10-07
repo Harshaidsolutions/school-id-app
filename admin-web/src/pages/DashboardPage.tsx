@@ -382,6 +382,18 @@ export function DashboardPage() {
 
 
 
+  const organizationTotal = summary?.organizationRecords ?? 0;
+  const organizationCaptured = summary?.organizationCaptured ?? 0;
+  const organizationPending = summary?.organizationPending ?? 0;
+  const organizationCards = [
+    { label: "Total Organizations", value: summary?.totalOrganizations ?? 0, linkTo: "/extra-2" },
+    { label: "Total Records", value: organizationTotal },
+    { label: "Records Captured", value: organizationCaptured },
+    { label: "Records Uncaptured", value: organizationPending },
+    { label: "Capture Percentage", value: pct(organizationCaptured, organizationTotal) },
+    { label: "Uncapture Percentage", value: pct(organizationPending, organizationTotal) },
+  ];
+
   const cardStyle = [
 
     { iconBg: "bg-white/80", iconColor: "text-button-blue", cardClass: "bg-[#EFF6FF]" },
@@ -449,6 +461,10 @@ export function DashboardPage() {
 
           <section className="dashboard-section">
 
+            <h2 className="dashboard-section-title">Organizations</h2>
+            <MetricPatternGrid cards={organizationCards} cardStyle={cardStyle} icon={icon} />
+          </section>
+          <section className="dashboard-section">
             <div className="dashboard-status-grid">
 
               <StatusPill
@@ -491,6 +507,8 @@ export function DashboardPage() {
 
               />
 
+              <StatusPill label="Active Organizations" value={summary?.activeOrganizations ?? 0} tone="border-[#BBF7D0] bg-[#F0FDF4] text-[#22C55E]" />
+              <StatusPill label="Inactive Organizations" value={summary?.inactiveOrganizations ?? 0} tone="border-[#E2E8F0] bg-[#EFF6FF] text-[#64748B]" />
             </div>
 
           </section>

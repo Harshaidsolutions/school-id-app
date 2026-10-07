@@ -99,6 +99,8 @@ export async function getDashboardSummary(
     const [
       schoolStats,
       instituteStats,
+      organizationStats,
+      organizationRecordStats,
       studentStats,
       instituteMemberStats,
       templateCount,
@@ -121,6 +123,30 @@ export async function getDashboardSummary(
            COUNT(*) FILTER (WHERE COALESCE(is_active, true) = false)::text AS inactive
          FROM institutes${instituteWhere}`,
         [scope.adminUserId]
+      ),
+      pool.query<{ total: string; active: string; inactive: string }>(
+        `SELECT COUNT(*)::text AS total,
+          COUNT(*) FILTER (WHERE COALESCE(is_active, true))::text AS active,
+          COUNT(*) FILTER (WHERE NOT COALESCE(is_active, true))::text AS inactive
+         FROM organizations WHERE ($2::boolean OR owner_admin_id = $1)`,
+        [scope.adminUserId, seeAll]
+      ),
+      pool.query<{ total: string; captured: string; uncaptured: string }>(
+        `WITH records AS (
+          SELECT s.id, EXISTS (
+            SELECT 1 FROM organization_form_fields f WHERE f.form_id = s.form_id
+              AND f.enabled AND f.field_type = 'photo' AND f.field_name NOT ILIKE '%signature%'
+          ) AND NOT EXISTS (
+            SELECT 1 FROM organization_form_fields f
+            LEFT JOIN organization_submission_values v ON v.field_id = f.id AND v.submission_id = s.id
+            WHERE f.form_id = s.form_id AND f.enabled AND f.field_type = 'photo'
+              AND f.field_name NOT ILIKE '%signature%' AND NULLIF(v.photo_url, '') IS NULL
+          ) AS captured
+          FROM organization_submissions s JOIN organizations o ON o.id = s.organization_id
+          WHERE COALESCE(o.is_active, true) AND ($2::boolean OR o.owner_admin_id = $1)
+        ) SELECT COUNT(*)::text AS total, COUNT(*) FILTER (WHERE captured)::text AS captured,
+          COUNT(*) FILTER (WHERE NOT captured)::text AS uncaptured FROM records`,
+        [scope.adminUserId, seeAll]
       ),
       pool.query<{ total: string; captured: string; uncaptured: string }>(
         `SELECT
@@ -178,6 +204,12 @@ export async function getDashboardSummary(
       totalInstitutes: Number(institutes?.total ?? 0),
       activeInstitutes: Number(institutes?.active ?? 0),
       inactiveInstitutes: Number(institutes?.inactive ?? 0),
+      totalOrganizations: Number(organizationStats.rows[0]?.total ?? 0),
+      activeOrganizations: Number(organizationStats.rows[0]?.active ?? 0),
+      inactiveOrganizations: Number(organizationStats.rows[0]?.inactive ?? 0),
+      organizationRecords: Number(organizationRecordStats.rows[0]?.total ?? 0),
+      organizationCaptured: Number(organizationRecordStats.rows[0]?.captured ?? 0),
+      organizationPending: Number(organizationRecordStats.rows[0]?.uncaptured ?? 0),
       totalTemplates: Number(templateCount.rows[0]?.count ?? 0),
       totalModels: Number(modelCount.rows[0]?.count ?? 0),
       totalStudents: schoolPhotos,

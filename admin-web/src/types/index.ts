@@ -113,6 +113,12 @@ export interface DashboardSummary {
   institutePhotos?: number;
   instituteCaptured?: number;
   institutePending?: number;
+  totalOrganizations?: number;
+  activeOrganizations?: number;
+  inactiveOrganizations?: number;
+  organizationRecords?: number;
+  organizationCaptured?: number;
+  organizationPending?: number;
   totalInstitutes: number;
   activeInstitutes?: number;
   inactiveInstitutes?: number;

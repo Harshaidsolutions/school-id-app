@@ -869,15 +869,13 @@ export function OrganizationDetailPage() {
             </label>
             {activeFields.filter((field) => !isPhotoNumberLabel(field.field_name)).map((field) => (
               <label key={field.id} className="block text-sm">
-                <span className="mb-1.5 block font-medium">{field.field_name}</span>
+                <span className="mb-1.5 block font-medium">{field.field_type === "photo" ? `${editingRow.values[field.id]?.hasPhoto ? "Replace" : "Upload"} ${isSignatureLabel(field.field_name) ? "signature" : "photo"}` : field.field_name}</span>
                 {field.field_type === "photo" ? (
-                  <span className="block rounded-xl border border-border bg-content-bg p-3">
-                    <span className="mb-2 block text-text-muted">{editingRow.values[field.id]?.hasPhoto ? "Replace photo" : "Upload photo"}</span>
+                  <span className="block">
                     <input aria-label={`Replace ${field.field_name}`} type="file" accept="image/jpeg,image/png" className="block w-full min-w-0 text-sm" disabled={editBusy} onChange={event => {
                       const file = event.target.files?.[0];
                       if (file) setEditPhotos(current => ({...current, [field.id]: file}));
                     }} />
-                    <span className="mt-2 block text-xs">A replacement returns this photo to uncropped status.</span>
                   </span>
                 ) : (
                   <input className="input-field" value={editDraft[field.id] ?? ""} onChange={(event) => setEditDraft((current) => ({ ...current, [field.id]: event.target.value }))} />
