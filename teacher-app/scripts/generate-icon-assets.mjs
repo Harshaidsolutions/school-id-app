@@ -221,6 +221,8 @@ async function writeAndroidSplashDrawables() {
     if (fs.existsSync(logo)) fs.unlinkSync(logo);
   }
 
+  // Preserve the legacy resource name used by older launcher backgrounds.
+  if (fs.existsSync(drawableDir)) fs.writeFileSync(path.join(drawableDir, "splashscreen_logo.xml"), TRANSPARENT_SPLASH_ICON);
   const stylesPath = path.join(resRoot, "values", "styles.xml");
   if (fs.existsSync(stylesPath)) {
     let xml = fs.readFileSync(stylesPath, "utf8");

@@ -1,3 +1,4 @@
+import { notificationAlertsEnabled, registerNotificationToken, useNotificationPreference } from "../utils/notificationPreference";
 import { useEffect, useRef } from "react";
 import { Platform } from "react-native";
 import type { NavigationContainerRefWithCurrent } from "@react-navigation/native";
@@ -18,13 +19,10 @@ const PUSH_TOKEN_STORAGE_KEY = "teacher_fcm_push_token";
 const PENDING_NOTIFICATION_ID_KEY = "teacher_pending_notification_id";
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async () => {
+    const show = await notificationAlertsEnabled().catch(() => false);
+    return {shouldShowAlert:show, shouldPlaySound:show, shouldSetBadge:show, shouldShowBanner:show, shouldShowList:show};
+  },
 });
 
 async function ensureAndroidChannel(): Promise<void> {
@@ -94,12 +92,8 @@ async function registerPushTokenWithBackend(
   deviceId: string | null,
   deviceName: string | null
 ): Promise<void> {
-  await api.post("/teacher/push-token", {
-    pushToken,
-    platform: Platform.OS,
-    deviceId,
-    deviceName,
-  });
+  const registered = await registerNotificationToken(pushToken, deviceId, deviceName);
+  if (!registered) throw new Error("Notifications are disabled on this phone.");
 }
 
 async function unregisterPushTokenWithBackend(pushToken: string): Promise<void> {
@@ -151,9 +145,13 @@ export function usePushNotifications(
   userId: string | null,
   syncPendingWhenAuthenticated = false
 ) {
+  const preference = useNotificationPreference();
+  enabled = enabled && preference === true;
+  syncPendingWhenAuthenticated = syncPendingWhenAuthenticated && preference === true;
   const registeredTokenRef = useRef<string | null>(null);
   const permissionDeniedRef = useRef(false);
   const syncedPendingRef = useRef<string | null>(null);
+  useEffect(() => { if (preference === true) permissionDeniedRef.current = false; }, [preference]);
 
   useEffect(() => {
     let cancelled = false;
@@ -229,7 +227,7 @@ export function usePushNotifications(
     if (!enabled) {
       const token = registeredTokenRef.current;
       registeredTokenRef.current = null;
-      if (token) {
+      if (token && preference !== false) {
         void unregisterPushTokenWithBackend(token).finally(() => {
           void clearStoredPushToken();
         });
@@ -274,6 +272,7 @@ export function usePushNotifications(
         registeredTokenRef.current = pushToken;
         await storePushToken(pushToken);
       }
+      if (cancelled) return;
 
       receivedSub = Notifications.addNotificationReceivedListener((notification) => {
         const notificationId = readNotificationId(notification);
@@ -308,7 +307,7 @@ export function usePushNotifications(
 
     }
 
-    void setupPush();
+    void setupPush().catch(error => console.warn("[push] setup failed:", error));
 
     return () => {
       cancelled = true;

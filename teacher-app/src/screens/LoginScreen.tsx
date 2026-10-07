@@ -1,6 +1,5 @@
 import { API_BASE_URL } from "../api/client";
 import axios from "axios";
-import { APP_RELEASE } from "../constants/release";
 import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -157,7 +156,6 @@ export function LoginScreen(_props: Props) {
 
             <Text style={styles.title}>Welcome Back!</Text>
             <Text style={styles.subtitle}>Login to continue</Text>
-            <Text style={{ color: "#6550A3", fontSize: 11, marginBottom: 12 }}>Version {APP_RELEASE}</Text>
 
             <View style={styles.formGroup}>
               <View style={styles.formRow}>

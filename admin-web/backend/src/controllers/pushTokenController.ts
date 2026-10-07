@@ -153,16 +153,16 @@ export async function unregisterTeacherPushToken(
     }
 
     const existing = await pool.query<{ sns_endpoint_arn: string | null }>(
-      `SELECT sns_endpoint_arn FROM teacher_push_tokens WHERE push_token = $1 LIMIT 1`,
-      [pushToken]
+      `SELECT sns_endpoint_arn FROM teacher_push_tokens WHERE push_token = $1 AND user_id = $2 LIMIT 1`,
+      [pushToken, req.user?.userId]
     );
     const endpointArn = existing.rows[0]?.sns_endpoint_arn;
     if (endpointArn) {
       await deactivateSnsEndpoint(endpointArn);
     }
 
-    await pool.query(`DELETE FROM teacher_push_tokens WHERE push_token = $1`, [
-      pushToken,
+    await pool.query(`DELETE FROM teacher_push_tokens WHERE push_token = $1 AND user_id = $2`, [
+      pushToken, req.user?.userId,
     ]);
     res.status(200).json({ status: "ok", removed: true });
   } catch (error) {

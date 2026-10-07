@@ -1,9 +1,11 @@
+import { setNotificationPreference, useNotificationPreference } from "../utils/notificationPreference";
 import { useEffect, useState } from "react";
 import {
   Alert,
   Linking,
   Pressable,
   ScrollView,
+  Switch,
   StyleSheet,
   Text,
   View,
@@ -44,6 +46,8 @@ export function SettingsScreen({ navigation }: Props) {
   const { mode, setMode, colors } = useTheme();
   const insets = useSafeAreaInsets();
   const version = appVersion();
+  const notificationsOn = useNotificationPreference();
+  const [notificationsBusy, setNotificationsBusy] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const { brand, ready } = useCustomerBrand();
   const [schoolName, setSchoolName] = useState("");
@@ -179,6 +183,19 @@ export function SettingsScreen({ navigation }: Props) {
           </Pressable>
         </View>
 
+        <Text style={[styles.sectionHeader, { color: colors.primaryOrange }]}>NOTIFICATIONS</Text>
+        <View style={styles.row}>
+          <Ionicons name="notifications-outline" size={20} color={colors.textMuted} />
+          <View style={{flex:1}}>
+            <Text style={[styles.rowLabel, {color:colors.text}]}>Push notifications</Text>
+            <Text style={{color:colors.textMuted, fontSize:12}}>{notificationsBusy ? "Saving…" : notificationsOn ? "On for this phone" : "Off for this phone"}</Text>
+          </View>
+          <Switch accessibilityLabel="Push notifications" value={notificationsOn === true} disabled={notificationsBusy || notificationsOn === null}
+            trackColor={{true:colors.brandGreen}} onValueChange={next => {
+              setNotificationsBusy(true);
+              void setNotificationPreference(next).catch(error => Alert.alert("Notifications", error instanceof Error ? error.message : "Could not update notifications. Please try again online.")).finally(() => setNotificationsBusy(false));
+            }} />
+        </View>
         <Text style={[styles.sectionHeader, { color: colors.primaryOrange }]}>
           SUPPORT
         </Text>
