@@ -112,7 +112,7 @@ export async function deleteSnsEndpoint(endpointArn: string): Promise<void> {
   }
 }
 
-function buildGcmMessage(payload: SnsPushPayload): string {
+export function buildGcmMessage(payload: SnsPushPayload): string {
   const data = payload.data ?? {};
   const imageUrl = payload.imageUrl?.trim() || "";
   // Data-only so the app receives the message in the foreground, background, and
@@ -131,24 +131,13 @@ function buildGcmMessage(payload: SnsPushPayload): string {
   for (const [key, value] of Object.entries(data)) {
     dataStrings[key] = String(value);
   }
+  if (data.notificationId) dataStrings.tag = `admin-notification-${data.notificationId}`;
   const message: Record<string, unknown> = {
     data: dataStrings,
     priority: "high",
   };
-  if (imageUrl) {
-    message.notification = {
-      title: payload.title,
-      body: payload.body,
-      image: imageUrl,
-    };
-    message.android = {
-      priority: "high",
-      notification: {
-        image: imageUrl,
-        channel_id: ANDROID_CHANNEL_ID,
-      },
-    };
-  }
+  // A single data-only message is rendered by Expo's native image-aware builder.
+  // Do not also send an FCM notification object: it creates a second display path.
   return JSON.stringify(message);
 }
 

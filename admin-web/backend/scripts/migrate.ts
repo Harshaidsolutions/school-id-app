@@ -920,6 +920,14 @@ async function migrate() {
       WHERE details_separated = false;
   `);
   await pool.query(fs.readFileSync(path.join(__dirname, "sql/record-duplicates.sql"), "utf8"));
+  await pool.query(`
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS client_request_id TEXT;
+    CREATE UNIQUE INDEX IF NOT EXISTS notifications_request_once ON notifications(created_by, client_request_id) WHERE client_request_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS notifications_organization ON notifications(organization_id);
+    ALTER TABLE teacher_push_tokens ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+    CREATE INDEX IF NOT EXISTS teacher_push_tokens_active_organization ON teacher_push_tokens(organization_id) WHERE is_active = true;
+  `);
   console.log("Migration completed successfully.");
 }
 

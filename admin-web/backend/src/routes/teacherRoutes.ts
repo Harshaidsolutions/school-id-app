@@ -47,6 +47,13 @@ router.get("/models", ...sharedAccess, listTeacherModels);
 router.get("/templates", ...sharedAccess, listTeacherTemplates);
 router.post("/templates/:id/select", ...sharedAccess, selectTeacherTemplate);
 
+router.get("/notifications", ...sharedAccess, listTeacherNotifications);
+router.post("/notifications/delete-all", ...sharedAccess, deleteAllTeacherNotifications);
+router.post("/notifications/:id/read", ...sharedAccess, markTeacherNotificationRead);
+router.post("/notifications/:id/delete", ...sharedAccess, deleteTeacherNotification);
+router.post("/push-token", ...sharedAccess, registerTeacherPushToken);
+router.delete("/push-token", ...sharedAccess, unregisterTeacherPushToken);
+
 router.use(
   authMiddleware,
   requireRole("teacher", "institute_staff"),
@@ -76,12 +83,6 @@ router.get("/students/:id/card-preview", getTeacherCardPreview);
 router.get("/progress", getTeacherProgress);
 
 
-router.get("/notifications", listTeacherNotifications);
-router.post("/notifications/delete-all", deleteAllTeacherNotifications);
-router.post("/notifications/:id/read", markTeacherNotificationRead);
-router.post("/notifications/:id/delete", deleteTeacherNotification);
-router.post("/push-token", registerTeacherPushToken);
-router.delete("/push-token", unregisterTeacherPushToken);
 router.get("/brochures", listTeacherBrochures);
 router.get("/brochure", getLatestTeacherBrochure);
 

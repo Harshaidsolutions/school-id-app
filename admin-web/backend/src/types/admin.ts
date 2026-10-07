@@ -78,6 +78,7 @@ export interface NotificationRow {
   id: string;
   school_id: string | null;
   institute_id?: string | null;
+  organization_id?: string | null;
   title: string;
   message: string;
   image_url?: string | null;

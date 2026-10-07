@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import axios from "axios";
 import api from "../api/client";
 import { BulkActionBar, BulkModeButtons, bulkDeleteMessage } from "../components/BulkActionBar";
@@ -13,6 +13,8 @@ import type {
 type NotificationRow = NotificationItem & {
   school_name?: string | null;
   institute_name?: string | null;
+  organization_name?: string | null;
+  organization_id?: string | null;
 };
 
 /**
@@ -20,6 +22,10 @@ type NotificationRow = NotificationItem & {
  */
 export function NotificationsPage() {
   const [schools, setSchools] = useState<School[]>([]);
+  const [organizations, setOrganizations] = useState<Array<{id:string;name:string}>>([]);
+  const [selectedOrganizationIds, setSelectedOrganizationIds] = useState<Set<string>>(new Set());
+  const sendingRef = useRef(false);
+  const sendRequest = useRef<{fingerprint:string; image:File|null; id:string} | null>(null);
   const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [selectedSchoolIds, setSelectedSchoolIds] = useState<Set<string>>(
     new Set()
@@ -68,13 +74,15 @@ export function NotificationsPage() {
   useEffect(() => {
     void (async () => {
       try {
-        const [schoolsRes, institutesRes] = await Promise.all([
+        const [schoolsRes, institutesRes, organizationsRes] = await Promise.all([
           api.get<{ schools: School[] }>("/admin/schools"),
           api.get<{ institutes: Institute[] }>("/admin/institutes").catch(() => ({
             data: { institutes: [] as Institute[] },
           })),
+          api.get<{organizations:Array<{id:string;name:string}>}>("/admin/organizations"),
         ]);
         setSchools(schoolsRes.data.schools);
+        setOrganizations(organizationsRes.data.organizations ?? []);
         setInstitutes(institutesRes.data.institutes ?? []);
         await loadAllNotifications();
       } catch (err) {
@@ -128,73 +136,53 @@ export function NotificationsPage() {
 
   async function handleSend(event: FormEvent) {
     event.preventDefault();
-    setError(null);
-    setSuccess(null);
-
-    const schoolTargets = [...selectedSchoolIds];
-    const instituteTargets = [...selectedInstituteIds];
-
-    if (schoolTargets.length === 0 && instituteTargets.length === 0) {
-      setError("Select at least one school or institute.");
-      return;
+    if (sendingRef.current) return;
+    setError(null); setSuccess(null);
+    type Target = {kind:"schoolId"|"instituteId"|"organizationId"; id:string};
+    const targets: Target[] = [
+      ...[...selectedSchoolIds].map(id => ({kind:"schoolId" as const,id})),
+      ...[...selectedInstituteIds].map(id => ({kind:"instituteId" as const,id})),
+      ...[...selectedOrganizationIds].map(id => ({kind:"organizationId" as const,id})),
+    ];
+    if (!targets.length) { setError("Select at least one school, institute or organization."); return; }
+    const fingerprint = JSON.stringify([title.trim(), description.trim()]);
+    if (!sendRequest.current || sendRequest.current.fingerprint !== fingerprint || sendRequest.current.image !== imageFile) {
+      sendRequest.current = {fingerprint,image:imageFile,id:crypto.randomUUID()};
     }
-
-    setSending(true);
+    const batchId = sendRequest.current.id;
+    sendingRef.current = true; setSending(true);
     try {
-      const sendOne = (target: { schoolId?: string; instituteId?: string }) => {
-        if (!imageFile) {
-          return api.post("/admin/notifications", {
-            ...target,
-            title: title.trim(),
-            message: description.trim(),
-          });
-        }
+      const outcomes = await Promise.allSettled(targets.map(target => {
+        const requestId = `${batchId}:${target.kind}:${target.id}`;
+        if (!imageFile) return api.post("/admin/notifications", {[target.kind]:target.id,title:title.trim(),message:description.trim(),requestId});
         const body = new FormData();
-        if (target.schoolId) body.set("schoolId", target.schoolId);
-        if (target.instituteId) body.set("instituteId", target.instituteId);
-        body.set("title", title.trim());
-        body.set("message", description.trim());
-        body.set("image", imageFile);
-        return api.post("/admin/notifications", body);
-      };
-      await Promise.all([
-        ...schoolTargets.map((schoolId) => sendOne({ schoolId })),
-        ...instituteTargets.map((instituteId) => sendOne({ instituteId })),
-      ]);
-
-      setTitle("");
-      setDescription("");
-      setImageFile(null);
-      if (imagePreview) URL.revokeObjectURL(imagePreview);
-      setImagePreview(null);
-      setSelectedSchoolIds(new Set());
-      setSelectedInstituteIds(new Set());
-
-      const parts: string[] = [];
-      if (schoolTargets.length) {
-        parts.push(
-          `${schoolTargets.length} school${schoolTargets.length === 1 ? "" : "s"}`
-        );
-      }
-      if (instituteTargets.length) {
-        parts.push(
-          `${instituteTargets.length} institute${instituteTargets.length === 1 ? "" : "s"}`
-        );
-      }
-      setSuccess(`Notification sent to ${parts.join(" and ")}.`);
+        body.set(target.kind,target.id); body.set("title",title.trim()); body.set("message",description.trim()); body.set("requestId",requestId); body.set("image",imageFile);
+        return api.post("/admin/notifications",body);
+      }));
+      const failed = targets.filter((_,index) => outcomes[index].status === "rejected");
+      // Retain the same draft/request keys when retrying failed or timed-out targets.
+      setSelectedSchoolIds(new Set(failed.filter(t=>t.kind==="schoolId").map(t=>t.id)));
+      setSelectedInstituteIds(new Set(failed.filter(t=>t.kind==="instituteId").map(t=>t.id)));
+      setSelectedOrganizationIds(new Set(failed.filter(t=>t.kind==="organizationId").map(t=>t.id)));
       await loadAllNotifications();
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const body = err.response?.data as ApiErrorBody | undefined;
-        setError(body?.message ?? "Failed to send notification.");
-      } else setError("Failed to send notification.");
-    } finally {
-      setSending(false);
-    }
+      if (failed.length) {
+        const first = outcomes.find(outcome => outcome.status === "rejected") as PromiseRejectedResult;
+        const detail = axios.isAxiosError(first.reason) ? first.reason.response?.data?.message : "";
+        setError(`${targets.length-failed.length} sent; ${failed.length} need retry. Only the remaining recipients are selected.${detail ? ` ${detail}` : ""}`);
+      } else {
+        setSuccess(`Notification sent to ${targets.length} recipient${targets.length===1?"":"s"}.`);
+        setTitle(""); setDescription(""); setImageFile(null);
+        if (imagePreview) URL.revokeObjectURL(imagePreview);
+        setImagePreview(null); sendRequest.current = null;
+      }
+    } catch(err) { setError("Could not finish sending. Retry this draft; completed sends will not be duplicated."); }
+    finally { sendingRef.current = false; setSending(false); }
   }
 
   const targetLabel = useMemo(() => {
     return (n: NotificationRow) => {
+      if (n.organization_name) return `Organization: ${n.organization_name}`;
+      if (n.organization_id) return "Organization";
       if (n.institute_name) return `Institute: ${n.institute_name}`;
       if (n.school_name) return `School: ${n.school_name}`;
       if (n.institute_id) return "Institute";
@@ -209,6 +197,7 @@ export function NotificationsPage() {
         onSubmit={handleSend}
         className="mb-8 space-y-5 card p-6 sm:p-7"
       >
+        <fieldset disabled={sending} className="space-y-5">
         <h2 className="text-base font-semibold text-text-navy">Compose Notification</h2>
 
         <label className="block text-sm">
@@ -290,13 +279,14 @@ export function NotificationsPage() {
                     : "Send to All Institutes"}
                 </button>
               )}
+              {organizations.length > 0 && <button type="button" className="text-xs font-semibold text-accent-blue hover:underline" onClick={() => setSelectedOrganizationIds(current => current.size === organizations.length ? new Set() : new Set(organizations.map(org=>org.id)))}>{selectedOrganizationIds.size === organizations.length ? "Clear all organizations" : "Send to All Organizations"}</button>}
             </div>
           </div>
 
           <div className="max-h-56 overflow-y-auto rounded-xl border border-border bg-content-bg/40 p-3">
-            {schools.length === 0 && institutes.length === 0 && (
+            {schools.length === 0 && institutes.length === 0 && organizations.length === 0 && (
               <p className="text-sm text-text-muted">
-                No schools or institutes yet.
+                No schools, institutes or organizations yet.
               </p>
             )}
 
@@ -345,6 +335,10 @@ export function NotificationsPage() {
                 </ul>
               </div>
             )}
+            {organizations.length > 0 && <div className="mt-3 border-t border-border pt-3">
+              <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-muted">Organizations</div>
+              <ul className="space-y-1">{organizations.map(org => <li key={org.id}><label className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-text hover:bg-white"><input type="checkbox" checked={selectedOrganizationIds.has(org.id)} onChange={() => setSelectedOrganizationIds(current => {const next=new Set(current); if(next.has(org.id))next.delete(org.id);else next.add(org.id);return next;})} className="h-4 w-4 rounded border-border text-button-blue" />{org.name}</label></li>)}</ul>
+            </div>}
           </div>
         </div>
 
@@ -358,6 +352,7 @@ export function NotificationsPage() {
         >
           {sending ? "Sending…" : "Send"}
         </button>
+        </fieldset>
       </form>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">

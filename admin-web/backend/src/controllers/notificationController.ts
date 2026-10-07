@@ -1,7 +1,8 @@
+import { assertOrganizationOwned } from "./organizationPortalController";
 import { randomUUID } from "crypto";
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
-import { STUDENT_PHOTOS_BUCKET, uploadBufferToBucket } from "../config/storage";
+import { STUDENT_PHOTOS_BUCKET, uploadBufferToBucket, deleteFromBucket } from "../config/storage";
 import { AppError } from "../middleware/errorHandler";
 import {
   requestAdminActionOtp,
@@ -26,113 +27,67 @@ import {
 type NotificationWithTarget = NotificationRow & {
   school_name?: string | null;
   institute_name?: string | null;
+  organization_name?: string | null;
 };
 
-export async function createNotification(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function createNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const client = await pool.connect();
+  let imagePath: string | null = null;
+  let committed = false;
   try {
     if (!req.user) throw new AppError("Authentication required", 401);
-
     const schoolId = String(req.body.school_id ?? req.body.schoolId ?? "").trim();
-    const instituteId = String(
-      req.body.institute_id ?? req.body.instituteId ?? ""
-    ).trim();
+    const instituteId = String(req.body.institute_id ?? req.body.instituteId ?? "").trim();
+    const organizationId = String(req.body.organization_id ?? req.body.organizationId ?? "").trim();
+    if ([schoolId, instituteId, organizationId].filter(Boolean).length !== 1) throw new AppError("Select exactly one school, institute or organization", 400);
     const title = String(req.body.title ?? "").trim();
     const message = String(req.body.message ?? "").trim();
-
-    if (!schoolId && !instituteId) {
-      throw new AppError("schoolId or instituteId is required", 400);
-    }
-    if (schoolId && instituteId) {
-      throw new AppError("Provide either schoolId or instituteId, not both", 400);
-    }
-    if (!title) throw new AppError("title is required", 400);
-    if (!message) throw new AppError("message is required", 400);
-    if (req.file && req.file.size > 2 * 1024 * 1024) {
-      throw new AppError("Notification image must be 2 MB or smaller", 400);
-    }
-
+    const requestId = String(req.body.requestId ?? "").trim() || null;
+    if (requestId && (requestId.length > 200 || !/^[a-zA-Z0-9:_-]+$/.test(requestId))) throw new AppError("Invalid request identifier", 400);
+    if (!title || !message) throw new AppError("Title and message are required", 400);
+    if (req.file && req.file.size > 2 * 1024 * 1024) throw new AppError("Notification image must be 2 MB or smaller", 400);
     const scope = await requireAdminScope(req);
-    const orgId = schoolId || instituteId;
+    // Validate ownership before storing any uploaded image or returning a previous send.
+    if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
+    else if (instituteId) await assertInstituteOwnedByAdmin(scope, instituteId);
+    else await assertOrganizationOwned(scope, organizationId);
+    await client.query("BEGIN");
+    if (requestId) {
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [`notification:${req.user.userId}:${requestId}`]);
+      const existing = await client.query<NotificationRow>("SELECT * FROM notifications WHERE created_by = $1 AND client_request_id = $2", [req.user.userId, requestId]);
+      if (existing.rows[0]) {
+        const note = existing.rows[0];
+        if ((note.school_id || "") !== schoolId || (note.institute_id || "") !== instituteId || (note.organization_id || "") !== organizationId || note.title !== title || note.message !== message) throw new AppError("This send identifier was already used for a different notification", 409);
+        await client.query("COMMIT"); committed = true;
+        res.status(200).json({status:"ok", notification:note, reused:true}); return;
+      }
+    }
     let imageUrl: string | null = null;
     if (req.file) {
       const ext = req.file.mimetype.includes("png") ? "png" : "jpg";
-      imageUrl = await uploadBufferToBucket(
-        STUDENT_PHOTOS_BUCKET,
-        `notifications/${orgId}/${randomUUID()}.${ext}`,
-        req.file.buffer,
-        req.file.mimetype
-      );
+      imagePath = `notifications/${schoolId || instituteId || organizationId}/${randomUUID()}.${ext}`;
+      imageUrl = await uploadBufferToBucket(STUDENT_PHOTOS_BUCKET, imagePath, req.file.buffer, req.file.mimetype);
     }
-
-    if (schoolId) {
-      const school = await pool.query(`SELECT id FROM schools WHERE id = $1`, [
-        schoolId,
-      ]);
-      if (!school.rows[0]) throw new AppError("School not found", 404);
-      await assertSchoolOwnedByAdmin(scope, schoolId);
-
-      const inserted = await pool.query<NotificationRow>(
-        `INSERT INTO notifications (school_id, title, message, image_url, created_by)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING *`,
-        [schoolId, title, message, imageUrl, req.user.userId]
-      );
-
-      const notification = inserted.rows[0];
-      const endpoints = await loadSnsEndpointsForOrg({ schoolId });
-      if (notification && endpoints.length > 0) {
-        void sendSnsPushNotifications(endpoints, {
-          title,
-          body: message,
-          imageUrl,
-          data: { notificationId: notification.id, schoolId },
-        }).then((result) => {
-          if (result.disabledEndpointArns.length > 0) {
-            void deactivatePushEndpoints(result.disabledEndpointArns);
-          }
-        });
-      }
-
-      res.status(201).json({ status: "ok", notification });
-      return;
-    }
-
-    const institute = await pool.query(`SELECT id FROM institutes WHERE id = $1`, [
-      instituteId,
-    ]);
-    if (!institute.rows[0]) throw new AppError("Institute not found", 404);
-    await assertInstituteOwnedByAdmin(scope, instituteId);
-
-    const inserted = await pool.query<NotificationRow>(
-      `INSERT INTO notifications (institute_id, title, message, image_url, created_by)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [instituteId, title, message, imageUrl, req.user.userId]
+    const inserted = await client.query<NotificationRow>(
+      `INSERT INTO notifications (school_id, institute_id, organization_id, title, message, image_url, created_by, client_request_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [schoolId || null, instituteId || null, organizationId || null, title, message, imageUrl, req.user.userId, requestId]
     );
-
+    await client.query("COMMIT"); committed = true;
     const notification = inserted.rows[0];
-    const endpoints = await loadSnsEndpointsForOrg({ instituteId });
-    if (notification && endpoints.length > 0) {
-      void sendSnsPushNotifications(endpoints, {
-        title,
-        body: message,
-        imageUrl,
-        data: { notificationId: notification.id, instituteId },
-      }).then((result) => {
-        if (result.disabledEndpointArns.length > 0) {
-          void deactivatePushEndpoints(result.disabledEndpointArns);
-        }
-      });
-    }
-
-    res.status(201).json({ status: "ok", notification });
+    // Delivery failure never causes the already-committed announcement to be inserted again.
+    void loadSnsEndpointsForOrg({schoolId, instituteId, organizationId}).then(endpoints => sendSnsPushNotifications(endpoints, {
+      title, body:message, imageUrl,
+      data:{notificationId:notification.id, ...(schoolId ? {schoolId} : instituteId ? {instituteId} : {organizationId})},
+    })).then(result => deactivatePushEndpoints(result.disabledEndpointArns)).catch(error => console.error("[notification-push]", error));
+    res.status(201).json({status:"ok", notification});
   } catch (error) {
+    if (!committed) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      if (imagePath) await deleteFromBucket(STUDENT_PHOTOS_BUCKET, imagePath).catch(() => undefined);
+    }
     next(error);
-  }
+  } finally { client.release(); }
 }
 
 /** GET /admin/notifications — all notifications with target names */
@@ -147,7 +102,7 @@ export async function listAllAdminNotifications(
     const values: unknown[] = [];
     const accessFilter = seeAll
       ? ""
-      : ` WHERE (s.owner_admin_id = $1 OR i.owner_admin_id = $1)
+      : ` WHERE (s.owner_admin_id = $1 OR i.owner_admin_id = $1 OR o.owner_admin_id = $1)
             AND COALESCE(n.audience, 'org') <> 'super_admin'`;
     if (!seeAll) {
       values.push(scope.adminUserId);
@@ -156,10 +111,12 @@ export async function listAllAdminNotifications(
     const result = await pool.query<NotificationWithTarget>(
       `SELECT n.*,
               s.name AS school_name,
-              i.name AS institute_name
+              i.name AS institute_name,
+              o.name AS organization_name
        FROM notifications n
        LEFT JOIN schools s ON s.id = n.school_id
        LEFT JOIN institutes i ON i.id = n.institute_id
+       LEFT JOIN organizations o ON o.id = n.organization_id
        ${accessFilter}
        ORDER BY n.created_at DESC NULLS LAST`,
       values
@@ -456,109 +413,30 @@ export async function bulkDeleteNotifications(
   }
 }
 
-export async function listTeacherNotifications(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  try {
-    if (!req.user?.userId) {
-      throw new AppError("Authentication required", 401);
-    }
-
-    const isInstitute = req.user.role === "institute_staff";
-    const schoolId = req.user.schoolId;
-    const instituteId = req.user.instituteId;
-
-    if (isInstitute) {
-      if (!instituteId) {
-        throw new AppError("Institute account is missing institute assignment", 403);
-      }
-
-      const result = await pool.query<
-        NotificationRow & { is_read: boolean }
-      >(
-        `SELECT n.*,
-                EXISTS (
-                  SELECT 1 FROM notification_reads r
-                  WHERE r.notification_id = n.id AND r.user_id = $2
-                ) AS is_read
-         FROM notifications n
-         WHERE n.institute_id = $1
-           AND COALESCE(n.audience, 'org') <> 'super_admin'
-           AND NOT EXISTS (
-             SELECT 1 FROM notification_deletes d
-             WHERE d.notification_id = n.id AND d.user_id = $2
-           )
-         ORDER BY n.created_at DESC`,
-        [instituteId, req.user.userId]
-      );
-
-      const unreadCount = result.rows.filter((n) => !n.is_read).length;
-      res.status(200).json({
-        status: "ok",
-        count: result.rows.length,
-        unreadCount,
-        notifications: result.rows,
-      });
-      return;
-    }
-
-    if (!schoolId) {
-      throw new AppError("Teacher account is missing school assignment", 403);
-    }
-
-    const result = await pool.query<
-      NotificationRow & { is_read: boolean }
-    >(
-      `SELECT n.*,
-              EXISTS (
-                SELECT 1 FROM notification_reads r
-                WHERE r.notification_id = n.id AND r.user_id = $2
-              ) AS is_read
-       FROM notifications n
-       WHERE n.school_id = $1
-         AND COALESCE(n.audience, 'org') <> 'super_admin'
-         AND NOT EXISTS (
-           SELECT 1 FROM notification_deletes d
-           WHERE d.notification_id = n.id AND d.user_id = $2
-         )
-       ORDER BY n.created_at DESC`,
-      [schoolId, req.user.userId]
-    );
-
-    const unreadCount = result.rows.filter((n) => !n.is_read).length;
-
-    res.status(200).json({
-      status: "ok",
-      count: result.rows.length,
-      unreadCount,
-      notifications: result.rows,
-    });
-  } catch (error) {
-    next(error);
-  }
+function notificationTarget(req: Request): { column: "school_id" | "institute_id" | "organization_id"; id: string } {
+  if (!req.user?.userId) throw new AppError("Authentication required", 401);
+  const column = req.user.role === "organization_staff" ? "organization_id" : req.user.role === "institute_staff" ? "institute_id" : "school_id";
+  const id = column === "organization_id" ? req.user.organizationId : column === "institute_id" ? req.user.instituteId : req.user.schoolId;
+  if (!id) throw new AppError("Account is missing its organization assignment", 403);
+  return {column, id};
 }
 
-async function assertTeacherNotificationAccess(
-  req: Request,
-  notificationId: string
-): Promise<void> {
-  if (!req.user?.userId) {
-    throw new AppError("Authentication required", 401);
-  }
+export async function listTeacherNotifications(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const target = notificationTarget(req);
+    const result = await pool.query<NotificationRow & {is_read:boolean}>(
+      `SELECT n.*, EXISTS (SELECT 1 FROM notification_reads r WHERE r.notification_id=n.id AND r.user_id=$2) AS is_read
+       FROM notifications n WHERE n.${target.column}=$1 AND COALESCE(n.audience, 'org') <> 'super_admin'
+       AND NOT EXISTS (SELECT 1 FROM notification_deletes d WHERE d.notification_id=n.id AND d.user_id=$2)
+       ORDER BY n.created_at DESC`, [target.id, req.user!.userId]
+    );
+    res.status(200).json({status:"ok", count:result.rows.length, unreadCount:result.rows.filter(n => !n.is_read).length, notifications:result.rows});
+  } catch(error) {next(error);}
+}
 
-  const isInstitute = req.user.role === "institute_staff";
-  const note = isInstitute
-    ? await pool.query(
-        `SELECT id FROM notifications WHERE id = $1 AND institute_id = $2`,
-        [notificationId, req.user.instituteId]
-      )
-    : await pool.query(
-        `SELECT id FROM notifications WHERE id = $1 AND school_id = $2`,
-        [notificationId, req.user.schoolId]
-      );
-
+async function assertTeacherNotificationAccess(req: Request, notificationId: string): Promise<void> {
+  const target = notificationTarget(req);
+  const note = await pool.query(`SELECT id FROM notifications WHERE id=$1 AND ${target.column}=$2 AND COALESCE(audience, 'org') <> 'super_admin'`, [notificationId, target.id]);
   if (!note.rows[0]) throw new AppError("Notification not found", 404);
 }
 
@@ -596,32 +474,10 @@ export async function deleteAllTeacherNotifications(
       throw new AppError("Authentication required", 401);
     }
 
-    const isInstitute = req.user.role === "institute_staff";
-    if (isInstitute) {
-      if (!req.user.instituteId) {
-        throw new AppError("Institute account is missing institute assignment", 403);
-      }
-      await pool.query(
-        `INSERT INTO notification_deletes (notification_id, user_id)
-         SELECT n.id, $2
-         FROM notifications n
-         WHERE n.institute_id = $1
-         ON CONFLICT DO NOTHING`,
-        [req.user.instituteId, req.user.userId]
-      );
-    } else {
-      if (!req.user.schoolId) {
-        throw new AppError("Teacher account is missing school assignment", 403);
-      }
-      await pool.query(
-        `INSERT INTO notification_deletes (notification_id, user_id)
-         SELECT n.id, $2
-         FROM notifications n
-         WHERE n.school_id = $1
-         ON CONFLICT DO NOTHING`,
-        [req.user.schoolId, req.user.userId]
-      );
-    }
+    const target = notificationTarget(req);
+    await pool.query(`INSERT INTO notification_deletes (notification_id, user_id)
+      SELECT n.id, $2 FROM notifications n WHERE n.${target.column}=$1 AND COALESCE(n.audience, 'org') <> 'super_admin'
+      ON CONFLICT DO NOTHING`, [target.id, req.user.userId]);
 
     res.status(200).json({ status: "ok", deleted: true });
   } catch (error) {

@@ -25,7 +25,7 @@ const file = path.join(
 
 if (!fs.existsSync(file)) {
   console.log("[patch-notification-image] expo-notifications builder not found");
-  process.exit(0);
+  process.exit(1);
 }
 
 const source = fs.readFileSync(file, "utf8");
@@ -56,7 +56,7 @@ const replacement = `    if (notificationContent.containsImage()) {
 
 if (!source.includes(target)) {
   console.warn("[patch-notification-image] expected builder block was not found");
-  process.exit(0);
+  process.exit(1);
 }
 
 const helper = `
@@ -97,7 +97,7 @@ const contentFile = path.join(
 
 if (!fs.existsSync(contentFile)) {
   console.log("[patch-notification-image] remote notification content not found");
-  process.exit(0);
+  process.exit(1);
 }
 
 const content = fs.readFileSync(contentFile, "utf8");
@@ -127,7 +127,7 @@ if (!content.includes("notificationImageUri")) {
     return runCatching { android.net.Uri.parse(trimmed) }.getOrNull()
   }`;
   if (!content.includes(imageTarget)) {
-    console.warn("[patch-notification-image] expected image lookup was not found");
+    throw new Error("[patch-notification-image] expected image lookup was not found");
   } else {
     fs.writeFileSync(contentFile, content.replace(imageTarget, imageReplacement));
     console.log("[patch-notification-image] remote notifications read the image URL");
@@ -200,4 +200,12 @@ suspend fun downloadImage(imageUrl: Uri, connectTimeout: Long = 12000, readTimeo
     fs.writeFileSync(downloadFile, nextDownload);
     console.log("[patch-notification-image] notification images download off the UI thread");
   }
+}
+
+// A repeated transport delivery updates the same notification tag silently.
+const builder = fs.readFileSync(file, "utf8");
+if (!builder.includes("builder.setOnlyAlertOnce(true)")) {
+  const marker = "    builder.setAutoCancel(content.isAutoDismiss)";
+  if (!builder.includes(marker)) throw new Error("Notification deduplication hook not found");
+  fs.writeFileSync(file, builder.replace(marker, `${marker}\n    builder.setOnlyAlertOnce(true)`));
 }

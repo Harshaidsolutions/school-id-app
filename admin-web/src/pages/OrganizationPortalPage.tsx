@@ -1,3 +1,4 @@
+import { RecordMediaViewer } from "../components/RecordMediaViewer";
 import { captureDayKey } from "../utils/captureDay";
 import { IdCardGeneratorButton } from "../components/IdCardGeneratorButton";
 import { BulkUploadModal } from "../components/BulkUploadModal";
@@ -349,7 +350,7 @@ export function OrganizationDetailPage() {
   const [editBusy, setEditBusy] = useState(false);
   const [editPhotos, setEditPhotos] = useState<Record<string, File>>({});
   const [editDraft, setEditDraft] = useState<Record<string, string>>({});
-  const [photoPreview, setPhotoPreview] = useState<{ src: string; alt: string } | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<{ rowId: string; fieldId: string } | null>(null);
 
   async function load() {
     const { data } = await api.get<{
@@ -440,6 +441,22 @@ export function OrganizationDetailPage() {
         };
       });
   }, [categories, submissions]);
+  const previewItems = useMemo(() => {
+    if (!photoPreview) return [];
+    const field = activeFields.find(field => field.id === photoPreview.fieldId);
+    const nameField = textFields.find(field => /name/i.test(field.field_name)) ?? textFields[0];
+    return visibleRows.filter(row => row.values[photoPreview.fieldId]?.hasPhoto).map(row => ({
+      id: row.id,
+      title: `${nameField ? row.values[nameField.id]?.text || "Record" : "Record"} · ${field?.field_name || "Image"}`,
+      detail: row.photoNumber || `Record ${row.serial}`,
+      load: async () => {
+        const {data} = await api.get(`/admin/organizations/${id}/submissions/${row.id}/fields/${photoPreview.fieldId}/photo`, {responseType:"blob"});
+        const url = URL.createObjectURL(data as Blob);
+        return {url, release: () => URL.revokeObjectURL(url)};
+      },
+    }));
+  }, [visibleRows, photoPreview?.fieldId, activeFields, textFields, id]);
+
   const photoCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const row of submissions) {
@@ -606,11 +623,7 @@ export function OrganizationDetailPage() {
       ) : null}
       {error ? <div className="alert-error">{error}</div> : null}
       {notice ? <div className="alert-success">{notice}</div> : null}
-      {photoPreview ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4" onClick={() => setPhotoPreview(null)}>
-          <img alt={photoPreview.alt} src={photoPreview.src} className="max-h-[80vh] max-w-full rounded-2xl bg-white object-contain" onClick={(event) => event.stopPropagation()} />
-        </div>
-      ) : null}
+      {photoPreview ? <RecordMediaViewer items={previewItems} activeId={photoPreview.rowId} onNavigate={rowId => setPhotoPreview(current => current ? {...current, rowId} : null)} onClose={() => setPhotoPreview(null)} /> : null}
       {link ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <input readOnly className="input-field min-w-0 basis-full sm:basis-0 flex-1" value={link} onFocus={(event) => event.currentTarget.select()} />
@@ -686,7 +699,7 @@ export function OrganizationDetailPage() {
                             submissionId={row.id}
                             fieldId={field.id}
                             alt={field.field_name}
-                            onOpen={setPhotoPreview}
+                            onOpen={() => setPhotoPreview({rowId:row.id, fieldId:field.id})}
                           />
                         ) : "—"
                       ) : value?.text || "—"}
@@ -1014,7 +1027,7 @@ function OrgPhoto({
   }, [organizationId, submissionId, fieldId]);
   if (!src) return <span className="text-text-muted">Photo</span>;
   return (
-    <button type="button" title="View photo" onClick={() => onOpen?.({ src, alt })}>
+    <button type="button" title={`View ${alt}`} onClick={() => onOpen?.({ src, alt })}>
       <img alt={alt} className="h-14 w-14 rounded-lg object-cover" src={src} />
     </button>
   );

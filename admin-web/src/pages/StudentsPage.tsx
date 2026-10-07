@@ -467,7 +467,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   }
 
   const enabledFields = useMemo(
-    () => dedupeDisplayFields(formFields).filter((field) => field.key !== "signature_upload"),
+    () => dedupeDisplayFields(formFields),
     [formFields]
   );
 
@@ -1201,7 +1201,9 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   <td className="col-sno text-text-muted">{serial}</td>
                   {enabledFields.map((field) => (
                     <td key={field.key} className={fieldColumnClass(field)}>
-                      {isIdentityColumn(field) ? (
+                      {field.key === "signature_upload" ? (
+                        <SignatureThumb student={student} onOpen={() => setSignatureStudent(student)} />
+                      ) : isIdentityColumn(field) ? (
                         <div className="flex flex-col items-start gap-1">
                           <button
                             type="button"
@@ -1213,10 +1215,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                           >
                             <StudentThumb student={student} />
                           </button>
-                          <SignatureThumb
-                            student={student}
-                            onOpen={() => setSignatureStudent(student)}
-                          />
                           <span className="max-w-[4.5rem] truncate text-[10px] font-medium text-text-muted">
                             {studentFieldDisplay(student, field.key, field.label)}
                           </span>

@@ -41,7 +41,8 @@ export async function registerTeacherPushToken(
 
     const schoolId = req.user.schoolId ?? null;
     const instituteId = req.user.instituteId ?? null;
-    if (!schoolId && !instituteId) {
+    const organizationId = req.user.organizationId ?? null;
+    if (!schoolId && !instituteId && !organizationId) {
       throw new AppError("Teacher account is missing org assignment", 403);
     }
 
@@ -69,6 +70,7 @@ export async function registerTeacherPushToken(
         userId: req.user.userId,
         schoolId,
         instituteId,
+        organizationId,
         deviceId: deviceId || undefined,
       });
       snsEndpointArn = await registerSnsDeviceEndpoint(pushToken, {
@@ -79,14 +81,15 @@ export async function registerTeacherPushToken(
 
     await pool.query(
       `INSERT INTO teacher_push_tokens (
-         user_id, school_id, institute_id, push_token, platform,
+         user_id, school_id, institute_id, push_token, platform, organization_id,
          sns_endpoint_arn, device_id, device_name, is_active, updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NOW())
+       VALUES ($1, $2, $3, $4, $5, $9, $6, $7, $8, true, NOW())
        ON CONFLICT (push_token) DO UPDATE SET
          user_id = EXCLUDED.user_id,
          school_id = EXCLUDED.school_id,
          institute_id = EXCLUDED.institute_id,
+         organization_id = EXCLUDED.organization_id,
          platform = EXCLUDED.platform,
          sns_endpoint_arn = COALESCE(EXCLUDED.sns_endpoint_arn, teacher_push_tokens.sns_endpoint_arn),
          device_id = COALESCE(NULLIF(EXCLUDED.device_id, ''), teacher_push_tokens.device_id),
@@ -102,6 +105,7 @@ export async function registerTeacherPushToken(
         snsEndpointArn,
         deviceId || null,
         deviceName || null,
+        organizationId,
       ]
     );
 
@@ -166,34 +170,13 @@ export async function unregisterTeacherPushToken(
   }
 }
 
-export async function loadSnsEndpointsForOrg(options: {
-  schoolId?: string | null;
-  instituteId?: string | null;
-}): Promise<string[]> {
-  const { schoolId, instituteId } = options;
-  if (schoolId) {
-    const result = await pool.query<{ sns_endpoint_arn: string }>(
-      `SELECT DISTINCT sns_endpoint_arn
-       FROM teacher_push_tokens
-       WHERE school_id = $1::uuid
-         AND is_active = true
-         AND sns_endpoint_arn IS NOT NULL`,
-      [schoolId]
-    );
-    return result.rows.map((r) => r.sns_endpoint_arn);
-  }
-  if (instituteId) {
-    const result = await pool.query<{ sns_endpoint_arn: string }>(
-      `SELECT DISTINCT sns_endpoint_arn
-       FROM teacher_push_tokens
-       WHERE institute_id = $1::uuid
-         AND is_active = true
-         AND sns_endpoint_arn IS NOT NULL`,
-      [instituteId]
-    );
-    return result.rows.map((r) => r.sns_endpoint_arn);
-  }
-  return [];
+export async function loadSnsEndpointsForOrg(options: {schoolId?:string|null; instituteId?:string|null; organizationId?:string|null}): Promise<string[]> {
+  const column = options.organizationId ? "organization_id" : options.instituteId ? "institute_id" : "school_id";
+  const id = options.organizationId || options.instituteId || options.schoolId;
+  if (!id) return [];
+  const result = await pool.query<{sns_endpoint_arn:string}>(`SELECT DISTINCT sns_endpoint_arn FROM teacher_push_tokens
+    WHERE ${column}=$1::uuid AND is_active=true AND sns_endpoint_arn IS NOT NULL`, [id]);
+  return result.rows.map(row => row.sns_endpoint_arn);
 }
 
 export async function deactivatePushEndpoints(endpointArns: string[]): Promise<void> {
@@ -213,6 +196,7 @@ export async function deactivatePushEndpoints(endpointArns: string[]): Promise<v
 export async function loadPushTokensForOrg(options: {
   schoolId?: string | null;
   instituteId?: string | null;
+  organizationId?: string | null;
 }): Promise<string[]> {
   const { schoolId, instituteId } = options;
   if (schoolId) {

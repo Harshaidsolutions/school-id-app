@@ -195,11 +195,13 @@ export async function assertNotificationOwnedByAdmin(
      FROM notifications n
      LEFT JOIN schools s ON s.id = n.school_id
      LEFT JOIN institutes i ON i.id = n.institute_id
+     LEFT JOIN organizations o ON o.id = n.organization_id
      WHERE n.id = $1
        AND COALESCE(n.audience, 'org') <> 'super_admin'
        AND (
          s.owner_admin_id = $2
          OR i.owner_admin_id = $2
+         OR o.owner_admin_id = $2
        )
      LIMIT 1`,
     [notificationId, scope.adminUserId]
