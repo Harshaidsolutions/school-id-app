@@ -1,8 +1,8 @@
+import { Pressable } from "../components/Pressable";
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
-  Pressable,
   StyleSheet,
   View,
 } from "react-native";

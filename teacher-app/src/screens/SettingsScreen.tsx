@@ -1,9 +1,9 @@
+import { Pressable } from "../components/Pressable";
 import { setNotificationPreference, useNotificationPreference } from "../utils/notificationPreference";
 import { useEffect, useState } from "react";
 import {
   Alert,
   Linking,
-  Pressable,
   ScrollView,
   Switch,
   StyleSheet,

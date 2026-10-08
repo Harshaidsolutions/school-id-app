@@ -1,9 +1,9 @@
+import { Pressable } from "../components/Pressable";
 import { useRef, useState } from "react";
 import {
   Animated,
   FlatList,
   Image,
-  Pressable,
   Text,
   View,
   useWindowDimensions,
@@ -224,7 +224,7 @@ function OnboardingFooter({
   const footerH = Math.round(height * FOOTER_RATIO);
   const gradient =
     accent === "green"
-      ? ([colors.brandGreen, colors.brandGreenLight, "#81C784"] as const)
+      ? ([colors.brandGreen, colors.brandGreenLight, "#63BDB4"] as const)
       : fabGradient;
 
   return (

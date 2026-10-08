@@ -1281,3 +1281,25 @@ tbody tr { transition:background .18s; } tbody tr:hover { background:#F6F5FD; }
 @keyframes page-arrive { from { opacity:.3; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 @media(prefers-reduced-motion:reduce) { .app-page,.detail-page-content { animation:none; } .app-sidebar a,.btn-primary,.btn-secondary,tbody tr { transition:none; } .app-sidebar a:hover,.btn-primary:active,.btn-secondary:active { transform:none; } }
 @media(max-width:640px) { .app-header { gap:8px; padding-inline:12px; }.app-header-title { font-size:16px; }.header-back { font-size:11px; padding-inline:4px; } }
+/* Authentication, dialogs and common page surfaces complete the shared design. */
+.login-shell { background:#F5F6FC; }
+.login-brand-panel { position:relative; isolation:isolate; overflow:hidden; background:linear-gradient(145deg,#7470CC,#568CB9 70%,#529AAB); }
+.login-brand-panel::after { content:""; position:absolute; width:380px; height:380px; border:50px solid #FFFFFF0C; border-radius:50%; right:-150px; bottom:-170px; z-index:-1; animation:brand-drift 12s ease-in-out infinite alternate; }
+.login-brand-copy h2 { font-weight:650; letter-spacing:-.045em; }
+.auth-card { border:1px solid #E0E4F1; border-radius:24px; background:#FFFFFFE8; box-shadow:0 20px 60px #6F6DB614; padding:clamp(20px,3vw,36px); }
+.login-form-panel { background:radial-gradient(ellipse at 100% 0,#E8F5FA,transparent 65%),#F5F6FC; }
+.login-heading { color:#5C5495; letter-spacing:-.025em; }
+.login-footer { color:#6C7694; }
+.app-main h1,.app-main h2,.app-main h3 { letter-spacing:-.02em; }
+.app-main select,.app-main textarea,.app-main input:not([type=checkbox]):not([type=radio]):not([type=range]) { color:#515B89; accent-color:#7970C7; }
+.app-main input[type=checkbox],.app-main input[type=radio] { accent-color:#7970C7; }
+.app-main [role=dialog] { border-radius:20px; box-shadow:0 18px 60px #68529E26; animation:dialog-arrive .18s ease-out; }
+.app-main .card > h2,.app-main .card > h3 { color:#625798; }
+.app-main tbody td { border-color:#EBECF6; }
+.app-main tbody tr:nth-child(even) { background:#FAFAFE; }
+.app-main tbody tr:hover { background:#F0EEFB; }
+.detail-toolbar-row1 .detail-toolbar-btn:hover { background:#EDEAFB; box-shadow:0 3px 10px #7566B514; }
+@keyframes brand-drift { from { transform:translateY(0) scale(1); } to { transform:translateY(-35px) scale(1.08); } }
+@keyframes dialog-arrive { from { opacity:0; transform:translateY(8px) scale(.99); } to { opacity:1; transform:none; } }
+@media(prefers-reduced-motion:reduce) { .login-brand-panel::after,.app-main [role=dialog] { animation:none; } }
+@media(max-width:640px) { .auth-card { padding:20px; border-radius:18px; } }

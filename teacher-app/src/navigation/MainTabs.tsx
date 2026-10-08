@@ -1,3 +1,4 @@
+import { useReducedMotion } from "../hooks/useReducedMotion";
 import { StyleSheet, Text, View } from "react-native";
 import { Pressable } from "../components/Pressable";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
@@ -103,7 +104,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
           <Pressable
             key={route.key}
             onPress={() => navigation.navigate(route.name)}
-            style={styles.item}
+            style={[styles.item, {backgroundColor:isFocused ? colors.purpleSoft : "transparent",borderRadius:16,marginHorizontal:3}]}
           >
             <Ionicons
               name={isFocused ? config.iconFocused : config.icon}
@@ -119,12 +120,13 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 }
 
 export function MainTabs() {
+  const reducedMotion = useReducedMotion();
   const { user } = useAuth();
   return (
     <Tab.Navigator
       initialRouteName={user?.role === "organization_staff" ? "IdCards" : "Home"}
       tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{ headerShown: false, animation: reducedMotion ? "none" : "fade" }}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Template" component={TemplateScreen} />

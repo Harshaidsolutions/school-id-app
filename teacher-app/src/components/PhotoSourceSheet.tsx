@@ -1,4 +1,5 @@
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./Pressable";
+import { ActivityIndicator, Modal, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { TeacherStudent } from "../types";
 import { radius, spacing } from "../theme/colors";

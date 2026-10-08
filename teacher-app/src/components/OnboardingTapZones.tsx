@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./Pressable";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scale } from "../theme/responsive";
 

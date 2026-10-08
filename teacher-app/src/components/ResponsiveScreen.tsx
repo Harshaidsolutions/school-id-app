@@ -1,3 +1,4 @@
+import { useTheme } from "../theme/ThemeContext";
 import type { ReactNode } from "react";
 import {
   KeyboardAvoidingView,
@@ -39,6 +40,7 @@ export function ResponsiveScreen({
   centerContent = false,
   scrollProps,
 }: Props) {
+  const { colors } = useTheme();
   const { pagePad } = useResponsiveLayout();
 
   const body = scroll ? (
@@ -71,7 +73,7 @@ export function ResponsiveScreen({
   );
 
   return (
-    <SafeAreaView style={[styles.flex, style]} edges={edges}>
+    <SafeAreaView style={[styles.flex, {backgroundColor:colors.background}, style]} edges={edges}>
       {wrapped}
     </SafeAreaView>
   );

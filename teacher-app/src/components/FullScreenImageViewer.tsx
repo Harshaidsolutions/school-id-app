@@ -1,9 +1,9 @@
+import { Pressable } from "./Pressable";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Image,
   Modal,
-  Pressable,
   StyleSheet,
   Text,
   View,

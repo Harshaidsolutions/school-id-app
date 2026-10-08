@@ -46,9 +46,10 @@ const styles = StyleSheet.create({
     ...textStyles.h2,
   },
   rule: {
-    height: scale(1.5),
+    height: scale(3),
+    width: scale(34),
     backgroundColor: colors.primaryOrange,
-    opacity: 0.55,
+    opacity: 0.75,
     borderRadius: scale(1),
     marginBottom: spacing.xxs,
   },

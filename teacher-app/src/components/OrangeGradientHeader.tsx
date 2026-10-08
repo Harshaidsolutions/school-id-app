@@ -52,9 +52,12 @@ export function OrangeGradientHeader({
         style,
       ]}
     >
+      <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{position:"absolute",right:-25,top:-35,width:160,height:160,borderRadius:80,borderWidth:24,borderColor:"rgba(255,255,255,0.08)"}} />
       <View style={styles.row}>
         {onBack ? (
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Back"
             onPress={onBack}
             style={[styles.iconBtn, { width: iconSize, height: iconSize, borderRadius: iconSize / 2 }]}
             hitSlop={scaledHitSlop}
@@ -86,6 +89,8 @@ export function OrangeGradientHeader({
         </View>
         {rightIcon ? (
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="More options"
             onPress={onRightPress}
             style={[styles.iconBtn, { width: iconSize, height: iconSize, borderRadius: iconSize / 2 }]}
             hitSlop={scaledHitSlop}
@@ -102,6 +107,7 @@ export function OrangeGradientHeader({
 
 const styles = StyleSheet.create({
   container: {
+    overflow: "hidden",
     paddingBottom: moderateScale(18),
     justifyContent: "center",
     borderBottomLeftRadius: radius.xl,
@@ -118,6 +124,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
   },
   iconSlot: {
     alignItems: "center",

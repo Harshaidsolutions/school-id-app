@@ -1,3 +1,4 @@
+import { Pressable } from "../components/Pressable";
 import { API_BASE_URL } from "../api/client";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -5,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Linking,
   Platform,
-  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -159,7 +159,7 @@ export function LoginScreen(_props: Props) {
 
             <View style={styles.formGroup}>
               <View style={styles.formRow}>
-                <Ionicons name="person-outline" size={18} color="#9CA3AF" />
+                <Ionicons name="person-outline" size={18} color="#7A83A0" />
                 <TextInput
                   style={styles.input}
                   placeholder="Username"
@@ -173,7 +173,7 @@ export function LoginScreen(_props: Props) {
               </View>
               <View style={styles.formDivider} />
               <View style={styles.formRow}>
-                <Ionicons name="lock-closed-outline" size={18} color="#9CA3AF" />
+                <Ionicons name="lock-closed-outline" size={18} color="#7A83A0" />
                 <TextInput
                   style={styles.input}
                   placeholder="Password"
@@ -186,7 +186,7 @@ export function LoginScreen(_props: Props) {
                   <Ionicons
                     name={showPassword ? "eye-off-outline" : "eye-outline"}
                     size={20}
-                    color="#9CA3AF"
+                    color="#7A83A0"
                   />
                 </Pressable>
               </View>
@@ -220,12 +220,12 @@ export function LoginScreen(_props: Props) {
             </View>
 
             <Pressable style={styles.contactRow} onPress={openWebsite}>
-              <Ionicons name="globe-outline" size={18} color="#F5811F" />
+              <Ionicons name="globe-outline" size={18} color="#D66A32" />
               <Text style={styles.contactText}>www.harshaidsolutions.in</Text>
             </Pressable>
 
             <Pressable style={styles.contactRow} onPress={openMail}>
-              <Ionicons name="mail" size={18} color="#F5811F" />
+              <Ionicons name="mail" size={18} color="#D66A32" />
               <Text style={styles.contactText}>{SUPPORT_EMAIL}</Text>
             </Pressable>
           </ScrollView>
@@ -237,7 +237,7 @@ export function LoginScreen(_props: Props) {
 
 function useLoginStyles() {
   return useResponsiveStyles(({ wp, scale }) => {
-    const formW = wp(92);
+    const formW = Math.min(wp(90), 440);
     return {
       safe: { flex: 1, backgroundColor: LOGIN_BG },
       flex: { flex: 1 },
@@ -250,24 +250,26 @@ function useLoginStyles() {
       },
       title: {
         marginTop: spacing.sm,
-        fontSize: scale(28),
+        fontSize: scale(25),
         fontFamily: fonts.headingBold,
         textAlign: "center",
-        color: "#4CAF50",
+        color: "#168B86",
       },
       subtitle: {
         marginTop: scale(4),
         marginBottom: spacing.md,
         fontFamily: fonts.body,
         fontSize: typeScale.subtitle,
-        color: "#8A8F98",
+        color: "#6C718D",
         textAlign: "center",
       },
       formGroup: {
         width: formW,
         alignSelf: "center",
         backgroundColor: "#FFFFFF",
-        borderRadius: radius.lg,
+        borderRadius: radius.card,
+        borderWidth: 1,
+        borderColor: "#DFE3F2",
         marginBottom: spacing.sm,
         overflow: "hidden",
         ...cardShadow,
@@ -281,13 +283,13 @@ function useLoginStyles() {
       },
       formDivider: {
         height: 1,
-        backgroundColor: "#9CA3AF",
+        backgroundColor: "#E3E7F3",
         marginHorizontal: spacing.md,
       },
       input: {
         flex: 1,
         ...textStyles.input,
-        color: "#2C2C2C",
+        color: "#50548D",
         paddingVertical: Platform.OS === "ios" ? spacing.sm : spacing.xs,
       },
       error: {
@@ -301,14 +303,14 @@ function useLoginStyles() {
       loginBtn: {
         width: formW,
         alignSelf: "center",
-        backgroundColor: "#F5811F",
-        borderRadius: radius.buttonPill,
+        backgroundColor: "#7066C6",
+        borderRadius: radius.lg,
         minHeight: scale(50),
         alignItems: "center",
         justifyContent: "center",
         marginTop: spacing.xs,
         elevation: 2,
-        shadowColor: "#F5811F",
+        shadowColor: "#D66A32",
         shadowOpacity: 0.25,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 2 },
@@ -322,7 +324,7 @@ function useLoginStyles() {
         textAlign: "center",
         fontFamily: fonts.body,
         fontSize: typeScale.subtitle,
-        color: "#4CAF50",
+        color: "#168B86",
         marginTop: spacing.md,
         marginBottom: spacing.sm,
         width: formW,
@@ -351,7 +353,7 @@ function useLoginStyles() {
         gap: spacing.xs,
         paddingVertical: spacing.sm,
         borderRadius: radius.buttonPill,
-        backgroundColor: "#F5811F",
+        backgroundColor: "#D66A32",
       },
       contactBtnText: {
         fontFamily: fonts.headingSemiBold,
@@ -369,7 +371,7 @@ function useLoginStyles() {
       contactText: {
         fontFamily: fonts.body,
         fontSize: typeScale.subtitle,
-        color: "#2C2C2C",
+        color: "#50548D",
       },
     };
   });

@@ -1,10 +1,9 @@
+import { Pressable } from "../components/Pressable";
 import {
 
   Linking,
 
   Modal,
-
-  Pressable,
 
   ScrollView,
 

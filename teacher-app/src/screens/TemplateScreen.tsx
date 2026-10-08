@@ -1,9 +1,9 @@
+import { Pressable } from "../components/Pressable";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Image,
   Modal,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,

@@ -1,8 +1,8 @@
+import { Pressable } from "./Pressable";
 import {
   FlatList,
   Modal,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,

@@ -1,10 +1,10 @@
+import { Pressable } from "../components/Pressable";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,

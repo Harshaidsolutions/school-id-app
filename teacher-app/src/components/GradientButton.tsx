@@ -54,8 +54,8 @@ export function GradientButton({
       : variant === "orange"
         ? ([...orangeButtonGradient] as const)
         : variant === "sunset"
-          ? (["#FFC107", "#FF9800", "#43A047"] as const)
-          : (["#66BB6A", "#43A047", "#2E7D32"] as const);
+          ? (["#FFC107", "#FF9800", "#18847E"] as const)
+          : (["#66BB6A", "#18847E", "#2E7D32"] as const);
 
   return (
     <Pressable

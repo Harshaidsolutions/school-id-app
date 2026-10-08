@@ -1,4 +1,5 @@
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./Pressable";
+import { Modal, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type { AppColors } from "../theme/palettes";
 import { radius, spacing, submitGradient } from "../theme/colors";

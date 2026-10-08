@@ -1,4 +1,5 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "../components/Pressable";
+import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 

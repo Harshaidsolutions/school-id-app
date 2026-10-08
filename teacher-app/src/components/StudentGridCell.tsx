@@ -1,5 +1,6 @@
+import { Pressable } from "./Pressable";
 import { memo } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { TeacherStudent } from "../types";
 import { formatCapturedAt } from "../utils/recordStatus";

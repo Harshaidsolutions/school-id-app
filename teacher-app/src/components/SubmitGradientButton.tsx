@@ -1,6 +1,6 @@
+import { Pressable } from "./Pressable";
 import {
   ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   View,

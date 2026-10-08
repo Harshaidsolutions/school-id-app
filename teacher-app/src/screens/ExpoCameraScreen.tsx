@@ -1,7 +1,7 @@
+import { Pressable } from "../components/Pressable";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
-  Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,

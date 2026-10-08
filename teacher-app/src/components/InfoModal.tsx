@@ -1,6 +1,6 @@
+import { Pressable } from "./Pressable";
 import {
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,

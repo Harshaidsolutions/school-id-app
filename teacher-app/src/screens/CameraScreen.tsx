@@ -1,9 +1,9 @@
+import { Pressable } from "../components/Pressable";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
-  Pressable,
   StyleSheet,
   Text,
   View,

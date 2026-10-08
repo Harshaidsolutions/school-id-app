@@ -1,9 +1,9 @@
+import { Pressable } from "../components/Pressable";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Image,
   Linking,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -593,7 +593,7 @@ function useModelsStyles() {
   },
   tagPreviewImage: {
     height: hp(52),
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#F1F3FA",
   },
   tabsWrap: {
     paddingHorizontal: spacing.md,

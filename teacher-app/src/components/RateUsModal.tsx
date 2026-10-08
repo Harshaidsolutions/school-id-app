@@ -1,8 +1,8 @@
+import { Pressable } from "./Pressable";
 import { useState } from "react";
 import {
   Linking,
   Modal,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,

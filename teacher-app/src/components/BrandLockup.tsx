@@ -101,9 +101,9 @@ export function BrandLockup({
         ? { mascot: wp(16, screenW), harsha: 22, solutions: 13, tag: 11, gap: 0 }
         : { mascot: wp(28, screenW), harsha: 44, solutions: 24, tag: 14, gap: 0 };
 
-  const hColor = harshaColor ?? (variant === "splash" ? "#FFFFFF" : "#F5811F");
-  const sColor = solutionsColor ?? (variant === "splash" ? "#FFFFFF" : "#4CAF50");
-  const tColor = taglineColor ?? (variant === "splash" ? "rgba(255,255,255,0.9)" : "#8A8F98");
+  const hColor = harshaColor ?? (variant === "splash" ? "#FFFFFF" : "#D66A32");
+  const sColor = solutionsColor ?? (variant === "splash" ? "#FFFFFF" : "#168B86");
+  const tColor = taglineColor ?? (variant === "splash" ? "rgba(255,255,255,0.9)" : "#6C718D");
 
   const harshaStyle: TextStyle = {
     fontFamily: fonts.headingExtraBold,

@@ -1,5 +1,6 @@
+import { Pressable } from "./Pressable";
 import type { ReactNode } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { FormFieldConfig } from "../constants/formFields";
 import { sortFormFields } from "../constants/formFields";

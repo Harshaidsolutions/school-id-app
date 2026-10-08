@@ -1,6 +1,6 @@
+import { Pressable } from "../components/Pressable";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,

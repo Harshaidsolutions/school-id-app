@@ -1,3 +1,4 @@
+import { useReducedMotion } from "../hooks/useReducedMotion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DefaultTheme,
@@ -40,6 +41,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 export function RootNavigator() {
+  const reducedMotion = useReducedMotion();
   const { isAuthenticated, bootstrapping, instructionsDone, user } = useAuth();
   const { colors, isDark } = useTheme();
   const pushEnabled = isAuthenticated && instructionsDone;
@@ -114,6 +116,8 @@ export function RootNavigator() {
           key={`auth-${authInitialRoute}`}
           initialRouteName={authInitialRoute}
           screenOptions={{
+            animation: reducedMotion ? "none" : "fade_from_bottom",
+            animationDuration: 220,
             headerShown: false,
             contentStyle: { backgroundColor: colors.background },
           }}
@@ -126,6 +130,8 @@ export function RootNavigator() {
           key="app-instructions"
           initialRouteName="Instructions"
           screenOptions={{
+            animation: reducedMotion ? "none" : "fade_from_bottom",
+            animationDuration: 220,
             headerShown: false,
             contentStyle: { backgroundColor: colors.background },
           }}
@@ -141,6 +147,8 @@ export function RootNavigator() {
           key="app-main"
           initialRouteName="MainTabs"
           screenOptions={{
+            animation: reducedMotion ? "none" : "fade_from_bottom",
+            animationDuration: 220,
             headerTintColor: colors.royalGreen,
             headerTitleStyle: {
               fontFamily: fonts.bold,
@@ -155,7 +163,7 @@ export function RootNavigator() {
             options={{
               headerShown: false,
               presentation: "transparentModal",
-              animation: "slide_from_left",
+              animation: reducedMotion ? "none" : "slide_from_left",
               contentStyle: { backgroundColor: "transparent" },
             }}
           />
