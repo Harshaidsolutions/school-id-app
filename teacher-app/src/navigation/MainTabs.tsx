@@ -139,6 +139,9 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     borderTopWidth: 1,
+    borderTopLeftRadius:24,
+    borderTopRightRadius:24,
+    paddingHorizontal:8,
     paddingTop: moderateScale(8),
     alignItems: "flex-end",
   },

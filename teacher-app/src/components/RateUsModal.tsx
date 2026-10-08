@@ -110,7 +110,7 @@ export function RateUsModal({ visible, onClose }: Props) {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(75,60,112,0.45)",
     justifyContent: "center",
     padding: spacing.lg,
   },

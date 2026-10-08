@@ -5,74 +5,74 @@ import { scale as s } from "./responsive";
 
 export const colors = {
   // Brand
-  primaryOrange: "#F5811F",
-  warmOrange: "#FF8C1A",
+  primaryOrange: "#D66A32",
+  warmOrange: "#ED8650",
   yellow: "#FACC15",
   softYellow: "#FEF3C7",
-  green: "#4CAF50",
-  successGreen: "#4CAF50",
-  submitGreen: "#6FCF57",
+  green: "#168B86",
+  successGreen: "#168B86",
+  submitGreen: "#25A59C",
   softGreen: "rgba(76,175,80,0.12)",
-  blue: "#2196F3",
+  blue: "#487DCA",
   softBlue: "rgba(33,150,243,0.12)",
-  purple: "#9C27B0",
+  purple: "#8A64C7",
   softPurple: "rgba(156,39,176,0.12)",
-  pink: "#E91E63",
+  pink: "#C95E8C",
   softPink: "rgba(233,30,99,0.12)",
 
-  background: "#FAF8F5",
+  background: "#F5F6FC",
   surface: "#FFFFFF",
-  text: "#45468C",
-  textPrimary: "#45468C",
-  textSecondary: "#8A8F98",
-  textBody: "#485989",
-  textPlaceholder: "#B0B4BA",
-  border: "#F0F0F0",
+  text: "#50548D",
+  textPrimary: "#50548D",
+  textSecondary: "#6C718D",
+  textBody: "#566482",
+  textPlaceholder: "#787F99",
+  border: "#DFE4F1",
 
   // Header / gradients
-  headerOrangeStart: "#FF8C1A",
-  headerOrangeMid: "#F5811F",
-  headerYellowEnd: "#F5811F",
+  headerOrangeStart: "#7370D5",
+  headerOrangeMid: "#548FC5",
+  headerYellowEnd: "#D66A32",
 
-  brandOrange: "#F5811F",
-  brandOrangeLight: "#FF8C1A",
-  brandGreen: "#4CAF50",
-  brandGreenLight: "#6FCF57",
-  brandGreenDark: "#388E3C",
-  brandGreenDeep: "#2E7D32",
-  brandNavy: "#45468C",
-  brandBlue: "#2196F3",
+  brandOrange: "#D66A32",
+  brandOrangeLight: "#ED8650",
+  brandGreen: "#168B86",
+  brandGreenLight: "#25A59C",
+  brandGreenDark: "#167D79",
+  brandGreenDeep: "#126A68",
+  brandNavy: "#50548D",
+  brandBlue: "#487DCA",
 
-  splashGreen: "#4CAF50",
-  splashGreenLight: "#6FCF57",
+  splashGreen: "#168B86",
+  splashGreenLight: "#25A59C",
   splashGreenPale: "rgba(76,175,80,0.12)",
-  splashOrange: "#F5811F",
+  splashOrange: "#D66A32",
   splashOrangeDeep: "#E06B10",
   splashYellow: "#FACC15",
 
-  gradientStart: "#FF8C1A",
-  gradientMid: "#F5811F",
-  gradientEnd: "#6FCF57",
+  gradientStart: "#ED8650",
+  gradientMid: "#D66A32",
+  gradientEnd: "#25A59C",
 
-  royalGreen: "#4CAF50",
-  parrotGreen: "#6FCF57",
+  royalGreen: "#168B86",
+  parrotGreen: "#25A59C",
 
   orangeDark: "#E06B10",
   orangeDeep: "#C45A12",
-  offerOrange: "#F5811F",
-  tabActive: "#F5811F",
+  offerOrange: "#D66A32",
+  tabActive: "#D66A32",
 
   whatsappGreen: "#25D366",
 
   white: "#FFFFFF",
-  surfaceMuted: "#FAF8F5",
+  surfaceMuted: "#F5F6FC",
   inputBg: "#FFFFFF",
-  borderLight: "#F0F0F0",
-  track: "#F0F0F0",
+  borderLight: "#DFE4F1",
+  track: "#DFE4F1",
 
-  textMuted: "#8A8F98",
-  textSubtle: "#B0B4BA",
-  textNav: "#45468C",
+  textMuted: "#6C718D",
+  textSubtle: "#787F99",
+  textNav: "#50548D",
 
   classIconYellow: "#FEF3C7",
   classIconOrange: "rgba(245,129,31,0.12)",
@@ -95,26 +95,26 @@ export const colors = {
   chipPurple: "rgba(156,39,176,0.12)",
   chipPink: "rgba(233,30,99,0.12)",
 
-  statusCaptured: "#4CAF50",
+  statusCaptured: "#168B86",
   statusCapturedBg: "rgba(76,175,80,0.12)",
-  statusPending: "#F5811F",
+  statusPending: "#D66A32",
   statusPendingBg: "rgba(245,129,31,0.12)",
 
-  progressRingGreen: "#4CAF50",
-  progressRingOrange: "#F5811F",
+  progressRingGreen: "#168B86",
+  progressRingOrange: "#D66A32",
 
   danger: "#EF4444",
   dangerSoft: "#FEE2E2",
   dangerBorder: "#FECACA",
 
-  darkBlue: "#45468C",
-  cameraBg: "#3D2817",
-  overlay: "rgba(26,34,51,0.45)",
-  overlayHeavy: "rgba(26,34,51,0.6)",
+  darkBlue: "#50548D",
+  cameraBg: "#56477A",
+  overlay: "rgba(79,65,119,0.40)",
+  overlayHeavy: "rgba(79,65,119,0.60)",
 
   tabInactive: "#9CA3AF",
   tabBarBg: "#FFFFFF",
-  sectionOrange: "#F5811F",
+  sectionOrange: "#D66A32",
 } as const;
 
 /** ID Cards header — same green as Home "ID Solutions" text. */
@@ -123,7 +123,7 @@ export const idCardsHeaderGradient = [
   colors.brandGreenLight,
 ] as const;
 
-/** Primary header: 135deg #FF8C1A → #F5811F */
+/** Primary header: 135deg #ED8650 → #D66A32 */
 export const headerGradient = [
   colors.headerOrangeStart,
   colors.headerOrangeMid,
@@ -145,7 +145,7 @@ export const orangeButtonGradient = [
   colors.primaryOrange,
 ] as const;
 
-/** Submit CTA: #F5811F → #6FCF57 */
+/** Submit CTA: #D66A32 → #25A59C */
 export const submitGradient = [
   colors.primaryOrange,
   colors.submitGreen,
@@ -173,9 +173,9 @@ export const spacing = {
   lg: s(20),
   xl: s(24),
   xxl: s(24),
-  pagePad: s(16),
-  cardGap: s(8),
-  sectionGap: s(16),
+  pagePad: s(20),
+  cardGap: s(12),
+  sectionGap: s(24),
   fieldGap: s(12),
   labelGap: s(8),
   iconTextGap: s(14),
@@ -201,7 +201,7 @@ export const radius = {
   md: s(14),
   lg: s(16),
   xl: s(24),
-  card: s(16),
+  card: s(22),
   chip: s(12),
   buttonPill: s(25),
   full: 999,
@@ -210,8 +210,8 @@ export const radius = {
 /** Card: soft shadow preferred over heavy border */
 export const cardShadow = {
   elevation: 2,
-  shadowColor: "#000000",
-  shadowOpacity: 0.04,
+  shadowColor: "#7775B8",
+  shadowOpacity: 0.10,
   shadowRadius: s(8),
   shadowOffset: { width: 0, height: s(2) },
 } as const;

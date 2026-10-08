@@ -498,7 +498,7 @@ export function FullScreenImageViewer({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#000000" },
+  root: { flex: 1, backgroundColor: "#65568D" },
   header: {
     flexDirection: "row",
     alignItems: "center",

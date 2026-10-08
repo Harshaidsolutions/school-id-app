@@ -1249,3 +1249,35 @@ body,.app-shell,.app-main { background:#f7f8ff; color:#42518a; }
 .detail-toolbar-row2-search { flex:1 1 180px; width:auto; min-width:170px; }
 .app-sidebar .logo-swing { padding:0; }
 @media(prefers-reduced-motion:reduce) { .app-sidebar .logo-swing img { animation:none; } }
+.detail-toolbar-row2-search { flex:0 0 270px; width:270px; min-width:270px; flex-wrap:nowrap; }
+
+/* Shared light interface: violet, sky and teal, with coloured text throughout. */
+@theme {
+ --color-text:#515B89; --color-text-navy:#50518C; --color-text-muted:#6C7694;
+ --color-button-blue:#6864CA; --color-button-blue-hover:#5953B6;
+ --color-content-bg:#F5F6FC; --color-border:#DFE4F2; --color-heading-accent:#6055A6;
+ --color-dark-blue:#6864CA;
+}
+.app-shell { background:radial-gradient(ellipse at top right,#EAF5FA,transparent 55%),#F5F6FC; color:#515B89; }
+.app-header { background:linear-gradient(110deg,#FFFFFF,#F0F0FE 65%,#EBF7FA); border-color:#E1E4F4; min-height:66px; }
+.app-header-title { color:#565391; font-size:18px; letter-spacing:-.025em; font-weight:650; }
+.app-sidebar { background:linear-gradient(165deg,#7270CC,#638EC0 65%,#5C9BAE); border-right:1px solid #FFFFFF60; }
+.app-sidebar a { transition:background .2s,transform .2s; }
+.app-sidebar a:hover { transform:translateX(3px); }
+.card { border:1px solid #E1E5F2; border-radius:18px; box-shadow:0 5px 20px #6D72AF08; }
+.btn-primary { background:linear-gradient(120deg,#7564CB,#5D87C8); border-radius:12px; box-shadow:0 4px 12px #7465C725; font-size:13px; }
+.btn-primary:hover { background:linear-gradient(120deg,#6755BB,#4D78B8); }
+.btn-secondary { color:#6662A6; border-color:#DBDDF0; border-radius:12px; font-size:13px; }
+.btn-primary,.btn-secondary { transition:transform .18s,background .18s,box-shadow .18s; }
+.btn-primary:active,.btn-secondary:active { transform:scale(.98); }
+.input-field { border-color:#DDE2F0; border-radius:11px; background:#FCFCFF; color:#515B89; }
+.input-field:focus { border-color:#9A94D5; box-shadow:0 0 0 3px #8374CA12; }
+.detail-toolbar-shell { background:linear-gradient(110deg,#FFFFFF,#F5F4FE); border:1px solid #E4E3F4; border-radius:16px; padding:12px; }
+.detail-toolbar-btn { border-radius:11px; background:#FFFFFF; border-color:#DFE1F0; color:#626198; }
+.detail-toolbar-status-tab-active { color:#6155AF; background:#EAE7FC; border-radius:8px; }
+thead { background:#EEEDFA; color:#605A91; }
+tbody tr { transition:background .18s; } tbody tr:hover { background:#F6F5FD; }
+.app-page,.detail-page-content { animation:page-arrive .28s ease-out; }
+@keyframes page-arrive { from { opacity:.3; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+@media(prefers-reduced-motion:reduce) { .app-page,.detail-page-content { animation:none; } .app-sidebar a,.btn-primary,.btn-secondary,tbody tr { transition:none; } .app-sidebar a:hover,.btn-primary:active,.btn-secondary:active { transform:none; } }
+@media(max-width:640px) { .app-header { gap:8px; padding-inline:12px; }.app-header-title { font-size:16px; }.header-back { font-size:11px; padding-inline:4px; } }

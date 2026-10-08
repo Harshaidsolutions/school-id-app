@@ -3,145 +3,36 @@
  * Brand orange/green accents stay consistent in both modes.
  */
 
-export const lightPalette = {
-  primaryOrange: "#F5811F",
-  warmOrange: "#FF8C1A",
-  yellow: "#FACC15",
-  softYellow: "#FEF3C7",
-  green: "#4CAF50",
-  successGreen: "#4CAF50",
-  submitGreen: "#6FCF57",
-  softGreen: "rgba(76,175,80,0.12)",
-  blue: "#2196F3",
-  softBlue: "rgba(33,150,243,0.12)",
-  purple: "#9C27B0",
-  softPurple: "rgba(156,39,176,0.12)",
-  pink: "#E91E63",
-  softPink: "rgba(233,30,99,0.12)",
-
-  background: "#FAF8F5",
-  surface: "#FFFFFF",
-  text: "#45468C",
-  textPrimary: "#45468C",
-  textSecondary: "#8A8F98",
-  textBody: "#485989",
-  textPlaceholder: "#B0B4BA",
-  border: "#F0F0F0",
-
-  headerOrangeStart: "#FF8C1A",
-  headerOrangeMid: "#F5811F",
-  headerYellowEnd: "#F5811F",
-
-  brandOrange: "#F5811F",
-  brandOrangeLight: "#FF8C1A",
-  brandGreen: "#4CAF50",
-  brandGreenLight: "#6FCF57",
-  brandGreenDark: "#388E3C",
-  brandGreenDeep: "#2E7D32",
-  brandNavy: "#45468C",
-  brandBlue: "#2196F3",
-
-  splashGreen: "#4CAF50",
-  splashGreenLight: "#6FCF57",
-  splashGreenPale: "rgba(76,175,80,0.12)",
-  splashOrange: "#F5811F",
-  splashOrangeDeep: "#E06B10",
-  splashYellow: "#FACC15",
-
-  gradientStart: "#FF8C1A",
-  gradientMid: "#F5811F",
-  gradientEnd: "#6FCF57",
-
-  royalGreen: "#4CAF50",
-  parrotGreen: "#6FCF57",
-
-  orangeDark: "#E06B10",
-  orangeDeep: "#C45A12",
-  offerOrange: "#F5811F",
-  tabActive: "#F5811F",
-
-  whatsappGreen: "#25D366",
-
-  white: "#FFFFFF",
-  surfaceMuted: "#FAF8F5",
-  inputBg: "#FFFFFF",
-  borderLight: "#F0F0F0",
-  track: "#F0F0F0",
-
-  textMuted: "#8A8F98",
-  textSubtle: "#B0B4BA",
-  textNav: "#45468C",
-
-  classIconYellow: "#FEF3C7",
-  classIconOrange: "rgba(245,129,31,0.12)",
-  classIconGreen: "rgba(76,175,80,0.12)",
-  classIconBlue: "rgba(33,150,243,0.12)",
-  classIconPurple: "rgba(156,39,176,0.12)",
-
-  yellowSoft: "#FEF3C7",
-  greenSoft: "rgba(76,175,80,0.12)",
-  orangeSoft: "rgba(245,129,31,0.12)",
-  blueSoft: "rgba(33,150,243,0.12)",
-  purpleSoft: "rgba(156,39,176,0.12)",
-  pinkSoft: "rgba(233,30,99,0.12)",
-  graySoft: "#F5F5F5",
-
-  chipYellow: "#FEF3C7",
-  chipGreen: "rgba(76,175,80,0.12)",
-  chipOrange: "rgba(245,129,31,0.12)",
-  chipBlue: "rgba(33,150,243,0.12)",
-  chipPurple: "rgba(156,39,176,0.12)",
-  chipPink: "rgba(233,30,99,0.12)",
-
-  statusCaptured: "#4CAF50",
-  statusCapturedBg: "rgba(76,175,80,0.12)",
-  statusPending: "#F5811F",
-  statusPendingBg: "rgba(245,129,31,0.12)",
-
-  progressRingGreen: "#4CAF50",
-  progressRingOrange: "#F5811F",
-
-  danger: "#EF4444",
-  dangerSoft: "#FEE2E2",
-  dangerBorder: "#FECACA",
-
-  darkBlue: "#45468C",
-  cameraBg: "#3D2817",
-  overlay: "rgba(26,34,51,0.45)",
-  overlayHeavy: "rgba(26,34,51,0.6)",
-
-  tabInactive: "#9CA3AF",
-  tabBarBg: "#FFFFFF",
-  sectionOrange: "#F5811F",
-} as const;
+import { colors } from "./colors";
+export const lightPalette = colors;
 
 export type LightPalette = typeof lightPalette;
 export type AppColors = { [K in keyof LightPalette]: string };
 
 export const darkPalette: AppColors = {
   ...lightPalette,
-  background: "#1A2233",
-  surface: "#243044",
-  surfaceMuted: "#1A2233",
-  inputBg: "#2C3A4F",
+  background: "#51457B",
+  surface: "#63568F",
+  surfaceMuted: "#51457B",
+  inputBg: "#6A6097",
   text: "#F5F5F5",
   textPrimary: "#F5F5F5",
-  textSecondary: "#A8ADB7",
-  textBody: "#C4C8D0",
-  textPlaceholder: "#7A7F88",
-  textMuted: "#A8ADB7",
-  textSubtle: "#7A7F88",
+  textSecondary: "#E0DAF5",
+  textBody: "#EAE6F8",
+  textPlaceholder: "#DDD7F0",
+  textMuted: "#E0DAF5",
+  textSubtle: "#DDD7F0",
   textNav: "#F5F5F5",
-  border: "#334155",
-  borderLight: "#334155",
-  track: "#334155",
+  border: "#887DB2",
+  borderLight: "#887DB2",
+  track: "#887DB2",
   // Keep true white for icons/text on orange headers; cards use `surface`
   white: "#FFFFFF",
-  graySoft: "#2C3A4F",
-  tabBarBg: "#243044",
+  graySoft: "#6A6097",
+  tabBarBg: "#63568F",
   tabInactive: "#8A8F98",
-  overlay: "rgba(26,34,51,0.55)",
-  overlayHeavy: "rgba(26,34,51,0.7)",
+  overlay: "rgba(68,46,112,0.55)",
+  overlayHeavy: "rgba(68,46,112,0.7)",
   softYellow: "rgba(250,204,21,0.15)",
   yellowSoft: "rgba(250,204,21,0.15)",
   orangeSoft: "rgba(245,129,31,0.18)",

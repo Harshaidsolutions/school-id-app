@@ -484,7 +484,7 @@ function useIdCardsStyles() {
         borderRadius: radius.md,
         paddingVertical: spacing.xxs + 2,
         elevation: 6,
-        shadowColor: "#1A2233",
+        shadowColor: "#7267A0",
         shadowOpacity: 0.2,
         shadowRadius: 8,
         shadowOffset: { width: 0, height: 4 },

@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: fonts.bold,
     fontSize: typeScale.lg,
-    textShadowColor: "rgba(0,0,0,0.75)",
+    textShadowColor: "rgba(75,60,112,0.75)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     fontSize: typeScale.subtitle,
   },
   iconBtn: {
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(75,60,112,0.55)",
     width: spacing.chipSize,
     height: spacing.chipSize,
     borderRadius: spacing.chipSize / 2,
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: "rgba(75,60,112,0.35)",
   },
   shutterInner: {
     width: moderateScale(58),
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: "rgba(75,60,112,0.35)",
   },
   error: {
     color: "#FFCDD2",

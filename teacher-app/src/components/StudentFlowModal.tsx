@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
   },
   fullscreenBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.92)",
+    backgroundColor: "rgba(75,60,112,0.92)",
     alignItems: "center",
     justifyContent: "center",
     padding: spacing.md,

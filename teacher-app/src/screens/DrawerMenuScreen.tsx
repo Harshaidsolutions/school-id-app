@@ -392,7 +392,7 @@ function useDrawerMenuStyles() {
     panel: {
       height: "100%",
       elevation: 16,
-      shadowColor: "#1A2233",
+      shadowColor: "#7267A0",
       shadowOpacity: 0.25,
       shadowRadius: 16,
       shadowOffset: { width: 4, height: 0 },

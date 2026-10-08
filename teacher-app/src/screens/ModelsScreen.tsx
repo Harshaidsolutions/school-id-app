@@ -544,7 +544,7 @@ function useModelsStyles() {
     borderRadius: radius.lg,
     overflow: "hidden",
     elevation: 2,
-    shadowColor: "#000",
+    shadowColor: "#65568D",
     shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
