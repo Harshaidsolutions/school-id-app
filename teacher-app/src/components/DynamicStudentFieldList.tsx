@@ -224,7 +224,7 @@ export function DynamicStudentFieldList({
   const ordered = dedupeFormFields(formFields);
   const configuredIdentityLabel =
     ordered.find((field) => field.key === "photo_id" || isIdentityAliasLabel(field.label))?.label ||
-    "ID";
+    "Photo Number";
   const configuredNameLabel =
     ordered.find((field) => effectiveKind(field) === "student_name")?.label || "Name";
   const primaryParentKey = ordered.find((field) => effectiveKind(field) === "parent_name")?.key;
@@ -286,11 +286,7 @@ export function DynamicStudentFieldList({
           field.key !== "photo_id" &&
           !isIdentityAliasLabel(field.label)
         ) {
-          return (
-            <Field key={field.key} label={label} colors={colors}>
-              <Text style={{ color: colors.textMuted, fontSize: 13 }}>Use the photo above.</Text>
-            </Field>
-          );
+          return null;
         }
         if (lockIdentityFields && isIdentityAliasLabel(field.label)) {
           return null;

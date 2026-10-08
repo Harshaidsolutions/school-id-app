@@ -281,7 +281,7 @@ export function DrawerMenuScreen({ navigation }: Props) {
             },
           ]}
         >
-          <View style={styles.headerLogoWrap}>
+          <View style={{...styles.headerLogoWrap, width: drawerLogoSize * 1.5, height: drawerLogoSize * 1.5, borderRadius: drawerLogoSize * .75}}>
             <AppIcon size={drawerLogoSize} variant="default" />
           </View>
         </LinearGradient>
@@ -411,7 +411,7 @@ function useDrawerMenuStyles() {
       borderRadius:10,
       paddingVertical:3,
       flexShrink: 0,
-      alignItems: "flex-start",
+      alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: spacing.xxs,
       minWidth: scale(36),

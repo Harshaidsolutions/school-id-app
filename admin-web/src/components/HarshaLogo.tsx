@@ -16,7 +16,7 @@ export function HarshaLogo({ compact = false, className = "", src="/harsha-logo-
         alt={alt}
         className={
           compact
-            ? "h-[64px] w-[100px] max-w-full object-contain"
+            ? "h-[88px] w-[124px] max-w-full object-contain"
             : "h-auto w-full max-w-[min(100%,380px)] object-contain"
         }
       />

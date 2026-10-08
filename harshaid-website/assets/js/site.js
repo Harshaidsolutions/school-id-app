@@ -24,7 +24,7 @@
   document.querySelector("[data-header]").innerHTML = `
     <a class="skip" href="#main">Skip to content</a>
     <header class="header">
-      <div class="wrap header-inner">
+      <div class="wrap header-inner"><a class="site-brand" href="/" aria-label="Harsha ID Solutions home"><img src="/assets/images/harsha-official-logo.png" alt="Harsha ID Solutions"/></a>
         <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="nav">Menu</button>
         <nav class="nav" id="nav">
           ${links
@@ -92,10 +92,31 @@
         <article class="product-card">
           <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy" />
           <h3>${escapeHtml(product.name)}</h3>
+          <a class="button book-product" target="_blank" rel="noopener noreferrer" href="${escapeHtml(site.whatsapp + '?text=' + encodeURIComponent('Hello, I would like to order ' + product.name + '. Please share the price and availability.\nProduct image: ' + new URL(product.image, location.origin).href))}">Book Now ↗</a>
+          <button class="share-product" type="button" data-product="${escapeHtml(product.name)}">Share product image</button>
         </article>`
       )
       .join("");
   }
+
+  productsRoot?.querySelectorAll(".share-product").forEach(button => {
+    button.addEventListener("click", async () => {
+      const product = site.products.find(item => item.name === button.dataset.product);
+      if (!product) return;
+      button.disabled = true;
+      try {
+        const response = await fetch(product.image);
+        if (!response.ok) throw new Error("Image unavailable");
+        const blob = await response.blob();
+        const file = new File([blob], product.name.replace(/[^a-z0-9]/gi, "-") + (blob.type === "image/png" ? ".png" : ".jpg"), {type: blob.type});
+        const data = {files: [file], title: product.name, text: "Hello, I would like to order " + product.name + ". Please share the price and availability."};
+        if (navigator.canShare?.({files:[file]})) await navigator.share(data);
+        else window.open(site.whatsapp + "?text=" + encodeURIComponent(data.text + "\nProduct image: " + new URL(product.image, location.origin).href), "_blank", "noopener,noreferrer");
+      } catch (error) {
+        if (error.name !== "AbortError") alert("Please use Book Now to send the product details and image link to our team.");
+      } finally { button.disabled = false; }
+    });
+  });
 
   const clientsRoot = document.querySelector("[data-clients]");
   if (clientsRoot) {

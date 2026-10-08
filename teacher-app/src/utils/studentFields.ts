@@ -110,7 +110,7 @@ function canonicalValueForLabel(
     return student.class_section ?? classSection ?? null;
   }
   if (
-    n.includes("parent") ||
+    (n.includes("parent") && !/phone|mobile|whatsapp|contact/.test(n)) ||
     n.includes("father") ||
     n.includes("mother") ||
     n.includes("guardian")

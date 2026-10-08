@@ -1,3 +1,4 @@
+import * as Clipboard from "expo-clipboard";
 import { Asset } from "expo-asset";
 import Share, { Social } from "react-native-share";
 import type { HomeProduct } from "../constants/products";
@@ -11,10 +12,14 @@ export async function bookProductViaWhatsApp(
   await asset.downloadAsync();
   // Android's native share implementation supports whatsAppNumber, although its
   // published BaseShareSingleOptions type omits this documented option.
+  const message = `Hello, I would like to order ${product.name}. Please share the price and availability.`;
+  await Clipboard.setStringAsync(message);
   const options = {
     social: Social.Whatsapp,
     whatsAppNumber: phone,
-    message: `I want to book this product: ${product.name}`,
+    message,
+    title: product.name,
+    filename: product.name.replace(/[^a-z0-9]+/gi, "-"),
     url: asset.localUri || asset.uri,
     type: asset.type === "png" ? "image/png" : "image/jpeg",
   } as const;

@@ -26,6 +26,7 @@ export function CropToolModal({
   layout = "page",
   storageKey = "crop",
   schoolName = "",
+  backLabel = "Back to Schools",
 }: {
   students: Student[];
   categories: ConfiguredCategoryField[];
@@ -34,6 +35,7 @@ export function CropToolModal({
   layout?: "page" | "modal";
   storageKey?: string;
   schoolName?:string;
+  backLabel?: string;
 }) {
   const field = useMemo(() => primaryCategory(categories), [categories]);
   const [cropView, setCropView] = useState<"uncropped" | "cropped">("uncropped");
@@ -668,7 +670,7 @@ export function CropToolModal({
   }, []);
 
   function canLeaveEditor() {
-    if (saving || applying) return false;
+    if (saving || applying || rotating) return false;
     if (!editingId || window.confirm("Discard unsaved photo changes?")) {
       setEditingId(null);
       return true;
@@ -697,6 +699,7 @@ export function CropToolModal({
   return (
     <div className={shell} role={layout === "page" ? undefined : "dialog"} aria-modal={layout === "page" ? undefined : true} aria-label="Cropping Tool">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-indigo-100 bg-white px-4 py-2 text-sm font-semibold text-indigo-900">
+        {layout === "page" && <button type="button" className="btn-secondary" disabled={saving || applying || rotating} onClick={() => { if (canLeaveEditor()) onClose(); }}>← {backLabel}</button>}
         <span>{schoolName || "Cropping Tool"}</span><span>{!browsing && student ? `Photo ${student.photo_id || "—"} · ${student.student_name || ""}` : "Photos"}</span>
         {layout==="modal" && <button aria-label="Close cropping tool" onClick={()=>{if(canLeaveEditor())onClose();}}>×</button>}
       </div>
@@ -976,8 +979,21 @@ export function CropToolModal({
           </div>
         )}
           {!browsing ? <div className="crop-actions crop-actions-bottom" aria-label="Crop actions">
-              <button className="btn-secondary" aria-label="Rotate whole image left" title={cropArmed&&phase==="edit"?"Press OK to rotate the selected output":"Rotate entire image left"} disabled={!src||saving||applying||rotating||(cropArmed&&phase==="edit")} onClick={()=>void rotateWholePhoto(-90)}>↶ Image</button>
-              <button className="btn-secondary" aria-label="Rotate whole image right" title={cropArmed&&phase==="edit"?"Press OK to rotate the selected output":"Rotate entire image right"} disabled={!src||saving||applying||rotating||(cropArmed&&phase==="edit")} onClick={()=>void rotateWholePhoto(90)}>Image ↷</button>
+              <select
+                className="btn-secondary"
+                aria-label="Rotate image"
+                title={cropArmed && phase === "edit" ? "Press OK to rotate the selected output" : "Rotate the image left or right"}
+                value=""
+                disabled={!src || saving || applying || rotating || (cropArmed && phase === "edit")}
+                onChange={(event) => {
+                  const direction = event.target.value;
+                  if (direction === "left" || direction === "right") void rotateWholePhoto(direction === "left" ? -90 : 90);
+                }}
+              >
+                <option value="" disabled>Rotate image</option>
+                <option value="left">Left (90°)</option>
+                <option value="right">Right (90°)</option>
+              </select>
               <button type="button" className="btn-secondary" disabled={saving || applying || rotating} onClick={() => { if (canLeaveEditor()) resetWorkspace(); }}>Reset</button>
               <button type="button" className="btn-secondary" disabled={saving || applying || rotating} onClick={leaveEditor}>Photos</button>
               {phase === "preview" ? (

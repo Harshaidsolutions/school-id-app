@@ -388,7 +388,7 @@ export function FormSetupPage() {
 
           {schoolId && <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-orange-200 bg-orange-50 p-4">
               <div><p className="font-semibold text-indigo-900">Parent student form</p><p className="text-sm text-slate-600">Show the parent form link on the app’s ID Cards screen.</p></div>
-              <ToggleSwitch checked={parentFormEnabled} disabled={parentFormBusy} label="Parent student form" onChange={()=>{setParentFormBusy(true);void api.patch(`/admin/schools/${schoolId}/parent-link/settings`,{enabled:!parentFormEnabled}).then(({data})=>setParentFormEnabled(data.enabled)).catch(err=>setError(err.response?.data?.message || "Could not update parent form visibility.")).finally(()=>setParentFormBusy(false));}} />
+              <ToggleSwitch checked={parentFormEnabled} disabled={parentFormBusy} label="Parent student form" onChange={()=>{const previous=parentFormEnabled;setParentFormEnabled(!previous);setParentFormBusy(true);void api.patch(`/admin/schools/${schoolId}/parent-link/settings`,{enabled:!parentFormEnabled}).then(({data})=>setParentFormEnabled(data.enabled)).catch(err=>{setParentFormEnabled(previous);setError(err.response?.data?.message || "Could not update parent form visibility.");}).finally(()=>setParentFormBusy(false));}} />
             </div>}
 
       {loading ? (

@@ -163,7 +163,7 @@ export function HomeScreen() {
           { paddingTop: insets.top + scale(4), paddingBottom: scale(4) },
         ]}
       >
-        <View style={styles.headerLogoWrap}>
+        <View style={{...styles.headerLogoWrap, width: headerLogo * 1.5, height: headerLogo * 1.5, borderRadius: headerLogo * .75}}>
           <AppIcon size={headerLogo} variant="default" />
         </View>
         <View style={styles.headerTextWrap}>
@@ -420,6 +420,7 @@ export function HomeScreen() {
                   <Text style={styles.lightboxCloseText}>Close</Text>
                 </Pressable>
                 </View>
+                <Text style={{color:colors.textMuted,fontFamily:fonts.regular,fontSize:12,textAlign:"center",marginTop:8}}>Book Now includes the product image and message. If WhatsApp omits the caption, paste the copied message.</Text>
               </>
             ) : null}
           </Pressable>
@@ -476,7 +477,7 @@ function useHomeStyles() {
       borderRadius:10,
       paddingVertical:3,
     flexShrink: 0,
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.xxs,
     minWidth: scale(36),
@@ -668,6 +669,11 @@ function useHomeStyles() {
     minHeight: 0,
   },
   lightboxClose: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 48,
+    justifyContent: "center",
+    paddingHorizontal: 12,
     marginTop: spacing.md,
     borderRadius: radius.md,
     paddingVertical: spacing.sm,

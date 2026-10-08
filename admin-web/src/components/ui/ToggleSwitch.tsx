@@ -18,7 +18,7 @@ export function ToggleSwitch({
       disabled={disabled}
       onClick={onChange}
       className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${
-        checked ? "bg-parrot-green" : "bg-track"
+        checked ? "bg-gradient-to-r from-emerald-500 to-teal-500 shadow-sm" : "bg-gradient-to-r from-indigo-300 to-violet-300"
       } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
     >
       <span

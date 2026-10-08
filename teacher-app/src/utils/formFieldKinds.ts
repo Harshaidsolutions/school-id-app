@@ -48,7 +48,7 @@ export function resolveFieldLabelKind(field: FormFieldConfig): ResolvedFieldKind
   if (key === "blood_group" || n.includes("blood")) return "blood_group";
   if (
     key === "parent_name" ||
-    n.includes("parent") ||
+    (n.includes("parent") && !/phone|mobile|whatsapp|contact/.test(n)) ||
     n.includes("father") ||
     n.includes("mother") ||
     n.includes("guardian")
@@ -96,7 +96,7 @@ export function resolveFieldKind(field: FormFieldConfig): ResolvedFieldKind {
   if (key === "blood_group" || n.includes("blood")) return "blood_group";
   if (
     key === "parent_name" ||
-    n.includes("parent") ||
+    (n.includes("parent") && !/phone|mobile|whatsapp|contact/.test(n)) ||
     n.includes("father") ||
     n.includes("mother") ||
     n.includes("guardian")

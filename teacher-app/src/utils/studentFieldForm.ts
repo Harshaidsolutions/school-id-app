@@ -208,6 +208,20 @@ export function buildTeacherStudentPayload(
   }
   if (identityPhoto) payload.photo_id = identityPhoto;
 
+  const primaryParent = sortFormFields(formFields).find(field => field.enabled && resolveFieldLabelKind(field) === "parent_name")?.key;
+  const values: Record<string, string> = {
+    student_name: studentName, class_section: classSection, roll_no: state.rollNo,
+    dob: state.dob, gender: state.gender, blood_group: state.bloodGroup,
+    parent_name: state.parentName, parent_phone: state.parentPhone, address: state.address,
+    custom_1: state.custom1, custom_2: state.custom2, custom_3: state.custom3,
+  };
+  for (const field of sortFormFields(formFields)) {
+    if (!field.enabled) continue;
+    const kind = /^fld_\d+$/.test(field.key) || field.key.startsWith("dyn_") ? resolveFieldLabelKind(field) : resolveFieldKind(field);
+    if (kind === "generic" || kind === "photo") continue;
+    const value = kind === "parent_name" && field.key !== primaryParent ? state.extraValues[field.key] : values[kind];
+    extraFields[field.key] = value?.trim() || null;
+  }
   payload.extra_fields = extraFields;
   return payload;
 }

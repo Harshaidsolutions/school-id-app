@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Alert, Share, StyleSheet, Text, View } from "react-native";
+import { Alert, AppState, Share, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { Pressable } from "./Pressable";
@@ -19,7 +19,10 @@ export function SchoolParentLinkCard() {
       let active = true;
       setLink(null);
       setCopied(false);
+      let fetching = false;
       const refresh = async () => {
+        if (fetching || AppState.currentState !== "active") return;
+        fetching = true;
         try {
           const { data } = await api.get<{ link: string | null; enabled?:boolean }>(
             "/teacher/parent-link",
@@ -27,11 +30,13 @@ export function SchoolParentLinkCard() {
           if (active) setLink(data.enabled===true?data.link:null);
         } catch {
           if (active) setLink(null);
-        }
+        } finally { fetching = false; }
       };
       void refresh();
-      const timer = setInterval(() => void refresh(), 30000);
+      const timer = setInterval(() => void refresh(), 2000);
+      const subscription = AppState.addEventListener("change", state => { if (state === "active") void refresh(); });
       return () => {
+        subscription.remove();
         active = false;
         clearInterval(timer);
       };
