@@ -187,10 +187,10 @@ export function SettingsScreen({ navigation }: Props) {
         <View style={styles.row}>
           <Ionicons name="notifications-outline" size={20} color={colors.textMuted} />
           <View style={{flex:1}}>
-            <Text style={[styles.rowLabel, {color:colors.text}]}>Push notifications</Text>
+            <Text style={[styles.rowLabel, {color:colors.text}]}>Notifications</Text>
             <Text style={{color:colors.textMuted, fontSize:12}}>{notificationsBusy ? "Saving…" : notificationsOn ? "On for this phone" : "Off for this phone"}</Text>
           </View>
-          <Switch accessibilityLabel="Push notifications" value={notificationsOn === true} disabled={notificationsBusy || notificationsOn === null}
+          <Switch accessibilityLabel="Notifications" value={notificationsOn === true} disabled={notificationsBusy || notificationsOn === null}
             trackColor={{true:colors.brandGreen}} onValueChange={next => {
               setNotificationsBusy(true);
               void setNotificationPreference(next).catch(error => Alert.alert("Notifications", error instanceof Error ? error.message : "Could not update notifications. Please try again online.")).finally(() => setNotificationsBusy(false));

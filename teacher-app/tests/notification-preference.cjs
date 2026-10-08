@@ -4,7 +4,8 @@ function fixture(initial={}) {
  const values=new Map(Object.entries(initial)),calls=[];let failDelete=false,permission=true,delay;
  const context={exports:{},console,require(name){
  if(name.includes('async-storage'))return{getItem:async k=>values.get(k)??null,setItem:async(k,v)=>values.set(k,v)};
- if(name==='expo-notifications')return{requestPermissionsAsync:async()=>({granted:permission}),getDevicePushTokenAsync:async()=>({data:'device-token'}),cancelAllScheduledNotificationsAsync:async()=>calls.push('cancel'),dismissAllNotificationsAsync:async()=>calls.push('dismiss'),setBadgeCountAsync:async()=>{}};
+ if(name.includes('constants/pushNotifications'))return{ANDROID_NOTIFICATION_CHANNEL_ID:'school'};
+ if(name==='expo-notifications')return{setNotificationChannelAsync:async()=>{},AndroidImportance:{MAX:5},requestPermissionsAsync:async()=>({granted:permission}),getDevicePushTokenAsync:async()=>({data:'device-token'}),cancelAllScheduledNotificationsAsync:async()=>calls.push('cancel'),dismissAllNotificationsAsync:async()=>calls.push('dismiss'),setBadgeCountAsync:async()=>{}};
  if(name==='expo-device')return{modelName:'Phone'};
  if(name==='react-native')return{Platform:{OS:'android'}};
  if(name==='react')return{};

@@ -930,6 +930,7 @@ async function migrate() {
   `);
   await pool.query(`ALTER TABLE schools ADD COLUMN IF NOT EXISTS parent_form_token TEXT;
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS parent_form_classes JSONB;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS parent_form_enabled BOOLEAN NOT NULL DEFAULT false;
     CREATE UNIQUE INDEX IF NOT EXISTS schools_parent_form_token ON schools(parent_form_token) WHERE parent_form_token IS NOT NULL;`);
   console.log("Migration completed successfully.");
 }

@@ -56,6 +56,11 @@ function patchManifest() {
     changed = true;
   }
 
+  if (!xml.includes('android:name="com.whatsapp"')) {
+    const entry='<package android:name="com.whatsapp" />';
+    xml=xml.includes('</queries>')?xml.replace('</queries>',entry+'\n</queries>'):xml.replace('</manifest>','<queries>'+entry+'</queries>\n</manifest>');
+    changed=true;
+  }
   if (changed) {
     fs.writeFileSync(manifestPath, xml);
     console.log("Patched release AndroidManifest for cleartext HTTP to production API.");

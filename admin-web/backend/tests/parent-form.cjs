@@ -48,7 +48,7 @@ test("parent submission inserts school student; duplicate and upload failure rol
     queries = [],
     released = 0;
   pool.query = async () => ({
-    rows: [{ id: "school-a", name: "School A", parent_form_classes: ["6 A"] }],
+    rows: [{ id: "school-a", name: "School A", class_section:"6 A",parent_form_enabled:true }],
   });
   config.loadFormConfigForOrg = async () => fields;
   serial.allocateReusableAddSerial = async () => "ADD_000";
@@ -169,7 +169,7 @@ test("teacher link scope comes from authentication", async () => {
   let values, result;
   pool.query = async (sql, v) => {
     values = v;
-    return { rows: [{ parent_form_token: "a".repeat(48) }] };
+    return { rows: [{ parent_form_token: "a".repeat(48),parent_form_enabled:true }] };
   };
   try {
     await controller.getSchoolParentLink(
@@ -191,4 +191,14 @@ test("teacher link scope comes from authentication", async () => {
   } finally {
     pool.query = original;
   }
+});
+test('disabled parent form returns no app link',async()=>{
+ const query=pool.query;pool.query=async()=>({rows:[{parent_form_token:'a'.repeat(48),parent_form_enabled:false,class_section:'6 A'}]});
+ try {let result;await controller.getSchoolParentLink({user:{role:'teacher',schoolId:'school-a'},params:{}},{json(data){result=data}},e=>{throw e});assert.equal(result.enabled,false);assert.equal(result.link,null);}finally{pool.query=query;}
+});
+test('enabling app parent form validates school classes and creates its link',async()=>{
+ const scope=require('../dist/utils/adminScope');const originals=[pool.query,scope.requireAdminScope,scope.assertSchoolOwnedByAdmin,config.loadFormConfigForOrg];let update,result;
+ scope.requireAdminScope=async()=>({});scope.assertSchoolOwnedByAdmin=async(s,id)=>assert.equal(id,'school-a');config.loadFormConfigForOrg=async()=>fields;
+ pool.query=async(sql,values)=>{if(sql.startsWith('UPDATE'))update={sql,values};return {rows:[{class_section:'6 A'}]}};
+ try{await controller.setSchoolParentFormEnabled({params:{id:'school-a'},body:{enabled:true}},{json(data){result=data}},e=>{throw e});assert.equal(result.enabled,true);assert.deepEqual(update.values.slice(0,2),['school-a',true]);assert.match(update.values[2],/^[a-f0-9]{48}$/);assert.match(update.sql,/parent_form_token=CASE/);}finally{[pool.query,scope.requireAdminScope,scope.assertSchoolOwnedByAdmin,config.loadFormConfigForOrg]=originals;}
 });

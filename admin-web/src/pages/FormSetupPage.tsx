@@ -209,6 +209,9 @@ export function FormSetupPage() {
       ? `/institute-members?instituteId=${encodeURIComponent(instituteId)}${searchParams.get("instituteName") ? `&instituteName=${encodeURIComponent(searchParams.get("instituteName")!)}` : ""}`
       : "/students";
 
+  const [parentFormEnabled,setParentFormEnabled]=useState(false);
+  const [parentFormBusy,setParentFormBusy]=useState(false);
+  useEffect(()=>{if(schoolId)void api.get(`/admin/schools/${schoolId}/parent-link`).then(({data})=>setParentFormEnabled(data.enabled===true)).catch(()=>{});},[schoolId]);
   const [fields, setFields] = useState<FormFieldConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -383,12 +386,17 @@ export function FormSetupPage() {
       {error && <div className="w-full alert-error">{error}</div>}
       {success && <div className="mt-4 w-full alert-success">{success}</div>}
 
+          {schoolId && <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-orange-200 bg-orange-50 p-4">
+              <div><p className="font-semibold text-indigo-900">Parent student form</p><p className="text-sm text-slate-600">Show the parent form link on the app’s ID Cards screen.</p></div>
+              <ToggleSwitch checked={parentFormEnabled} disabled={parentFormBusy} label="Parent student form" onChange={()=>{setParentFormBusy(true);void api.patch(`/admin/schools/${schoolId}/parent-link/settings`,{enabled:!parentFormEnabled}).then(({data})=>setParentFormEnabled(data.enabled)).catch(err=>setError(err.response?.data?.message || "Could not update parent form visibility.")).finally(()=>setParentFormBusy(false));}} />
+            </div>}
+
       {loading ? (
         <div className="mt-6 text-sm text-text-muted">Loading form fields from imported data…</div>
       ) : fields.length === 0 && !organizationId ? (
         <div className="centered-page-card px-6 py-12 text-center">
           <p className="text-sm font-medium text-text-navy">No form fields yet</p>
-          <p className="mt-2 text-sm text-text-muted">
+            <p className="mt-2 text-sm text-text-muted">
             Upload an Excel file for this {instituteId ? "institute" : "school"} first.
           </p>
         </div>

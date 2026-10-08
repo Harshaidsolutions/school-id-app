@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import { CropToolModal } from "../components/CropToolModal";
 import { sortFormFields, type FormFieldConfig } from "../constants/formFields";
@@ -13,7 +13,10 @@ export function CropToolPage() {
   const schoolId = params.get("schoolId") ?? "";
   const instituteId = params.get("instituteId") ?? "";
   const organizationId = params.get("organizationId") ?? "";
-  const orgName = params.get("schoolName") ?? params.get("instituteName") ?? params.get("organizationName") ?? "";
+  const queryName = params.get("schoolName") ?? params.get("instituteName") ?? params.get("organizationName") ?? "";
+  const [resolvedName,setResolvedName]=useState("");
+  const orgName=queryName || resolvedName;
+  useEffect(()=>{let cancelled=false;setResolvedName("");if(!queryName && (schoolId||instituteId))void api.get(`/admin/${instituteId?"institutes":"schools"}/${instituteId||schoolId}/organization-info`).then(({data})=>{if(!cancelled)setResolvedName(data.organization?.name || "");}).catch(()=>{});return()=>{cancelled=true;};},[queryName,schoolId,instituteId]);
   const isInstitute = Boolean(instituteId);
   const isOrganization = Boolean(organizationId);
   const [students, setStudents] = useState<Student[]>([]);
@@ -106,12 +109,10 @@ export function CropToolPage() {
 
   return (
     <div className="app-page flex min-h-0 flex-1 flex-col">
-      <Link to={back} className="mb-3 inline-flex w-fit text-sm font-semibold text-button-blue hover:underline">
-        ← Back to {isOrganization ? "Organization" : isInstitute ? "Members" : "Students"}
-      </Link>
       {loading ? <p className="text-sm text-[#64748B]">Loading photos…</p> : (
         <CropToolModal
           layout="page"
+          schoolName={orgName}
           storageKey={organizationId ? `organization:${organizationId}` : instituteId ? `institute:${instituteId}` : `school:${schoolId}`}
           students={students}
           categories={isOrganization ? organizationCategories : configuredCategoryFields(fields)}

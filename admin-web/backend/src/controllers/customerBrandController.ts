@@ -20,6 +20,7 @@ export async function getTeacherBranding(
 
     const result = await pool.query<{
       owner_id: string | null;
+      photo_url: string | null;
       display_name: string | null;
       phone: string | null;
       whatsapp: string | null;
@@ -31,7 +32,7 @@ export async function getTeacherBranding(
       is_super_admin: boolean | null;
     }>(
       `SELECT owner.id AS owner_id,
-              owner.display_name, owner.phone, owner.whatsapp,
+              owner.photo_url, owner.display_name, owner.phone, owner.whatsapp,
               owner.facebook_url, owner.instagram_url, owner.youtube_url,
               owner.email, owner.username,
               COALESCE(owner.is_super_admin, false) AS is_super_admin
@@ -58,7 +59,7 @@ export async function getTeacherBranding(
 
     res.set("Cache-Control", "no-store");
     if (!childOwned) {
-      res.status(200).json({ status: "ok", branding: { source: "platform" } });
+      res.status(200).json({ status: "ok", branding: { source: "platform",whatsapp:row?.whatsapp || null,phone:row?.phone || null } });
       return;
     }
 
@@ -66,6 +67,7 @@ export async function getTeacherBranding(
       status: "ok",
       branding: {
         source: "child",
+        photoUrl: row?.photo_url || null,
         adminName: row?.display_name?.trim() || CHILD_NAME_FALLBACK,
         phone: row?.phone?.trim() || null,
         whatsapp: row?.whatsapp?.trim() || null,

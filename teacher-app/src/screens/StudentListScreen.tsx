@@ -288,7 +288,7 @@ export function StudentListScreen({ navigation, route }: Props) {
             >
               <Ionicons name="add" size={14} color={colors.brandGreen} />
               <Text style={[styles.addBtnText, { color: colors.brandGreen }]}>
-                Add Student
+                Add Member
               </Text>
             </Pressable>
           ) : (
@@ -446,7 +446,7 @@ export function StudentListScreen({ navigation, route }: Props) {
               <Ionicons name="close" size={28} color={colors.text} />
             </Pressable>
             <Text style={[styles.addModalTitle, { color: colors.text }]}>
-              Add Student
+              Add Member
             </Text>
             <View style={styles.addBtnPlaceholder} />
           </View>

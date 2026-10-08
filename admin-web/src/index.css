@@ -1229,3 +1229,13 @@ body,.app-shell,.app-main { background:#f7f8ff; color:#42518a; }
 }
 .detail-page-shell.admin-scroll-root { overflow-y:auto; overflow-x:hidden; }
 .detail-page-shell > .students-table-scroll.admin-scroll-panel { flex:1 0 280px; min-height:280px; }
+.crop-actions .crop-ok { color:white; background:linear-gradient(135deg,#f97316,#ea580c); border-color:#ea580c; }
+.crop-actions .crop-save { color:white; background:linear-gradient(135deg,#16a34a,#0f766e); border-color:#15803d; }
+/* Keep statuses and all record actions on the same third toolbar line. */
+.detail-toolbar-row2 { display:flex; flex-wrap:nowrap; align-items:center; justify-content:flex-start; gap:8px; overflow-x:auto; padding-bottom:5px; }
+.detail-toolbar-row2-tabs { flex:0 0 auto; width:auto; position:static; height:44px; flex-wrap:nowrap; }
+.detail-toolbar-row2-search { flex:0 0 270px; width:270px; min-width:230px; }
+.detail-toolbar-row2-actions { flex:0 0 auto; width:auto; flex-wrap:nowrap; }
+.detail-toolbar-row2-status-tab,.detail-toolbar-status-tab { white-space:nowrap; }
+.detail-toolbar-row2 > .detail-status-tabs-inline { flex:0 0 auto; width:auto; flex-wrap:nowrap; height:44px; position:static; }
+.detail-toolbar-row2-actions button { flex:none; white-space:nowrap; }

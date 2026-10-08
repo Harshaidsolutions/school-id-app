@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { Alert } from "react-native";
 import axios from "axios";
 import api from "../api/client";
@@ -12,6 +12,7 @@ export type CustomerBrand = {
   /** platform = Super Admin organization, keep the existing Harsha experience. */
   source: "platform" | "child";
   adminName: string;
+  photoUrl: string | null;
   phone: string | null;
   whatsapp: string | null;
   facebook: string | null;
@@ -24,6 +25,7 @@ function emptyBrand(): CustomerBrand {
   return {
     source: "platform",
     adminName: APP_BRAND_NAME,
+    photoUrl: null,
     phone: null,
     whatsapp: null,
     facebook: null,
@@ -42,12 +44,14 @@ export function whatsAppDigits(value: string | null): string | null {
 
 export function useCustomerBrand() {
   const { isAuthenticated, user } = useAuth();
+  const requestSequence=useRef(0);
   const [brand, setBrand] = useState<CustomerBrand>(emptyBrand());
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
+    const sequence=++requestSequence.current;
     if (!isAuthenticated) {
       setBrand(emptyBrand());
       setError(null);
@@ -60,12 +64,14 @@ export function useCustomerBrand() {
       const { data } = await api.get<{ branding: Partial<CustomerBrand> }>(
         user?.role === "organization_staff" ? "/organization-app/branding" : "/teacher/branding"
       );
+      if(sequence!==requestSequence.current)return;
       const next = data.branding ?? {};
       if (next.source !== "child") {
-        setBrand(emptyBrand());
+        setBrand({...emptyBrand(),whatsapp:next.whatsapp || null,phone:next.phone || null});
       } else {
         setBrand({
           source: "child",
+          photoUrl: next.photoUrl || null,
           adminName: next.adminName?.trim() || APP_BRAND_NAME,
           phone: next.phone?.trim() || null,
           whatsapp: next.whatsapp?.trim() || null,
@@ -77,6 +83,7 @@ export function useCustomerBrand() {
       }
       setReady(true);
     } catch (err) {
+      if(sequence!==requestSequence.current)return;
       if (axios.isAxiosError(err) && err.response?.status === 404) {
         setBrand(emptyBrand());
         setReady(true);
@@ -84,12 +91,13 @@ export function useCustomerBrand() {
       }
       setError("Could not load your organization details.");
     } finally {
-      setLoading(false);
+      if(sequence===requestSequence.current)setLoading(false);
     }
-  }, [isAuthenticated, user?.role]);
+  }, [isAuthenticated, user?.role,user?.id]);
 
   useEffect(() => {
-    void reload();
+    setBrand(emptyBrand());setReady(false);void reload();
+    return()=>{requestSequence.current++;};
   }, [reload]);
 
   return { brand, ready, loading, error, reload };

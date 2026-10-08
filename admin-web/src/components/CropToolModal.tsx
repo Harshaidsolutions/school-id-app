@@ -25,6 +25,7 @@ export function CropToolModal({
   onSaved,
   layout = "page",
   storageKey = "crop",
+  schoolName = "",
 }: {
   students: Student[];
   categories: ConfiguredCategoryField[];
@@ -32,6 +33,7 @@ export function CropToolModal({
   onSaved: (student: Student) => void;
   layout?: "page" | "modal";
   storageKey?: string;
+  schoolName?:string;
 }) {
   const field = useMemo(() => primaryCategory(categories), [categories]);
   const [cropView, setCropView] = useState<"uncropped" | "cropped">("uncropped");
@@ -109,6 +111,9 @@ export function CropToolModal({
   const toneButtonRef = useRef<HTMLButtonElement>(null);
   const toneImageRef = useRef<HTMLImageElement>(null);
   const cropRef = useRef<Crop>({ ...FULL });
+  const originalSourceRef=useRef("");
+  const outputRotationRef=useRef(0);
+  const [rotating,setRotating]=useState(false);
   const previewImageRef = useRef<HTMLImageElement>(null);
   const acceptedCropRef = useRef<{image:HTMLImageElement;crop:Crop;size:{width:number;height:number}} | null>(null);
   const toneRef = useRef({ brightness: 0, contrast: 0 });
@@ -182,7 +187,7 @@ export function CropToolModal({
     clearPreview();
     if (!student?.photo_url) return;
     void loadCropPhoto(student, controller.signal).then((url) => {
-      if (!cancelled) setSrc(url || "");
+      if (!cancelled) {originalSourceRef.current=url || "";outputRotationRef.current=0;setSrc(url || "");}
     }).catch(() => {
       if (!cancelled) setError("Could not load photo. Please try again.");
     });
@@ -352,6 +357,8 @@ export function CropToolModal({
   }
 
   function resetWorkspace() {
+    outputRotationRef.current=0;
+    if(originalSourceRef.current)setSrc(originalSourceRef.current);
     cropRef.current = { ...FULL };
     historyRef.current = [];
     setCropArmed(false);
@@ -555,6 +562,22 @@ export function CropToolModal({
     dragRef.current = null;
   }
 
+  async function rotateWholePhoto(delta:number) {
+    if(rotating||saving||applying)return;
+    setRotating(true);
+    try {
+      if(phase==="preview" && previewBlobRef.current){
+        const rotated=await rotateImageBlob(previewBlobRef.current,delta);
+        clearPreview();const url=URL.createObjectURL(rotated);previewUrlRef.current=url;previewBlobRef.current=rotated;setPreviewUrl(url);outputRotationRef.current=(outputRotationRef.current+delta+360)%360;
+      }else if(src && !cropArmed){
+        const original=await fetch(src).then(r=>r.blob());const rotated=await rotateImageBlob(original,delta);
+        const dataUrl=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=reject;reader.readAsDataURL(rotated);});
+        setSrc(dataUrl);setViewZoom({scale:1,x:0,y:0});
+      }
+      if(student)markDirty(student.id);
+    }catch{setError("Could not rotate the image. Please try again.");}finally{setRotating(false);}
+  }
+
   async function applyOk() {
     const image = imageRef.current;
     if (!image || !src || applying || !image.naturalWidth || !cropArmed) return;
@@ -568,6 +591,7 @@ export function CropToolModal({
       const snapshot = { image, crop: {...cropRef.current}, size: { width: toMillimeters(Number(limitWidth), limitUnit), height: toMillimeters(Number(limitHeight), limitUnit) } };
       const blob = await renderCrop(image, snapshot.crop, {brightness:0,contrast:0}, snapshot.size);
       acceptedCropRef.current = snapshot;
+      outputRotationRef.current=0;
       clearPreview();
       const url = URL.createObjectURL(blob);
       previewUrlRef.current = url;
@@ -587,7 +611,8 @@ export function CropToolModal({
     setSaving(true);
     setError(null);
     try {
-      const blob = await renderCrop(snapshot.image,snapshot.crop,{...toneRef.current},snapshot.size);
+      let blob = await renderCrop(snapshot.image,snapshot.crop,{...toneRef.current},snapshot.size);
+      if(outputRotationRef.current)blob=await rotateImageBlob(blob,outputRotationRef.current);
       const body = new FormData();
       body.append("photo", blob, `${student.photo_id || student.id}.jpg`);
       body.append("markCropped", "1");
@@ -671,6 +696,10 @@ export function CropToolModal({
 
   return (
     <div className={shell} role={layout === "page" ? undefined : "dialog"} aria-modal={layout === "page" ? undefined : true} aria-label="Cropping Tool">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-indigo-100 bg-white px-4 py-2 text-sm font-semibold text-indigo-900">
+        <span>{schoolName || "Cropping Tool"}</span><span>{!browsing && student ? `Photo ${student.photo_id || "—"} · ${student.student_name || ""}` : "Photos"}</span>
+        {layout==="modal" && <button aria-label="Close cropping tool" onClick={()=>{if(canLeaveEditor())onClose();}}>×</button>}
+      </div>
       <div className={`crop-tool-layout ${layout === "page" ? "flex min-h-0 flex-1 overflow-hidden" : "flex h-[min(92vh,860px)] w-full max-w-6xl overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white"}`}>
         <aside className="crop-settings flex w-[17.5rem] shrink-0 flex-col gap-3 overflow-y-auto border-r border-[#E2E8F0] bg-white p-4">
           <div className="flex items-center justify-between gap-2">
@@ -678,7 +707,7 @@ export function CropToolModal({
               {student && !browsing ? student.student_name ?? "Student" : `${gallery.length} photo${gallery.length === 1 ? "" : "s"}`}
               {student && !browsing && student.photo_id ? ` · Photo ${student.photo_id}` : ""}
             </p>
-            <button type="button" className="btn-secondary shrink-0 px-3 py-1.5 text-sm" onClick={() => { if (canLeaveEditor()) onClose(); }}>Back</button>
+
           </div>
           {field ? (
             <label className="min-w-[12rem] text-xs font-semibold text-[#485989]">
@@ -947,15 +976,17 @@ export function CropToolModal({
           </div>
         )}
           {!browsing ? <div className="crop-actions crop-actions-bottom" aria-label="Crop actions">
-              <button type="button" className="btn-secondary" disabled={saving || applying} onClick={() => { if (canLeaveEditor()) resetWorkspace(); }}>Reset</button>
-              <button type="button" className="btn-secondary" disabled={saving || applying} onClick={leaveEditor}>Photos</button>
+              <button className="btn-secondary" aria-label="Rotate whole image left" title={cropArmed&&phase==="edit"?"Press OK to rotate the selected output":"Rotate entire image left"} disabled={!src||saving||applying||rotating||(cropArmed&&phase==="edit")} onClick={()=>void rotateWholePhoto(-90)}>↶ Image</button>
+              <button className="btn-secondary" aria-label="Rotate whole image right" title={cropArmed&&phase==="edit"?"Press OK to rotate the selected output":"Rotate entire image right"} disabled={!src||saving||applying||rotating||(cropArmed&&phase==="edit")} onClick={()=>void rotateWholePhoto(90)}>Image ↷</button>
+              <button type="button" className="btn-secondary" disabled={saving || applying || rotating} onClick={() => { if (canLeaveEditor()) resetWorkspace(); }}>Reset</button>
+              <button type="button" className="btn-secondary" disabled={saving || applying || rotating} onClick={leaveEditor}>Photos</button>
               {phase === "preview" ? (
-                <button type="button" className="btn-secondary" disabled={saving || applying} onClick={() => { if (student) markDirty(student.id); setPhase("edit"); previewBlobRef.current = null; clearPreview(); }}>Edit crop</button>
+                <button type="button" className="btn-secondary" disabled={saving || applying || rotating} onClick={() => { if (student) markDirty(student.id); setPhase("edit"); previewBlobRef.current = null; clearPreview(); }}>Edit crop</button>
               ) : (
-                <button type="button" className="btn-secondary" disabled={!src || applying || !cropArmed} onClick={() => void applyOk()}>{applying ? "Preparing…" : "OK"}</button>
+                <button type="button" className="btn-secondary crop-ok" disabled={!src || applying || rotating || !cropArmed} onClick={() => void applyOk()}>{applying ? "Preparing…" : "OK"}</button>
               )}
-              <button type="button" className="btn-primary" disabled={phase !== "preview" || saving} onClick={() => void saveCrop()}>{saving ? "Saving…" : "Save"}</button>
-              <button type="button" className="btn-secondary" disabled={saving || applying} onClick={undoCrop}>Undo</button>
+              <button type="button" className="btn-primary crop-save" disabled={phase !== "preview" || saving || rotating} onClick={() => void saveCrop()}>{saving ? "Saving…" : "Save"}</button>
+              <button type="button" className="btn-secondary" disabled={saving || applying || rotating} onClick={undoCrop}>Undo</button>
 
           </div> : null}
         </div>
@@ -1406,4 +1437,13 @@ function renderCrop(
       } catch (error) { reject(error); }
     }, "image/jpeg", 0.95);
   });
+}
+
+async function rotateImageBlob(blob:Blob,degrees:number):Promise<Blob> {
+ const url=URL.createObjectURL(blob);
+ try {const image=new Image();image.src=url;await image.decode();const canvas=document.createElement("canvas");const swap=Math.abs(degrees)%180===90;
+ canvas.width=swap?image.naturalHeight:image.naturalWidth;canvas.height=swap?image.naturalWidth:image.naturalHeight;
+ const ctx=canvas.getContext("2d");if(!ctx)throw Error("Canvas unavailable");ctx.translate(canvas.width/2,canvas.height/2);ctx.rotate(degrees*Math.PI/180);ctx.drawImage(image,-image.naturalWidth/2,-image.naturalHeight/2);
+ return await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error("Image conversion failed")),"image/jpeg",0.95));
+ }finally{URL.revokeObjectURL(url);}
 }

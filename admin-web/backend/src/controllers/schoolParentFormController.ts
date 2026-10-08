@@ -82,12 +82,6 @@ export function parentFormFields(config: FormFieldConfig[]) {
   };
 }
 export async function schoolParentClasses(schoolId: string): Promise<string[]> {
-  const result = await pool.query<{ parent_form_classes: string[] | null }>(
-    "SELECT parent_form_classes FROM schools WHERE id=$1",
-    [schoolId],
-  );
-  if (Array.isArray(result.rows[0]?.parent_form_classes))
-    return result.rows[0].parent_form_classes;
   const classes = await pool.query<{ class_section: string }>(
     "SELECT DISTINCT class_section FROM students WHERE school_id=$1 AND NULLIF(TRIM(class_section),'') IS NOT NULL AND class_section <> 'UNKNOWN' ORDER BY class_section",
     [schoolId],
@@ -109,7 +103,7 @@ function parseClasses(value: unknown): string[] {
   ];
   if (!classes.length)
     throw new AppError(
-      "Add at least one class choice before sharing the link.",
+      "Import school records with Class values before sharing the link.",
       400,
     );
   return classes;
@@ -144,8 +138,17 @@ export async function getSchoolParentLink(
     );
     if (!school.rows[0]) throw new AppError("School not found", 404);
     const token = school.rows[0].parent_form_token;
+    const enabledResult = await pool.query<{ parent_form_enabled: boolean }>(
+      "SELECT parent_form_enabled FROM schools WHERE id=$1",
+      [schoolId],
+    );
+    const enabled = enabledResult.rows[0]?.parent_form_enabled === true;
     res.json({
-      link: token ? `${origin()}/school-form/${token}` : null,
+      enabled,
+      link:
+        token && (req.user?.role !== "teacher" || enabled)
+          ? `${origin()}/school-form/${token}`
+          : null,
       classes: await schoolParentClasses(schoolId),
     });
   } catch (e) {
@@ -161,9 +164,7 @@ export async function createSchoolParentLink(
     const id = routeParam(req.params.id);
     await assertSchoolOwnedByAdmin(await requireAdminScope(req), id);
     parentFormFields(await loadFormConfigForOrg({ schoolId: id }));
-    const classes = parseClasses(
-      req.body?.classes ?? (await schoolParentClasses(id)),
-    );
+    const classes = parseClasses(await schoolParentClasses(id));
     const result = await pool.query<{ parent_form_token: string }>(
       `UPDATE schools SET parent_form_token=COALESCE(parent_form_token,$2),parent_form_classes=$3::jsonb WHERE id=$1 AND COALESCE(is_active,true)=true RETURNING parent_form_token`,
       [id, randomBytes(24).toString("hex"), JSON.stringify(classes)],
@@ -356,5 +357,29 @@ export async function submitSchoolParentForm(
     next(e);
   } finally {
     client?.release();
+  }
+}
+
+export async function setSchoolParentFormEnabled(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const id = routeParam(req.params.id);
+    await assertSchoolOwnedByAdmin(await requireAdminScope(req), id);
+    if (typeof req.body.enabled !== "boolean")
+      throw new AppError("Enabled must be true or false", 400);
+    if (req.body.enabled) {
+      parentFormFields(await loadFormConfigForOrg({ schoolId: id }));
+      parseClasses(await schoolParentClasses(id));
+    }
+    await pool.query(
+      "UPDATE schools SET parent_form_enabled=$2,parent_form_token=CASE WHEN $2 THEN COALESCE(parent_form_token,$3) ELSE parent_form_token END WHERE id=$1",
+      [id, req.body.enabled, randomBytes(24).toString("hex")],
+    );
+    res.json({ enabled: req.body.enabled });
+  } catch (e) {
+    next(e);
   }
 }

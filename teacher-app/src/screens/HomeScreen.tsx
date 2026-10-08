@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import {
   Image,
+  Alert,
   Linking,
   Modal,
   RefreshControl,
@@ -34,6 +35,9 @@ import {
 } from "../hooks/useCustomerBrand";
 import { SUPPORT_PHONE } from "../constants/support";
 import { openWhatsApp } from "../utils/whatsappBusiness";
+import { bookProductViaWhatsApp } from "../utils/productBooking";
+import { whatsAppDigits } from "../hooks/useCustomerBrand";
+import { SUPPORT_PHONE_E164 } from "../constants/support";
 import { HOME_PRODUCTS } from "../constants/products";
 import { BEST_SCHOOLS } from "../constants/schools";
 import { BrandLockup } from "../components/BrandLockup";
@@ -65,12 +69,6 @@ const INSTRUCTIONS = [
 
 const PRODUCTS = HOME_PRODUCTS;
 
-function splitAdminName(name: string): { lead: string; accent?: string } {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length < 2) return { lead: parts[0] || name.trim() };
-  return { lead: parts[0], accent: parts.slice(1).join(" ") };
-}
-
 export function HomeScreen() {
   const styles = useHomeStyles();
   const { scale, wp, width } = useResponsiveLayout();
@@ -83,10 +81,10 @@ export function HomeScreen() {
   const { colors, headerGradient, isDark } = useTheme();
   const [unread, setUnread] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [booking,setBooking]=useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const { brand, ready, error: brandError, reload: reloadBrand } = useCustomerBrand();
   const childBrand = ready && brand.source === "child";
-  const adminNameParts = childBrand ? splitAdminName(brand.adminName) : null;
   const scrollRef = useRef<ScrollView>(null);
   const instructionsY = useRef(0);
   const copyright = !ready
@@ -135,6 +133,17 @@ export function HomeScreen() {
     }, [load, route.params?.scrollTo])
   );
 
+  async function bookProduct() {
+    if(booking || previewIndex===null || !ready)return;
+    const product=PRODUCTS[previewIndex];
+    const phone=childBrand?whatsAppDigits(brand.whatsapp || brand.phone):(whatsAppDigits(brand.whatsapp || brand.phone) || SUPPORT_PHONE_E164);
+    if(!phone){missingContact();return;}
+    setBooking(true);
+    try {await bookProductViaWhatsApp(product,phone);
+    }catch(error){if(!String(error).toLowerCase().includes("cancel"))Alert.alert("Book now","Could not open WhatsApp with the product image. Please check that WhatsApp is installed and try again.");}
+    finally{setBooking(false);}
+  }
+
   const productImageHeight = scale(108);
   const schoolPhotoSize = scale(72);
   const logoSize = scale(36);
@@ -155,7 +164,7 @@ export function HomeScreen() {
         ]}
       >
         <View style={styles.headerLogoWrap}>
-          <AppIcon size={headerLogo} variant="header" />
+          <AppIcon size={headerLogo} variant="default" />
         </View>
         <View style={styles.headerTextWrap}>
           <Text
@@ -217,12 +226,7 @@ export function HomeScreen() {
       >
         <View style={styles.hero}>
           {!ready ? null : childBrand ? (
-            <BrandLockup
-              variant="homeHero"
-              title={adminNameParts?.lead}
-              titleAccent={adminNameParts?.accent}
-              showTagline={false}
-            />
+            brand.photoUrl ? <Image source={{uri:brand.photoUrl}} accessibilityLabel="Your admin logo" resizeMode="contain" style={{width:"80%",height:scale(115),alignSelf:"center"}} /> : <BrandLockup variant="homeHero" showTagline />
           ) : (
             <BrandLockup variant="homeHero" showTagline />
           )}
@@ -407,12 +411,15 @@ export function HomeScreen() {
                     <Ionicons name="chevron-forward" size={icons.xxl} color={colors.primaryOrange} />
                   </Pressable>
                 </View>
+                <View style={{flexDirection:"row",gap:12,alignItems:"center"}}>
+                <Pressable accessibilityRole="button" disabled={booking || !ready} style={[styles.lightboxClose,{backgroundColor:colors.brandGreen,flex:1}]} onPress={()=>void bookProduct()}><Text style={styles.lightboxCloseText}>{booking?"Opening…":"Book Now"}</Text></Pressable>
                 <Pressable
                   style={[styles.lightboxClose, { backgroundColor: colors.primaryOrange }]}
                   onPress={() => setPreviewIndex(null)}
                 >
                   <Text style={styles.lightboxCloseText}>Close</Text>
                 </Pressable>
+                </View>
               </>
             ) : null}
           </Pressable>
@@ -465,6 +472,9 @@ function useHomeStyles() {
     borderBottomRightRadius: radius.xl,
   },
   headerLogoWrap: {
+      backgroundColor:"#FFFFFF",
+      borderRadius:10,
+      paddingVertical:3,
     flexShrink: 0,
     alignItems: "flex-start",
     justifyContent: "center",
@@ -483,12 +493,16 @@ function useHomeStyles() {
     fontSize: typeScale.md,
     color: "#FFFFFF",
     letterSpacing: 0.2,
+    includeFontPadding:false,
+    lineHeight:typeScale.md*1.15,
   },
   headerSubtitle: {
     fontFamily: fonts.regular,
     fontSize: typeScale.xs,
     color: "rgba(255,255,255,0.92)",
-    marginTop: scale(1),
+    marginTop: 0,
+    includeFontPadding:false,
+    lineHeight:typeScale.xs*1.15,
   },
   iconBtn: {
     alignItems: "center",

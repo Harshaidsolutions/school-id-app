@@ -4,11 +4,14 @@ import { useFocusEffect } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { Pressable } from "./Pressable";
 import api from "../api/client";
+import { fonts } from "../theme/typography";
+import { useTheme } from "../theme/ThemeContext";
 import { useAuth } from "../auth/AuthContext";
 
 /** The authenticated school's existing parent form; never a link from another account. */
 export function SchoolParentLinkCard() {
   const { user } = useAuth();
+  const {colors}=useTheme();
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   useFocusEffect(
@@ -18,10 +21,10 @@ export function SchoolParentLinkCard() {
       setCopied(false);
       const refresh = async () => {
         try {
-          const { data } = await api.get<{ link: string | null }>(
+          const { data } = await api.get<{ link: string | null; enabled?:boolean }>(
             "/teacher/parent-link",
           );
-          if (active) setLink(data.link);
+          if (active) setLink(data.enabled===true?data.link:null);
         } catch {
           if (active) setLink(null);
         }
@@ -36,18 +39,18 @@ export function SchoolParentLinkCard() {
   );
   if (!link) return null;
   return (
-    <View style={styles.card}>
-      <Text style={styles.title}>Parent student form</Text>
-      <Text style={styles.description}>
+    <View style={[styles.card,{backgroundColor:colors.surface,borderColor:colors.brandGreen}]}>
+      <Text style={[styles.title,{color:colors.brandGreen}]}>Parent student form</Text>
+      <Text style={[styles.description,{color:colors.textMuted}]}>
         Share this link with parents to add student details and a photo.
       </Text>
-      <Text selectable numberOfLines={2} style={styles.link}>
+      <Text selectable numberOfLines={2} style={[styles.link,{color:colors.text}]}>
         {link}
       </Text>
       <View style={styles.actions}>
         <Pressable
           accessibilityRole="button"
-          style={styles.button}
+          style={[styles.button,{backgroundColor:colors.primaryOrange}]}
           onPress={() => {
             void Clipboard.setStringAsync(link)
               .then(() => setCopied(true))
@@ -65,7 +68,7 @@ export function SchoolParentLinkCard() {
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          style={[styles.button, styles.share]}
+          style={[styles.button, styles.share,{backgroundColor:colors.brandGreen}]}
           onPress={() => {
             void Share.share({
               message: `Please fill in your child's school details and photo: ${link}`,
@@ -92,9 +95,9 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 18,
   },
-  title: { color: "#3730A3", fontSize: 17, fontWeight: "700" },
-  description: { color: "#475569", fontSize: 13, lineHeight: 19, marginTop: 5 },
-  link: { color: "#2563EB", fontSize: 13, lineHeight: 19, marginVertical: 12 },
+  title: { color: "#3730A3", fontSize: 17, fontFamily: fonts.semiBold },
+  description: {fontFamily:fonts.regular, color: "#475569", fontSize: 13, lineHeight: 19, marginTop: 5 },
+  link: {fontFamily:fonts.regular, color: "#2563EB", fontSize: 13, lineHeight: 19, marginVertical: 12 },
   actions: { flexDirection: "row", gap: 12 },
   button: {
     flex: 1,
@@ -106,5 +109,5 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   share: { backgroundColor: "#15803D" },
-  buttonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
+  buttonText: { color: "#FFFFFF", fontSize: 14, fontFamily: fonts.semiBold },
 });
