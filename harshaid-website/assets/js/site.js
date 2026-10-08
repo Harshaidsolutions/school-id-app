@@ -73,6 +73,10 @@
     });
   });
 
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && nav.classList.contains("open")) { nav.classList.remove("open"); menuBtn.setAttribute("aria-expanded", "false"); menuBtn.focus(); }
+  });
+
   const aboutRoot = document.querySelector("[data-about]");
   if (aboutRoot) {
     aboutRoot.innerHTML = site.about
@@ -194,6 +198,15 @@
       } finally {
         button.disabled = false;
       }
+    });
+  }
+  // Content remains visible when motion is reduced or observation is unavailable.
+  if ("IntersectionObserver" in window && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add("in-view"); observer.unobserve(entry.target); } });
+    }, {threshold:0.06});
+    document.querySelectorAll(".product-card,.client-card,.stat-card,.contact-card,.feature-card,.about-copy,.form,.page-intro").forEach((el,i) => {
+      el.classList.add("reveal"); el.style.setProperty("--delay", `${(i % 4)*45}ms`); observer.observe(el);
     });
   }
 })();
