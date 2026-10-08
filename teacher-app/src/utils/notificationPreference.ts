@@ -88,9 +88,13 @@ export function setNotificationPreference(next: boolean): Promise<void> {
         throw new Error(
           "Allow notifications in your phone's app settings first.",
         );
-      const token = (
-        await Notifications.getDevicePushTokenAsync()
-      ).data?.trim();
+      let token: string | undefined;
+      try { token = (await Notifications.getDevicePushTokenAsync()).data?.trim(); }
+      catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (/firebase|default.*app|google.services/i.test(message)) throw new Error("This installed app is missing its notification setup. Please install an APK built with the correct Firebase google-services.json for com.schoolid.teacher.");
+        throw new Error("Could not connect to phone notifications. Check your internet connection and try again.");
+      }
       if (!token)
         throw new Error("Could not register this phone. Please try again.");
       const response = await api.post("/teacher/push-token", {

@@ -101,8 +101,7 @@ export function CropToolPage() {
     };
   }, [schoolId, instituteId, organizationId, isInstitute]);
 
-  const back = isOrganization ? "/extra-2" : isInstitute ? "/institutes" : "/schools";
-  const backLabel = isOrganization ? "Back to Organizations" : isInstitute ? "Back to Institutes" : "Back to Schools";
+  const back = isOrganization ? `/extra-2/${encodeURIComponent(organizationId)}` : isInstitute ? `/institute-members?instituteId=${encodeURIComponent(instituteId)}&instituteName=${encodeURIComponent(orgName)}` : `/students?schoolId=${encodeURIComponent(schoolId)}&schoolName=${encodeURIComponent(orgName)}`;
 
   return (
     <div className="app-page flex min-h-0 flex-1 flex-col">
@@ -110,7 +109,6 @@ export function CropToolPage() {
         <CropToolModal
           layout="page"
           schoolName={orgName}
-          backLabel={backLabel}
           storageKey={organizationId ? `organization:${organizationId}` : instituteId ? `institute:${instituteId}` : `school:${schoolId}`}
           students={students}
           categories={isOrganization ? organizationCategories : configuredCategoryFields(fields)}

@@ -1,5 +1,6 @@
+import { HeaderBack } from "../components/HeaderBack";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
 import type {
@@ -114,7 +115,7 @@ export function BulkUploadPage() {
 
   return (
     <div>
-      <Link
+      <HeaderBack
         to={
           lockedSchoolId
             ? `/students?schoolId=${encodeURIComponent(lockedSchoolId)}${lockedSchoolName ? `&schoolName=${encodeURIComponent(lockedSchoolName)}` : ""}`
@@ -122,10 +123,9 @@ export function BulkUploadPage() {
               ? `/students?schoolId=${encodeURIComponent(schoolId)}`
               : "/students"
         }
-        className="mb-4 inline-block text-sm font-medium text-button-blue hover:underline"
       >
         ← Back to Students
-      </Link>
+      </HeaderBack>
 
       <form
         onSubmit={handleSubmit}

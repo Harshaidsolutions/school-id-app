@@ -1,0 +1,13 @@
+const fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'..');
+const target=path.join(root,'android/app/google-services.json');
+const candidates=[target,path.join(root,'google-services.json')];
+const source=candidates.find(p=>fs.existsSync(p));
+if(!source)throw Error('Notifications need google-services.json for com.schoolid.teacher. Download it from the existing Firebase project and put it in teacher-app before building. Do not create a different Firebase project.');
+const config=JSON.parse(fs.readFileSync(source,'utf8'));
+if(!config.client?.some(c=>c.client_info?.android_client_info?.package_name==='com.schoolid.teacher'))throw Error('google-services.json does not contain com.schoolid.teacher. Use the correct existing Firebase Android app.');
+if(source!==target)fs.copyFileSync(source,target);
+const gradle=path.join(root,'android/app/build.gradle');
+let text=fs.readFileSync(gradle,'utf8');
+if(!text.includes('com.google.gms.google-services'))throw Error('Firebase Gradle plugin is missing from android/app/build.gradle. Send this message with that file so notification setup can be repaired without changing signing.');
+console.log('Firebase Android package and Google Services plugin verified.');

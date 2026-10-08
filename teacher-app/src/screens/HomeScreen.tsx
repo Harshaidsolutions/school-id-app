@@ -163,8 +163,8 @@ export function HomeScreen() {
           { paddingTop: insets.top + scale(4), paddingBottom: scale(4) },
         ]}
       >
-        <View style={{...styles.headerLogoWrap, width: headerLogo * 1.5, height: headerLogo * 1.5, borderRadius: headerLogo * .75}}>
-          <AppIcon size={headerLogo} variant="default" />
+        <View style={styles.headerLogoWrap}>
+          <AppIcon size={headerLogo} variant="header" />
         </View>
         <View style={styles.headerTextWrap}>
           <Text
@@ -412,7 +412,7 @@ export function HomeScreen() {
                   </Pressable>
                 </View>
                 <View style={{flexDirection:"row",gap:12,alignItems:"center"}}>
-                <Pressable accessibilityRole="button" disabled={booking || !ready} style={[styles.lightboxClose,{backgroundColor:colors.brandGreen,flex:1}]} onPress={()=>void bookProduct()}><Text style={styles.lightboxCloseText}>{booking?"Opening…":"Book Now"}</Text></Pressable>
+                <Pressable accessibilityRole="button" disabled={booking || !ready} style={[styles.lightboxClose,{backgroundColor:colors.brandGreen,flex:1}]} onPress={()=>void bookProduct()}><Text style={styles.lightboxCloseText}>{booking?"Opening…":"Order Now"}</Text></Pressable>
                 <Pressable
                   style={[styles.lightboxClose, { backgroundColor: colors.primaryOrange }]}
                   onPress={() => setPreviewIndex(null)}
@@ -420,7 +420,6 @@ export function HomeScreen() {
                   <Text style={styles.lightboxCloseText}>Close</Text>
                 </Pressable>
                 </View>
-                <Text style={{color:colors.textMuted,fontFamily:fonts.regular,fontSize:12,textAlign:"center",marginTop:8}}>Book Now includes the product image and message. If WhatsApp omits the caption, paste the copied message.</Text>
               </>
             ) : null}
           </Pressable>
@@ -473,7 +472,7 @@ function useHomeStyles() {
     borderBottomRightRadius: radius.xl,
   },
   headerLogoWrap: {
-      backgroundColor:"#FFFFFF",
+      backgroundColor:"transparent",
       borderRadius:10,
       paddingVertical:3,
     flexShrink: 0,
@@ -491,17 +490,17 @@ function useHomeStyles() {
   },
   headerTitle: {
     fontFamily: fonts.extraBold,
-    fontSize: typeScale.md,
+    fontSize: typeScale.md + 2,
     color: "#FFFFFF",
     letterSpacing: 0.2,
     includeFontPadding:false,
-    lineHeight:typeScale.md*1.15,
+    lineHeight:(typeScale.md + 2)*1.15,
   },
   headerSubtitle: {
     fontFamily: fonts.regular,
     fontSize: typeScale.xs,
     color: "rgba(255,255,255,0.92)",
-    marginTop: 0,
+    marginTop: 3,
     includeFontPadding:false,
     lineHeight:typeScale.xs*1.15,
   },

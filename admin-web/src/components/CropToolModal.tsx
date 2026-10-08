@@ -1,3 +1,4 @@
+import { HeaderBack } from "./HeaderBack";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import api from "../api/client";
 import { studentFieldDisplay } from "../constants/formFields";
@@ -26,7 +27,6 @@ export function CropToolModal({
   layout = "page",
   storageKey = "crop",
   schoolName = "",
-  backLabel = "Back to Schools",
 }: {
   students: Student[];
   categories: ConfiguredCategoryField[];
@@ -699,7 +699,7 @@ export function CropToolModal({
   return (
     <div className={shell} role={layout === "page" ? undefined : "dialog"} aria-modal={layout === "page" ? undefined : true} aria-label="Cropping Tool">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-indigo-100 bg-white px-4 py-2 text-sm font-semibold text-indigo-900">
-        {layout === "page" && <button type="button" className="btn-secondary" disabled={saving || applying || rotating} onClick={() => { if (canLeaveEditor()) onClose(); }}>← {backLabel}</button>}
+        {layout === "page" && <HeaderBack disabled={saving || applying || rotating} onClick={() => { if (canLeaveEditor()) onClose(); }}>← Back</HeaderBack>}
         <span>{schoolName || "Cropping Tool"}</span><span>{!browsing && student ? `Photo ${student.photo_id || "—"} · ${student.student_name || ""}` : "Photos"}</span>
         {layout==="modal" && <button aria-label="Close cropping tool" onClick={()=>{if(canLeaveEditor())onClose();}}>×</button>}
       </div>

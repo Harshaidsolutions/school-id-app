@@ -1,3 +1,4 @@
+import { HeaderBack } from "../components/HeaderBack";
 import { RecordMediaViewer } from "../components/RecordMediaViewer";
 import { captureDayKey } from "../utils/captureDay";
 import { IdCardGeneratorButton } from "../components/IdCardGeneratorButton";
@@ -537,12 +538,11 @@ export function OrganizationDetailPage() {
 
   return (
     <div className="detail-page-shell admin-scroll-root">
-      <Link
+      <HeaderBack
         to="/extra-2"
-        className="mb-4 inline-flex w-fit max-w-full shrink-0 items-center gap-1.5 self-start text-sm font-semibold text-button-blue hover:underline"
       >
         ← Back to Organizations
-      </Link>
+      </HeaderBack>
       <div className="detail-toolbar-shell">
         <div className="detail-toolbar-row1">
           <button type="button" className="detail-toolbar-btn" disabled={!id} onClick={openFields}>Form Setup</button>

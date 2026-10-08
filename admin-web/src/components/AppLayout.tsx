@@ -329,13 +329,13 @@ export function AppLayout() {
     <>
       <div className="shrink-0 border-b border-white/25 px-3 py-3">
         {user?.isSuperAdmin === true ? (
-          <div className="rounded-lg bg-white px-2 py-1">
+          <div className="rounded-lg bg-transparent px-0 py-0">
             <HarshaLogo compact />
           </div>
         ) : (
           <div className="px-1 py-1 text-sm">
             {user?.photoUrl ? (
-              <div className="mb-3 rounded-lg bg-white px-2 py-1"><HarshaLogo compact src={user.photoUrl} alt="Admin logo" /></div>
+              <div className="mb-3 rounded-lg bg-transparent px-0 py-0"><HarshaLogo compact src={user.photoUrl} alt="Admin logo" /></div>
             ) : null}
             <div className="text-white/75">Hi</div>
             <div className="font-semibold text-white">
@@ -386,18 +386,7 @@ export function AppLayout() {
             useLockedPageScroll ? "" : "sticky top-0"
           }`}
         >
-          {hideSidebar && (isSchoolDetail || isInstituteDetail || isOrganizationDetail) ? (
-            <button
-              type="button"
-              onClick={() => navigate(isOrganizationDetail ? "/extra-2" : isInstituteDetail ? "/institutes" : "/schools")}
-              className="rounded-lg p-2 text-text-navy hover:bg-content-bg lg:hidden"
-              aria-label="Back to list"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-            </button>
-          ) : null}
+          <div id="page-header-back" className="shrink-0" />
           {!hideSidebar ? (
             <button
               type="button"

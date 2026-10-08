@@ -1,7 +1,8 @@
+import { HeaderBack } from "../components/HeaderBack";
 import { IdCardGeneratorButton } from "../components/IdCardGeneratorButton";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import api, { getAuthToken } from "../api/client";
 import { StudentPhotoModal } from "../components/StudentPhotoModal";
@@ -794,12 +795,11 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       }
     >
       {isDetailView && (
-        <Link
+        <HeaderBack
           to={isInstitute ? "/institutes" : "/schools"}
-          className="mb-4 inline-flex w-fit max-w-full shrink-0 items-center gap-1.5 self-start text-sm font-semibold text-button-blue hover:underline"
         >
           ← Back to {isInstitute ? "Institutes" : "Schools"}
-        </Link>
+        </HeaderBack>
       )}
 
       {isDetailView ? (

@@ -281,8 +281,8 @@ export function DrawerMenuScreen({ navigation }: Props) {
             },
           ]}
         >
-          <View style={{...styles.headerLogoWrap, width: drawerLogoSize * 1.5, height: drawerLogoSize * 1.5, borderRadius: drawerLogoSize * .75}}>
-            <AppIcon size={drawerLogoSize} variant="default" />
+          <View style={styles.headerLogoWrap}>
+            <AppIcon size={drawerLogoSize} variant="header" />
           </View>
         </LinearGradient>
 
@@ -407,7 +407,7 @@ function useDrawerMenuStyles() {
       borderBottomRightRadius: radius.xl,
     },
     headerLogoWrap: {
-      backgroundColor:"#FFFFFF",
+      backgroundColor:"transparent",
       borderRadius:10,
       paddingVertical:3,
       flexShrink: 0,

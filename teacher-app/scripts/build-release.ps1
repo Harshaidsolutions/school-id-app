@@ -13,6 +13,8 @@
         } catch {
             if (-not $_.Exception.Response -or [int]$_.Exception.Response.StatusCode -ne 400) { throw }
         }
+        node scripts/verify-push-config.cjs
+        if ($LASTEXITCODE -ne 0) { throw 'Notification configuration check failed. Fix it before building.' }
         npm ci
         if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed.' }
         npm run assets:generate

@@ -43,6 +43,7 @@ export function AppIcon({ size, style, variant = "default" }: Props) {
 
   return (
     <View style={[styles.wrap, { width, height }, style]}>
+      {variant === "header" && <View pointerEvents="none" style={{position:"absolute",left:width*.22,top:height*.29,width:width*.49,height:height*.60,borderRadius:width*.055,backgroundColor:"#FFFFFF"}} />}
       <Image
         source={source}
         style={{ width, height }}

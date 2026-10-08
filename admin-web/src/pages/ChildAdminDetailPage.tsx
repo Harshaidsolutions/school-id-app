@@ -1,5 +1,6 @@
+import { HeaderBack } from "../components/HeaderBack";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -159,9 +160,9 @@ export function ChildAdminDetailPage() {
 
   return (
     <div className="app-page space-y-4">
-      <Link to="/extra-1" className="text-sm font-semibold text-button-blue hover:underline">
+      <HeaderBack to="/extra-1">
         Back to Admin Management
-      </Link>
+      </HeaderBack>
       <h1 className="text-xl font-bold text-text-navy">Created Admin Details</h1>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
       {loading || !admin ? (

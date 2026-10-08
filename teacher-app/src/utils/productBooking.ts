@@ -12,7 +12,7 @@ export async function bookProductViaWhatsApp(
   await asset.downloadAsync();
   // Android's native share implementation supports whatsAppNumber, although its
   // published BaseShareSingleOptions type omits this documented option.
-  const message = `Hello, I would like to order ${product.name}. Please share the price and availability.`;
+  const message = `Hello, I want to buy this product: ${product.name}. Please share the price and availability.`;
   await Clipboard.setStringAsync(message);
   const options = {
     social: Social.Whatsapp,

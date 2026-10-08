@@ -277,6 +277,7 @@ export async function bulkUploadStudents(
       throw new AppError("Failed to create import batch", 500);
     }
 
+    await client.query("SELECT set_config('app.admin_excel_import', 'on', true)");
     let inserted = 0;
     let updated = 0;
 

@@ -1,5 +1,6 @@
+import { HeaderBack } from "../components/HeaderBack";
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import {
   DndContext,
@@ -379,9 +380,9 @@ export function FormSetupPage() {
 
   return (
     <div className="centered-page-shell">
-      <Link to={backHref} className="mb-4 self-start text-sm font-medium text-button-blue hover:underline">
+      <HeaderBack to={backHref}>
         ← Back
-      </Link>
+      </HeaderBack>
 
       {error && <div className="w-full alert-error">{error}</div>}
       {success && <div className="mt-4 w-full alert-success">{success}</div>}

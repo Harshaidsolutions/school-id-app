@@ -1,5 +1,6 @@
+import { HeaderBack } from "../components/HeaderBack";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
 import { ImagePreviewModal } from "../components/ImagePreviewModal";
@@ -433,9 +434,9 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
 
   return (
     <div className="centered-page-shell">
-      <Link to={backHref} className="mb-4 self-start text-sm font-medium text-button-blue hover:underline">
+      <HeaderBack to={backHref}>
         ← Back
-      </Link>
+      </HeaderBack>
 
       {error && <div className="w-full alert-error">{error}</div>}
 

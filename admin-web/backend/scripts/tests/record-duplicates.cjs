@@ -23,5 +23,9 @@ const {PGlite}=require('@electric-sql/pglite'); const fs=require('fs'); const as
  await org(r2,b,'Operations');
  await db.query("UPDATE organization_submission_values SET photo_url='replacement' WHERE submission_id=$1",[r]);
  await db.exec('BEGIN');await db.query("UPDATE organization_submission_values SET text_value='New department' WHERE submission_id=$1 AND field_id=$2",[r,g]);await db.exec('COMMIT');
+ await db.exec("BEGIN; SELECT set_config('app.admin_excel_import', 'on', true)");
+ await add(a,'Asha Rao','123','EXCEL_002');
+ await db.exec('COMMIT');
+ await assert.rejects(add(a,'Asha Rao','123','MANUAL_003'), e=>e.constraint==='duplicate_record_details');
  console.log('PASS duplicate SQL: idempotent migration, normalized equality, scope, different details, update collision, photo edits, organization transaction rollback');await db.close();
 })().catch(e=>{console.error(e);process.exit(1)});

@@ -27,6 +27,7 @@ CREATE OR REPLACE FUNCTION reject_duplicate_student_details() RETURNS trigger
 LANGUAGE plpgsql AS $$
 DECLARE details jsonb;
 BEGIN
+ IF current_setting('app.admin_excel_import', true) = 'on' THEN RETURN NEW; END IF;
  details := student_record_details(to_jsonb(NEW));
  IF details = '{}'::jsonb THEN RETURN NEW; END IF;
  IF TG_OP = 'UPDATE' THEN
