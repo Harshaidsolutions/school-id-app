@@ -1385,8 +1385,8 @@ function useOrgDetailsStyles() {
     },
 
     card: {
-      borderRadius: radius.card,
-      paddingVertical: spacing.md,
+      borderRadius: radius.xl,
+      paddingVertical: spacing.lg,
       paddingHorizontal: spacing.md,
       borderWidth: 1,
       ...cardShadow,
@@ -1437,7 +1437,7 @@ function useOrgDetailsStyles() {
     selectionImageWrap: {
       width: "100%",
       minHeight: scale(220),
-      borderRadius: radius.md,
+      borderRadius: radius.xl,
       padding: spacing.sm,
       alignItems: "center",
       justifyContent: "center",

@@ -205,7 +205,7 @@ function usePreviewStyles() {
         bottom: 0,
         flexDirection: "row",
         justifyContent: "center",
-        gap: scale(spacing.xxl + spacing.md),
+        gap: scale(spacing.xl),
         paddingTop: spacing.md,
         paddingHorizontal: scale(16),
       },
@@ -213,7 +213,7 @@ function usePreviewStyles() {
       actionCircle: {
         width: actionSize,
         height: actionSize,
-        borderRadius: actionSize / 2,
+        borderRadius: scale(19),
         alignItems: "center",
         justifyContent: "center",
       },

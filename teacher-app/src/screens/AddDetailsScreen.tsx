@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   field: {
-    marginBottom: spacing.sm + 2,
+    marginBottom: spacing.md,
   },
   label: {
     marginBottom: spacing.xxs + 2,
@@ -330,8 +330,8 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.sm + 2,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: Platform.OS === "ios" ? spacing.sm + 1 : spacing.sm - 2,
     fontSize: typeScale.rowTitle,
     fontFamily: fonts.regular,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     paddingVertical: spacing.sm + 2,
     alignItems: "center",
     justifyContent: "center",

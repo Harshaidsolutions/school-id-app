@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
 
 
 
-  photoRow: { alignItems: "center", marginBottom: spacing.md },
+  photoRow: { alignItems: "center", marginBottom: spacing.lg, paddingTop: spacing.sm },
 
   photoWrap: {
 
@@ -618,12 +618,12 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(75,60,112,0.35)",
+    backgroundColor: "rgba(17,73,49,0.42)",
   },
 
 
 
-  field: { marginBottom: spacing.sm + 2 },
+  field: { marginBottom: spacing.md },
 
   label: {
 
@@ -639,9 +639,8 @@ const styles = StyleSheet.create({
 
     borderWidth: 1,
 
-    borderRadius: radius.md,
-
-    paddingHorizontal: spacing.sm + 2,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
 
     paddingVertical: spacing.sm,
 

@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     padding: spacing.pagePad,
   },
   card: {
-    borderRadius: radius.xl,
+    borderRadius: radius.card,
     padding: spacing.xl,
     alignItems: "center",
     borderWidth: 1,
@@ -273,9 +273,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   actions: {
-    marginTop: spacing.xl,
+    marginTop: spacing.xxl,
     width: "100%",
-    gap: spacing.cardGap,
+    gap: spacing.md,
   },
   btn: {
     width: "100%",
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   thumb: {
     width: spacing.avatarMd + 8,
     height: spacing.avatarMd + 8,
-    borderRadius: (spacing.avatarMd + 8) / 2,
+    borderRadius: radius.lg,
     borderWidth: 2,
   },
 });
