@@ -9,9 +9,9 @@ export function Entrance({ children, style }: { children: ReactNode; style?: Sty
   useEffect(() => {
     if (reducedMotion) { progress.setValue(1); return; }
     progress.setValue(0);
-    const animation = Animated.timing(progress, { toValue: 1, duration: 320, useNativeDriver: true });
+    const animation = Animated.timing(progress, { toValue: 1, duration: 420, useNativeDriver: true });
     animation.start();
     return () => animation.stop();
   }, [progress, reducedMotion]);
-  return <Animated.View style={[style, { opacity: progress.interpolate({ inputRange: [0, 1], outputRange: [0.65, 1] }), transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>{children}</Animated.View>;
+  return <Animated.View style={[style, { opacity: progress.interpolate({ inputRange: [0, 1], outputRange: [0.48, 1] }), transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] }]}>{children}</Animated.View>;
 }

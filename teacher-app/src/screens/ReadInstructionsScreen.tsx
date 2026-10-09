@@ -111,13 +111,13 @@ function useReadInstructionsStyles() {
     },
     clipLine: {
       height: spacing.xxs,
-      backgroundColor: "#E0E0E0",
+      backgroundColor: "#D9E8DF",
       borderRadius: spacing.xxs / 2,
     },
     clipLineShort: {
       height: spacing.xxs,
       width: "60%",
-      backgroundColor: "#E0E0E0",
+      backgroundColor: "#D9E8DF",
       borderRadius: spacing.xxs / 2,
     },
     checkBadge: {

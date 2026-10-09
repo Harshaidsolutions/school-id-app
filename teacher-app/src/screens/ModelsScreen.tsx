@@ -544,7 +544,7 @@ function useModelsStyles() {
     borderRadius: radius.lg,
     overflow: "hidden",
     elevation: 2,
-    shadowColor: "#65568D",
+    shadowColor: "#287B5D",
     shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -593,7 +593,7 @@ function useModelsStyles() {
   },
   tagPreviewImage: {
     height: hp(52),
-    backgroundColor: "#F1F3FA",
+    backgroundColor: "#F0F8F3",
   },
   tabsWrap: {
     paddingHorizontal: spacing.md,
