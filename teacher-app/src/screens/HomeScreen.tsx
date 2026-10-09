@@ -490,7 +490,7 @@ function useHomeStyles() {
     paddingRight: spacing.xxs,
   },
   headerTitle: {
-    fontFamily: fonts.extraBold,
+    fontFamily: fonts.headingSemiBold,
     fontSize: typeScale.md + 2,
     color: "#FFFFFF",
     letterSpacing: 0.2,
@@ -530,10 +530,10 @@ function useHomeStyles() {
   scroll: { flex: 1 },
   content: { paddingHorizontal: spacing.pagePad, paddingTop: 0, paddingBottom: spacing.pagePad },
   hero: {
-    backgroundColor: "#FFF0E5",
+    backgroundColor: "#F0FBF4",
     borderWidth: 1,
-    borderColor: "#F1DACB",
-    borderRadius: 24,
+    borderColor: "#DCEFE2",
+    borderRadius: 22,
     paddingHorizontal: spacing.md,
     marginTop: spacing.md,
     alignItems: "center",
@@ -551,7 +551,7 @@ function useHomeStyles() {
     width: scale(36),
     borderRadius: 4,
     marginBottom: spacing.xs,
-    opacity: 0.8,
+    opacity: 0.65,
   },
   sectionEnd: {
     height: scale(1),

@@ -22,8 +22,8 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
   const styles = useLaunchSplashStyles();
   const { width, scale } = useResponsiveLayout();
   const logoSize = loginLogoSize(width);
-  const circleSize = Math.round(logoSize * 1.38);
-  const splashLogoSize = Math.round(logoSize * 0.82);
+  // Approved visual design: original logo has no circular backdrop.
+  const splashLogoSize = Math.round(logoSize * 1.03);
   const opacity = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.82)).current;
   const readyFired = useRef(false);
@@ -43,13 +43,13 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 900,
+        duration: 650,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(scaleAnim, {
         toValue: 1,
-        duration: 1100,
+        duration: 800,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -58,8 +58,8 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
 
   return (
     <LinearGradient
-      colors={["#FF8C1A", "#D66A32", "#25A59C", "#168B86"]}
-      locations={[0, 0.38, 0.72, 1]}
+      colors={["#F7FFF9", "#EAF9F1", "#D7F1E6"]}
+      locations={[0, 0.55, 1]}
       start={{ x: 0.1, y: 0 }}
       end={{ x: 0.9, y: 1 }}
       style={styles.root}
@@ -72,18 +72,7 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
             { opacity, transform: [{ scale: scaleAnim }] },
           ]}
         >
-          <View
-            style={[
-              styles.logoCircle,
-              {
-                width: circleSize,
-                height: circleSize,
-                borderRadius: circleSize / 2,
-              },
-            ]}
-          >
-            <AppIcon size={splashLogoSize} />
-          </View>
+          <AppIcon size={splashLogoSize} />
           <BrandLockup
             variant="splash"
             title={BRAND.appName}
@@ -110,10 +99,6 @@ function useLaunchSplashStyles() {
       maxWidth: wp(92),
       paddingHorizontal: scale(16),
     },
-    logoCircle: {
-      backgroundColor: "#FFFFFF",
-      alignItems: "center",
-      justifyContent: "center",
-    },
+
   }));
 }

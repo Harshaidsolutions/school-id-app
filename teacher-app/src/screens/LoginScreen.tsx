@@ -40,7 +40,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
 const REMEMBER_KEY = "teacher_remember_username";
 const REMEMBER_FLAG = "teacher_remember_me";
-const LOGIN_BG = "#FBF6F0";
+const LOGIN_BG = "#F4FBF6";
 
 export function LoginScreen(_props: Props) {
   const styles = useLoginStyles();
@@ -242,7 +242,7 @@ export function LoginScreen(_props: Props) {
 
 function useLoginStyles() {
   return useResponsiveStyles(({ wp, scale }) => {
-    const formW = Math.min(wp(100) - spacing.pagePad * 2, 440);
+    const formW = Math.min(wp(100) - spacing.pagePad * 2, 480);
     return {
       safe: { flex: 1, backgroundColor: LOGIN_BG },
       flex: { flex: 1 },
@@ -254,20 +254,20 @@ function useLoginStyles() {
         paddingVertical: spacing.lg,
       },
       identityPanel: { alignItems: "center", width: formW, paddingBottom: spacing.lg },
-      authPanel: { width: formW, padding: spacing.lg, backgroundColor: "#FFFFFF", borderRadius: scale(28), borderWidth: 1, borderColor: "#EBDDE4", ...cardShadow },
+      authPanel: { width: formW, padding: spacing.lg, backgroundColor: "#FFFFFF", borderRadius: scale(24), borderWidth: 1, borderColor: "#DDECE2", ...cardShadow },
       title: {
         marginTop: spacing.sm,
         fontSize: scale(25),
-        fontFamily: fonts.headingBold,
+        fontFamily: fonts.headingSemiBold,
         textAlign: "center",
-        color: "#168B86",
+        color: "#207E52",
       },
       subtitle: {
         marginTop: scale(4),
         marginBottom: spacing.md,
         fontFamily: fonts.body,
         fontSize: typeScale.subtitle,
-        color: "#6C718D",
+        color: "#647B70",
         textAlign: "center",
       },
       formGroup: {
@@ -276,7 +276,7 @@ function useLoginStyles() {
         backgroundColor: "#FFFFFF",
         borderRadius: radius.card,
         borderWidth: 1,
-        borderColor: "#EBDDE4",
+        borderColor: "#DDECE2",
         marginBottom: spacing.sm,
         overflow: "hidden",
         ...cardShadow,
@@ -290,13 +290,13 @@ function useLoginStyles() {
       },
       formDivider: {
         height: 1,
-        backgroundColor: "#EBDDE4",
+        backgroundColor: "#DDECE2",
         marginHorizontal: spacing.md,
       },
       input: {
         flex: 1,
         ...textStyles.input,
-        color: "#694B72",
+        color: "#29463A",
         paddingVertical: Platform.OS === "ios" ? spacing.sm : spacing.xs,
       },
       error: {
@@ -310,14 +310,14 @@ function useLoginStyles() {
       loginBtn: {
         width: "100%",
         alignSelf: "center",
-        backgroundColor: "#875881",
+        backgroundColor: "#218451",
         borderRadius: radius.lg,
         minHeight: scale(50),
         alignItems: "center",
         justifyContent: "center",
         marginTop: spacing.xs,
         elevation: 2,
-        shadowColor: "#D66A32",
+        shadowColor: "#218451",
         shadowOpacity: 0.25,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 2 },
@@ -331,7 +331,7 @@ function useLoginStyles() {
         textAlign: "center",
         fontFamily: fonts.body,
         fontSize: typeScale.subtitle,
-        color: "#168B86",
+        color: "#207E52",
         marginTop: spacing.md,
         marginBottom: spacing.sm,
         width: formW,
@@ -350,7 +350,7 @@ function useLoginStyles() {
         gap: spacing.xs,
         paddingVertical: spacing.sm,
         borderRadius: radius.buttonPill,
-        backgroundColor: "#287F79",
+        backgroundColor: "#218451",
       },
       callBtn: {
         flex: 1,
@@ -360,7 +360,7 @@ function useLoginStyles() {
         gap: spacing.xs,
         paddingVertical: spacing.sm,
         borderRadius: radius.buttonPill,
-        backgroundColor: "#D66A32",
+        backgroundColor: "#EAA563",
       },
       contactBtnText: {
         fontFamily: fonts.headingSemiBold,
@@ -378,7 +378,7 @@ function useLoginStyles() {
       contactText: {
         fontFamily: fonts.body,
         fontSize: typeScale.subtitle,
-        color: "#694B72",
+        color: "#29463A",
       },
     };
   });

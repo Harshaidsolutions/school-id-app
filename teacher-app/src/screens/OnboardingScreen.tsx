@@ -224,7 +224,7 @@ function OnboardingFooter({
   const footerH = Math.round(height * FOOTER_RATIO);
   const gradient =
     accent === "green"
-      ? ([colors.brandGreen, colors.brandGreenLight, "#63BDB4"] as const)
+      ? (["#258754", "#47AC74", "#8FD5AD"] as const)
       : fabGradient;
 
   return (
@@ -613,7 +613,7 @@ function useOnboardingStyles() {
       alignItems: "center",
       justifyContent: "center",
       marginBottom: 0,
-      shadowColor: "#65568D",
+      shadowColor: "#317B54",
       shadowOpacity: 0.1,
       shadowRadius: 6,
       shadowOffset: { width: 0, height: 2 },
