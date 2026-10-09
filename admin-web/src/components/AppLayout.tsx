@@ -137,7 +137,7 @@ function SidebarNav({
             `flex items-center justify-start gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] transition duration-200 ${
               isActive
                 ? "nav-active"
-                : "font-medium text-white/90 hover:bg-white/15 hover:text-white"
+                : "nav-idle font-medium"
             }`
           }
         >
@@ -337,8 +337,8 @@ export function AppLayout() {
             {user?.photoUrl ? (
               <div className="mb-3 rounded-lg bg-transparent px-0 py-0"><HarshaLogo compact src={user.photoUrl} alt="Admin logo" /></div>
             ) : null}
-            <div className="text-white/75">Hi</div>
-            <div className="font-semibold text-white">
+            <div className="text-text-muted">Hi</div>
+            <div className="font-semibold text-text">
               {user?.displayName?.trim() || user?.username || user?.email}
             </div>
           </div>
@@ -637,7 +637,7 @@ export function AppLayout() {
               onClick={() => setMenuOpen((v) => !v)}
               className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-content-bg"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] text-sm font-semibold text-white shadow-[0_6px_14px_rgba(99,102,241,0.28)]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] text-sm font-semibold text-text shadow-[0_6px_14px_rgba(99,102,241,0.28)]">
                 A
               </span>
               <span className="hidden text-left sm:block">

@@ -1,3 +1,4 @@
+import { Entrance } from "../components/Entrance";
 import { useCallback, useRef, useState } from "react";
 import {
   Image,
@@ -160,7 +161,7 @@ export function HomeScreen() {
         end={{ x: 1, y: 0.5 }}
         style={[
           styles.header,
-          { paddingTop: insets.top + scale(4), paddingBottom: scale(4) },
+          { paddingTop: insets.top + scale(12), paddingBottom: scale(16) },
         ]}
       >
         <View style={styles.headerLogoWrap}>
@@ -224,13 +225,13 @@ export function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.hero}>
+        <Entrance style={styles.hero}>
           {!ready ? null : childBrand ? (
             brand.photoUrl ? <Image source={{uri:brand.photoUrl}} accessibilityLabel="Your admin logo" resizeMode="contain" style={{width:"80%",height:scale(115),alignSelf:"center"}} /> : <BrandLockup variant="homeHero" showTagline />
           ) : (
             <BrandLockup variant="homeHero" showTagline />
           )}
-        </View>
+        </Entrance>
         {brandError && !ready ? (
           <Text style={[styles.footer, { color: colors.textMuted }]}>{brandError}</Text>
         ) : null}
@@ -505,6 +506,8 @@ function useHomeStyles() {
     lineHeight:typeScale.xs*1.15,
   },
   iconBtn: {
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -527,6 +530,12 @@ function useHomeStyles() {
   scroll: { flex: 1 },
   content: { paddingHorizontal: spacing.pagePad, paddingTop: 0, paddingBottom: spacing.pagePad },
   hero: {
+    backgroundColor: "#FFF0E5",
+    borderWidth: 1,
+    borderColor: "#F1DACB",
+    borderRadius: 24,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.md,
     alignItems: "center",
     paddingVertical: spacing.md,
     marginBottom: spacing.xs,
@@ -539,12 +548,13 @@ function useHomeStyles() {
   },
   sectionRule: {
     height: scale(1.5),
-    width: "100%",
+    width: scale(36),
+    borderRadius: 4,
     marginBottom: spacing.xs,
-    opacity: 0.55,
+    opacity: 0.8,
   },
   sectionEnd: {
-    height: scale(1.5),
+    height: scale(1),
     width: "100%",
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
@@ -558,7 +568,8 @@ function useHomeStyles() {
   instructionRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    borderRadius: radius.card,
+    borderRadius: radius.lg,
+    borderLeftWidth: 4,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.cardGap,
@@ -569,7 +580,7 @@ function useHomeStyles() {
   instructionNum: {
     width: scale(32),
     height: scale(32),
-    borderRadius: scale(16),
+    borderRadius: scale(10),
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 0,

@@ -134,18 +134,18 @@ const styles = StyleSheet.create({
   },
   titleWrap: {
     flex: 1,
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.md,
   },
   title: {
     ...textStyles.h1,
     color: "#FFFFFF",
-    textAlign: "center",
+    textAlign: "left",
   },
   subtitle: {
     fontFamily: fonts.medium,
     fontSize: typeScale.xs,
     color: "rgba(255,255,255,0.92)",
-    textAlign: "center",
+    textAlign: "left",
     marginTop: moderateScale(2),
   },
 });

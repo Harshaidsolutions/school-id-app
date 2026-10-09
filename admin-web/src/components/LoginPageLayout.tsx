@@ -6,14 +6,14 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
   onTitlePress?: () => void;
 }) {
   return (
-    <main className="login-shell">
+    <main className="login-shell"><div className="login-composition">
       <section className="login-brand-panel" aria-label="My School ID Card">
         <div className="login-wordmark"><img src="/app-logo.png" alt="" /><span>My School ID Card</span></div>
         <div className="login-brand-copy">
           <span className="login-eyebrow">ADMIN WORKSPACE</span>
           <h2>Every identity.<br />One organized place.</h2>
           <p>Manage your schools, institutes and organizations with a clear view of every record.</p>
-          <div className="login-feature-list"><span>Records &amp; photos</span><span>Forms &amp; exports</span><span>One shared workspace</span></div>
+          <div className="login-feature-list"><span><b>01</b>Records &amp; photos</span><span><b>02</b>Forms &amp; exports</span><span><b>03</b>One shared workspace</span></div>
         </div>
         <p className="login-brand-footnote">My School ID Card · Administration</p>
       </section>
@@ -26,6 +26,6 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
           {footer ? <div className="login-footer border-t border-border">{footer}</div> : null}
         </div>
       </section>
-    </main>
+    </div></main>
   );
 }

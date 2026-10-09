@@ -234,7 +234,7 @@ function SuperAdminContactCard() {
   if (rows.length === 0) return null;
 
   return (
-    <section className="dashboard-section">
+    <section className="dashboard-section dashboard-collection">
       <h2 className="dashboard-section-title">Super Admin contact</h2>
       <div className="card divide-y divide-border">
         {rows.map(([label, value]) => (
@@ -427,7 +427,7 @@ export function DashboardPage() {
 
         <>
 
-          <section className="dashboard-section">
+          <section className="dashboard-section dashboard-collection">
 
             <h2 className="dashboard-section-title">Schools</h2>
 

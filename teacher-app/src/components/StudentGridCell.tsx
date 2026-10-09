@@ -78,9 +78,9 @@ export const StudentGridCell = memo(function StudentGridCell({
             Captured: {formatCapturedAt(item.photo_captured_at)}
           </Text>
         ) : null}
-        <View style={[styles.nameBar, { backgroundColor: colors.brandGreen }]}>
+        <View style={[styles.nameBar, { backgroundColor: colors.surface }]}>
           <Text
-            style={styles.studentName}
+            style={[styles.studentName, { color: colors.textPrimary }]}
             numberOfLines={2}
             adjustsFontSizeToFit
             minimumFontScale={0.65}
@@ -96,13 +96,15 @@ export const StudentGridCell = memo(function StudentGridCell({
 const styles = StyleSheet.create({
   gridItem: { alignItems: "stretch" },
   photoCard: {
-    borderRadius: radius.lg,
+    borderRadius: radius.card,
+    padding: spacing.xxs,
     overflow: "hidden",
     borderWidth: 1,
   },
   avatar: {
     width: "100%",
     aspectRatio: 2 / 3,
+    borderRadius: radius.lg,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -111,7 +113,7 @@ const styles = StyleSheet.create({
   avatarPending: { borderStyle: "dashed" },
   avatarImg: { width: "100%", height: "100%" },
   nameBar: {
-    paddingVertical: spacing.xxs + 2,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xxs,
     minHeight: spacing.lg,
     justifyContent: "center",

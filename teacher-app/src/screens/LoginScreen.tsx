@@ -1,3 +1,4 @@
+import { Entrance } from "../components/Entrance";
 import { Pressable } from "../components/Pressable";
 import { API_BASE_URL } from "../api/client";
 import axios from "axios";
@@ -39,7 +40,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
 const REMEMBER_KEY = "teacher_remember_username";
 const REMEMBER_FLAG = "teacher_remember_me";
-const LOGIN_BG = "#F9F9F7";
+const LOGIN_BG = "#FBF6F0";
 
 export function LoginScreen(_props: Props) {
   const styles = useLoginStyles();
@@ -144,7 +145,8 @@ export function LoginScreen(_props: Props) {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <AppIcon size={logoSize} />
+            <View style={styles.identityPanel}>
+            <AppIcon size={Math.min(logoSize, 104)} />
             <BrandLockup
               variant="hero"
               title={BRAND.appName}
@@ -154,6 +156,8 @@ export function LoginScreen(_props: Props) {
               style={{ marginTop: spacing.sm }}
             />
 
+            </View>
+            <Entrance style={styles.authPanel}>
             <Text style={styles.title}>Welcome Back!</Text>
             <Text style={styles.subtitle}>Login to continue</Text>
 
@@ -204,6 +208,7 @@ export function LoginScreen(_props: Props) {
               </Text>
             </Pressable>
 
+            </Entrance>
             <Text style={styles.contactPrompt}>
               Please contact us if you want login
             </Text>
@@ -237,7 +242,7 @@ export function LoginScreen(_props: Props) {
 
 function useLoginStyles() {
   return useResponsiveStyles(({ wp, scale }) => {
-    const formW = Math.min(wp(90), 440);
+    const formW = Math.min(wp(100) - spacing.pagePad * 2, 440);
     return {
       safe: { flex: 1, backgroundColor: LOGIN_BG },
       flex: { flex: 1 },
@@ -248,6 +253,8 @@ function useLoginStyles() {
         paddingHorizontal: spacing.pagePad,
         paddingVertical: spacing.lg,
       },
+      identityPanel: { alignItems: "center", width: formW, paddingBottom: spacing.lg },
+      authPanel: { width: formW, padding: spacing.lg, backgroundColor: "#FFFFFF", borderRadius: scale(28), borderWidth: 1, borderColor: "#EBDDE4", ...cardShadow },
       title: {
         marginTop: spacing.sm,
         fontSize: scale(25),
@@ -264,12 +271,12 @@ function useLoginStyles() {
         textAlign: "center",
       },
       formGroup: {
-        width: formW,
+        width: "100%",
         alignSelf: "center",
         backgroundColor: "#FFFFFF",
         borderRadius: radius.card,
         borderWidth: 1,
-        borderColor: "#DFE3F2",
+        borderColor: "#EBDDE4",
         marginBottom: spacing.sm,
         overflow: "hidden",
         ...cardShadow,
@@ -283,13 +290,13 @@ function useLoginStyles() {
       },
       formDivider: {
         height: 1,
-        backgroundColor: "#E3E7F3",
+        backgroundColor: "#EBDDE4",
         marginHorizontal: spacing.md,
       },
       input: {
         flex: 1,
         ...textStyles.input,
-        color: "#50548D",
+        color: "#694B72",
         paddingVertical: Platform.OS === "ios" ? spacing.sm : spacing.xs,
       },
       error: {
@@ -298,12 +305,12 @@ function useLoginStyles() {
         fontSize: typeScale.body,
         color: "#DC2626",
         textAlign: "center",
-        width: formW,
+        width: "100%",
       },
       loginBtn: {
-        width: formW,
+        width: "100%",
         alignSelf: "center",
-        backgroundColor: "#7066C6",
+        backgroundColor: "#875881",
         borderRadius: radius.lg,
         minHeight: scale(50),
         alignItems: "center",
@@ -343,7 +350,7 @@ function useLoginStyles() {
         gap: spacing.xs,
         paddingVertical: spacing.sm,
         borderRadius: radius.buttonPill,
-        backgroundColor: "#25D366",
+        backgroundColor: "#287F79",
       },
       callBtn: {
         flex: 1,
@@ -371,7 +378,7 @@ function useLoginStyles() {
       contactText: {
         fontFamily: fonts.body,
         fontSize: typeScale.subtitle,
-        color: "#50548D",
+        color: "#694B72",
       },
     };
   });
