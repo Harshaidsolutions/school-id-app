@@ -52,7 +52,7 @@ export function OrangeGradientHeader({
         style,
       ]}
     >
-      <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{position:"absolute",right:-25,top:-35,width:160,height:160,borderRadius:80,borderWidth:24,borderColor:"rgba(255,255,255,0.08)"}} />
+      {/* No decorative circular background: preserve clear, professional headers. */}
       <View style={styles.row}>
         {onBack ? (
           <Pressable
@@ -108,7 +108,7 @@ export function OrangeGradientHeader({
 const styles = StyleSheet.create({
   container: {
     overflow: "hidden",
-    paddingBottom: moderateScale(18),
+    paddingBottom: moderateScale(16),
     justifyContent: "center",
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   iconBtn: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.25)",
   },

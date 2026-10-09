@@ -28,11 +28,11 @@ export const fonts = {
    * Role aliases (prefer textStyles):
    * heading weights → Poppins; body weights → Inter
    */
-  heading: "Poppins_700Bold",
-  headingMedium: "Poppins_500Medium",
-  headingSemiBold: "Poppins_600SemiBold",
-  headingBold: "Poppins_700Bold",
-  headingExtraBold: "Poppins_800ExtraBold",
+  heading: "Inter_600SemiBold",
+  headingMedium: "Inter_500Medium",
+  headingSemiBold: "Inter_600SemiBold",
+  headingBold: "Inter_600SemiBold",
+  headingExtraBold: "Inter_600SemiBold",
 
   body: "Inter_400Regular",
   bodyMedium: "Inter_500Medium",
@@ -42,9 +42,9 @@ export const fonts = {
   regular: "Inter_400Regular",
   medium: "Inter_500Medium",
   /** Row/card titles & buttons → Poppins */
-  semiBold: "Poppins_600SemiBold",
-  bold: "Poppins_700Bold",
-  extraBold: "Poppins_800ExtraBold",
+  semiBold: "Inter_600SemiBold",
+  bold: "Inter_600SemiBold",
+  extraBold: "Inter_600SemiBold",
 } as const;
 
 export const type = {
@@ -83,14 +83,14 @@ export const textStyles = {
   h1: {
     fontFamily: fonts.headingBold,
     fontSize: type.h1,
-    letterSpacing: 0.5,
+    letterSpacing: -0.25,
     color: colors.white,
     textTransform: "none" as const,
   },
   h2: {
     fontFamily: fonts.headingSemiBold,
     fontSize: type.section,
-    letterSpacing: 0.5,
+    letterSpacing: -0.25,
     color: colors.sectionOrange,
     textTransform: "none" as const,
   },
