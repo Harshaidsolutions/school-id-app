@@ -437,11 +437,17 @@ function useIdCardsStyles() {
       },
       classCard: {
         borderRadius: radius.xl,
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.md,
-        marginBottom: spacing.sm,
+        paddingVertical: spacing.md,
+        paddingHorizontal: spacing.lg,
+        marginBottom: spacing.md,
         borderWidth: 1,
-        minHeight: scale(96),
+        borderColor: "#DCECE3",
+        minHeight: scale(104),
+        shadowColor: "#1E7854",
+        shadowOpacity: 0.07,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 2,
         justifyContent: "center",
       },
       classCardTop: {
@@ -476,7 +482,7 @@ function useIdCardsStyles() {
       },
       menuBackdrop: {
         flex: 1,
-        backgroundColor: "rgba(26,34,51,0.35)",
+        backgroundColor: "rgba(20,68,48,0.26)",
         alignItems: "flex-end",
       },
       menuCard: {

@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
 
 
 
-  photoSection: { alignItems: "center", paddingVertical: spacing.lg },
+  photoSection: { alignItems: "center", paddingVertical: spacing.xl },
 
   photoWrap: {
 
@@ -362,9 +362,11 @@ const styles = StyleSheet.create({
 
     paddingHorizontal: spacing.lg,
 
-    gap: spacing.cardGap,
+    gap: spacing.md,
 
-    paddingVertical: spacing.xxs,
+    paddingVertical: spacing.md,
+
+    borderRadius: radius.xl,
 
   },
 

@@ -96,10 +96,16 @@ export const StudentGridCell = memo(function StudentGridCell({
 const styles = StyleSheet.create({
   gridItem: { alignItems: "stretch" },
   photoCard: {
-    borderRadius: radius.card,
-    padding: spacing.xxs,
+    borderRadius: radius.xl,
+    padding: spacing.xs,
     overflow: "hidden",
     borderWidth: 1,
+    borderColor: "#DCECE3",
+    shadowColor: "#18744F",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   avatar: {
     width: "100%",

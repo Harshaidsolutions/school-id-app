@@ -514,7 +514,7 @@ function useStudentListStyles() {
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.xs,
       gap: scale(4),
-      transform: [{ scale: 1.14 }],
+      transform: [{ scale: 1 }],
     },
     addBtnPlaceholder: { width: spacing.iconSm },
     addBtnText: {
@@ -534,7 +534,10 @@ function useStudentListStyles() {
       justifyContent: "center",
       paddingVertical: spacing.xs,
       paddingHorizontal: spacing.xxs,
-      borderRadius: radius.full,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: "#DDEDE3",
+      minHeight: scale(42),
     },
     tabText: {
       fontFamily: fonts.semiBold,
@@ -542,7 +545,7 @@ function useStudentListStyles() {
       textAlign: "center",
       width: "100%",
     },
-    gridContent: { paddingTop: scale(4) },
+    gridContent: { paddingTop: spacing.sm, paddingBottom: spacing.xxl },
     gridRow: { gap: spacing.cardGap, marginBottom: spacing.cardGap },
     empty: {
       textAlign: "center",
