@@ -81,24 +81,36 @@ export function ReadInstructionsScreen({ navigation }: Props) {
 
 function useReadInstructionsStyles() {
   return useResponsiveStyles(({ scale }) => ({
-    safe: { flex: 1 },
+    safe: { flex: 1 ,
+      backgroundColor: "#FAF8FF"
+    },
     container: {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: spacing.xl + scale(8),
+
+      backgroundColor: "#FAF8FF"
     },
     clipboardWrap: {
       marginBottom: spacing.xl + scale(4),
       alignItems: "center",
+
+      backgroundColor: "#E6FAF1",
+      borderRadius: 30
     },
     clipboard: {
       width: scale(80),
       height: scale(100),
-      borderRadius: spacing.sm - 2,
+      borderRadius: 24,
       padding: spacing.sm + 2,
       paddingTop: spacing.xl,
       gap: spacing.xs,
+
+      backgroundColor: "#FFFFFF",
+      shadowColor: "#005C55",
+      shadowOpacity: 0.09,
+      shadowRadius: 15
     },
     clipTop: {
       position: "absolute",
@@ -129,6 +141,8 @@ function useReadInstructionsStyles() {
       fontFamily: fonts.bold,
       fontSize: typeScale.xl,
       textAlign: "center",
+
+      color: "#131B2E"
     },
     subtitle: {
       fontFamily: fonts.medium,
@@ -136,6 +150,8 @@ function useReadInstructionsStyles() {
       textAlign: "center",
       marginTop: spacing.sm - 2,
       marginBottom: spacing.xl + scale(4),
+
+      color: "#647775"
     },
     buttons: {
       width: "100%",

@@ -282,10 +282,10 @@ const styles = StyleSheet.create({
     fontSize: typeScale.subtitle,
   },
   iconBtn: {
-    backgroundColor: "rgba(75,60,112,0.55)",
+    backgroundColor: "rgba(0,92,85,0.72)",
     width: spacing.chipSize,
     height: spacing.chipSize,
-    borderRadius: spacing.chipSize / 2,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -312,7 +312,10 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingHorizontal: spacing.xl + 4,
   },
-  sideBtn: { alignItems: "center", gap: spacing.xxs, minWidth: spacing.avatarMd + 8 },
+  sideBtn: { alignItems: "center", gap: spacing.xxs, minWidth: spacing.avatarMd + 8 ,
+      backgroundColor: "rgba(0,92,85,0.72)",
+      borderRadius: 18
+    },
   sideSpacer: { width: spacing.xl, height: spacing.xl },
   sideLabel: {
     color: colors.white,
@@ -329,12 +332,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(75,60,112,0.35)",
-  },
+
+      borderColor: "#6CF8BB"
+    },
   shutterInner: {
     width: moderateScale(58),
     height: moderateScale(58),
     borderRadius: moderateScale(29),
-    backgroundColor: colors.white,
+    backgroundColor: "#FFFFFF",
   },
   hint: {
     color: "rgba(255,255,255,0.9)",
@@ -370,10 +375,10 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   permButton: {
-    backgroundColor: colors.brandGreen,
+    backgroundColor: "#005C55",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    borderRadius: spacing.sm,
+    borderRadius: 18,
   },
   permButtonText: {
     color: colors.white,

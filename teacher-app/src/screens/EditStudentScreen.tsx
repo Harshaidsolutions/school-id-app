@@ -583,7 +583,9 @@ function Field({
 
 const styles = StyleSheet.create({
 
-  root: { flex: 1 },
+  root: { flex: 1 ,
+      backgroundColor: "#FAF8FF"
+    },
 
   flex: { flex: 1 },
 
@@ -598,7 +600,7 @@ const styles = StyleSheet.create({
 
   photoWrap: {
 
-    borderRadius: radius.md,
+    borderRadius: 24,
 
     alignItems: "center",
 
@@ -610,7 +612,9 @@ const styles = StyleSheet.create({
 
     position: "relative",
 
-  },
+
+      borderColor: "#BCEEE0"
+    },
 
   photoImg: { width: "100%", height: "100%" },
 
@@ -623,7 +627,7 @@ const styles = StyleSheet.create({
 
 
 
-  field: { marginBottom: spacing.md },
+  field: { marginBottom: 18 },
 
   label: {
 
@@ -633,13 +637,15 @@ const styles = StyleSheet.create({
 
     fontFamily: fonts.semiBold,
 
-  },
+
+      color: "#3E4947"
+    },
 
   input: {
 
     borderWidth: 1,
 
-    borderRadius: radius.lg,
+    borderRadius: 16,
     paddingHorizontal: spacing.md,
 
     paddingVertical: spacing.sm,
@@ -648,7 +654,12 @@ const styles = StyleSheet.create({
 
     fontFamily: fonts.regular,
 
-  },
+
+      backgroundColor: "#F2F3FF",
+      borderColor: "#DFE6EE",
+      minHeight: 52,
+      color: "#131B2E"
+    },
 
   error: {
 
@@ -686,13 +697,15 @@ const styles = StyleSheet.create({
 
     borderWidth: 1.5,
 
-    borderRadius: radius.md,
+    borderRadius: 18,
 
     paddingVertical: spacing.sm + 2,
 
     paddingHorizontal: spacing.xxs,
 
-  },
+
+      minHeight: 52
+    },
 
   retakeBtnText: {
 
@@ -708,8 +721,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.xxs + 2,
-    borderRadius: radius.md,
-    minHeight: 48,
+    borderRadius: 18,
+    minHeight: 52,
     paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.md,
   },

@@ -302,20 +302,24 @@ function Field({
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-  },
+
+      backgroundColor: "#FAF8FF"
+    },
   flex: { flex: 1 },
   scroll: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingHorizontal: 20,
+    paddingTop: 24,
     paddingBottom: spacing.xxl,
   },
   photoWrap: {
     alignSelf: "center",
-    borderRadius: radius.md,
+    borderRadius: 24,
     overflow: "hidden",
     marginBottom: spacing.lg,
     borderWidth: 3,
-  },
+
+      borderColor: "#BCEEE0"
+    },
   photo: {
     width: "100%",
     height: "100%",
@@ -327,15 +331,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxs + 2,
     fontSize: typeScale.rowTitle,
     fontFamily: fonts.semiBold,
-  },
+
+      color: "#3E4947"
+    },
   input: {
     borderWidth: 1,
-    borderRadius: radius.lg,
+    borderRadius: 16,
     paddingHorizontal: spacing.md,
     paddingVertical: Platform.OS === "ios" ? spacing.sm + 1 : spacing.sm - 2,
     fontSize: typeScale.rowTitle,
     fontFamily: fonts.regular,
-  },
+
+      backgroundColor: "#F2F3FF",
+      borderColor: "#DFE6EE",
+      minHeight: 52,
+      color: "#131B2E"
+    },
   error: {
     fontFamily: fonts.regular,
     fontSize: typeScale.rowTitle,
@@ -348,11 +359,11 @@ const styles = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    borderRadius: radius.lg,
+    borderRadius: 18,
     paddingVertical: spacing.sm + 2,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: spacing.buttonHeight - 4,
+    minHeight: 52,
   },
   btnCancelText: {
     fontFamily: fonts.bold,

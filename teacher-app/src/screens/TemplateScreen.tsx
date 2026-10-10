@@ -734,19 +734,21 @@ function useTemplateStyles() {
     grid: {
       paddingHorizontal: spacing.md,
       paddingTop: spacing.sm + 2,
-      paddingBottom: spacing.xl + 4,
+      paddingBottom: 24,
     },
     gridEmpty: { flexGrow: 1, justifyContent: "center" },
     row: { justifyContent: "space-between", marginBottom: spacing.sm + 2 },
     card: {
-      borderRadius: radius.lg,
+      borderRadius: 23,
       overflow: "hidden",
       position: "relative",
       elevation: 2,
-      shadowColor: "#287B5D",
-      shadowOpacity: 0.06,
-      shadowRadius: 6,
+      shadowColor: "#005C55",
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
       shadowOffset: { width: 0, height: 2 },
+
+      backgroundColor: "#FFFFFF"
     },
     cardPressed: { opacity: 0.9 },
     pairCol: { width: "100%" },
@@ -779,13 +781,15 @@ function useTemplateStyles() {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingHorizontal: spacing.sm - 2,
-      paddingVertical: spacing.sm - 2,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
     },
     name: {
       flex: 1,
       fontFamily: fonts.semiBold,
       fontSize: typeScale.sm,
+
+      color: "#131B2E"
     },
     emptyWrap: {
       alignItems: "center",
@@ -799,6 +803,8 @@ function useTemplateStyles() {
       alignItems: "center",
       justifyContent: "center",
       marginBottom: spacing.md,
+
+      backgroundColor: "#E7FAF2"
     },
     emptyTitle: {
       fontFamily: fonts.bold,
@@ -821,8 +827,10 @@ function useTemplateStyles() {
     modalCard: {
       width: "100%",
       maxWidth: modalWidth,
-      borderRadius: radius.lg,
+      borderRadius: 28,
       padding: spacing.lg + 2,
+
+      backgroundColor: "#FFFFFF"
     },
     modalTitle: {
       fontSize: typeScale.lg,
@@ -843,7 +851,9 @@ function useTemplateStyles() {
     cancelBtn: {
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm - 1,
-      borderRadius: radius.md,
+      borderRadius: 18,
+
+      minHeight: 50
     },
     cancelText: {
       fontFamily: fonts.bold,
@@ -852,9 +862,11 @@ function useTemplateStyles() {
     yesBtn: {
       paddingHorizontal: spacing.md + 2,
       paddingVertical: spacing.sm - 1,
-      borderRadius: radius.md,
+      borderRadius: 18,
       minWidth: "22%",
       alignItems: "center",
+
+      minHeight: 50
     },
     yesDisabled: { opacity: 0.65 },
     yesText: {

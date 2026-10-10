@@ -302,33 +302,51 @@ function SettingRow({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1 ,
+      backgroundColor: "#FAF8FF"
+    },
   scroll: { flex: 1 },
-  scrollContent: {},
+  scrollContent: {
+      paddingBottom: 30
+    },
   sectionHeader: {
     fontFamily: fonts.bold,
     fontSize: typeScale.sm,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xs,
-    letterSpacing: 0.5,
-  },
+    letterSpacing: 0.8,
+
+      color: "#005C55"
+    },
   row: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.lg,
     gap: spacing.iconTextGap,
-  },
+
+      backgroundColor: "#FFFFFF",
+      borderRadius: 18,
+      marginHorizontal: 14,
+      marginVertical: 5,
+      minHeight: 56,
+      borderWidth: 1,
+      borderColor: "#EBEEF5"
+    },
   rowLabel: {
     flex: 1,
     fontFamily: fonts.medium,
     fontSize: typeScale.sm,
-  },
+
+      color: "#131B2E"
+    },
   rowValue: {
     fontFamily: fonts.regular,
     fontSize: typeScale.subtitle,
-  },
+
+      color: "#647775"
+    },
   themeRow: {
     flexDirection: "row",
     paddingHorizontal: spacing.lg,
@@ -341,7 +359,7 @@ const styles = StyleSheet.create({
     gap: spacing.xxs + 2,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm - 2,
-    borderRadius: radius.full,
+    borderRadius: 16,
     borderWidth: 1,
   },
   themeText: {
@@ -352,7 +370,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginTop: spacing.xl,
     paddingVertical: spacing.sm + 2,
-    borderRadius: radius.md,
+    borderRadius: 18,
     borderWidth: 1.5,
     alignItems: "center",
   },

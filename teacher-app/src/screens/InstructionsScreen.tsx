@@ -411,7 +411,9 @@ function useInstructionsStyles() {
 
     return {
 
-      safe: { flex: 1 },
+      safe: { flex: 1 ,
+      backgroundColor: "#FAF8FF"
+    },
 
       header: {
 
@@ -447,7 +449,9 @@ function useInstructionsStyles() {
 
         paddingBottom: spacing.sm,
 
-      },
+
+      marginVertical: 14
+    },
 
       langChip: {
 
@@ -455,11 +459,13 @@ function useInstructionsStyles() {
 
         paddingVertical: spacing.xs,
 
-        borderRadius: scale(20),
+        borderRadius: 16,
 
         borderWidth: 1,
 
-      },
+
+      minHeight: 42
+    },
 
       langChipText: {
 
@@ -483,11 +489,19 @@ function useInstructionsStyles() {
 
         alignItems: "flex-start",
 
-        marginBottom: spacing.cardGap,
+        marginBottom: 12,
 
         gap: spacing.iconTextGap,
 
-      },
+
+      backgroundColor: "#FFFFFF",
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: "#E9ECF2",
+      shadowColor: "#005C55",
+      shadowOpacity: 0.05,
+      shadowRadius: 10
+    },
 
       numberCircle: {
 
@@ -531,7 +545,9 @@ function useInstructionsStyles() {
 
         lineHeight: typeScale.body * 1.45,
 
-      },
+
+      color: "#3E4947"
+    },
 
       linkText: {
 
@@ -571,13 +587,15 @@ function useInstructionsStyles() {
 
         maxWidth: modalWidth,
 
-        borderRadius: spacing.md,
+        borderRadius: 26,
 
         padding: spacing.lg,
 
         alignItems: "center",
 
-      },
+
+      backgroundColor: "#FFFFFF"
+    },
 
       modalTitle: {
 

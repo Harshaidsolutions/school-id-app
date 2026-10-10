@@ -194,7 +194,9 @@ function usePreviewStyles() {
     return {
       confirmRoot: {
         flex: 1,
-      },
+
+      backgroundColor: "#FAF8FF"
+    },
       fullPhoto: {
         ...StyleSheet.absoluteFillObject,
       },
@@ -209,11 +211,14 @@ function usePreviewStyles() {
         paddingTop: spacing.md,
         paddingHorizontal: scale(16),
       },
-      actionBtn: { alignItems: "center" },
+      actionBtn: { alignItems: "center" ,
+      borderRadius: 18,
+      minHeight: 50
+    },
       actionCircle: {
         width: actionSize,
         height: actionSize,
-        borderRadius: scale(19),
+        borderRadius: 30,
         alignItems: "center",
         justifyContent: "center",
       },

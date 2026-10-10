@@ -213,24 +213,37 @@ export function BrochureScreen() {
 
 function useBrochureStyles() {
   return useResponsiveStyles(({ scale }) => ({
-  safe: { flex: 1 },
+  safe: { flex: 1 ,
+      backgroundColor: "#FAF8FF"
+    },
   container: {
     padding: spacing.md,
     paddingBottom: spacing.xxl,
     gap: spacing.md,
-  },
+
+      backgroundColor: "#FAF8FF"
+    },
   card: {
-    borderRadius: radius.lg,
+    borderRadius: 24,
     borderWidth: 1,
     padding: spacing.sm,
     overflow: "hidden",
-  },
+
+      backgroundColor: "#FFFFFF",
+      borderColor: "#E2E8EF",
+      shadowColor: "#005C55",
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 2
+    },
   title: {
     fontFamily: fonts.semiBold,
     fontSize: typeScale.sm,
     marginBottom: spacing.xs,
     textAlign: "center",
-  },
+
+      color: "#131B2E"
+    },
   thumb: {
     minHeight: scale(220),
     alignSelf: "center",
@@ -247,11 +260,13 @@ function useBrochureStyles() {
     paddingHorizontal: spacing.md,
   },
   modalCard: {
-    borderRadius: radius.lg,
+    borderRadius: 26,
     padding: spacing.md,
     width: "100%",
     alignSelf: "center",
-  },
+
+      backgroundColor: "#FFFFFF"
+    },
   modalHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -292,7 +307,7 @@ function useBrochureStyles() {
   },
   closeBtn: {
     marginTop: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: 18,
     paddingVertical: spacing.sm,
     alignItems: "center",
   },

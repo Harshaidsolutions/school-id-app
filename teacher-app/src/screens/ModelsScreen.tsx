@@ -541,14 +541,16 @@ function useModelsStyles() {
   grid: { padding: spacing.md, paddingBottom: spacing.xl + 4 },
   row: { justifyContent: "space-between", marginBottom: spacing.cardGap },
   card: {
-    borderRadius: radius.lg,
+    borderRadius: 24,
     overflow: "hidden",
     elevation: 2,
-    shadowColor: "#287B5D",
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowColor: "#005C55",
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 2 },
-  },
+
+      backgroundColor: "#FFFFFF"
+    },
   cardTop: {
     aspectRatio: 1.35,
     alignItems: "center",
@@ -571,7 +573,9 @@ function useModelsStyles() {
   },
   modelPreview: {
     ...textStyles.body,
-  },
+
+      borderRadius: 20
+    },
   modalBackdrop: {
     flex: 1,
     alignItems: "center",
@@ -581,9 +585,11 @@ function useModelsStyles() {
   detailCard: {
     width: "100%",
     maxHeight: "80%",
-    borderRadius: radius.lg,
+    borderRadius: 28,
     padding: spacing.lg - 2,
-  },
+
+      backgroundColor: "#FFFFFF"
+    },
   detailScroll: { maxHeight: hp(45), marginTop: spacing.sm - 2 },
   previewImage: {
     width: "100%",
@@ -605,12 +611,14 @@ function useModelsStyles() {
   },
   modelTab: {
     flex: 1,
-    borderRadius: radius.sm,
+    borderRadius: 15,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
     borderWidth: 1,
     alignItems: "center",
-  },
+
+      minHeight: 43
+    },
   modelTabText: {
     fontFamily: fonts.semiBold,
     fontSize: typeScale.body,
@@ -623,9 +631,11 @@ function useModelsStyles() {
   modalCard: {
     width: "100%",
     maxWidth: "92%",
-    borderRadius: radius.lg,
+    borderRadius: 26,
     padding: spacing.lg,
-  },
+
+      backgroundColor: "#FFFFFF"
+    },
   modalTitle: {
     fontSize: typeScale.xl,
     fontFamily: fonts.bold,
@@ -651,16 +661,20 @@ function useModelsStyles() {
   cancelBtn: {
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: spacing.sm - 1,
-    borderRadius: radius.md,
-  },
+    borderRadius: 18,
+
+      minHeight: 48
+    },
   cancelText: { fontFamily: fonts.semiBold, fontSize: typeScale.sm },
   yesBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm - 1,
-    borderRadius: radius.md,
+    borderRadius: 18,
     minWidth: "22%",
     alignItems: "center",
-  },
+
+      minHeight: 48
+    },
   yesDisabled: { opacity: 0.65 },
   yesText: {
     fontFamily: fonts.semiBold,
@@ -668,11 +682,13 @@ function useModelsStyles() {
     fontSize: typeScale.sm,
   },
   tagCard: {
-    borderRadius: radius.lg,
+    borderRadius: 22,
     overflow: "hidden",
     marginBottom: spacing.sm,
     position: "relative",
-  },
+
+      backgroundColor: "#FFFFFF"
+    },
   tagImageWrap: {
     width: "100%",
     height: scale(88),
@@ -680,7 +696,9 @@ function useModelsStyles() {
     justifyContent: "center",
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-  },
+
+      borderRadius: 18
+    },
   tagImage: {
     width: "100%",
     height: "100%",

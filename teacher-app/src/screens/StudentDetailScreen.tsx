@@ -298,7 +298,9 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
 
-  root: { flex: 1 },
+  root: { flex: 1 ,
+      backgroundColor: "#FAF8FF"
+    },
 
   scroll: { flex: 1 },
 
@@ -306,11 +308,11 @@ const styles = StyleSheet.create({
 
 
 
-  photoSection: { alignItems: "center", paddingVertical: spacing.xl },
+  photoSection: { alignItems: "center", paddingVertical: 30 },
 
   photoWrap: {
 
-    borderRadius: radius.md,
+    borderRadius: 22,
 
     alignItems: "center",
 
@@ -320,7 +322,9 @@ const styles = StyleSheet.create({
 
     borderWidth: 3,
 
-  },
+
+      borderColor: "#BCEEE0"
+    },
 
   photo: { width: "100%", height: "100%" },
 
@@ -352,9 +356,11 @@ const styles = StyleSheet.create({
 
     fontFamily: fonts.bold,
 
-    fontSize: typeScale.title,
+    fontSize: 23,
 
-  },
+
+      color: "#131B2E"
+    },
 
 
 
@@ -364,11 +370,18 @@ const styles = StyleSheet.create({
 
     gap: spacing.md,
 
-    paddingVertical: spacing.md,
+    paddingVertical: 22,
 
-    borderRadius: radius.xl,
+    borderRadius: 26,
 
-  },
+
+      backgroundColor: "#FFFFFF",
+      marginHorizontal: 18,
+      shadowColor: "#005C55",
+      shadowOpacity: 0.08,
+      shadowRadius: 18,
+      elevation: 2
+    },
 
   detailRow: {
 
@@ -386,7 +399,9 @@ const styles = StyleSheet.create({
 
     width: "32%",
 
-  },
+
+      color: "#647775"
+    },
 
   detailColon: {
 
@@ -434,11 +449,13 @@ const styles = StyleSheet.create({
 
     borderWidth: 1.5,
 
-    borderRadius: radius.md,
+    borderRadius: 18,
 
     paddingVertical: spacing.sm + 2,
 
-  },
+
+      minHeight: 50
+    },
 
   editBtnText: {
 
@@ -460,11 +477,13 @@ const styles = StyleSheet.create({
 
     gap: spacing.xxs + 2,
 
-    borderRadius: radius.md,
+    borderRadius: 18,
 
     paddingVertical: spacing.sm + 2,
 
-  },
+
+      minHeight: 50
+    },
 
   submitBtnText: {
 

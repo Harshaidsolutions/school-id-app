@@ -372,10 +372,10 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   facingBadge: {
-    backgroundColor: "rgba(75,60,112,0.55)",
+    backgroundColor: "rgba(0,92,85,0.76)",
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: spacing.md,
+    borderRadius: 18,
   },
   facingBadgeText: {
     color: colors.white,
@@ -384,10 +384,10 @@ const styles = StyleSheet.create({
   },
   topActions: { flexDirection: "row", gap: spacing.sm - 2 },
   iconBtn: {
-    backgroundColor: "rgba(75,60,112,0.55)",
+    backgroundColor: "rgba(0,92,85,0.72)",
     width: spacing.iconMd + 8,
     height: spacing.iconMd + 8,
-    borderRadius: (spacing.iconMd + 8) / 2,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -434,12 +434,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(75,60,112,0.35)",
-  },
+
+      borderColor: "#6CF8BB"
+    },
   shutterInner: {
     width: moderateScale(58),
     height: moderateScale(58),
     borderRadius: moderateScale(29),
-    backgroundColor: colors.white,
+    backgroundColor: "#FFFFFF",
   },
   shutterLabel: {
     color: colors.white,
@@ -474,10 +476,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   permButton: {
-    backgroundColor: colors.primaryOrange,
+    backgroundColor: "#005C55",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    borderRadius: spacing.sm,
+    borderRadius: 18,
   },
   permButtonText: {
     color: colors.white,

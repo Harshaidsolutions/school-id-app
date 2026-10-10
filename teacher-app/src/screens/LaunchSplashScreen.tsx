@@ -93,11 +93,15 @@ function useLaunchSplashStyles() {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
+
+      backgroundColor: "#FAF8FF"
     },
     wordmark: {
       alignItems: "center",
       maxWidth: wp(92),
       paddingHorizontal: scale(16),
+
+      color: "#005C55"
     },
 
   }));

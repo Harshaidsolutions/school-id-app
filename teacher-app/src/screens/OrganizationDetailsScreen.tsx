@@ -1374,7 +1374,9 @@ const FormField = memo(function FormField({  colors,
 
 function useOrgDetailsStyles() {
   return useResponsiveStyles(({ scale, modalWidth }) => ({
-    root: { flex: 1 },
+    root: { flex: 1 ,
+      backgroundColor: "#FAF8FF"
+    },
     flex: { flex: 1 },
     scroll: {
       paddingHorizontal: spacing.pagePad,
@@ -1505,7 +1507,7 @@ function useOrgDetailsStyles() {
       alignItems: "center",
       gap: spacing.xxs,
       borderWidth: 1,
-      borderRadius: radius.md,
+      borderRadius: 18,
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.xxs + 2,
     },
@@ -1515,6 +1517,9 @@ function useOrgDetailsStyles() {
     },
     readOnlyBlock: {
       gap: spacing.sm,
+
+      backgroundColor: "#FFFFFF",
+      borderRadius: 22
     },
     readOnlyField: {
       marginBottom: spacing.sm,
@@ -1542,7 +1547,7 @@ function useOrgDetailsStyles() {
       gap: spacing.xxs,
       alignSelf: "flex-start",
       borderWidth: 1,
-      borderRadius: radius.md,
+      borderRadius: 15,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
       marginTop: spacing.xs,
@@ -1552,21 +1557,26 @@ function useOrgDetailsStyles() {
       fontSize: typeScale.sm,
     },
 
-    formField: { marginBottom: spacing.fieldGap },
+    formField: { marginBottom: 18 },
     formFieldLast: { marginBottom: spacing.xxs },
     formLabel: {
       ...textStyles.fieldLabel,
       marginBottom: spacing.labelGap,
+
+      color: "#3E4947"
     },
     formInputBox: {
       flexDirection: "row",
       alignItems: "flex-start",
       gap: spacing.iconTextGap,
-      borderRadius: radius.md,
+      borderRadius: 16,
       borderWidth: 1,
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.sm,
-      minHeight: spacing.buttonHeight - 2,
+      minHeight: 52,
+
+      backgroundColor: "#F2F3FF",
+      borderColor: "#DEE7F0"
     },
     formInputInner: { flex: 1 },
     input: {
@@ -1597,6 +1607,9 @@ function useOrgDetailsStyles() {
     submitFull: {
       width: "100%",
       alignSelf: "stretch",
+
+      borderRadius: 18,
+      minHeight: 54
     },
     confirmBackdrop: {
       flex: 1,
@@ -1607,8 +1620,10 @@ function useOrgDetailsStyles() {
     confirmCard: {
       width: "100%",
       maxWidth: modalWidth,
-      borderRadius: radius.lg,
+      borderRadius: 27,
       padding: spacing.lg,
+
+      backgroundColor: "#FFFFFF"
     },
     confirmTitle: {
       ...textStyles.h3,
