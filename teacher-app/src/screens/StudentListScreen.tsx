@@ -546,7 +546,7 @@ function useStudentListStyles() {
       width: "100%",
     },
     gridContent: { paddingTop: spacing.sm, paddingBottom: spacing.xxl },
-    gridRow: { gap: spacing.cardGap, marginBottom: spacing.cardGap },
+    gridRow: { gap: spacing.md, marginBottom: spacing.md },
     empty: {
       textAlign: "center",
       fontFamily: fonts.regular,

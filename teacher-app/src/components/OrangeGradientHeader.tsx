@@ -110,8 +110,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     paddingBottom: moderateScale(16),
     justifyContent: "center",
-    borderBottomLeftRadius: radius.xl,
-    borderBottomRightRadius: radius.xl,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
   row: {
     flexDirection: "row",
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   iconBtn: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.18)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.25)",
   },
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   titleWrap: {
     flex: 1,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   title: {
     ...textStyles.h1,

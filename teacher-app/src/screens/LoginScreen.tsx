@@ -40,7 +40,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
 const REMEMBER_KEY = "teacher_remember_username";
 const REMEMBER_FLAG = "teacher_remember_me";
-const LOGIN_BG = "#F4FBF6";
+const LOGIN_BG = "#F2FAF5";
 
 export function LoginScreen(_props: Props) {
   const styles = useLoginStyles();
@@ -157,11 +157,11 @@ export function LoginScreen(_props: Props) {
             />
 
             </View>
-            <Entrance style={styles.authPanel}>
+            <Entrance style={styles.authPanel}><View style={styles.portalTag}><Ionicons name="shield-checkmark-outline" color="#005C55" size={16} /><Text style={styles.portalTagText}>AUTHORIZED PORTAL</Text></View>
             <Text style={styles.title}>Welcome Back!</Text>
             <Text style={styles.subtitle}>Login to continue</Text>
 
-            <View style={styles.formGroup}>
+            <View style={styles.formGroup}><Text style={styles.fieldLabel}>USERNAME</Text>
               <View style={styles.formRow}>
                 <Ionicons name="person-outline" size={18} color="#7A83A0" />
                 <TextInput
@@ -175,7 +175,7 @@ export function LoginScreen(_props: Props) {
                   onChangeText={setUsername}
                 />
               </View>
-              <View style={styles.formDivider} />
+              <View style={styles.formDivider} /><Text style={styles.fieldLabel}>PASSWORD</Text>
               <View style={styles.formRow}>
                 <Ionicons name="lock-closed-outline" size={18} color="#7A83A0" />
                 <TextInput
@@ -196,7 +196,7 @@ export function LoginScreen(_props: Props) {
               </View>
             </View>
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+            <View style={styles.rememberRow}><Pressable onPress={() => setRememberMe((v) => !v)} style={styles.rememberPress} accessibilityLabel="Remember me"><Ionicons name={rememberMe ? "checkbox" : "square-outline"} color="#005C55" size={19} /><Text style={styles.rememberText}>Remember me</Text></Pressable></View>{error ? <Text style={styles.error}>{error}</Text> : null}
 
             <Pressable
               onPress={() => void handleLogin()}
@@ -204,7 +204,7 @@ export function LoginScreen(_props: Props) {
               style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
             >
               <Text style={styles.loginBtnText}>
-                {loading ? "Logging in…" : "Login"}
+                {loading ? "Logging in…" : "Sign In"}
               </Text>
             </Pressable>
 
@@ -244,7 +244,7 @@ function useLoginStyles() {
   return useResponsiveStyles(({ wp, scale }) => {
     const formW = Math.min(wp(100) - spacing.pagePad * 2, 480);
     return {
-      safe: { flex: 1, backgroundColor: LOGIN_BG },
+      safe: { flex: 1, backgroundColor: "#FAF8FF" },
       flex: { flex: 1 },
       scroll: {
         flexGrow: 1,
@@ -253,46 +253,14 @@ function useLoginStyles() {
         paddingHorizontal: spacing.pagePad,
         paddingVertical: spacing.lg,
       },
-      identityPanel: { alignItems: "center", width: formW, paddingBottom: spacing.lg },
-      authPanel: { width: formW, padding: spacing.lg, backgroundColor: "#FFFFFF", borderRadius: scale(24), borderWidth: 1, borderColor: "#DDECE2", ...cardShadow },
-      title: {
-        marginTop: spacing.sm,
-        fontSize: scale(25),
-        fontFamily: fonts.headingSemiBold,
-        textAlign: "center",
-        color: "#207E52",
-      },
-      subtitle: {
-        marginTop: scale(4),
-        marginBottom: spacing.md,
-        fontFamily: fonts.body,
-        fontSize: typeScale.subtitle,
-        color: "#647B70",
-        textAlign: "center",
-      },
-      formGroup: {
-        width: "100%",
-        alignSelf: "center",
-        backgroundColor: "#FFFFFF",
-        borderRadius: radius.card,
-        borderWidth: 1,
-        borderColor: "#DDECE2",
-        marginBottom: spacing.sm,
-        overflow: "hidden",
-        ...cardShadow,
-      },
-      formRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: spacing.md,
-        gap: spacing.sm,
-        minHeight: scale(52),
-      },
-      formDivider: {
-        height: 1,
-        backgroundColor: "#DDECE2",
-        marginHorizontal: spacing.md,
-      },
+      identityPanel: { alignItems: "center", width: formW, paddingTop: spacing.md, paddingBottom: spacing.lg, backgroundColor: "#EBF9F5", borderRadius: scale(30), marginBottom: spacing.sm },
+      // A generous responsive login surface; fields and callbacks stay exactly the same.
+      authPanel: { width: formW, padding: spacing.lg, backgroundColor: "#FFFFFF", borderRadius: scale(32), borderWidth: 1, borderColor: "#E7EBF4", shadowColor: "#005C55", shadowOpacity: 0.10, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 3 },
+      title: { fontSize: scale(28), fontFamily: fonts.headingSemiBold, color: "#131B2E", textAlign: "left", marginTop: spacing.sm },
+      subtitle: { fontSize: typeScale.body, fontFamily: fonts.body, color: "#66757B", textAlign: "left", marginTop: spacing.xs, marginBottom: spacing.lg },
+      formGroup: { width: "100%", marginBottom: spacing.sm, borderWidth: 0, borderRadius: scale(20), backgroundColor: "#FFFFFF", overflow: "hidden" },
+      formRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.md, minHeight: scale(56), backgroundColor: "#EAEDFF", borderRadius: scale(18), marginBottom: spacing.xs },
+      formDivider: { height: spacing.xs, backgroundColor: "transparent" },
       input: {
         flex: 1,
         ...textStyles.input,
@@ -307,21 +275,13 @@ function useLoginStyles() {
         textAlign: "center",
         width: "100%",
       },
-      loginBtn: {
-        width: "100%",
-        alignSelf: "center",
-        backgroundColor: "#218451",
-        borderRadius: radius.lg,
-        minHeight: scale(50),
-        alignItems: "center",
-        justifyContent: "center",
-        marginTop: spacing.xs,
-        elevation: 2,
-        shadowColor: "#218451",
-        shadowOpacity: 0.25,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 2 },
-      },
+      loginBtn: { width: "100%", minHeight: scale(56), alignSelf: "center", alignItems: "center", justifyContent: "center", backgroundColor: "#005C55", borderRadius: 999, marginTop: spacing.sm, elevation: 4, shadowColor: "#005C55", shadowOpacity: 0.24, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+      portalTag: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: spacing.xs, borderRadius: 999, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, backgroundColor: "#D8F8E9", marginBottom: spacing.sm },
+      portalTagText: { fontFamily: fonts.semiBold, letterSpacing: 1, fontSize: typeScale.xs, color: "#005C55" },
+      fieldLabel: { fontFamily: fonts.semiBold, fontSize: typeScale.xs, letterSpacing: 0.6, color: "#344454", marginTop: spacing.xs, marginBottom: spacing.xs },
+      rememberRow: { marginVertical: spacing.sm },
+      rememberPress: { flexDirection: "row", alignItems: "center", gap: spacing.xs, alignSelf: "flex-start" },
+      rememberText: { fontFamily: fonts.medium, color: "#344454", fontSize: typeScale.subtitle },
       loginBtnDisabled: { opacity: 0.65 },
       loginBtnText: {
         ...textStyles.button,

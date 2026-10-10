@@ -47,8 +47,8 @@ const styles = StyleSheet.create({
   },
   rule: {
     height: scale(3),
-    width: scale(34),
-    backgroundColor: colors.primaryOrange,
+    width: scale(42),
+    backgroundColor: "#005C55",
     opacity: 0.75,
     borderRadius: scale(1),
     marginBottom: spacing.xxs,

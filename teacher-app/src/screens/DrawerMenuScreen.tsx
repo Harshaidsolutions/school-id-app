@@ -387,12 +387,12 @@ function useDrawerMenuStyles() {
     root: { flex: 1, flexDirection: "row" },
     backdrop: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(26,34,51,0.45)",
+      backgroundColor: "rgba(19,27,46,0.38)",
     },
     panel: {
       height: "100%",
       elevation: 16,
-      shadowColor: "#5F9E84",
+      shadowColor: "#005C55",
       shadowOpacity: 0.25,
       shadowRadius: 16,
       shadowOffset: { width: 4, height: 0 },
@@ -442,7 +442,7 @@ function useDrawerMenuStyles() {
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.sm,
       gap: spacing.iconTextGap,
-      borderRadius: radius.card,
+      borderRadius: 26,
       borderWidth: 1,
       ...cardShadow,
     },

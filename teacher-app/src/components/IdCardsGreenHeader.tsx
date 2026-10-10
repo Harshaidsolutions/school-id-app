@@ -40,10 +40,10 @@ const HEADER_BODY = ID_CARDS_HEADER_BODY;
 
 const styles = StyleSheet.create({
   shell: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
-    borderBottomLeftRadius: radius.xl,
-    borderBottomRightRadius: radius.xl,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
     justifyContent: "flex-end",
   },
   inner: {

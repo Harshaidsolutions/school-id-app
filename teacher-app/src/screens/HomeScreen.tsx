@@ -156,7 +156,7 @@ export function HomeScreen() {
   return (
     <View style={[styles.safe, { backgroundColor: colors.background }]}>
       <LinearGradient
-        colors={[...headerGradient]}
+        colors={["#FAF8FF", "#F1F9F7"]}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={[
@@ -206,7 +206,7 @@ export function HomeScreen() {
           style={[styles.iconBtn, { width: logoSize, height: logoSize }]}
           onPress={() => navigation.navigate("DrawerMenu" as any)}
         >
-          <Ionicons name="menu" size={icons.xl} color="#FFFFFF" />
+          <Ionicons name="menu" size={icons.xl} color="#005C55" />
         </Pressable>
       </LinearGradient>
 
@@ -225,7 +225,7 @@ export function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        <Entrance style={styles.hero}>
+        <View style={styles.editorialIntro}><Text style={styles.editorialOverline}>MY SCHOOL ID CARD</Text><Text style={styles.editorialHeading}>A Complete ID World</Text></View><Entrance style={styles.hero}>
           {!ready ? null : childBrand ? (
             brand.photoUrl ? <Image source={{uri:brand.photoUrl}} accessibilityLabel="Your admin logo" resizeMode="contain" style={{width:"80%",height:scale(115),alignSelf:"center"}} /> : <BrandLockup variant="homeHero" showTagline />
           ) : (
@@ -463,15 +463,7 @@ function StarRating({ value }: { value: number }) {
 function useHomeStyles() {
   return useResponsiveStyles(({ scale }) => ({
   safe: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: spacing.sm,
-    paddingBottom: 0,
-    gap: spacing.xs,
-    borderBottomLeftRadius: radius.xl,
-    borderBottomRightRadius: radius.xl,
-  },
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.sm, paddingBottom: 0, gap: spacing.xs, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, borderBottomWidth: 1, borderBottomColor: "#DCEBE9" },
   headerLogoWrap: {
       backgroundColor:"transparent",
       borderRadius:10,
@@ -489,28 +481,9 @@ function useHomeStyles() {
     justifyContent: "center",
     paddingRight: spacing.xxs,
   },
-  headerTitle: {
-    fontFamily: fonts.headingSemiBold,
-    fontSize: typeScale.md + 2,
-    color: "#FFFFFF",
-    letterSpacing: 0.2,
-    includeFontPadding:false,
-    lineHeight:(typeScale.md + 2)*1.15,
-  },
-  headerSubtitle: {
-    fontFamily: fonts.regular,
-    fontSize: typeScale.xs,
-    color: "rgba(255,255,255,0.92)",
-    marginTop: 3,
-    includeFontPadding:false,
-    lineHeight:typeScale.xs*1.15,
-  },
-  iconBtn: {
-    backgroundColor: "rgba(255,255,255,0.14)",
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  headerTitle: { fontFamily: fonts.headingSemiBold, fontSize: typeScale.md + 2, color: "#131B2E", includeFontPadding: false },
+  headerSubtitle: { fontFamily: fonts.regular, fontSize: typeScale.xs, color: "#005C55", marginTop: 3 },
+  iconBtn: { alignItems: "center", justifyContent: "center", backgroundColor: "#E0F6EF", borderRadius: 17 },
   badge: {
     position: "absolute",
     top: spacing.xxs / 2,
@@ -529,17 +502,12 @@ function useHomeStyles() {
   },
   scroll: { flex: 1 },
   content: { paddingHorizontal: spacing.pagePad, paddingTop: 0, paddingBottom: spacing.pagePad },
-  hero: {
-    backgroundColor: "#F0FBF4",
-    borderWidth: 1,
-    borderColor: "#DCEFE2",
-    borderRadius: 22,
-    paddingHorizontal: spacing.md,
-    marginTop: spacing.md,
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    marginBottom: spacing.xs,
-  },
+  // The original brand lockup stays untouched; only its surrounding surface changes.
+  // A full-width editorial panel replaces the older small tinted box.
+  hero: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E4EBF2", borderRadius: 30, paddingHorizontal: spacing.lg, marginTop: spacing.sm, alignItems: "center", paddingVertical: spacing.xl, marginBottom: spacing.md, ...cardShadow },
+  editorialIntro: { paddingTop: spacing.lg, paddingBottom: spacing.sm, paddingHorizontal: spacing.xs },
+  editorialOverline: { fontFamily: fonts.semiBold, color: "#005C55", fontSize: typeScale.xs, letterSpacing: 1.6 },
+  editorialHeading: { fontFamily: fonts.headingSemiBold, color: "#131B2E", fontSize: typeScale.xl, marginTop: spacing.xs },
   sectionTitle: {
     ...textStyles.h2,
     paddingTop: spacing.sm,
@@ -565,18 +533,7 @@ function useHomeStyles() {
     marginTop: scale(2),
     justifyContent: "center",
   },
-  instructionRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    borderRadius: radius.lg,
-    borderLeftWidth: 4,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.cardGap,
-    gap: spacing.iconTextGap,
-    borderWidth: 1,
-    ...cardShadow,
-  },
+  instructionRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md, borderRadius: 22, borderWidth: 1, paddingVertical: spacing.lg, paddingHorizontal: spacing.md, marginBottom: spacing.cardGap, ...cardShadow },
   instructionNum: {
     width: scale(32),
     height: scale(32),
@@ -609,16 +566,7 @@ function useHomeStyles() {
     justifyContent: "space-between",
     gap: spacing.sm,
   },
-  productCard: {
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: radius.card,
-    paddingHorizontal: spacing.sm,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
-    overflow: "hidden",
-    ...cardShadow,
-  },
+  productCard: { alignItems: "center", borderWidth: 1, borderRadius: 26, paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.lg, overflow: "hidden", ...cardShadow },
   productImage: {
     width: "100%",
     borderRadius: radius.sm,
@@ -642,8 +590,8 @@ function useHomeStyles() {
     alignItems: "center",
     justifyContent: "center",
     elevation: 6,
-    shadowColor: "#65568D",
-    shadowOpacity: 0.22,
+    shadowColor: "#2A8058",
+    shadowOpacity: 0.14,
     shadowRadius: scale(6),
     shadowOffset: { width: 0, height: scale(3) },
   },

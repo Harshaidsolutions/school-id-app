@@ -392,7 +392,7 @@ function useIdCardsStyles() {
         width: 22,
         height: 22,
       },
-      content: { paddingHorizontal: spacing.pagePad },
+      content: { paddingHorizontal: spacing.pagePad, paddingTop: spacing.md },
       progress: {
         paddingHorizontal: spacing.pagePad,
         paddingTop: spacing.md,

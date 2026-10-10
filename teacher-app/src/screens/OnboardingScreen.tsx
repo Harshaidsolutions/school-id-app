@@ -224,7 +224,7 @@ function OnboardingFooter({
   const footerH = Math.round(height * FOOTER_RATIO);
   const gradient =
     accent === "green"
-      ? (["#258754", "#47AC74", "#8FD5AD"] as const)
+      ? (["#005C55", "#0F766E", "#6CF8BB"] as const)
       : fabGradient;
 
   return (
@@ -448,7 +448,7 @@ function Page3({
 
 function useOnboardingStyles() {
   return useResponsiveStyles(({ scale, wp }) => ({
-    root: { flex: 1, backgroundColor: colors.white },
+    root: { flex: 1, backgroundColor: "#FAF8FF" },
 
     headerZone: {
       paddingHorizontal: spacing.lg,
@@ -656,7 +656,7 @@ function useOnboardingStyles() {
       width: scale(44),
       height: scale(44),
       borderRadius: radius.full,
-      backgroundColor: colors.orangeSoft,
+      backgroundColor: "#D8F8E9",
       alignItems: "center",
       justifyContent: "center",
     },
@@ -664,7 +664,7 @@ function useOnboardingStyles() {
       flex: 1,
       fontFamily: fonts.semiBold,
       fontSize: typeScale.body * 1.28,
-      color: colors.brandNavy,
+      color: "#131B2E",
       lineHeight: typeScale.body * 1.55,
       letterSpacing: 0.15,
     },

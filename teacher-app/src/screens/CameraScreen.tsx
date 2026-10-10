@@ -226,11 +226,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: spacing.pagePad,
   },
+  // Camera state information stays legible without changing capture behavior.
   card: {
-    borderRadius: radius.card,
+    borderRadius: radius.xl,
     padding: spacing.xl,
     alignItems: "center",
     borderWidth: 1,
+    borderColor: "#D8EADB",
   },
   back: {
     alignSelf: "flex-start",

@@ -499,15 +499,17 @@ export function NotificationsScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  list: { paddingHorizontal: spacing.md, paddingTop: spacing.md, gap: spacing.cardGap },
+  list: { paddingHorizontal: spacing.md, paddingTop: spacing.lg, paddingBottom: spacing.xl, gap: spacing.md },
   listEmpty: { flexGrow: 1, justifyContent: "center" },
   card: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: spacing.cardGap,
     borderRadius: radius.xl,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+    borderWidth: 1,
+    borderColor: "#DCEDE1",
     elevation: 2,
     shadowColor: "#287B5D",
     shadowOpacity: 0.06,
@@ -537,7 +539,7 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 140,
     marginTop: 8,
-    borderRadius: 8,
+    borderRadius: 16,
     backgroundColor: "transparent",
   },
   modalImage: {
