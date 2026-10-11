@@ -231,6 +231,7 @@ export function HomeScreen() {
           ) : (
             <BrandLockup variant="homeHero" showTagline />
           )}
+        <MetricCard label="Total Schools" value={123} icon="book-outline" />
         </Entrance>
         {brandError && !ready ? (
           <Text style={[styles.footer, { color: colors.textMuted }]}>{brandError}</Text>
@@ -720,3 +721,5 @@ function useHomeStyles() {
   },
   }));
 }
+
+import { MetricCard } from "../components/modern";

@@ -1,0 +1,280 @@
+:root {
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-secondary: #64748B;
+  --color-background: #F8FAFC;
+  --color-card-bg: #FFFFFF;
+  --color-text: #1E293B;
+  --color-text-muted: #64748B;
+  --color-border: #E2E8F0;
+  --color-success: #10B981;
+  --color-warning: #F5E90B;
+  --color-danger: #EF4444;
+  --color-info: #3B82F6;
+  --color-sidebar-gradient-from: #1E3A8A;
+  --color-sidebar-gradient-to: #2563EB;
+  --color-white: #FFFFFF;
+}
+
+/* Override body */
+body {
+  background-color: var(--color-background) !important;
+  color: var(--color-text) !important;
+}
+
+/* Override app-shell background */
+.app-shell {
+  background-color: var(--color-background) !important;
+}
+
+/* Override app-header */
+.app-header {
+  background: linear-gradient(90deg, var(--color-card-bg) 0%, #f5f3ff 55%, #eff6ff 100%) !important;
+}
+
+/* Override app-sidebar */
+.app-sidebar {
+  background: linear-gradient(180deg, var(--color-sidebar-gradient-from) 0%, var(--color-sidebar-gradient-to) 52%, #8b5cf6 100%) !important;
+}
+
+/* Override primary button */
+.btn-primary {
+  background-image: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-hover) 100%) !important;
+  border-color: transparent !important;
+}
+.btn-primary:hover {
+  background-image: none !important;
+  background-color: var(--color-primary-hover) !important;
+}
+
+/* Override secondary button */
+.btn-secondary {
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+  background-color: var(--color-card-bg) !important;
+}
+.btn-secondary:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* Override card */
+.card {
+  border-color: var(--color-border) !important;
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.08) !important;
+}
+
+/* Override input fields */
+.input-field,
+.input-field-icon {
+  border-color: var(--color-border) !important;
+  background-color: var(--color-card-bg) !important;
+}
+.input-field:focus,
+.input-field-icon:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+}
+
+/* Override alert-error */
+.alert-error {
+  border-color: var(--color-danger) !important;
+  background-color: #fef2f2 !important;
+  color: var(--color-danger) !important;
+}
+
+/* Override alert-success */
+.alert-success {
+  border-color: var(--color-success) !important;
+  background-color: #f0fdf4 !important;
+  color: var(--color-success) !important;
+}
+
+/* Override nav-active */
+.nav-active {
+  background-image: linear-gradient(180deg, var(--color-primary) 0%, #8b5cf6 100%) !important;
+}
+
+/* Override app-sidebar .nav-active */
+.app-sidebar .nav-active {
+  background-color: rgba(255,255,255,0.24) !important;
+  border: 1px solid rgba(255,255,255,0.42) !important;
+}
+
+/* Override detail-toolbar-shell */
+.detail-toolbar-shell {
+  background: linear-gradient(120deg, #f3edff, #eff9fc) !important;
+  border-color: #d8dcf4 !important;
+}
+
+/* Override detail-toolbar-btn */
+.detail-toolbar-btn {
+  background-color: #ffffff !important;
+  border-color: #dfe1f0 !important;
+  color: #626198 !important;
+}
+
+/* Override detail-toolbar-status-tab-active */
+.detail-toolbar-status-tab-active {
+  color: #6155af !important;
+  background-color: #eae7fc !important;
+}
+
+/* Override thead */
+thead {
+  background-color: #eeedfa !important;
+  color: #605a91 !important;
+}
+
+/* Override tbody tr:hover */
+tbody tr:hover {
+  background-color: #f6f5fd !important;
+}
+
+/* Override login-shell */
+.login-shell {
+  background: #f5f6fc !important;
+}
+
+/* Override login-brand-panel */
+.login-brand-panel {
+  background: linear-gradient(145deg, #7470cc, #568cb9 70%, #529aab) !important;
+}
+
+/* Override auth-card */
+.auth-card {
+  border: 1px solid #e0e4f1 !important;
+  border-radius: 24px !important;
+  background: #ffffffb2 !important;
+  box-shadow: 0 20px 60px #6f6db614 !important;
+}
+
+/* Override login-heading */
+.login-heading {
+  color: #5c5495 !important;
+}
+
+/* Override login-footer */
+.login-footer {
+  color: #6c7694 !important;
+}
+
+/* Override app-main headings */
+.app-main h1,
+.app-main h2,
+.app-main h3 {
+  letter-spacing: -0.02em !important;
+}
+
+/* Override form inputs */
+.app-main select,
+.app-main textarea,
+.app-main input:not([type=checkbox]):not([type=radio]):not([type=range]) {
+  color: #515b89 !important;
+  accent-color: #7970c7 !important;
+}
+.app-main input[type=checkbox],
+.app-main input[type=radio] {
+  accent-color: #7970c7 !important;
+}
+
+/* Override dialogs */
+.app-main [role=dialog] {
+  border-radius: 20px !important;
+  box-shadow: 0 18px 60px #68529e26 !important;
+}
+
+/* Override card headings */
+.app-main .card > h2,
+.app-main .card > h3 {
+  color: #625798 !important;
+}
+
+/* Override table borders */
+.app-main tbody td {
+  border-color: #ebecf6 !important;
+}
+.app-main tbody tr:nth-child(even) {
+  background: #fafafe !important;
+}
+.app-main tbody tr:hover {
+  background: #f0eefb !important;
+}
+
+/* Override detail-toolbar-row1 .detail-toolbar-btn:hover */
+.detail-toolbar-row1 .detail-toolbar-btn:hover {
+  background: #edeafb !important;
+  box-shadow: 0 3px 10px #7566b514 !important;
+}
+
+/* Ensure transitions */
+* {
+  transition: background-color .2s, border-color .2s, color .2s, box-shadow .2s !important;
+}
+/* Dashboard stat cards */
+.dashboard-stat-card {
+  background: var(--color-card-bg) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.1) !important;
+}
+.dashboard-stat-card:hover {
+  box-shadow: 0 14px 32px rgba(37, 99, 235, 0.14) !important;
+}
+
+/* Dashboard pattern grid */
+.dashboard-pattern-grid {
+  gap: 0.75rem !important;
+}
+.dashboard-stat-card-span-2 {
+  grid-column: span 2 !important;
+}
+
+/* Status pill */
+.StatusPill {
+  background: var(--color-card-bg) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+/* Table styling */
+.table {
+  --color-text: var(--color-text);
+}
+
+/* Form fields */
+.form-field-row {
+  background: var(--color-card-bg) !important;
+}
+
+/* Sidebar active nav */
+.app-sidebar .nav-active {
+  background-color: rgba(255,255,255,0.15) !important;
+}
+
+/* Header title */
+.app-header-title {
+  color: var(--color-heading-accent) !important;
+}
+
+/* Page heading */
+.page-heading {
+  color: var(--color-heading-accent) !important;
+}
+
+/* Dashboard section title */
+.dashboard-section-title {
+  color: var(--color-heading-accent) !important;
+}
+/* Metric card */
+.metric-card {
+  @apply flex items-start gap-3 rounded-2xl border border-white/80 bg-white p-3.5 transition duration-200;
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.1);
+}
+.metric-card:hover {
+  box-shadow: 0 14px 32px rgba(37, 99, 235, 0.14);
+}
+.metric-card-span-2 {
+  grid-column: span 2;
+}
+/* Status pill for statistics */
+.stat-status-pill {
+  @apply h-full rounded-xl border px-4 py-4 text-center;
+}
