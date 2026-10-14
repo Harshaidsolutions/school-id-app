@@ -20,7 +20,7 @@ export const colors = {
   pink: "#C95E8C",
   softPink: "rgba(233,30,99,0.12)",
 
-  background: "#F3F2FB",
+  background: "#F6F7FC",
   surface: "#FFFFFF",
   text: "#34334F",
   textPrimary: "#34334F",
@@ -65,7 +65,7 @@ export const colors = {
   whatsappGreen: "#25D366",
 
   white: "#FFFFFF",
-  surfaceMuted: "#F3F2FB",
+  surfaceMuted: "#F6F7FC",
   inputBg: "#FFFFFF",
   borderLight: "#E5E3F3",
   track: "#E5E3F3",
@@ -112,7 +112,7 @@ export const colors = {
   overlay: "rgba(79,65,119,0.40)",
   overlayHeavy: "rgba(79,65,119,0.60)",
 
-  tabInactive: "#9CA3AF",
+  tabInactive: "#73778E",
   tabBarBg: "#FFFFFF",
   sectionOrange: "#7650ED",
 } as const;
@@ -201,7 +201,7 @@ export const radius = {
   md: s(14),
   lg: s(16),
   xl: s(24),
-  card: s(28),
+  card: s(24),
   chip: s(12),
   buttonPill: s(25),
   full: 999,
@@ -211,8 +211,8 @@ export const radius = {
 export const cardShadow = {
   elevation: 2,
   shadowColor: "#7961CC",
-  shadowOpacity: 0.14,
-  shadowRadius: s(18),
+  shadowOpacity: 0.09,
+  shadowRadius: s(12),
   shadowOffset: { width: 0, height: s(2) },
 } as const;
 

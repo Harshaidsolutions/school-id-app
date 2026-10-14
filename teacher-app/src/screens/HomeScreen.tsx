@@ -188,7 +188,8 @@ export function HomeScreen() {
           </Text>
         </View>
         <Pressable
-          style={[styles.iconBtn, { width: logoSize, height: logoSize }]}
+          style={[styles.iconBtn, { width: Math.max(44, logoSize), height: Math.max(44, logoSize) }]}
+          accessibilityLabel="Notifications"
           onPress={() => navigation.navigate("Notifications")}
         >
           <Ionicons
@@ -205,7 +206,8 @@ export function HomeScreen() {
           ) : null}
         </Pressable>
         <Pressable
-          style={[styles.iconBtn, { width: logoSize, height: logoSize }]}
+          style={[styles.iconBtn, { width: Math.max(44, logoSize), height: Math.max(44, logoSize) }]}
+          accessibilityLabel="Open menu"
           onPress={() => navigation.navigate("DrawerMenu" as any)}
         >
           <Ionicons name="menu" size={icons.xl} color="#FFFFFF" />
@@ -463,6 +465,7 @@ function StarRating({ value }: { value: number }) {
 }
 
 function useHomeStyles() {
+  const { colors } = useTheme();
   return useResponsiveStyles(({ scale }) => ({
   safe: { flex: 1 },
   header: {
@@ -532,9 +535,9 @@ function useHomeStyles() {
   scroll: { flex: 1 },
   content: { paddingHorizontal: spacing.pagePad, paddingTop: 0, paddingBottom: spacing.pagePad },
   hero: {
-    backgroundColor: "#EEEAFF",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#DDD5FA",
+    borderColor: colors.borderLight,
     borderRadius: 24,
     paddingHorizontal: spacing.md,
     marginTop: spacing.md,
@@ -626,6 +629,8 @@ function useHomeStyles() {
     borderRadius: radius.sm,
   },
   productText: {
+    minHeight: typeScale.sm * 2.8,
+    lineHeight: typeScale.sm * 1.4,
     marginTop: spacing.xs,
     fontFamily: fonts.semiBold,
     fontSize: typeScale.sm,
@@ -720,5 +725,5 @@ function useHomeStyles() {
     fontFamily: fonts.medium,
     fontSize: typeScale.xs,
   },
-  }));
+  }), [colors]);
 }

@@ -145,10 +145,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius:24,
     paddingHorizontal:8,
     paddingTop: moderateScale(8),
-    alignItems: "flex-end",
+    alignItems: "center",
   },
   item: {
     flex: 1,
+    minHeight: 48,
+    minWidth: 0,
     alignItems: "center",
     justifyContent: "center",
     gap: moderateScale(4),
@@ -156,6 +158,7 @@ const styles = StyleSheet.create({
   },
   label: {
     ...textStyles.nav,
+    textAlign: "center",
   },
   fabWrap: {
     flex: 1,
@@ -169,8 +172,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     elevation: 8,
-    shadowColor: "#F5811F",
-    shadowOpacity: 0.4,
+    shadowColor: "#7650ED",
+    shadowOpacity: 0.18,
     shadowRadius: moderateScale(10),
     shadowOffset: { width: 0, height: moderateScale(4) },
   },
