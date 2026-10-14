@@ -2,10 +2,10 @@
   "expo": {
     "name": "My School ID Card",
     "slug": "teacher-app",
-    "version": "1.0.154",
-    "orientation": "portrait",
+    "version": "1.0.155",
+    "orientation": "default",
     "icon": "./assets/app-icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "runtimeVersion": {
       "policy": "appVersion"
@@ -31,7 +31,7 @@
       }
     },
     "android": {
-      "versionCode": 154,
+      "versionCode": 155,
       "package": "com.schoolid.teacher",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-foreground.png",

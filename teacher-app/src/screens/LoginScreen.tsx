@@ -1,3 +1,5 @@
+import { LinearGradient } from "expo-linear-gradient";
+import { useTheme } from "../theme/ThemeContext";
 import { Entrance } from "../components/Entrance";
 import { Pressable } from "../components/Pressable";
 import { API_BASE_URL } from "../api/client";
@@ -40,10 +42,11 @@ type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
 const REMEMBER_KEY = "teacher_remember_username";
 const REMEMBER_FLAG = "teacher_remember_me";
-const LOGIN_BG = "#FBF6F0";
+
 
 export function LoginScreen(_props: Props) {
   const styles = useLoginStyles();
+  const { colors } = useTheme();
   const { width } = useResponsiveLayout();
   const logoSize = loginLogoSize(width);
   const { login } = useAuth();
@@ -134,7 +137,7 @@ export function LoginScreen(_props: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["top", "bottom"]}>
       <KeyboardDismissView style={styles.flex}>
         <KeyboardAvoidingView
           style={styles.flex}
@@ -149,6 +152,9 @@ export function LoginScreen(_props: Props) {
             <AppIcon size={Math.min(logoSize, 104)} />
             <BrandLockup
               variant="hero"
+              harshaColor={colors.textPrimary}
+              solutionsColor={colors.primaryOrange}
+              taglineColor={colors.textMuted}
               title={BRAND.appName}
               subtitle={BRAND.headerSubtitle}
               showTagline={false}
@@ -203,9 +209,11 @@ export function LoginScreen(_props: Props) {
               disabled={loading}
               style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
             >
+              <LinearGradient colors={["#833BFA", "#517CFF"]} start={{x:0,y:0}} end={{x:1,y:1}} style={styles.loginGradient}>
               <Text style={styles.loginBtnText}>
                 {loading ? "Logging in…" : "Login"}
               </Text>
+              </LinearGradient>
             </Pressable>
 
             </Entrance>
@@ -225,12 +233,12 @@ export function LoginScreen(_props: Props) {
             </View>
 
             <Pressable style={styles.contactRow} onPress={openWebsite}>
-              <Ionicons name="globe-outline" size={18} color="#D66A32" />
+              <Ionicons name="globe-outline" size={18} color="#7650ED" />
               <Text style={styles.contactText}>www.harshaidsolutions.in</Text>
             </Pressable>
 
             <Pressable style={styles.contactRow} onPress={openMail}>
-              <Ionicons name="mail" size={18} color="#D66A32" />
+              <Ionicons name="mail" size={18} color="#7650ED" />
               <Text style={styles.contactText}>{SUPPORT_EMAIL}</Text>
             </Pressable>
           </ScrollView>
@@ -241,10 +249,11 @@ export function LoginScreen(_props: Props) {
 }
 
 function useLoginStyles() {
+  const { colors } = useTheme();
   return useResponsiveStyles(({ wp, scale }) => {
     const formW = Math.min(wp(100) - spacing.pagePad * 2, 440);
     return {
-      safe: { flex: 1, backgroundColor: LOGIN_BG },
+      safe: { flex: 1, backgroundColor: colors.background },
       flex: { flex: 1 },
       scroll: {
         flexGrow: 1,
@@ -254,29 +263,29 @@ function useLoginStyles() {
         paddingVertical: spacing.lg,
       },
       identityPanel: { alignItems: "center", width: formW, paddingBottom: spacing.lg },
-      authPanel: { width: formW, padding: spacing.lg, backgroundColor: "#FFFFFF", borderRadius: scale(28), borderWidth: 1, borderColor: "#EBDDE4", ...cardShadow },
+      authPanel: { width: formW, padding: spacing.lg, backgroundColor: colors.surface, borderRadius: scale(28), borderWidth: 1, borderColor: "#E5E3F3", ...cardShadow },
       title: {
         marginTop: spacing.sm,
         fontSize: scale(25),
         fontFamily: fonts.headingBold,
         textAlign: "center",
-        color: "#168B86",
+        color: colors.textPrimary,
       },
       subtitle: {
         marginTop: scale(4),
         marginBottom: spacing.md,
         fontFamily: fonts.body,
         fontSize: typeScale.subtitle,
-        color: "#6C718D",
+        color: colors.textMuted,
         textAlign: "center",
       },
       formGroup: {
         width: "100%",
         alignSelf: "center",
-        backgroundColor: "#FFFFFF",
+        backgroundColor: colors.surface,
         borderRadius: radius.card,
         borderWidth: 1,
-        borderColor: "#EBDDE4",
+        borderColor: "#E5E3F3",
         marginBottom: spacing.sm,
         overflow: "hidden",
         ...cardShadow,
@@ -290,13 +299,13 @@ function useLoginStyles() {
       },
       formDivider: {
         height: 1,
-        backgroundColor: "#EBDDE4",
+        backgroundColor: "#E5E3F3",
         marginHorizontal: spacing.md,
       },
       input: {
         flex: 1,
         ...textStyles.input,
-        color: "#694B72",
+        color: colors.textPrimary,
         paddingVertical: Platform.OS === "ios" ? spacing.sm : spacing.xs,
       },
       error: {
@@ -310,18 +319,19 @@ function useLoginStyles() {
       loginBtn: {
         width: "100%",
         alignSelf: "center",
-        backgroundColor: "#875881",
-        borderRadius: radius.lg,
-        minHeight: scale(50),
+        backgroundColor: "#7650ED",
+        borderRadius: radius.full,
+        minHeight: scale(54),
         alignItems: "center",
         justifyContent: "center",
         marginTop: spacing.xs,
         elevation: 2,
-        shadowColor: "#D66A32",
+        shadowColor: "#7650ED",
         shadowOpacity: 0.25,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 2 },
       },
+      loginGradient: { width: "100%", minHeight: scale(54), paddingVertical: spacing.sm, borderRadius: radius.full, alignItems: "center", justifyContent: "center" },
       loginBtnDisabled: { opacity: 0.65 },
       loginBtnText: {
         ...textStyles.button,
@@ -331,7 +341,7 @@ function useLoginStyles() {
         textAlign: "center",
         fontFamily: fonts.body,
         fontSize: typeScale.subtitle,
-        color: "#168B86",
+        color: colors.textPrimary,
         marginTop: spacing.md,
         marginBottom: spacing.sm,
         width: formW,
@@ -360,7 +370,7 @@ function useLoginStyles() {
         gap: spacing.xs,
         paddingVertical: spacing.sm,
         borderRadius: radius.buttonPill,
-        backgroundColor: "#D66A32",
+        backgroundColor: "#7650ED",
       },
       contactBtnText: {
         fontFamily: fonts.headingSemiBold,
@@ -378,8 +388,8 @@ function useLoginStyles() {
       contactText: {
         fontFamily: fonts.body,
         fontSize: typeScale.subtitle,
-        color: "#694B72",
+        color: colors.textPrimary,
       },
     };
-  });
+  }, [colors]);
 }

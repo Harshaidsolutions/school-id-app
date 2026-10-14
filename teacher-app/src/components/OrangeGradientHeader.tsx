@@ -36,7 +36,7 @@ export function OrangeGradientHeader({
   const { headerGradient, idCardsHeaderGradient } = useTheme();
   const gradient =
     variant === "green" ? idCardsHeaderGradient : headerGradient;
-  const iconSize = moderateScale(40);
+  const iconSize = Math.max(44, moderateScale(40));
 
   return (
     <LinearGradient

@@ -150,8 +150,10 @@ export function HomeScreen() {
   const logoSize = scale(36);
   const lightboxImageHeight = Math.min(scale(320), wp(78));
   const gridPad = spacing.pagePad * 2;
-  const productCardWidth = Math.floor((screenW - gridPad - spacing.sm) / 2);
-  const schoolColWidth = Math.floor((screenW - gridPad - spacing.xs * 2) / 3);
+  const productColumns = Math.max(2, Math.floor((screenW - gridPad) / 180));
+  const productCardWidth = Math.floor((screenW - gridPad - spacing.sm * (productColumns - 1)) / productColumns);
+  const schoolColumns = Math.max(3, Math.floor((screenW - gridPad) / 150));
+  const schoolColWidth = Math.floor((screenW - gridPad - spacing.xs * (schoolColumns - 1)) / schoolColumns);
 
   return (
     <View style={[styles.safe, { backgroundColor: colors.background }]}>
@@ -530,9 +532,9 @@ function useHomeStyles() {
   scroll: { flex: 1 },
   content: { paddingHorizontal: spacing.pagePad, paddingTop: 0, paddingBottom: spacing.pagePad },
   hero: {
-    backgroundColor: "#FFF0E5",
+    backgroundColor: "#EEEAFF",
     borderWidth: 1,
-    borderColor: "#F1DACB",
+    borderColor: "#DDD5FA",
     borderRadius: 24,
     paddingHorizontal: spacing.md,
     marginTop: spacing.md,

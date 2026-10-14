@@ -55,7 +55,7 @@ export function windowSize() {
  */
 export function scale(size: number, width = windowSize().width): number {
   const ratio = width / BASE_WIDTH;
-  const applied = width >= 480 ? Math.min(ratio, 1.25) : ratio;
+  const applied = Math.max(0.9, Math.min(ratio, 1.2));
   return PixelRatio.roundToNearestPixel(size * applied);
 }
 

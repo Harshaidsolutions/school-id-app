@@ -13,11 +13,12 @@ type ResponsiveLayout = ReturnType<typeof useResponsiveLayout>;
  * Pass a factory receiving live layout metrics (scale, wp, hp, width, height).
  */
 export function useResponsiveStyles<T extends NamedStyles<T>>(
-  factory: (layout: ResponsiveLayout) => T
+  factory: (layout: ResponsiveLayout) => T,
+  dependencies: readonly unknown[] = []
 ): T {
   const layout = useResponsiveLayout();
   return useMemo(
     () => StyleSheet.create(factory(layout)),
-    [layout.width, layout.height]
+    [layout.width, layout.height, ...dependencies]
   );
 }

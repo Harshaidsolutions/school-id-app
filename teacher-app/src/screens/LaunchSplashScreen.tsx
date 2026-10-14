@@ -58,7 +58,7 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
 
   return (
     <LinearGradient
-      colors={["#FF8C1A", "#D66A32", "#25A59C", "#168B86"]}
+      colors={["#FF8C1A", "#7650ED", "#25A59C", "#168B86"]}
       locations={[0, 0.38, 0.72, 1]}
       start={{ x: 0.1, y: 0 }}
       end={{ x: 0.9, y: 1 }}
