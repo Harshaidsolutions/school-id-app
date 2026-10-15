@@ -79,6 +79,7 @@ interface TeacherStudentRow {
   id: string;
   student_name: string;
   roll_no: string | null;
+  app_visible?: boolean;
   photo_url: string | null;
   photo_captured_at: string | null;
   status: string | null;
@@ -111,7 +112,7 @@ interface TeacherModelRow {
 }
 
 const TEACHER_STUDENT_SELECT = `
-  id, student_name, roll_no, photo_url, photo_captured_at, signature_url, status, school_id, institute_id, class_section,
+  app_visible, id, student_name, roll_no, photo_url, photo_captured_at, signature_url, status, school_id, institute_id, class_section,
   parent_name, parent_phone, address, photo_id,
   dob, gender, blood_group, custom_1, custom_2, custom_3, extra_fields, field_labels
 `;
@@ -260,7 +261,7 @@ export async function listTeacherStudents(
       const result = await pool.query<TeacherStudentRow>(
         `SELECT ${TEACHER_STUDENT_SELECT}
          FROM students
-         WHERE institute_id = $1
+         WHERE app_visible = true AND institute_id = $1
          ORDER BY student_name ASC, roll_no ASC NULLS LAST`,
         [instituteId]
       );
@@ -287,7 +288,7 @@ export async function listTeacherStudents(
         const result = await pool.query<TeacherStudentRow>(
           `SELECT ${TEACHER_STUDENT_SELECT}
            FROM students
-           WHERE school_id = $1
+           WHERE app_visible = true AND school_id = $1
            ORDER BY class_section ASC, roll_no ASC NULLS LAST, student_name ASC`,
           [schoolId]
         );
@@ -314,7 +315,7 @@ export async function listTeacherStudents(
     const result = await pool.query<TeacherStudentRow>(
       `SELECT ${TEACHER_STUDENT_SELECT}
        FROM students
-       WHERE school_id = $1
+       WHERE app_visible = true AND school_id = $1
          AND class_section = $2
        ORDER BY roll_no ASC NULLS LAST, student_name ASC`,
       [schoolId, classSection]
@@ -1037,7 +1038,7 @@ export async function getTeacherProgress(
            COUNT(*) FILTER (WHERE photo_url IS NOT NULL AND btrim(photo_url) <> '')::text AS captured,
            COUNT(*) FILTER (WHERE photo_url IS NULL OR btrim(photo_url) = '')::text AS uncaptured
          FROM students
-         WHERE institute_id = $1`,
+         WHERE app_visible = true AND institute_id = $1`,
         [instituteId]
       );
       const row = result.rows[0];
@@ -1069,7 +1070,7 @@ export async function getTeacherProgress(
          COUNT(*) FILTER (WHERE photo_url IS NOT NULL AND btrim(photo_url) <> '')::text AS captured,
          COUNT(*) FILTER (WHERE photo_url IS NULL OR btrim(photo_url) = '')::text AS uncaptured
        FROM students
-       WHERE school_id = $1
+       WHERE app_visible = true AND school_id = $1
          ${scopeSql}`,
       values
     );
@@ -1114,7 +1115,7 @@ export async function getTeacherHome(
            COUNT(*) FILTER (WHERE photo_url IS NOT NULL AND btrim(photo_url) <> '')::text AS captured,
            COUNT(*) FILTER (WHERE photo_url IS NULL OR btrim(photo_url) = '')::text AS uncaptured
          FROM students
-         WHERE institute_id = $1`,
+         WHERE app_visible = true AND institute_id = $1`,
         [instituteId]
       );
 
@@ -1162,7 +1163,7 @@ export async function getTeacherHome(
          COUNT(*) FILTER (WHERE photo_url IS NOT NULL AND btrim(photo_url) <> '')::text AS captured,
          COUNT(*) FILTER (WHERE photo_url IS NULL OR btrim(photo_url) = '')::text AS uncaptured
        FROM students
-       WHERE school_id = $1
+       WHERE app_visible = true AND school_id = $1
          ${scopeSql}
        GROUP BY class_section
        ORDER BY class_section ASC`,

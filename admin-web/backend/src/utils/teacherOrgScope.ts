@@ -37,8 +37,9 @@ export function getTeacherOrgId(user: AuthUser): string {
 
 export function assertStudentBelongsToOrg(
   user: AuthUser,
-  student: { school_id?: string | null; institute_id?: string | null }
+  student: { school_id?: string | null; institute_id?: string | null; app_visible?:boolean }
 ): void {
+  if (student.app_visible === false) throw new AppError("Record is hidden by the admin",404);
   if (isInstituteStaff(user)) {
     if (student.institute_id !== user.instituteId) {
       throw new AppError("Forbidden: member belongs to another institute", 403);

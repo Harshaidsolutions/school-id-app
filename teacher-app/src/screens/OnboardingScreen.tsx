@@ -268,7 +268,6 @@ function Page1({ nav }: { nav: NavProps }) {
         footerRatio={FOOTER_RATIO}
       />
       <View style={styles.p1Top}>
-        <AppIcon size={iconSize} style={{ marginBottom: spacing.md }} />
         <BrandLockup
           variant="hero"
           title={BRAND.appName}

@@ -17,7 +17,7 @@ export function drawerLogoSize(width: number): number {
 
 /** Splash intro — larger centered logo. */
 export function splashLogoSize(width: number): number {
-  return wp(32, width);
+  return Math.min(width-48,320);
 }
 
 /** @deprecated use loginLogoSize(width) — kept for imports that expect a constant */

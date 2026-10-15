@@ -1,3 +1,5 @@
+import {IdCardGeneratorPage} from "./pages/IdCardGeneratorPage";
+import {WorkspaceHelpPage} from "./pages/WorkspaceHelpPage";
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
@@ -51,6 +53,8 @@ export default function App() {
               <Route path="/institutes" element={<InstituteListPage />} />
               <Route path="/institutes/add" element={<InstituteFormPage />} />
               <Route path="/institutes/:id/edit" element={<InstituteFormPage />} />
+              <Route path="/id-card-generator" element={<IdCardGeneratorPage />} />
+              <Route path="/workspace-help" element={<WorkspaceHelpPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/form-setup" element={<FormSetupPage />} />

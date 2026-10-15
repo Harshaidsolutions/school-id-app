@@ -82,7 +82,7 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
               },
             ]}
           >
-            <AppIcon size={splashLogoSize} />
+
           </View>
           <BrandLockup
             variant="splash"

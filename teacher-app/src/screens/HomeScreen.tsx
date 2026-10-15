@@ -1,3 +1,4 @@
+import {ManagedInstructions} from "../components/ManagedInstructions";
 import { Entrance } from "../components/Entrance";
 import { useCallback, useRef, useState } from "react";
 import {
@@ -167,7 +168,7 @@ export function HomeScreen() {
         ]}
       >
         <View style={styles.headerLogoWrap}>
-          <AppIcon size={headerLogo} variant="header" />
+          <AppIcon size={Math.min(screenW * .48,220)} variant="header" />
         </View>
         <View style={styles.headerTextWrap}>
           <Text
@@ -248,6 +249,7 @@ export function HomeScreen() {
           <View style={[styles.sectionRule, { backgroundColor: colors.primaryOrange }]} />
           <SectionTitle title="INSTRUCTIONS" accent={colors.primaryOrange} />
         </View>
+        <ManagedInstructions />
         {INSTRUCTIONS.map((text, i) => (
           <View
             key={text.slice(0, 20)}
@@ -489,6 +491,7 @@ function useHomeStyles() {
     minHeight: scale(40),
   },
   headerTextWrap: {
+    display:"none",
     flex: 1,
     minWidth: 0,
     justifyContent: "center",

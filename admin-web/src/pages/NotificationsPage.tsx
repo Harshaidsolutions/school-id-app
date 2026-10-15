@@ -1,3 +1,4 @@
+import {SavedMessages} from "../components/SavedMessages";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import axios from "axios";
 import api from "../api/client";
@@ -198,7 +199,7 @@ export function NotificationsPage() {
         className="mb-8 space-y-5 card p-6 sm:p-7"
       >
         <fieldset disabled={sending} className="space-y-5">
-        <h2 className="text-base font-semibold text-text-navy">Compose Notification</h2>
+        <h2 className="text-base font-semibold text-text-navy">Compose Notification</h2><SavedMessages title={title} message={description} onUse={(t,m)=>{setTitle(t);setDescription(m);}}/>
 
         <label className="block text-sm">
           <span className="mb-1.5 block font-medium text-text-navy">Title</span>
@@ -409,8 +410,9 @@ export function NotificationsPage() {
         {sentNotifications.map((n) => (
           <div
             key={n.id}
-            className="rounded-2xl border border-border/60 bg-white p-5 pl-6 shadow-sm"
+            className="notification-history-card rounded-2xl border border-border/60 bg-white p-5 pl-6 shadow-sm"
           >
+            <button type="button" className="btn-secondary mb-3" onClick={()=>{setTitle(n.title);setDescription(n.message);setSuccess('Text copied to the composer. Use Save this text to keep it as a template.');window.scrollTo({top:0,behavior:'smooth'});}}>Reuse this text</button>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <label className="flex items-center gap-3 pl-1 font-semibold text-text-navy">
                 {bulkOpen ? (

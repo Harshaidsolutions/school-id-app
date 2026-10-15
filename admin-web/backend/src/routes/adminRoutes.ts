@@ -1,3 +1,5 @@
+import {photoArchiveUpload,importPhotos} from "../controllers/photoImportController";
+import {uploadInstructionMedia,messageTemplates,instructionContent,registrations,setCandidateVisibility} from "../controllers/workspaceToolsController";
 import {getSchoolParentLink, setSchoolParentFormEnabled,createSchoolParentLink} from "../controllers/schoolParentFormController";
 import { Router } from "express";
 import { authMiddleware, requireRole } from "../middleware/auth";
@@ -146,7 +148,17 @@ const router = Router();
 
 router.use(authMiddleware, requireRole("admin"));
 
+router.post("/photo-import",photoArchiveUpload,importPhotos);
 router.get("/profile", getAdminProfile);
+router.get('/message-templates',messageTemplates);
+router.post('/message-templates',messageTemplates);
+router.delete('/message-templates/:id',messageTemplates);
+router.post('/app-instructions/media',uploadCatalogMedia.single('file'),uploadInstructionMedia);
+router.get('/app-instructions',instructionContent);
+router.put('/app-instructions',instructionContent);
+router.get('/service-registrations',registrations);
+router.patch('/service-registrations/:id',registrations);
+router.patch('/students/visibility',setCandidateVisibility);
 
 router.get("/organizations", listOrganizations);
 router.post("/organizations", createOrganization);

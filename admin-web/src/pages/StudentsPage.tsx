@@ -1,3 +1,4 @@
+import {PhotoImportModal} from "../components/PhotoImportModal";
 import { HeaderBack } from "../components/HeaderBack";
 import { IdCardGeneratorButton } from "../components/IdCardGeneratorButton";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -311,7 +312,15 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [showDeleteOptions, setShowDeleteOptions] = useState(false);
   const [showDownloadPhotosModal, setShowDownloadPhotosModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [photoImportOpen,setPhotoImportOpen]=useState(false);
   const [selecting, setSelecting] = useState(false);
+  const [visibilityView,setVisibilityView]=useState('visible');
+  const [visibilityBusy,setVisibilityBusy]=useState(false);
+  async function changeVisibility(ids:string[],visible:boolean){
+    if(!ids.length)return;setVisibilityBusy(true);
+    try{await api.patch('/admin/students/visibility',{ids,visible});setStudents(a=>a.map(v=>ids.includes(v.id)?{...v,app_visible:visible}:v));setSelectedIds(new Set());}
+    catch{setError('Could not update visibility. Please try again.');}finally{setVisibilityBusy(false);}
+  }
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [otpOpen, setOtpOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -540,6 +549,8 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return students.filter((s) => {
+      if(visibilityView==='visible' && s.app_visible===false)return false;
+      if(visibilityView==='hidden' && s.app_visible!==false)return false;
       const { photo, dataMissing } = recordFlags(s, isInstitute);
       if (!photoFilter && tab === "pending" && photo) return false;
       if (tab === "pending-data" && !dataMissing) return false;
@@ -561,25 +572,29 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       }
       return true;
     });
-  }, [students, tab, classFilter, photoFilter, search, isInstitute]);
+  }, [students, tab, classFilter, photoFilter, search, isInstitute, visibilityView]);
 
   const counts = useMemo(() => {
     let pending = 0;
     let pendingData = 0;
     let captured = 0;
+    let visibleCount=0;
     for (const s of students) {
+      if(visibilityView==='visible' && s.app_visible===false)continue;
+      if(visibilityView==='hidden' && s.app_visible!==false)continue;
+      visibleCount++;
       const { photo, dataMissing } = recordFlags(s, isInstitute);
       if (!photo) pending += 1;
       if (dataMissing) pendingData += 1;
       if (photo) captured += 1;
     }
     return {
-      all: students.length,
+      all: visibleCount,
       pending,
       "pending-data": pendingData,
       captured,
     };
-  }, [students, isInstitute]);
+  }, [students, isInstitute, visibilityView]);
 
   async function handleDeleteImage(student: Student) {
     setConfirmDeletePhotoStudent(null);
@@ -805,6 +820,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       {isDetailView ? (
         <>
         <div className="detail-toolbar-shell">
+          {photoImportOpen&&<PhotoImportModal orgId={orgId} kind={isInstitute?'institute':'school'} onClose={()=>setPhotoImportOpen(false)} onComplete={()=>void reloadStudentsAndConfig()}/>}
           <div className="detail-toolbar-row1">
             <button
               type="button"
@@ -833,6 +849,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             >
               Upload Excel
             </button>
+            <button type="button" className="detail-toolbar-btn" disabled={!orgId} onClick={()=>setPhotoImportOpen(true)}>Upload Photos</button>
 
             <button
               type="button"
@@ -961,6 +978,9 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             </button>
 
             <div className="detail-toolbar-row2-actions">
+              <select aria-label="Record visibility" className="input-field" value={visibilityView} onChange={e=>{setVisibilityView(e.target.value);setSelectedIds(new Set());}}><option value="visible">Visible</option><option value="hidden">Hidden</option><option value="all">All records</option></select>
+              <button type="button" className="btn-secondary" onClick={()=>setSelecting(true)}>Select records</button>
+              {selecting&&<><button type="button" className="btn-secondary" disabled={!selectedIds.size||visibilityBusy} onClick={()=>void changeVisibility(filtered.filter(v=>selectedIds.has(v.id)).map(v=>v.id),false)}>Hide selected</button><button type="button" className="btn-secondary" disabled={!selectedIds.size||visibilityBusy} onClick={()=>void changeVisibility(filtered.filter(v=>selectedIds.has(v.id)).map(v=>v.id),true)}>Show selected</button></>}
               {selecting ? (
                 <button
                   type="button"
@@ -1292,6 +1312,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   </td>
                   <td className="col-actions">
                     <div className="flex items-center justify-end gap-0.5">
+                      <button type="button" className="record-eye" disabled={visibilityBusy} aria-label={(student.app_visible===false?'Show ':'Hide ')+student.student_name+' in school app'} title={student.app_visible===false?'Show in school app':'Hide in school app'} onClick={()=>void changeVisibility([student.id],student.app_visible===false)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>{student.app_visible===false&&<path d="m3 3 18 18"/>}</svg></button>
                       <button
                         type="button"
                         title="Download photo"

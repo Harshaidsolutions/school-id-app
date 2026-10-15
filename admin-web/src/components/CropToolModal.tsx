@@ -133,6 +133,7 @@ export function CropToolModal({
   const limitRef = useRef<{ width: number | null; height: number | null }>({ width: null, height: null });
   const historyRef = useRef<Array<Crop & { brightness: number; contrast: number; armed: boolean }>>([]);
   const undoRef = useRef<() => void>(() => {});
+  const applyOkRef = useRef<() => void>(()=>{});
   const quickSaveRef = useRef<() => void>(() => {});
   const student = gallery[index] ?? null;
 
@@ -646,6 +647,7 @@ export function CropToolModal({
     if (previewBlobRef.current) await saveCrop();
   }
 
+  applyOkRef.current = () => { if (!browsing && !saving && !applying && !previewBlobRef.current) void applyOk(); };
   undoRef.current = undoCrop;
   quickSaveRef.current = () => {
     void quickSave();
@@ -655,6 +657,8 @@ export function CropToolModal({
     function onKey(event: KeyboardEvent) {
       const target = event.target;
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.closest('button'))) return;
+      if (event.key === 'Enter' && !event.repeat && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) { event.preventDefault(); applyOkRef.current(); return; }
       if (!event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
       const key = event.key.toLowerCase();
       if (key === "z") {

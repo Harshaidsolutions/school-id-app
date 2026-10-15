@@ -8,7 +8,7 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
   return (
     <main className="login-shell"><div className="login-composition">
       <section className="login-brand-panel" aria-label="My School ID Card">
-        <div className="login-wordmark"><img src="/app-logo.png" alt="" /><span>My School ID Card</span></div>
+        <div className="login-wordmark"><img src="/brand-wordmark.png" alt="My School ID Card" /></div>
         <div className="login-brand-copy">
           <span className="login-eyebrow">ADMIN WORKSPACE</span>
           <h2>Every identity.<br />One organized place.</h2>
@@ -19,7 +19,7 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
       </section>
       <section className="login-form-panel">
         <div className="auth-card">
-          <img src="/app-logo.png" alt="My School ID Card" className="login-main-logo" />
+          <img src="/brand-wordmark.png" alt="My School ID Card" className="login-main-logo" />
           <h1 className="login-heading">{onTitlePress ? <button type="button" onClick={onTitlePress} className="login-heading-action" aria-label="Welcome Admin — open password recovery">{title}</button> : title}</h1>
           <p className="login-caption text-sm text-text-muted">Your workspace starts here.</p>
           {children}

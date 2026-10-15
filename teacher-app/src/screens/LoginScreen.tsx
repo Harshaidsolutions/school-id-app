@@ -1,3 +1,4 @@
+import {ServiceRegistration} from "../components/ServiceRegistration";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../theme/ThemeContext";
 import { Entrance } from "../components/Entrance";
@@ -149,7 +150,6 @@ export function LoginScreen(_props: Props) {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.identityPanel}>
-            <AppIcon size={Math.min(logoSize, 104)} />
             <BrandLockup
               variant="hero"
               harshaColor={colors.textPrimary}
@@ -217,6 +217,7 @@ export function LoginScreen(_props: Props) {
             </Pressable>
 
             </Entrance>
+            <ServiceRegistration />
             <Text style={styles.contactPrompt}>
               Please contact us if you want login
             </Text>

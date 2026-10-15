@@ -932,6 +932,20 @@ async function migrate() {
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS parent_form_classes JSONB;
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS parent_form_enabled BOOLEAN NOT NULL DEFAULT false;
     CREATE UNIQUE INDEX IF NOT EXISTS schools_parent_form_token ON schools(parent_form_token) WHERE parent_form_token IS NOT NULL;`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_message_templates (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(), owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL, message TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    CREATE TABLE IF NOT EXISTS app_instruction_content (
+      owner_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL DEFAULT 'Instructions', body TEXT NOT NULL DEFAULT '',
+      media JSONB NOT NULL DEFAULT '[]', updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    CREATE TABLE IF NOT EXISTS service_registrations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, phone TEXT NOT NULL,
+      email TEXT NOT NULL DEFAULT '', organization TEXT NOT NULL DEFAULT '', message TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'new', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    ALTER TABLE students ADD COLUMN IF NOT EXISTS app_visible BOOLEAN NOT NULL DEFAULT true;
+  `);
   console.log("Migration completed successfully.");
 }
 

@@ -1,3 +1,4 @@
+import {ManagedInstructions} from "../components/ManagedInstructions";
 import { Pressable } from "../components/Pressable";
 import {
 
@@ -250,6 +251,8 @@ export function InstructionsScreen(_props: Props) {
         showsVerticalScrollIndicator={false}
 
       >
+<ManagedInstructions />
+
 
         {steps.map((step, i) => (
 

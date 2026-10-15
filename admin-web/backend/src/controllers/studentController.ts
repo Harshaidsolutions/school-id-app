@@ -128,7 +128,7 @@ async function appendPendingDataIds(
 
 const STUDENT_SELECT = `
   id, school_id, institute_id, class_section, roll_no, student_name, parent_name, parent_phone,
-  address, photo_id, photo_url, photo_captured_at, photo_cropped, signature_url, status, import_batch_id, printed_at, created_at, updated_at,
+  app_visible, address, photo_id, photo_url, photo_captured_at, photo_cropped, signature_url, status, import_batch_id, printed_at, created_at, updated_at,
   custom_1, custom_2, custom_3, dob, gender, blood_group, extra_fields, field_labels
 `;
 

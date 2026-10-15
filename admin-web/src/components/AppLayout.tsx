@@ -19,10 +19,12 @@ const NAV: NavItem[] = [
   { label: "Dashboard", icon: "dashboard", to: "/" },
   { label: "Schools", icon: "school", to: "/schools" },
   { label: "Institutes", icon: "institute", to: "/institutes" },
+  { label: "ID Card Generator", icon: "extra", to: "/id-card-generator" },
   { label: "Templates", icon: "templates", to: "/templates" },
   { label: "Models", icon: "model", to: "/models" },
   { label: "Brochures", icon: "brochure", to: "/brochures" },
   { label: "Notifications", icon: "notification", to: "/notifications" },
+  { label: "Instructions & enquiries", icon: "extra", to: "/workspace-help" },
   { label: "Admin Management", icon: "extra", to: "/extra-1", superOnly: true },
 ];
 
@@ -33,6 +35,8 @@ const TITLES: Record<string, string> = {
   "/templates": "Templates",
   "/models": "Models",
   "/notifications": "Notifications",
+  "/workspace-help": "Instructions & enquiries",
+  "/id-card-generator": "ID Card Generator",
   "/brochures": "Brochures",
   "/extra-1": "Admin Management",
   "/extra-2": "Organization",
@@ -335,7 +339,7 @@ export function AppLayout() {
         ) : (
           <div className="px-1 py-1 text-sm">
             {user?.photoUrl ? (
-              <div className="mb-3 rounded-lg bg-transparent px-0 py-0"><HarshaLogo compact src={user.photoUrl} alt="Admin logo" /></div>
+              <div className="mb-3 rounded-lg bg-transparent px-0 py-0"><HarshaLogo compact src={user.isSuperAdmin ? undefined : user.photoUrl} alt="Admin logo" /></div>
             ) : null}
             <div className="text-text-muted">Hi</div>
             <div className="font-semibold text-text">

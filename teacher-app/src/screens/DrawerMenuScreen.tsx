@@ -282,7 +282,7 @@ export function DrawerMenuScreen({ navigation }: Props) {
           ]}
         >
           <View style={styles.headerLogoWrap}>
-            <AppIcon size={drawerLogoSize} variant="header" />
+            <AppIcon size={200} variant="header" />
           </View>
         </LinearGradient>
 

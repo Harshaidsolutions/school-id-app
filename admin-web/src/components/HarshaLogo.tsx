@@ -6,7 +6,7 @@ type HarshaLogoProps = {
   className?: string;
 };
 
-export function HarshaLogo({ compact = false, className = "", src="/harsha-logo-new.png", alt="Harsha ID Solutions" }: HarshaLogoProps) {
+export function HarshaLogo({ compact = false, className = "", src="/brand-wordmark.png", alt="My School ID Card" }: HarshaLogoProps) {
   return (
     <div
       className={`logo-swing flex justify-center ${compact ? "py-1" : "py-2"} ${className}`}
@@ -16,7 +16,7 @@ export function HarshaLogo({ compact = false, className = "", src="/harsha-logo-
         alt={alt}
         className={
           compact
-            ? "h-[88px] w-[124px] max-w-full object-contain"
+            ? "sidebar-brand-image"
             : "h-auto w-full max-w-[min(100%,380px)] object-contain"
         }
       />

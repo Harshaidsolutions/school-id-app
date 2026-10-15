@@ -27,6 +27,7 @@ export interface Student {
   parent_name: string | null;
   parent_phone: string | null;
   address: string | null;
+  app_visible?: boolean;
   photo_id: string | null;
   photo_url: string | null;
   signature_url?: string | null;

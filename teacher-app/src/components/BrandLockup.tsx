@@ -133,6 +133,10 @@ export function BrandLockup({
   const solutionsMin = variant === "compact" ? 10 : BRAND_MIN.solutions;
   const tagMin = BRAND_MIN.tag;
 
+  if (!title || title === BRAND.appName) {
+    const logoWidth=Math.min(screenW-48,variant==='compact'?240:360);
+    return <View style={[styles.wrap,style]}><Image source={require('../../assets/brand-wordmark.png')} resizeMode="contain" accessibilityLabel="My School ID Card — Get Your Identity Here" style={{width:logoWidth,height:logoWidth*536/1600,borderRadius:12}}/></View>;
+  }
   return (
     <View
       style={[
