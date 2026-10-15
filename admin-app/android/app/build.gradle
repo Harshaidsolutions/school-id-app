@@ -1,0 +1,36 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.schoolid.admin'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.schoolid.admin'
+        minSdk 23
+        targetSdk 36
+        versionCode 1
+        versionName '1.0.0'
+    }
+    signingConfigs {
+        release {
+            def keyPath = System.getenv('ADMIN_KEYSTORE_PATH')
+            if (keyPath) {
+                storeFile file(keyPath)
+                storePassword System.getenv('ADMIN_KEYSTORE_PASSWORD')
+                keyAlias 'school-id-admin'
+                keyPassword System.getenv('ADMIN_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release { signingConfig signingConfigs.release; minifyEnabled false }
+    }
+}
+tasks.configureEach { task ->
+    if (task.name == 'validateSigningRelease') {
+        task.doFirst {
+            if (!System.getenv('ADMIN_KEYSTORE_PATH') || !System.getenv('ADMIN_KEYSTORE_PASSWORD')) {
+                throw new GradleException('Use scripts/build-release-macos.sh or scripts/build-release.ps1 to build a signed Admin APK.')
+            }
+        }
+    }
+}
+dependencies { implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.3' }

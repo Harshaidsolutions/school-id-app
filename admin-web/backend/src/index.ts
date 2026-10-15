@@ -69,6 +69,18 @@ app.use((req, res, next) => {
 // ---------------------------------------------------------------------------
 
 /** (a) All API routes live under /api */
+// Explicit route: express.static ignores dot-directories by default.
+app.get("/.well-known/assetlinks.json", (_req, res) => {
+  const fingerprints = (process.env.ADMIN_ANDROID_CERT_SHA256 ?? "").split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
+  if (!fingerprints.length || fingerprints.some(s => !/^(?:[0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(s))) {
+    res.status(404).json({ error: "Admin Android association is not configured" });
+    return;
+  }
+  res.setHeader("Cache-Control", "public, max-age=300");
+  res.json([{ relation: ["delegate_permission/common.handle_all_urls"], target: {
+    namespace: "android_app", package_name: "com.schoolid.admin", sha256_cert_fingerprints: fingerprints
+  } }]);
+});
 app.use("/api", routes);
 
 /**

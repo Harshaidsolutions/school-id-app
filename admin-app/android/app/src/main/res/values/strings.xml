@@ -1,0 +1,5 @@
+<resources>
+    <string name="asset_statements">[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://myschoolidcard.in\"}}]</string>
+    <color name="brand">#624FEB</color>
+    <color name="surface">#F4F7FF</color>
+</resources>
