@@ -128,7 +128,7 @@ export const isSmallPhone = () => windowSize().width < 370;
 export const isLargePhone = () => windowSize().width >= 414;
 
 /** Layout-critical: do not honor system font size (causes per-device drift). */
-export const MAX_FONT_MULT = 1.3;
+export const MAX_FONT_MULT = 1.15;
 
 /**
  * Icon sizes — always width-scaled (same ratio as typography).

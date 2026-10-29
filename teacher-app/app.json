@@ -3,7 +3,7 @@
     "name": "My School ID Card",
     "slug": "teacher-app",
     "version": "1.0.159",
-    "orientation": "default",
+    "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -57,7 +57,10 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FFFFFF"
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/app-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain"
         }
       ],
       [
