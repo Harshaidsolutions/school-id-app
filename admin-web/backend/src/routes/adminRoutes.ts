@@ -99,6 +99,7 @@ import {
   requestNotificationBulkDeleteOtp,
   listAllAdminNotifications,
   incomingUnreadCount,
+  listAdminInbox,
   markIncomingNotificationsRead,
   requestNotificationDeleteOtp,
 } from "../controllers/notificationController";
@@ -272,6 +273,7 @@ router.post("/notifications/bulk-delete", bulkDeleteNotifications);
 router.post("/notifications", uploadImage.single("image"), createNotification);
 router.get("/notifications", listAllAdminNotifications);
 router.get("/notifications/unread-count", incomingUnreadCount);
+router.get("/notifications/inbox", listAdminInbox);
 router.post("/notifications/incoming/mark-read", markIncomingNotificationsRead);
 router.post("/notifications/:id/request-delete-otp", requestNotificationDeleteOtp);
 router.delete("/notifications/:id", deleteNotification);

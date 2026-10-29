@@ -928,3 +928,38 @@ input[type="file"]::file-selector-button:hover { background: #e0e3ff; }
 .login-shell button[type=submit] { position: relative; overflow: hidden; }
 .login-shell button[type=submit]::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%); background-size: 220% 100%; animation: shimmer 3s linear infinite; }
 @media (max-width: 1280px), (max-height: 760px) { .login-cards { display: none; } }
+
+/* Super admin: change own photo from the sidebar */
+.sidebar-avatar-edit { position: relative; flex: none; cursor: pointer; border-radius: 50%; }
+.sidebar-avatar-badge { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-grad); color: #fff; box-shadow: 0 0 0 2px #2b2770; transition: transform 0.2s var(--ease); }
+.sidebar-avatar-badge svg { width: 12px; height: 12px; }
+.sidebar-avatar-edit:hover .sidebar-avatar-badge { transform: scale(1.15); }
+.sidebar-avatar-edit.is-busy { opacity: 0.6; pointer-events: none; }
+.sidebar-avatar-edit:focus-within { outline: 3px solid #a5b4fc; outline-offset: 3px; }
+
+/* Child admin bell: messages from the super admin */
+.admin-inbox { animation: pop-in 0.22s var(--ease) backwards; }
+.admin-inbox-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px 10px; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--ink); }
+.admin-inbox-link { border: 0; background: transparent; color: var(--brand); font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.admin-inbox-empty { padding: 18px 6px; text-align: center; color: var(--muted); font-size: 13px; }
+.admin-inbox-list { list-style: none; margin: 8px 0 0; padding: 0; max-height: 60vh; overflow: auto; display: grid; gap: 6px; }
+.admin-inbox-list li { border: 1px solid var(--line-soft); border-radius: 12px; overflow: hidden; }
+.admin-inbox-list li.is-unread { border-color: var(--brand-line); background: #faf9ff; }
+.admin-inbox-list li > button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 10px 12px; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.admin-inbox-list li.is-unread .admin-inbox-title::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--accent-grad); vertical-align: middle; }
+.admin-inbox-title { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.admin-inbox-date { font-size: 11.5px; color: var(--muted); }
+.admin-inbox-body { padding: 0 12px 12px; font-size: 13.5px; color: var(--ink-2); white-space: pre-wrap; }
+.admin-inbox-body img { margin-top: 8px; max-width: 100%; border-radius: 10px; }
+
+/* Instructions media — file picker + description cards */
+.instruction-media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.instruction-media-card { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--line, #e0e7ff); border-radius: 16px; background: #fff; box-shadow: 0 6px 18px rgba(79,70,229,.08); animation: pop-in .25s ease backwards; }
+.instruction-media-preview { position: relative; aspect-ratio: 16/10; border-radius: 12px; overflow: hidden; background: #eef2ff; display: grid; place-items: center; }
+.instruction-media-preview img, .instruction-media-preview video { width: 100%; height: 100%; object-fit: cover; background: #0f0d2e; }
+.instruction-media-empty { color: #6366f1; font-size: .85rem; }
+.instruction-media-kind { position: absolute; top: 8px; left: 8px; padding: 2px 10px; border-radius: 999px; background: rgba(30,27,75,.75); color: #fff; font-size: .72rem; font-weight: 600; pointer-events: none; }
+.instruction-media-remove { align-self: flex-end; color: #e11d48; }
+.instruction-media-add { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.instruction-media-add.is-disabled { opacity: .55; pointer-events: none; }
+@media (max-width: 640px) { .instruction-media-grid { grid-template-columns: 1fr; } }

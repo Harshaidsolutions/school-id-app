@@ -39,7 +39,8 @@ export async function createNotification(req: Request, res: Response, next: Next
     const schoolId = String(req.body.school_id ?? req.body.schoolId ?? "").trim();
     const instituteId = String(req.body.institute_id ?? req.body.instituteId ?? "").trim();
     const organizationId = String(req.body.organization_id ?? req.body.organizationId ?? "").trim();
-    if ([schoolId, instituteId, organizationId].filter(Boolean).length !== 1) throw new AppError("Select exactly one school, institute or organization", 400);
+    const adminId = String(req.body.admin_id ?? req.body.adminId ?? "").trim();
+    if ([schoolId, instituteId, organizationId, adminId].filter(Boolean).length !== 1) throw new AppError("Select exactly one school, institute, organization or admin", 400);
     const title = String(req.body.title ?? "").trim();
     const message = String(req.body.message ?? "").trim();
     const requestId = String(req.body.requestId ?? "").trim() || null;
@@ -48,7 +49,15 @@ export async function createNotification(req: Request, res: Response, next: Next
     if (req.file && req.file.size > 10 * 1024 * 1024) throw new AppError("Notification image must be 10 MB or smaller", 400);
     const scope = await requireAdminScope(req);
     // Validate ownership before storing any uploaded image or returning a previous send.
-    if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
+    if (adminId) {
+      if (!scope.isSuperAdmin) throw new AppError("Only the super admin can message admins", 403);
+      const target = await client.query(
+        `SELECT id FROM users WHERE id = $1 AND role = 'admin' AND COALESCE(is_super_admin, false) = false LIMIT 1`,
+        [adminId]
+      );
+      if (!target.rows[0]) throw new AppError("Admin not found", 404);
+    }
+    else if (schoolId) await assertSchoolOwnedByAdmin(scope, schoolId);
     else if (instituteId) await assertInstituteOwnedByAdmin(scope, instituteId);
     else await assertOrganizationOwned(scope, organizationId);
     await client.query("BEGIN");
@@ -57,7 +66,7 @@ export async function createNotification(req: Request, res: Response, next: Next
       const existing = await client.query<NotificationRow>("SELECT * FROM notifications WHERE created_by = $1 AND client_request_id = $2", [req.user.userId, requestId]);
       if (existing.rows[0]) {
         const note = existing.rows[0];
-        if ((note.school_id || "") !== schoolId || (note.institute_id || "") !== instituteId || (note.organization_id || "") !== organizationId || note.title !== title || note.message !== message) throw new AppError("This send identifier was already used for a different notification", 409);
+        if ((note.school_id || "") !== schoolId || (note.institute_id || "") !== instituteId || (note.organization_id || "") !== organizationId || (note.target_admin_id || "") !== adminId || note.title !== title || note.message !== message) throw new AppError("This send identifier was already used for a different notification", 409);
         await client.query("COMMIT"); committed = true;
         res.status(200).json({status:"ok", notification:note, reused:true}); return;
       }
@@ -65,16 +74,21 @@ export async function createNotification(req: Request, res: Response, next: Next
     let imageUrl: string | null = null;
     if (req.file) {
       const ext = req.file.mimetype.includes("png") ? "png" : "jpg";
-      imagePath = `notifications/${schoolId || instituteId || organizationId}/${randomUUID()}.${ext}`;
+      imagePath = `notifications/${schoolId || instituteId || organizationId || `admin-${adminId}`}/${randomUUID()}.${ext}`;
       imageUrl = await uploadBufferToBucket(STUDENT_PHOTOS_BUCKET, imagePath, req.file.buffer, req.file.mimetype);
     }
     const inserted = await client.query<NotificationRow>(
-      `INSERT INTO notifications (school_id, institute_id, organization_id, title, message, image_url, created_by, client_request_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [schoolId || null, instituteId || null, organizationId || null, title, message, imageUrl, req.user.userId, requestId]
+      `INSERT INTO notifications (school_id, institute_id, organization_id, target_admin_id, audience, title, message, image_url, created_by, client_request_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [schoolId || null, instituteId || null, organizationId || null, adminId || null, adminId ? "admin" : "org", title, message, imageUrl, req.user.userId, requestId]
     );
     await client.query("COMMIT"); committed = true;
     const notification = inserted.rows[0];
+    if (adminId) {
+      // Admins read these on their dashboard bell; there is no mobile push for admins.
+      res.status(201).json({ status: "ok", notification });
+      return;
+    }
     // Delivery failure never causes the already-committed announcement to be inserted again.
     void loadSnsEndpointsForOrg({schoolId, instituteId, organizationId}).then(endpoints => sendSnsPushNotifications(endpoints, {
       title, body:message, imageUrl,
@@ -112,11 +126,13 @@ export async function listAllAdminNotifications(
       `SELECT n.*,
               s.name AS school_name,
               i.name AS institute_name,
-              o.name AS organization_name
+              o.name AS organization_name,
+              COALESCE(NULLIF(TRIM(ua.display_name), ''), ua.username, ua.email) AS admin_name
        FROM notifications n
        LEFT JOIN schools s ON s.id = n.school_id
        LEFT JOIN institutes i ON i.id = n.institute_id
        LEFT JOIN organizations o ON o.id = n.organization_id
+       LEFT JOIN users ua ON ua.id = n.target_admin_id
        ${accessFilter}
        ORDER BY n.created_at DESC NULLS LAST`,
       values
@@ -141,24 +157,41 @@ export async function incomingUnreadCount(
   try {
     const scope = await requireAdminScope(req);
     const seeAll = await adminSeesAllOrganizations(scope, req);
-    if (!seeAll) {
-      res.status(200).json({ status: "ok", unreadCount: 0 });
-      return;
-    }
+    // Super admin: messages from schools/institutes. Child admins: messages from the super admin.
     const result = await pool.query<{ count: number }>(
       `SELECT COUNT(*)::int AS count
        FROM notifications n
-       WHERE n.audience = 'super_admin'
+       WHERE ((n.audience = 'super_admin' AND $2::boolean)
+              OR (n.audience = 'admin' AND n.target_admin_id = $1))
          AND NOT EXISTS (
            SELECT 1 FROM notification_reads r
            WHERE r.notification_id = n.id AND r.user_id = $1
          )`,
-      [scope.adminUserId]
+      [scope.adminUserId, seeAll]
     );
     res.status(200).json({
       status: "ok",
       unreadCount: result.rows[0]?.count ?? 0,
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** GET /admin/notifications/inbox — notifications the super admin sent to this admin */
+export async function listAdminInbox(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const result = await pool.query(
+      `SELECT n.id, n.title, n.message, n.image_url, n.created_at,
+              EXISTS (SELECT 1 FROM notification_reads r WHERE r.notification_id = n.id AND r.user_id = $1) AS read
+       FROM notifications n
+       WHERE n.audience = 'admin' AND n.target_admin_id = $1
+       ORDER BY n.created_at DESC NULLS LAST
+       LIMIT 100`,
+      [scope.adminUserId]
+    );
+    res.status(200).json({ status: "ok", notifications: result.rows });
   } catch (error) {
     next(error);
   }
@@ -174,6 +207,15 @@ export async function markIncomingNotificationsRead(
     const scope = await requireAdminScope(req);
     const seeAll = await adminSeesAllOrganizations(scope, req);
     if (!seeAll) {
+      const ids = Array.isArray(req.body?.ids) ? parseBulkIds(req.body.ids, "notification") : null;
+      await pool.query(
+        `INSERT INTO notification_reads (notification_id, user_id)
+         SELECT n.id, $1 FROM notifications n
+         WHERE n.audience = 'admin' AND n.target_admin_id = $1
+           AND ($2::uuid[] IS NULL OR n.id = ANY($2::uuid[]))
+         ON CONFLICT DO NOTHING`,
+        [scope.adminUserId, ids]
+      );
       res.status(200).json({ status: "ok" });
       return;
     }

@@ -2,6 +2,7 @@ import {SavedMessages} from "../components/SavedMessages";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import axios from "axios";
 import api from "../api/client";
+import { useAuth } from "../context/AuthContext";
 import { BulkActionBar, BulkModeButtons, bulkDeleteMessage } from "../components/BulkActionBar";
 import { OtpConfirmModal } from "../components/OtpConfirmModal";
 import type {
@@ -15,6 +16,8 @@ type NotificationRow = NotificationItem & {
   school_name?: string | null;
   institute_name?: string | null;
   organization_name?: string | null;
+  admin_name?: string | null;
+  target_admin_id?: string | null;
   organization_id?: string | null;
 };
 
@@ -22,6 +25,8 @@ type NotificationRow = NotificationItem & {
  * Notifications — compose and send to schools / institutes
  */
 export function NotificationsPage() {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.isSuperAdmin === true;
   const [schools, setSchools] = useState<School[]>([]);
   const [organizations, setOrganizations] = useState<Array<{id:string;name:string}>>([]);
   const [selectedOrganizationIds, setSelectedOrganizationIds] = useState<Set<string>>(new Set());
@@ -80,10 +85,17 @@ export function NotificationsPage() {
           api.get<{ institutes: Institute[] }>("/admin/institutes").catch(() => ({
             data: { institutes: [] as Institute[] },
           })),
-          api.get<{organizations:Array<{id:string;name:string}>}>("/admin/organizations"),
+          // Super admin can also message child admins (shown on their dashboard bell)
+          isSuperAdmin
+            ? api.get<{ admins: Array<{ id: string; display_name?: string | null; username?: string | null; email?: string | null; is_super_admin?: boolean; is_active?: boolean }> }>("/admin/managed-admins")
+            : Promise.resolve({ data: { admins: [] } }),
         ]);
         setSchools(schoolsRes.data.schools);
-        setOrganizations(organizationsRes.data.organizations ?? []);
+        setOrganizations(
+          (organizationsRes.data.admins ?? [])
+            .filter((a) => !a.is_super_admin && a.is_active !== false)
+            .map((a) => ({ id: a.id, name: a.display_name?.trim() || a.username || a.email || "Admin" }))
+        );
         setInstitutes(institutesRes.data.institutes ?? []);
         await loadAllNotifications();
       } catch (err) {
@@ -143,7 +155,7 @@ export function NotificationsPage() {
     event.preventDefault();
     if (sendingRef.current) return;
     setError(null); setSuccess(null);
-    if (!selectedSchoolIds.size && !selectedInstituteIds.size && !selectedOrganizationIds.size) { setError("Select at least one school, institute or organization."); return; }
+    if (!selectedSchoolIds.size && !selectedInstituteIds.size && !selectedOrganizationIds.size) { setError("Select at least one school, institute or admin."); return; }
     try {
       const { data } = await api.get<{ templates?: { title: string; message: string }[] }>("/admin/message-templates");
       const exists = (data.templates ?? []).some((t) => t.title.trim() === title.trim() && t.message.trim() === description.trim());
@@ -169,13 +181,13 @@ export function NotificationsPage() {
 
   async function performSend() {
     if (sendingRef.current) return;
-    type Target = {kind:"schoolId"|"instituteId"|"organizationId"; id:string};
+    type Target = {kind:"schoolId"|"instituteId"|"adminId"; id:string};
     const targets: Target[] = [
       ...[...selectedSchoolIds].map(id => ({kind:"schoolId" as const,id})),
       ...[...selectedInstituteIds].map(id => ({kind:"instituteId" as const,id})),
-      ...[...selectedOrganizationIds].map(id => ({kind:"organizationId" as const,id})),
+      ...[...selectedOrganizationIds].map(id => ({kind:"adminId" as const,id})),
     ];
-    if (!targets.length) { setError("Select at least one school, institute or organization."); return; }
+    if (!targets.length) { setError("Select at least one school, institute or admin."); return; }
     const fingerprint = JSON.stringify([title.trim(), description.trim()]);
     if (!sendRequest.current || sendRequest.current.fingerprint !== fingerprint || sendRequest.current.image !== imageFile) {
       sendRequest.current = {fingerprint,image:imageFile,id:crypto.randomUUID()};
@@ -194,7 +206,7 @@ export function NotificationsPage() {
       // Retain the same draft/request keys when retrying failed or timed-out targets.
       setSelectedSchoolIds(new Set(failed.filter(t=>t.kind==="schoolId").map(t=>t.id)));
       setSelectedInstituteIds(new Set(failed.filter(t=>t.kind==="instituteId").map(t=>t.id)));
-      setSelectedOrganizationIds(new Set(failed.filter(t=>t.kind==="organizationId").map(t=>t.id)));
+      setSelectedOrganizationIds(new Set(failed.filter(t=>t.kind==="adminId").map(t=>t.id)));
       await loadAllNotifications();
       if (failed.length) {
         const first = outcomes.find(outcome => outcome.status === "rejected") as PromiseRejectedResult;
@@ -212,6 +224,7 @@ export function NotificationsPage() {
 
   const targetLabel = useMemo(() => {
     return (n: NotificationRow) => {
+      if (n.admin_name) return `Admin: ${n.admin_name}`;
       if (n.organization_name) return `Organization: ${n.organization_name}`;
       if (n.organization_id) return "Organization";
       if (n.institute_name) return `Institute: ${n.institute_name}`;
@@ -232,7 +245,7 @@ export function NotificationsPage() {
         <div className="notify-head">
           <div>
             <h2 className="text-base font-semibold text-text-navy">Compose Notification</h2>
-            <p className="text-sm text-text-muted">Write once, pick the schools, institutes or organizations, and send.</p>
+            <p className="text-sm text-text-muted">Write once, pick the schools, institutes or admins, and send.</p>
           </div>
         </div>
         <SavedMessages refreshKey={savedRefresh} title={title} message={description} onUse={(t,m)=>{setTitle(t);setDescription(m);}}/>
@@ -327,14 +340,14 @@ export function NotificationsPage() {
                     : "Send to All Institutes"}
                 </button>
               )}
-              {organizations.length > 0 && <button type="button" className="text-xs font-semibold text-accent-blue hover:underline" onClick={() => setSelectedOrganizationIds(current => current.size === organizations.length ? new Set() : new Set(organizations.map(org=>org.id)))}>{selectedOrganizationIds.size === organizations.length ? "Clear all organizations" : "Send to All Organizations"}</button>}
+              {organizations.length > 0 && <button type="button" className="text-xs font-semibold text-accent-blue hover:underline" onClick={() => setSelectedOrganizationIds(current => current.size === organizations.length ? new Set() : new Set(organizations.map(org=>org.id)))}>{selectedOrganizationIds.size === organizations.length ? "Clear all admins" : "Send to All Admins"}</button>}
             </div>
           </div>
 
           <div className="max-h-56 overflow-y-auto rounded-xl border border-border bg-content-bg/40 p-3">
             {schools.length === 0 && institutes.length === 0 && organizations.length === 0 && (
               <p className="text-sm text-text-muted">
-                No schools, institutes or organizations yet.
+                No schools, institutes or admins yet.
               </p>
             )}
 
@@ -384,7 +397,7 @@ export function NotificationsPage() {
               </div>
             )}
             {organizations.length > 0 && <div className="mt-3 border-t border-border pt-3">
-              <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-muted">Organizations</div>
+              <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-muted">Admins (see it on their dashboard bell)</div>
               <ul className="space-y-1">{organizations.map(org => <li key={org.id}><label className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-text hover:bg-white"><input type="checkbox" checked={selectedOrganizationIds.has(org.id)} onChange={() => setSelectedOrganizationIds(current => {const next=new Set(current); if(next.has(org.id))next.delete(org.id);else next.add(org.id);return next;})} className="h-4 w-4 rounded border-border text-button-blue" />{org.name}</label></li>)}</ul>
             </div>}
           </div>

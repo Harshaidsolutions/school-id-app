@@ -946,6 +946,11 @@ async function migrate() {
       status TEXT NOT NULL DEFAULT 'new', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     ALTER TABLE students ADD COLUMN IF NOT EXISTS app_visible BOOLEAN NOT NULL DEFAULT true;
   `);
+  // Super admin → child admin notifications (shown on the admin's dashboard bell)
+  await pool.query(`
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_admin_id UUID REFERENCES users(id) ON DELETE CASCADE;
+    CREATE INDEX IF NOT EXISTS notifications_target_admin ON notifications(target_admin_id, created_at DESC) WHERE target_admin_id IS NOT NULL;
+  `);
   console.log("Migration completed successfully.");
 }
 

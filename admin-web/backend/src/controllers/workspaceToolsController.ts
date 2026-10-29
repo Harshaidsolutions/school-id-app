@@ -19,7 +19,7 @@ export async function instructionContent(req:Request,res:Response,next:NextFunct
  if(req.method==='GET'){res.json({content:(await pool.query('SELECT title,body,media FROM app_instruction_content WHERE owner_id=$1',[scope.adminUserId])).rows[0]??{title:'Instructions',body:'',media:[]}});return;}
  const title=text(req.body.title,120),body=text(req.body.body,12000);
  const media=req.body.media;if(!Array.isArray(media)||media.length>12)throw new AppError('Use up to 12 photos or videos',400);
- const clean=media.map((m:any)=>{const url=text(m.url,2000);let parsed:URL;try{parsed=new URL(url);}catch{throw new AppError('Enter a valid HTTPS media link',400);}if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw new AppError('Use HTTPS media links',400);if(!['photo','video'].includes(m.type))throw new AppError('Invalid media type',400);return {type:m.type,url,caption:text(m.caption,240)};});
+ const clean=media.map((m:any)=>{const url=text(m.url,2000);let parsed:URL;try{parsed=new URL(url);}catch{throw new AppError('Enter a valid HTTPS media link',400);}if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw new AppError('Use HTTPS media links',400);if(!['photo','video'].includes(m.type))throw new AppError('Invalid media type',400);return {type:m.type,url,caption:text(m.caption,1000)};});
  await pool.query(`INSERT INTO app_instruction_content(owner_id,title,body,media) VALUES($1,$2,$3,$4) ON CONFLICT(owner_id) DO UPDATE SET title=$2,body=$3,media=$4,updated_at=NOW()`,[scope.adminUserId,title,body,JSON.stringify(clean)]);res.json({status:'ok'});
 }catch(e){next(e);}}
 export async function getAppInstructions(req:Request,res:Response,next:NextFunction){try{

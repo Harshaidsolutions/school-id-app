@@ -209,7 +209,26 @@ function noticeHeadline(
 }
 
 export function AppLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, login, token } = useAuth();
+  const [photoBusy, setPhotoBusy] = useState(false);
+
+  /** Super admin changes their own profile photo from the sidebar. */
+  async function changeOwnPhoto(file: File) {
+    if (!user?.id || !token) return;
+    if (!/^image\/(jpeg|png)$/.test(file.type)) { window.alert("Choose a JPG or PNG photo."); return; }
+    setPhotoBusy(true);
+    try {
+      const form = new FormData();
+      form.append("photo", file);
+      const { data } = await api.post<{ admin?: { photo_url?: string | null } }>(`/admin/managed-admins/${user.id}/photo`, form);
+      const url = data.admin?.photo_url ?? null;
+      login(token, { ...user, photoUrl: url ? `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}` : null });
+    } catch {
+      window.alert("The photo could not be updated. Please try again.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
   const adminName = user?.displayName?.trim() || user?.username || user?.email || "Admin";
   const navigate = useNavigate();
   const location = useLocation();
@@ -219,6 +238,8 @@ export function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [noticeOpen, setNoticeOpen] = useState(false);
+  const [inbox, setInbox] = useState<Array<{ id: string; title: string; message: string; image_url?: string | null; created_at?: string | null; read?: boolean }> | null>(null);
+  const [inboxOpenId, setInboxOpenId] = useState<string | null>(null);
   const [notices, setNotices] = useState<IncomingNotice[]>([]);
   const [noticesLoading, setNoticesLoading] = useState(false);
   const [openNoticeId, setOpenNoticeId] = useState<string | null>(null);
@@ -262,7 +283,7 @@ export function AppLayout() {
   const isDashboard = location.pathname === "/";
 
   useEffect(() => {
-    if (!isDashboard || user?.isSuperAdmin !== true) {
+    if (!isDashboard || !user) {
       setUnreadCount(0);
       return;
     }
@@ -283,7 +304,7 @@ export function AppLayout() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [isDashboard, user?.isSuperAdmin]);
+  }, [isDashboard, user]);
 
   useEffect(() => {
     if (!noticeOpen) return;
@@ -346,7 +367,18 @@ export function AppLayout() {
   const sidebarContent = (
     <>
       <div className="sidebar-profile shrink-0">
-        <AdminAvatar photoUrl={user?.photoUrl} name={adminName} size="lg" />
+        {user?.isSuperAdmin === true ? (
+          <label className={`sidebar-avatar-edit${photoBusy ? " is-busy" : ""}`} title="Change profile photo">
+            <input type="file" accept="image/jpeg,image/png" hidden disabled={photoBusy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void changeOwnPhoto(f); }} />
+            <AdminAvatar photoUrl={user?.photoUrl} name={adminName} size="lg" />
+            <span className="sidebar-avatar-badge" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3" /></svg>
+            </span>
+            <span className="sr-only">Change profile photo</span>
+          </label>
+        ) : (
+          <AdminAvatar photoUrl={user?.photoUrl} name={adminName} size="lg" />
+        )}
         <div className="sidebar-profile-text">
           <span className="sidebar-profile-hi">Hi,</span>
           <span className="sidebar-profile-name" title={adminName}>{adminName}</span>
@@ -438,10 +470,15 @@ export function AppLayout() {
                 type="button"
                 className="relative rounded-xl p-2 text-button-blue hover:bg-blue-soft"
                 aria-label="Notifications"
-                aria-expanded={user?.isSuperAdmin === true ? noticeOpen : undefined}
+                aria-expanded={noticeOpen}
                 onClick={() => {
                   if (user?.isSuperAdmin !== true) {
-                    navigate("/notifications");
+                    // Child admin: messages from the super admin
+                    setNoticeOpen((open) => !open);
+                    setInbox(null);
+                    void api.get<{ notifications?: NonNullable<typeof inbox> }>("/admin/notifications/inbox")
+                      .then(({ data }) => setInbox(data.notifications ?? []))
+                      .catch(() => setInbox([]));
                     return;
                   }
                   setNoticeOpen((open) => {
@@ -459,12 +496,53 @@ export function AppLayout() {
                   <path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9" />
                   <path d="M10 21a2 2 0 0 0 4 0" />
                 </svg>
-                {user?.isSuperAdmin === true && unreadCount > 0 ? (
+                {unreadCount > 0 ? (
                   <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-white">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 ) : null}
               </button>
+              {user?.isSuperAdmin !== true && noticeOpen ? (
+                <div className="admin-inbox absolute right-0 top-full z-30 mt-2 w-[min(26rem,calc(100vw-1.5rem))] rounded-xl border border-border bg-white p-3 shadow-lg">
+                  <div className="admin-inbox-head">
+                    <b>Messages from Super Admin</b>
+                    {inbox && inbox.some((n) => !n.read) ? (
+                      <button type="button" className="admin-inbox-link" onClick={() => {
+                        void api.post("/admin/notifications/incoming/mark-read", {}).then(() => {
+                          setInbox((list) => list?.map((n) => ({ ...n, read: true })) ?? null);
+                          setUnreadCount(0);
+                        });
+                      }}>Mark all read</button>
+                    ) : null}
+                  </div>
+                  {inbox === null ? <p className="admin-inbox-empty">Loading…</p> : inbox.length === 0 ? <p className="admin-inbox-empty">No messages yet.</p> : (
+                    <ul className="admin-inbox-list">
+                      {inbox.map((n) => (
+                        <li key={n.id} className={n.read ? "" : "is-unread"}>
+                          <button type="button" onClick={() => {
+                            setInboxOpenId((cur) => (cur === n.id ? null : n.id));
+                            if (!n.read) {
+                              void api.post("/admin/notifications/incoming/mark-read", { ids: [n.id] }).then(() => {
+                                setInbox((list) => list?.map((x) => (x.id === n.id ? { ...x, read: true } : x)) ?? null);
+                                setUnreadCount((c) => Math.max(0, c - 1));
+                              });
+                            }
+                          }}>
+                            <span className="admin-inbox-title">{n.title}</span>
+                            <span className="admin-inbox-date">{n.created_at ? new Date(n.created_at).toLocaleString() : ""}</span>
+                          </button>
+                          {inboxOpenId === n.id ? (
+                            <div className="admin-inbox-body">
+                              <p>{n.message}</p>
+                              {n.image_url ? <img src={n.image_url} alt="" /> : null}
+                            </div>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
               {user?.isSuperAdmin === true && noticeOpen ? (
                 <div className="absolute right-0 top-full z-30 mt-2 w-[min(28rem,calc(100vw-1.5rem))] rounded-xl border border-border bg-white p-3 shadow-lg">
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
