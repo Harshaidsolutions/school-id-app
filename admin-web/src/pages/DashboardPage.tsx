@@ -384,17 +384,17 @@ export function DashboardPage() {
 
   const cardStyle = [
 
-    { iconBg: "bg-white/80", iconColor: "text-button-blue", cardClass: "bg-[#EFF6FF]" },
+    { iconBg: "bg-white/80", iconColor: "text-button-blue", cardClass: "bg-[#EAF6EE]" },
 
     { iconBg: "bg-white/80", iconColor: "text-[#22C55E]", cardClass: "bg-[#F0FDF4]" },
 
     { iconBg: "bg-white/80", iconColor: "text-primary-orange", cardClass: "bg-[#FFF7ED]" },
 
-    { iconBg: "bg-white/80", iconColor: "text-accent-purple", cardClass: "bg-[#F5F3FF]" },
+    { iconBg: "bg-white/80", iconColor: "text-accent-purple", cardClass: "bg-[#F3F8F4]" },
 
-    { iconBg: "bg-white/80", iconColor: "text-[#38BDF8]", cardClass: "bg-[#F0F9FF]" },
+    { iconBg: "bg-white/80", iconColor: "text-[#3B4B63]", cardClass: "bg-[#F7F9F8]" },
 
-    { iconBg: "bg-white/80", iconColor: "text-accent-pink", cardClass: "bg-[#FDF2F8]" },
+    { iconBg: "bg-white/80", iconColor: "text-accent-pink", cardClass: "bg-[#FFF4E3]" },
 
   ];
 
@@ -466,7 +466,7 @@ export function DashboardPage() {
 
                 value={summary?.inactiveSchools ?? 0}
 
-                tone="border-[#E2E8F0] bg-[#EFF6FF] text-[#64748B]"
+                tone="border-[#E2E8F0] bg-[#EAF6EE] text-[#64748B]"
 
               />
 
@@ -486,7 +486,7 @@ export function DashboardPage() {
 
                 value={summary?.inactiveInstitutes ?? 0}
 
-                tone="border-[#E2E8F0] bg-[#EFF6FF] text-[#64748B]"
+                tone="border-[#E2E8F0] bg-[#EAF6EE] text-[#64748B]"
 
               />
 

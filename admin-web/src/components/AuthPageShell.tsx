@@ -20,9 +20,9 @@ export function AuthPageShell({
         preserveAspectRatio="none"
         aria-hidden
       >
-        <path d="M0 80 C200 0 400 40 600 80 C800 120 1000 20 1440 60 L1440 220 L0 220 Z" fill="#F97316" opacity="0.92" />
-        <path d="M0 120 C300 60 500 140 720 100 C940 60 1100 130 1440 100 L1440 220 L0 220 Z" fill="#7C3AED" opacity="0.88" />
-        <path d="M0 160 C350 110 600 170 850 130 C1100 90 1250 160 1440 140 L1440 220 L0 220 Z" fill="#2563EB" opacity="0.92" />
+        <path d="M0 80 C200 0 400 40 600 80 C800 120 1000 20 1440 60 L1440 220 L0 220 Z" fill="#C46A06" opacity="0.92" />
+        <path d="M0 120 C300 60 500 140 720 100 C940 60 1100 130 1440 100 L1440 220 L0 220 Z" fill="#16843F" opacity="0.88" />
+        <path d="M0 160 C350 110 600 170 850 130 C1100 90 1250 160 1440 140 L1440 220 L0 220 Z" fill="#16843F" opacity="0.92" />
       </svg>
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[68.75rem] items-center px-4 sm:px-6 lg:px-8">

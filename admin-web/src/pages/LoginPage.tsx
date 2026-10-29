@@ -17,7 +17,7 @@ function IconField({
 }) {
   return (
     <label className="block w-full">
-      <span className="mb-1 block text-[13px] font-semibold text-[#45468C]">{label}</span>
+      <span className="mb-1 block text-[13px] font-semibold text-[#26332B]">{label}</span>
       <div className="relative w-full">
         <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-muted">
           {icon}
@@ -220,17 +220,17 @@ function SuperAdminContacts({
     <div className="login-support">
       {mail ? (
         <a
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#EFF6FF]"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#EAF6EE]"
           href={`mailto:${mail}`}
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EFF6FF] text-[#2563EB]">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EAF6EE] text-[#16843F]">
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
               <rect x="3" y="5" width="18" height="14" rx="2" />
               <path d="M3 7l9 7 9-7" />
             </svg>
           </span>
           <span className="min-w-0 text-left">
-            <span className="block text-[11px] font-semibold text-[#45468C]">Email</span>
+            <span className="block text-[11px] font-semibold text-[#26332B]">Email</span>
             <span className="block whitespace-nowrap text-[11px] font-medium text-[#64748B]">{mail}</span>
           </span>
         </a>
@@ -248,7 +248,7 @@ function SuperAdminContacts({
             </svg>
           </span>
           <span className="min-w-0 text-left">
-            <span className="block text-[11px] font-semibold text-[#45468C]">WhatsApp</span>
+            <span className="block text-[11px] font-semibold text-[#26332B]">WhatsApp</span>
             <span className="block truncate text-[11px] font-medium text-[#64748B]">{formatWhatsApp(chat)}</span>
           </span>
         </a>

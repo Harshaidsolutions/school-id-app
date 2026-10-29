@@ -5,9 +5,12 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
   appBrand?: boolean; brandAccent?: boolean; titleClassName?: string;
   onTitlePress?: () => void;
 }) {
+  const logo = <img src="/brand-wordmark.png" alt="My School ID Card" className="login-main-logo" />;
   return (
     <main className="login-shell"><div className="login-composition">
       <section className="login-brand-panel" aria-label="My School ID Card">
+        <span className="login-brand-ring" aria-hidden />
+        <span className="login-brand-dot" aria-hidden />
         <div className="login-wordmark"><img src="/brand-wordmark.png" alt="My School ID Card" /></div>
         <div className="login-brand-copy">
           <span className="login-eyebrow">ADMIN WORKSPACE</span>
@@ -19,8 +22,13 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
       </section>
       <section className="login-form-panel">
         <div className="auth-card">
-          <img src="/brand-wordmark.png" alt="My School ID Card" className="login-main-logo" />
-          <h1 className="login-heading">{onTitlePress ? <button type="button" onClick={onTitlePress} className="login-heading-action" aria-label="Welcome Admin — open password recovery">{title}</button> : title}</h1>
+          {/* Password recovery is intentionally not shown as a link: tapping the logo opens it. */}
+          {onTitlePress ? (
+            <button type="button" onClick={onTitlePress} className="login-logo-action" aria-label="My School ID Card">
+              {logo}
+            </button>
+          ) : logo}
+          <h1 className="login-heading">{title}</h1>
           <p className="login-caption text-sm text-text-muted">Your workspace starts here.</p>
           {children}
           {footer ? <div className="login-footer border-t border-border">{footer}</div> : null}

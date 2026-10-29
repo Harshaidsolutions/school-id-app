@@ -49,22 +49,26 @@ export function RecordMediaViewer({ items, activeId, onNavigate, onClose }: {
   }, [items, index, previous, next, onNavigate, onClose]);
   if (!item) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-text-navy/70 p-3 sm:p-6" onClick={onClose} role="dialog" aria-modal="true" aria-label={item.title}>
-      <div className="flex max-h-[94dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl" onClick={event => event.stopPropagation()}>
-        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <h2 className="min-w-0 truncate font-semibold text-text-navy">{item.title}</h2>
-          <button ref={closeRef} type="button" className="btn-secondary shrink-0" onClick={onClose} aria-label="Close preview">Close</button>
-        </div>
-        <div className="flex min-h-[160px] min-w-0 items-center justify-center overflow-auto bg-content-bg p-3" aria-busy={!src && !error}>
-          {error ? <p role="alert" className="p-8 text-center text-danger">Unable to load this image. You can continue to the next record.</p> : src ? <img src={src} alt={item.title} className="max-h-[62dvh] max-w-full object-contain" onError={() => setError(true)} /> : <p role="status" className="p-8 text-text-muted">Loading image…</p>}
-        </div>
-        {item.detail && <p className="px-4 py-2 text-center text-sm text-text-muted">{item.detail}</p>}
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-4 py-3">
-          <button type="button" className="btn-secondary" disabled={!previous} onClick={() => previous && onNavigate(items[index - 1].id)}>Previous</button>
-          <span className="text-sm text-text-muted" aria-live="polite">{index + 1} of {items.length}</span>
-          <button type="button" className="btn-primary" disabled={!next} onClick={() => next && onNavigate(items[index + 1].id)}>Next</button>
-        </div>
+    <div className="media-viewer" onClick={onClose} role="dialog" aria-modal="true" aria-label={item.title}>
+      <div className="media-viewer-top" onClick={event => event.stopPropagation()}>
+        <h2 className="media-viewer-title">{item.title}</h2>
+        <span className="media-viewer-count" aria-live="polite">{index + 1} / {items.length}</span>
+        <button ref={closeRef} type="button" className="media-viewer-nav" style={{ width: 44, height: 44 }} onClick={onClose} aria-label="Close preview">
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
       </div>
+      <div className="media-viewer-stage" aria-busy={!src && !error}>
+        <button type="button" className="media-viewer-nav" disabled={!previous} onClick={event => { event.stopPropagation(); if (previous) onNavigate(items[index - 1].id); }} aria-label="Previous">
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <div className="media-viewer-frame" onClick={event => event.stopPropagation()}>
+          {error ? <p role="alert" className="p-8 text-center">Unable to load this image. You can continue to the next record.</p> : src ? <img key={src} src={src} alt={item.title} onError={() => setError(true)} /> : <p role="status" className="p-8">Loading image…</p>}
+        </div>
+        <button type="button" className="media-viewer-nav" disabled={!next} onClick={event => { event.stopPropagation(); if (next) onNavigate(items[index + 1].id); }} aria-label="Next">
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M9 18l6-6-6-6" /></svg>
+        </button>
+      </div>
+      {item.detail && <p className="media-viewer-detail">{item.detail}</p>}
     </div>, document.body
   );
 }

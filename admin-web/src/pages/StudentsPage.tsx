@@ -1022,7 +1022,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               </button>
             </div>
           </div>
-          {!isInstitute && parentLinkOpen && <div className="col-span-full space-y-3 rounded-xl border border-indigo-100 bg-white p-4">
+          {!isInstitute && parentLinkOpen && <div className="col-span-full space-y-3 rounded-xl border border-border bg-white p-4">
             {parentLinkBusy && <p className="text-sm text-text-muted">Preparing link…</p>}
             {!isInstitute && parentLink && <div className="col-span-full flex w-full flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-3">
               <input aria-label="Parent form link" readOnly value={parentLink} className="input-field min-w-0 flex-1" onFocus={event=>event.target.select()}/>

@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useYear } from "../context/YearContext";
 import api from "../api/client";
 import { BulkModeButtons } from "./BulkActionBar";
-import { HarshaLogo } from "./HarshaLogo";
+import { AdminAvatar } from "./AdminAvatar";
 import { OtpConfirmModal } from "./OtpConfirmModal";
 
 interface NavItem {
@@ -19,13 +19,12 @@ const NAV: NavItem[] = [
   { label: "Dashboard", icon: "dashboard", to: "/" },
   { label: "Schools", icon: "school", to: "/schools" },
   { label: "Institutes", icon: "institute", to: "/institutes" },
-  { label: "ID Card Generator", icon: "extra", to: "/id-card-generator" },
   { label: "Templates", icon: "templates", to: "/templates" },
   { label: "Models", icon: "model", to: "/models" },
   { label: "Brochures", icon: "brochure", to: "/brochures" },
   { label: "Notifications", icon: "notification", to: "/notifications" },
-  { label: "Instructions & enquiries", icon: "extra", to: "/workspace-help" },
-  { label: "Admin Management", icon: "extra", to: "/extra-1", superOnly: true },
+  { label: "Instructions & enquiries", icon: "help", to: "/workspace-help" },
+  { label: "Admin Management", icon: "shield", to: "/extra-1", superOnly: true },
 ];
 
 const TITLES: Record<string, string> = {
@@ -113,6 +112,20 @@ function SideIcon({ name }: { name: string }) {
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
         </svg>
       );
+    case "help":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9.5 9.5a2.5 2.5 0 1 1 4 2c-1 .6-1.5 1.2-1.5 2.5M12 17h.01" />
+        </svg>
+      );
+    case "shield":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z" />
+          <path d="M9 12l2 2 4-4" />
+        </svg>
+      );
     default:
       return (
         <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -197,6 +210,7 @@ function noticeHeadline(
 
 export function AppLayout() {
   const { user, logout } = useAuth();
+  const adminName = user?.displayName?.trim() || user?.username || user?.email || "Admin";
   const navigate = useNavigate();
   const location = useLocation();
   const { year, years, setYear } = useYear();
@@ -331,22 +345,13 @@ export function AppLayout() {
 
   const sidebarContent = (
     <>
-      <div className="shrink-0 border-b border-white/25 px-3 py-3">
-        {user?.isSuperAdmin === true ? (
-          <div className="rounded-lg bg-transparent px-0 py-0">
-            <HarshaLogo compact />
-          </div>
-        ) : (
-          <div className="px-1 py-1 text-sm">
-            {user?.photoUrl ? (
-              <div className="mb-3 rounded-lg bg-transparent px-0 py-0"><HarshaLogo compact src={user.isSuperAdmin ? undefined : user.photoUrl} alt="Admin logo" /></div>
-            ) : null}
-            <div className="text-text-muted">Hi</div>
-            <div className="font-semibold text-text">
-              {user?.displayName?.trim() || user?.username || user?.email}
-            </div>
-          </div>
-        )}
+      <div className="sidebar-profile shrink-0">
+        <AdminAvatar photoUrl={user?.photoUrl} name={adminName} size="lg" />
+        <div className="sidebar-profile-text">
+          <span className="sidebar-profile-hi">Hi,</span>
+          <span className="sidebar-profile-name" title={adminName}>{adminName}</span>
+          <span className="sidebar-profile-role">{user?.isSuperAdmin === true ? "Super Admin" : "Admin"}</span>
+        </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         <SidebarNav
@@ -639,14 +644,15 @@ export function AppLayout() {
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
-              className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-content-bg"
+              className="header-account-btn"
+              aria-label="Account menu"
+              aria-expanded={menuOpen}
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] text-sm font-semibold text-text shadow-[0_6px_14px_rgba(99,102,241,0.28)]">
-                A
-              </span>
+              <AdminAvatar photoUrl={user?.photoUrl} name={adminName} size="sm" />
               <span className="hidden text-left sm:block">
-                <span className="block text-sm font-semibold text-text-navy">Admin</span>
+                <span className="block text-sm font-semibold text-text-navy">{adminName}</span>
               </span>
+              <svg className="h-4 w-4 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M6 9l6 6 6-6" /></svg>
             </button>
             {menuOpen && (
               <div className="absolute right-0 z-30 mt-2 w-52 overflow-hidden rounded-lg border border-border bg-white shadow-lg">

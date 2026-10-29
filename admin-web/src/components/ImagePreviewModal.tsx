@@ -154,14 +154,14 @@ export function ImagePreviewModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/75 p-4 sm:p-6"
+      className="media-preview fixed inset-0 z-50 flex items-center justify-center bg-[#080C0A]/90 p-4 sm:p-6"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={title}
     >
       <div
-        className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="media-preview-card relative flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
