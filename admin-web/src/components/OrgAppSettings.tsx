@@ -62,7 +62,7 @@ export function OrgAppSettings({
   }
 
   return (
-    <div className="centered-page-card mt-6 overflow-hidden">
+    <div className="centered-page-card org-settings mt-6 overflow-hidden">
       {error ? <div className="alert-error mx-5 mt-3">{error}</div> : null}
       {saved ? <div className="alert-success mx-5 mt-3">{saved}</div> : null}
       <div className="divide-y divide-border">

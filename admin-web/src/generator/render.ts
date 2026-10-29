@@ -315,7 +315,7 @@ async function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, w: num
 }
 
 export function mediaLabel(kind: MediaKind): string {
-  return { photo: "Photo", parentSign: "Parent signature", principalSign: "Principal signature", thumb: "Thumb impression", logo: "School logo" }[kind];
+  return { photo: "Photo", parentSign: "Signature", principalSign: "Principal signature", thumb: "Thumb impression", logo: "School logo", static: "Uploaded image" }[kind];
 }
 
 export function qrText(el: QrElement, row: Row, roles: Record<string, string>): string {
@@ -448,6 +448,25 @@ export async function renderCard(canvas: HTMLCanvasElement, input: RenderInput, 
     } finally {
       ctx.restore();
     }
+  }
+  const border = layout.cardBorder;
+  if (border && border.width > 0) {
+    const bw = border.width * mm;
+    const r = Math.max(0, border.radius * mm);
+    ctx.save();
+    ctx.strokeStyle = border.color;
+    ctx.lineWidth = bw;
+    if (border.style === "dashed") ctx.setLineDash([bw * 3, bw * 2]);
+    ctx.beginPath();
+    ctx.roundRect(bw / 2, bw / 2, W - bw, H - bw, r);
+    ctx.stroke();
+    if (border.style === "double") {
+      ctx.lineWidth = Math.max(1, bw / 2);
+      ctx.beginPath();
+      ctx.roundRect(bw * 2, bw * 2, W - bw * 4, H - bw * 4, Math.max(0, r - bw * 1.5));
+      ctx.stroke();
+    }
+    ctx.restore();
   }
   return issues;
 }

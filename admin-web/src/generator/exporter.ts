@@ -56,6 +56,7 @@ function rotated(source: HTMLCanvasElement, quarterTurns: 1 | 3): HTMLCanvasElem
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
+
 export async function exportCards(o: ExportOptions): Promise<ExportFile[]> {
   const sides: Side[] = ["front"];
   if (o.duplex !== "front-only" && hasSide(o.layout, "back", o.templates)) sides.push("back");
@@ -165,4 +166,84 @@ export async function exportCards(o: ExportOptions): Promise<ExportFile[]> {
     if (writers.back) files.push({ name: `${safeName(o.jobName)}_print_back${part}.pdf`, blob: writers.back.finish() });
   }
   return files;
+}
+
+export type BundleOptions = {
+  layout: Layout;
+  rows: { row: Row; index: number }[];
+  columns: string[];
+  templates: { front: Bitmap | null; back: Bitmap | null };
+  media: (rowIndex: number) => MediaResolver;
+  fileNamePattern: string;
+  jobName: string;
+  onProgress: (done: number, total: number, label: string) => void;
+  signal?: AbortSignal;
+};
+
+function csvCell(v: string): string {
+  return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+}
+
+/**
+ * One ZIP "folder" with everything for the batch:
+ *   <Job>/Cards/<PhotoID>_<Name>_front.png (+ _back.png)  — 300 DPI, one file per card
+ *   <Job>/Print sheets (A4).pdf                            — cards on A4 with crop marks, backs mirrored for duplex
+ *   <Job>/Card details.csv                                 — every column for every card
+ */
+export async function exportBundle(o: BundleOptions): Promise<ExportFile> {
+  const dpi = 300;
+  const hasBack = hasSide(o.layout, "back", o.templates);
+  const sides: Side[] = hasBack ? ["front", "back"] : ["front"];
+  const folder = safeName(o.jobName);
+  const zip = new ZipWriter();
+  const pdf = new PdfWriter(o.jobName);
+  const sheet = { key: "a4", label: "A4", w: 210, h: 297 };
+  const imp = impose({ sheet, card: { w: o.layout.card.w, h: o.layout.card.h }, margin: 8, gap: 3, perSheet: 0, allowRotate: true });
+  if (!imp.capacity) throw new Error("This card size does not fit on A4.");
+  const marks = cropMarks(imp, sheet);
+  const total = o.rows.length * sides.length;
+  let done = 0;
+  const canvas = document.createElement("canvas");
+  const used = new Map<string, number>();
+  const names = new Map<number, string>();
+  const check = () => { if (o.signal?.aborted) throw new DOMException("Cancelled", "AbortError"); };
+
+  for (let s = 0; s * imp.capacity < o.rows.length; s++) {
+    const group = o.rows.slice(s * imp.capacity, (s + 1) * imp.capacity);
+    for (const side of sides) {
+      const ops: PdfOp[] = [];
+      for (let k = 0; k < group.length; k++) {
+        check();
+        const item = group[k];
+        let base = names.get(item.index);
+        if (!base) {
+          base = fileNameFor(o.fileNamePattern, item.row, item.index);
+          const n = (used.get(base) ?? 0) + 1;
+          used.set(base, n);
+          if (n > 1) base = `${base}_${n}`;
+          names.set(item.index, base);
+        }
+        await renderCard(canvas, { layout: o.layout, side, row: item.row, dpi, template: o.templates[side], media: o.media(item.index) });
+        await zip.add(`${folder}/Cards/${base}${hasBack ? `_${side}` : ""}.png`, await canvasBlob(canvas, "image/png"));
+        const placed = imp.rotated ? rotated(canvas, side === "front" ? 1 : 3) : canvas;
+        const ref = pdf.addJpeg(await canvasBlob(placed, "image/jpeg", 0.93), placed.width, placed.height);
+        const slot = side === "back" ? mirrorSlot(imp.slots[k], imp.cellW, sheet.w) : imp.slots[k];
+        ops.push({ type: "image", ref, x: slot.x, y: slot.y, w: imp.cellW, h: imp.cellH });
+        done++;
+        o.onProgress(done, total, `Creating cards ${done}/${total}`);
+        if (done % 3 === 0) await tick();
+      }
+      const mx = (x: number) => (side === "back" ? sheet.w - x : x);
+      for (const l of marks.lines) ops.push({ type: "line", x1: mx(l.x1), y1: l.y1, x2: mx(l.x2), y2: l.y2, width: 0.2 });
+      ops.push({ type: "text", x: 6, y: sheet.h - 2.5, size: 6, text: `${o.jobName} | Sheet ${s + 1} | ${side.toUpperCase()} | ${group.length} cards | 300 DPI` });
+      pdf.addPage(sheet.w, sheet.h, ops);
+    }
+  }
+  o.onProgress(total, total, "Packing the folder…");
+  await zip.add(`${folder}/Print sheets (A4).pdf`, pdf.finish());
+  const header = ["S.No", "File name", ...o.columns];
+  const lines = [header.map(csvCell).join(",")];
+  o.rows.forEach((item, i) => lines.push([String(i + 1), names.get(item.index) ?? "", ...o.columns.map((c) => item.row[c] ?? "")].map(csvCell).join(",")));
+  await zip.add(`${folder}/Card details.csv`, new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv" }));
+  return { name: `${folder}.zip`, blob: zip.finish() };
 }

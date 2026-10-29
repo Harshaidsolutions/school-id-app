@@ -139,6 +139,34 @@ app.use((req, res, next) => {
     return;
   }
 
+  // Shared parent/organisation form links: give WhatsApp/SMS previews a clear title
+  if (/^\/(school-form|org-form)\//.test(req.path)) {
+    try {
+      const isSchool = req.path.startsWith("/school-form/");
+      const title = isSchool
+        ? "My School ID Card – Student details collection"
+        : "My School ID Card – Details collection";
+      const description = isSchool
+        ? "Fill in your child's details for the school ID card."
+        : "Fill in your details for the ID card.";
+      const proto = (req.get("x-forwarded-proto") ?? req.protocol).split(",")[0].trim();
+      const origin = `${proto}://${req.get("host") ?? ""}`;
+      const meta = [
+        `<title>${title}</title>`,
+        `<meta name="description" content="${description}" />`,
+        `<meta property="og:title" content="${title}" />`,
+        `<meta property="og:description" content="${description}" />`,
+        `<meta property="og:type" content="website" />`,
+        `<meta property="og:image" content="${origin}/brand-wordmark.png" />`,
+      ].join("\n    ");
+      const html = fs.readFileSync(indexHtml, "utf8").replace(/<title>[^<]*<\/title>/, meta);
+      res.type("html").send(html);
+      return;
+    } catch {
+      /* fall through to the plain page */
+    }
+  }
+
   res.sendFile(indexHtml, (err) => {
     if (err) next(err);
   });

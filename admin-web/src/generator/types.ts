@@ -10,7 +10,7 @@ export type PhotoShape =
   | "hexagon" | "octagon" | "pentagon" | "diamond" | "shield" | "star";
 
 /** Which uploaded media an image element shows. */
-export type MediaKind = "photo" | "parentSign" | "principalSign" | "thumb" | "logo";
+export type MediaKind = "photo" | "parentSign" | "principalSign" | "thumb" | "logo" | "static";
 
 type Base = {
   id: string;
@@ -56,6 +56,7 @@ export type ImageElement = Base & {
   border: { width: number; color: string }; // mm
   shadow: { on: boolean; blur: number; color: string };
   cleanSignature: boolean; // remove paper background from signatures/thumbs
+  imageData?: string; // media "static": an uploaded picture (logo, QR code, stamp…) as a data URL
 };
 
 export type QrContent = "column" | "biodata" | "vcard" | "url" | "tel";
@@ -95,6 +96,7 @@ export type Layout = {
   matchBy: "column" | "rownumber";
   roles: Record<string, string>; // smart mapping: role -> column
   photo: { removeBg: boolean; bg: string; face: boolean; enhance: boolean };
+  cardBorder?: { width: number; color: string; radius: number; style: "solid" | "double" | "dashed" };
 };
 
 export type MediaStore = {

@@ -309,16 +309,6 @@ export function TemplatesPage() {
                       </button>
                       <button
                         type="button"
-                        className="text-button-blue hover:underline"
-                        onClick={() => {
-                          setEditTemplate(tpl);
-                          setShowAddModal(true);
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
                         className="text-danger hover:underline"
                         onClick={() => void handleDelete(tpl.id)}
                       >

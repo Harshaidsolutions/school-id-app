@@ -640,6 +640,7 @@ export function AppLayout() {
             <div className="w-9 shrink-0" aria-hidden />
           )}
 
+          {isDashboard ? (
           <div className="relative">
             <button
               type="button"
@@ -655,7 +656,7 @@ export function AppLayout() {
               <svg className="h-4 w-4 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M6 9l6 6 6-6" /></svg>
             </button>
             {menuOpen && (
-              <div className="absolute right-0 z-30 mt-2 w-52 overflow-hidden rounded-lg border border-border bg-white shadow-lg">
+              <div className="account-menu absolute right-0 z-30 mt-2 w-60 overflow-hidden rounded-xl border border-border bg-white shadow-lg">
                 <div className="truncate border-b border-border px-3 py-2.5 text-xs text-text-muted">
                   {user?.email}
                 </div>
@@ -673,6 +674,7 @@ export function AppLayout() {
               </div>
             )}
           </div>
+          ) : null}
         </header>
 
         <main

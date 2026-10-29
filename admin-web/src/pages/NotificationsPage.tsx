@@ -135,10 +135,40 @@ export function NotificationsPage() {
     });
   }
 
+  const [askSave, setAskSave] = useState(false);
+  const [savedRefresh, setSavedRefresh] = useState(0);
+
+  /** Before sending, offer to keep new wording as a saved message (template). */
   async function handleSend(event: FormEvent) {
     event.preventDefault();
     if (sendingRef.current) return;
     setError(null); setSuccess(null);
+    if (!selectedSchoolIds.size && !selectedInstituteIds.size && !selectedOrganizationIds.size) { setError("Select at least one school, institute or organization."); return; }
+    try {
+      const { data } = await api.get<{ templates?: { title: string; message: string }[] }>("/admin/message-templates");
+      const exists = (data.templates ?? []).some((t) => t.title.trim() === title.trim() && t.message.trim() === description.trim());
+      if (!exists) { setAskSave(true); return; }
+    } catch {
+      /* saved messages unavailable: just send */
+    }
+    await performSend();
+  }
+
+  async function saveTemplateThenSend(save: boolean) {
+    setAskSave(false);
+    if (save) {
+      try {
+        await api.post("/admin/message-templates", { title: title.trim(), message: description.trim() });
+        setSavedRefresh((n) => n + 1);
+      } catch {
+        setError("The message could not be saved as a template, but it will still be sent.");
+      }
+    }
+    await performSend();
+  }
+
+  async function performSend() {
+    if (sendingRef.current) return;
     type Target = {kind:"schoolId"|"instituteId"|"organizationId"; id:string};
     const targets: Target[] = [
       ...[...selectedSchoolIds].map(id => ({kind:"schoolId" as const,id})),
@@ -196,10 +226,18 @@ export function NotificationsPage() {
     <div>
       <form
         onSubmit={handleSend}
-        className="mb-8 space-y-5 card p-6 sm:p-7"
+        className="notify-compose mb-8 space-y-5 card p-6 sm:p-7"
       >
         <fieldset disabled={sending} className="space-y-5">
-        <h2 className="text-base font-semibold text-text-navy">Compose Notification</h2><SavedMessages title={title} message={description} onUse={(t,m)=>{setTitle(t);setDescription(m);}}/>
+        <div className="notify-head">
+          <div>
+            <h2 className="text-base font-semibold text-text-navy">Compose Notification</h2>
+            <p className="text-sm text-text-muted">Write once, pick the schools, institutes or organizations, and send.</p>
+          </div>
+        </div>
+        <SavedMessages refreshKey={savedRefresh} title={title} message={description} onUse={(t,m)=>{setTitle(t);setDescription(m);}}/>
+        <div className="notify-grid">
+        <div className="notify-main space-y-5">
 
         <label className="block text-sm">
           <span className="mb-1.5 block font-medium text-text-navy">Title</span>
@@ -263,6 +301,8 @@ export function NotificationsPage() {
           ) : null}
         </label>
 
+        </div>
+        <aside className="notify-side">
         <div>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
             <span className="text-sm font-medium text-text-navy">Send to</span>
@@ -356,12 +396,28 @@ export function NotificationsPage() {
         <button
           type="submit"
           disabled={sending}
-          className="rounded-lg bg-button-blue px-6 py-3 text-sm font-semibold tracking-wider text-white uppercase shadow-sm hover:bg-button-blue-hover disabled:opacity-60"
+          className="btn-primary notify-send"
         >
-          {sending ? "Sending…" : "Send"}
+          {sending ? "Sending…" : `Send notification${selectedSchoolIds.size + selectedInstituteIds.size + selectedOrganizationIds.size ? ` (${selectedSchoolIds.size + selectedInstituteIds.size + selectedOrganizationIds.size})` : ""}`}
         </button>
+        </aside>
+        </div>
         </fieldset>
       </form>
+
+      {askSave && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Save as template" onClick={() => setAskSave(false)}>
+          <div className="card workflow-dialog" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-text-navy">Save this message as a template?</h3>
+            <p className="text-sm text-text-muted">“{title.trim()}” will be added to Saved messages so you can use the same wording next time.</p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button type="button" className="btn-secondary" onClick={() => setAskSave(false)}>Back</button>
+              <button type="button" className="btn-secondary" onClick={() => void saveTemplateThenSend(false)}>No, just send</button>
+              <button type="button" className="btn-primary" onClick={() => void saveTemplateThenSend(true)}>Yes, save &amp; send</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-text-navy">Sent Notifications</h2>

@@ -11,6 +11,20 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
       <section className="login-brand-panel" aria-label="My School ID Card">
         <span className="login-brand-ring" aria-hidden />
         <span className="login-brand-dot" aria-hidden />
+        <span className="login-orb login-orb-1" aria-hidden />
+        <span className="login-orb login-orb-2" aria-hidden />
+        <div className="login-cards" aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={`login-idcard login-idcard-${i}`}>
+              <i className="login-idcard-band" />
+              <i className="login-idcard-photo" />
+              <i className="login-idcard-line is-wide" />
+              <i className="login-idcard-line" />
+              <i className="login-idcard-line is-short" />
+              <i className="login-idcard-qr" />
+            </div>
+          ))}
+        </div>
         <div className="login-wordmark"><img src="/brand-wordmark.png" alt="My School ID Card" /></div>
         <div className="login-brand-copy">
           <span className="login-eyebrow">ADMIN WORKSPACE</span>

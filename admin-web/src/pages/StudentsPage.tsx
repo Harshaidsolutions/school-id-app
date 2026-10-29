@@ -265,6 +265,11 @@ async function downloadAuthenticatedFile(
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+/** Message parents receive with the form link. */
+function parentShareText(link: string, schoolName?: string | null): string {
+  return `My School ID Card – Student details collection link${schoolName ? ` for ${schoolName}` : ""}\n\nPlease fill in your child's details using this link:\n${link}`;
+}
+
 export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute" }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -979,8 +984,6 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
 
             <div className="detail-toolbar-row2-actions">
               <select aria-label="Record visibility" className="input-field" value={visibilityView} onChange={e=>{setVisibilityView(e.target.value);setSelectedIds(new Set());}}><option value="visible">Visible</option><option value="hidden">Hidden</option><option value="all">All records</option></select>
-              <button type="button" className="btn-secondary" onClick={()=>setSelecting(true)}>Select records</button>
-              {selecting&&<><button type="button" className="btn-secondary" disabled={!selectedIds.size||visibilityBusy} onClick={()=>void changeVisibility(filtered.filter(v=>selectedIds.has(v.id)).map(v=>v.id),false)}>Hide selected</button><button type="button" className="btn-secondary" disabled={!selectedIds.size||visibilityBusy} onClick={()=>void changeVisibility(filtered.filter(v=>selectedIds.has(v.id)).map(v=>v.id),true)}>Show selected</button></>}
               {selecting ? (
                 <button
                   type="button"
@@ -1026,8 +1029,13 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             {parentLinkBusy && <p className="text-sm text-text-muted">Preparing link…</p>}
             {!isInstitute && parentLink && <div className="col-span-full flex w-full flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-3">
               <input aria-label="Parent form link" readOnly value={parentLink} className="input-field min-w-0 flex-1" onFocus={event=>event.target.select()}/>
-              <button type="button" className="btn-secondary" onClick={()=>void navigator.clipboard.writeText(parentLink).then(()=>setParentLinkMessage("Link copied.")).catch(()=>setParentLinkMessage("Select the link and copy it."))}>Copy</button>
-              <a className="btn-primary" href={`https://wa.me/?text=${encodeURIComponent(parentLink)}`} target="_blank" rel="noreferrer">Share</a>
+              <button type="button" className="btn-secondary" onClick={()=>void navigator.clipboard.writeText(parentShareText(parentLink, selectedSchoolName)).then(()=>setParentLinkMessage("Message with link copied.")).catch(()=>setParentLinkMessage("Select the link and copy it."))}>Copy</button>
+              <button type="button" className="btn-primary" onClick={()=>{
+                const text = parentShareText(parentLink, selectedSchoolName);
+                const nav = navigator as Navigator & { share?: (d: { title?: string; text?: string }) => Promise<void> };
+                if (nav.share) void nav.share({ title: "My School ID Card – Student details collection", text }).catch(() => undefined);
+                else window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+              }}>Share</button>
             </div>}
             {!isInstitute && parentLinkMessage && <p role="status" className="col-span-full text-sm text-text-muted">{parentLinkMessage}</p>}
           </div>}

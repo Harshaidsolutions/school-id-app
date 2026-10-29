@@ -366,10 +366,13 @@ export function AddStudentModal({
       onClick={instituteNeedsExcel ? onClose : undefined}
     >
       <div
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+        className="sheet-dialog max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 className="page-heading text-xl">{instituteId ? "Add Member" : "Add Student"}</h2>
+        <div className="sheet-dialog-head">
+          <h2 className="page-heading text-xl">{instituteId ? "Add Member" : "Add Student"}</h2>
+          <button type="button" className="sheet-dialog-close" onClick={onClose} aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+        </div>
         {fields.length === 0 ? (
           instituteId ? (
             <div className="mt-4">
@@ -413,7 +416,7 @@ export function AddStudentModal({
             </div>
             {fields.filter((field) => !isPlainPhotoPrompt(field)).map((field) => renderField(field))}
             {error && <div className="alert-error">{error}</div>}
-            <div className="flex gap-2 pt-1">
+            <div className="sheet-dialog-foot flex gap-2 pt-1">
               <button type="button" onClick={onClose} className="btn-secondary flex-1">
                 Cancel
               </button>

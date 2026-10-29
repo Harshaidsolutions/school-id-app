@@ -77,7 +77,7 @@ function DetailSwitch({
       }`}
     >
       <span
-        className={`h-6 w-11 rounded-full p-0.5 transition ${on ? "bg-[#0D9488]" : "bg-[#D4D1EC]"}`}
+        className={`h-6 w-11 rounded-full p-0.5 transition ${on ? "bg-[#4F46E5]" : "bg-[#D4D1EC]"}`}
       >
         <span className={`block h-5 w-5 rounded-full bg-white shadow ${on ? "translate-x-5" : "translate-x-0"}`} />
       </span>
@@ -105,7 +105,7 @@ function InfoRow({
       ? emptyLabel
       : "-";
   return (
-    <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
+    <div className="org-info-row flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
       <div className="min-w-0">
         <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
         <div className="mt-1 whitespace-pre-wrap text-sm text-text-navy">{display}</div>
@@ -130,7 +130,7 @@ function ImageBlock({
 }) {
   if (!url?.trim()) {
     return (
-      <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
+      <div className="org-info-row flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
           <div className="mt-1 text-sm text-text-navy">-</div>
@@ -140,7 +140,7 @@ function ImageBlock({
     );
   }
   return (
-    <div className="border-b border-border px-5 py-4 last:border-b-0">
+    <div className="org-info-media border-b border-border px-5 py-4 last:border-b-0">
       <div className="mb-2 flex items-start justify-between gap-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
         {control}
@@ -183,7 +183,7 @@ function SelectionImageBlock({
   const name = caption?.trim() ?? "";
   if (!imageUrl && !name) {
     return (
-      <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
+      <div className="org-info-row flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
           <div className="mt-1 text-sm text-text-navy">{emptyLabel}</div>
@@ -219,7 +219,7 @@ function TagSelectionsBlock({
   const namesOnly = (items ?? []).filter((item) => !item.image_url && item.name.trim());
   if (withImages.length === 0 && namesOnly.length === 0) {
     return (
-      <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
+      <div className="org-info-row flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">Tags</div>
           <div className="mt-1 text-sm text-text-navy">-</div>
@@ -229,7 +229,7 @@ function TagSelectionsBlock({
     );
   }
   return (
-    <div className="border-b border-border px-5 py-4 last:border-b-0">
+    <div className="org-info-media border-b border-border px-5 py-4 last:border-b-0">
       <div className="mb-2 flex items-start justify-between gap-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">Tags</div>
         {control}
@@ -433,7 +433,7 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
     : -1;
 
   return (
-    <div className="centered-page-shell">
+    <div className="centered-page-shell org-info-page">
       <HeaderBack to={backHref}>
         ← Back
       </HeaderBack>
@@ -447,7 +447,7 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
           Open this page from a {isInstitute ? "institute" : "school"} detail screen.
         </div>
       ) : (
-        <div className="centered-page-card mt-6 overflow-hidden">
+        <div className="centered-page-card org-info mt-6 overflow-hidden">
           {isInstitute && institute ? (
             <>
               <InfoRow

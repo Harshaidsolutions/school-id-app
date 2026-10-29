@@ -20,7 +20,7 @@ const snap = (v: number) => Math.round(v * 2) / 2; // 0.5 mm grid
 
 function label(el: CardElement): string {
   if (el.kind === "text") return el.column || "Text";
-  if (el.kind === "image") return { photo: "Photo", parentSign: "Parent sign", principalSign: "Principal sign", thumb: "Thumb", logo: "Logo" }[el.media];
+  if (el.kind === "image") return { photo: "Photo", parentSign: "Signature", principalSign: "Principal sign", thumb: "Thumb", logo: "Logo", static: "Image" }[el.media];
   if (el.kind === "qr") return "QR";
   return "Barcode";
 }

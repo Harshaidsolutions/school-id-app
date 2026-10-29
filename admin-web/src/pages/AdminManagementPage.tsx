@@ -554,12 +554,16 @@ export function AdminManagementPage() {
       </div>
 
       {editTarget && editForm ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4 py-4">
           <form
             onSubmit={(e) => void saveEdit(e)}
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+            className="sheet-dialog max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
           >
-            <h2 className="text-lg font-bold text-text-navy">Edit Admin</h2>
+            <div className="sheet-dialog-head">
+              <button type="button" className="sheet-dialog-back" onClick={() => { setEditTarget(null); setEditForm(null); }}>← Back</button>
+              <h2 className="text-lg font-bold text-text-navy">Edit Admin</h2>
+              <button type="button" className="sheet-dialog-close" onClick={() => { setEditTarget(null); setEditForm(null); }} aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+            </div>
             <div className="mt-4 space-y-3">
               <FieldLabel label="Admin Name">
                 <input
@@ -690,7 +694,7 @@ export function AdminManagementPage() {
                 }}
               />
             </div>
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="sheet-dialog-foot mt-5 flex justify-end gap-2">
               <button
                 type="button"
                 className="btn-secondary"

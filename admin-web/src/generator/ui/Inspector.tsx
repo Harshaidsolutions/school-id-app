@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ToggleSwitch } from "../../components/ui/ToggleSwitch";
 import { GOOGLE_FONTS, SYSTEM_FONTS, addCustomFont, loadGoogleFont } from "../fonts";
+import { fileToDataUrl } from "../imageData";
 import type { BarcodeElement, CardElement, ImageElement, PhotoShape, QrElement, TextElement } from "../types";
 
 type Patch = (patch: Partial<CardElement>) => void;
@@ -208,11 +209,23 @@ function ImageProps({ el, patch }: { el: ImageElement; patch: Patch }) {
   const p = patch as (x: Partial<ImageElement>) => void;
   return (
     <>
-      <Field label="Shows" wide>
-        <select className="input-field" value={el.media} onChange={(e) => p({ media: e.target.value as ImageElement["media"], cleanSignature: e.target.value !== "photo" && e.target.value !== "logo" })}>
-          <option value="photo">Student photo</option><option value="parentSign">Parent signature</option><option value="principalSign">Principal signature (same on all)</option><option value="thumb">Thumb impression</option><option value="logo">School logo (same on all)</option>
-        </select>
-      </Field>
+      {el.media === "static" ? (
+        <label className="btn-secondary idg-small" style={{ width: "100%" }}>
+          <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={async (e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (!f) return;
+            try { p({ imageData: await fileToDataUrl(f) }); } catch (err) { alert(err instanceof Error ? err.message : "Image could not be read"); }
+          }} />
+          {el.imageData ? "Replace image" : "Upload image"}
+        </label>
+      ) : (
+        <Field label="Shows" wide>
+          <select className="input-field" value={el.media} onChange={(e) => p({ media: e.target.value as ImageElement["media"], cleanSignature: e.target.value === "parentSign" })}>
+            <option value="photo">Student photo</option><option value="parentSign">Signature (from bulk signatures)</option>
+          </select>
+        </Field>
+      )}
       <div className="idg-shapes" role="radiogroup" aria-label="Photo shape">
         {SHAPES.map((s) => (
           <button key={s.key} type="button" role="radio" aria-checked={el.shape === s.key} className={el.shape === s.key ? "is-on" : ""} onClick={() => p({ shape: s.key })} title={s.label}>
