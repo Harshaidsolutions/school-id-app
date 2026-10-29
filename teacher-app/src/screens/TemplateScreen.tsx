@@ -1,3 +1,4 @@
+import { Entrance } from "../components/Entrance";
 import { Pressable } from "../components/Pressable";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -38,7 +39,7 @@ import { SelectConfirmModal } from "../components/SelectConfirmModal";
 import { radius, spacing } from "../theme/colors";
 import { fonts, type as typeScale } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
-import { gridItemWidth, icons } from "../theme/responsive";
+import { gridItemWidth, icons, responsiveColumns } from "../theme/responsive";
 import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
 import {
@@ -236,7 +237,8 @@ export function TemplateScreen() {
   const userId = user?.id ?? "";
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const tabWidth = Math.floor((width - spacing.sm - spacing.xl) / 2.5);
+  // ~2.4 tabs visible on phones (hint to scroll); fixed comfortable width on tablets.
+  const tabWidth = Math.min(Math.floor((width - spacing.sm - spacing.xl) / 2.4), 170);
   const [tab, setTab] = useState<string>(TEMPLATE_TABS[0].key);
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -254,9 +256,9 @@ export function TemplateScreen() {
 
   const gap = spacing.cardGap;
   const pad = spacing.md;
-  const columns = tab.includes("both") ? 1 : 2;
+  const columns = responsiveColumns(width, tab.includes("both") ? 1 : 2);
   const cardWidth =
-    columns === 1 ? width - pad * 2 : gridItemWidth(2, pad, gap, width);
+    columns === 1 ? width - pad * 2 : gridItemWidth(columns, pad, gap, width);
 
   const load = useCallback(
     async (isRefresh = false) => {
@@ -482,6 +484,7 @@ export function TemplateScreen() {
           renderItem={({ item, index }) => {
             const isSelected = selectedId === item.id;
             return (
+              <Entrance delay={(index % 8) * 50}>
               <Pressable
                 style={({ pressed }) => [
                   styles.card,
@@ -536,6 +539,7 @@ export function TemplateScreen() {
                   </View>
                 ) : null}
               </Pressable>
+              </Entrance>
             );
           }}
         />
@@ -629,12 +633,12 @@ function useTemplateStyles() {
       paddingHorizontal: spacing.sm,
       borderWidth: 1,
       elevation: 1,
-      shadowColor: "#65568D",
+      shadowColor: "#1E293B",
       shadowOpacity: 0.05,
       shadowRadius: scale(3),
       shadowOffset: { width: 0, height: scale(1) },
       justifyContent: "center",
-      minHeight: scale(40),
+      minHeight: scale(48),
     },
     previewCard: {
       width: "100%",
@@ -726,10 +730,10 @@ function useTemplateStyles() {
     },
     yesBtnWrap: { flex: 1 },
     tabText: {
-      fontSize: typeScale.xs * 0.72,
+      fontSize: typeScale.xs,
       fontFamily: fonts.semiBold,
       textAlign: "center",
-      lineHeight: typeScale.xs * 0.95,
+      lineHeight: typeScale.xs * 1.2,
     },
     grid: {
       paddingHorizontal: spacing.md,
@@ -743,7 +747,7 @@ function useTemplateStyles() {
       overflow: "hidden",
       position: "relative",
       elevation: 2,
-      shadowColor: "#65568D",
+      shadowColor: "#1E293B",
       shadowOpacity: 0.06,
       shadowRadius: 6,
       shadowOffset: { width: 0, height: 2 },

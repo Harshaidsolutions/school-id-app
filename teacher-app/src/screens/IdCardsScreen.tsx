@@ -1,3 +1,5 @@
+import { contentMaxStyle } from "../theme/responsive";
+import { Entrance } from "../components/Entrance";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -167,7 +169,7 @@ function SchoolIdCardsScreen() {
       ) : (
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[
+        contentContainerStyle={[contentMaxStyle, 
           styles.content,
           { paddingBottom: spacing.xxl + insets.bottom },
         ]}
@@ -205,7 +207,7 @@ function SchoolIdCardsScreen() {
             </Text>
           </View>
         ) : (
-          classes.map((item) => {
+          classes.map((item, idx) => {
             const ratio =
               item.totalStudents === 0
                 ? 0
@@ -213,8 +215,8 @@ function SchoolIdCardsScreen() {
             const percent = Math.round(ratio * 100);
 
             return (
+              <Entrance key={item.class_section} delay={idx * 55}>
               <Pressable
-                key={item.class_section}
                 style={[
                   styles.classCard,
                   {
@@ -259,7 +261,7 @@ function SchoolIdCardsScreen() {
                       styles.classBarFill,
                       {
                         width: `${percent}%`,
-                        backgroundColor: colors.brandGreen,
+                        backgroundColor: colors.brandOrange,
                       },
                     ]}
                   />
@@ -268,6 +270,7 @@ function SchoolIdCardsScreen() {
                   {item.captured} / {item.totalStudents} Photos
                 </Text>
               </Pressable>
+              </Entrance>
             );
           })
         )}
@@ -484,7 +487,7 @@ function useIdCardsStyles() {
         borderRadius: radius.md,
         paddingVertical: spacing.xxs + 2,
         elevation: 6,
-        shadowColor: "#7267A0",
+        shadowColor: "#1E293B",
         shadowOpacity: 0.2,
         shadowRadius: 8,
         shadowOffset: { width: 0, height: 4 },

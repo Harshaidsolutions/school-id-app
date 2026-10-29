@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { radius, spacing } from "../theme/colors";
 import { useTheme } from "../theme/ThemeContext";
+import { FloatingShapes } from "./FloatingShapes";
 import { moderateScale } from "../theme/responsive";
 
 type Props = {
@@ -10,7 +11,7 @@ type Props = {
   style?: ViewStyle;
 };
 
-/** Shared green header shell — same height/padding on ID Cards + class screens. */
+/** Shared sunset header shell — same height/padding on ID Cards + class screens. */
 export function IdCardsGreenHeader({ children, style }: Props) {
   const insets = useSafeAreaInsets();
   const { idCardsHeaderGradient } = useTheme();
@@ -18,8 +19,8 @@ export function IdCardsGreenHeader({ children, style }: Props) {
   return (
     <LinearGradient
       colors={[...idCardsHeaderGradient]}
-      start={{ x: 0, y: 0.5 }}
-      end={{ x: 1, y: 0.5 }}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={[
         styles.shell,
         {
@@ -29,6 +30,7 @@ export function IdCardsGreenHeader({ children, style }: Props) {
         style,
       ]}
     >
+      <FloatingShapes />
       <View style={styles.inner}>{children}</View>
     </LinearGradient>
   );
@@ -45,6 +47,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,
     justifyContent: "flex-end",
+    overflow: "hidden",
   },
   inner: {
     minHeight: moderateScale(56),

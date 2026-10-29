@@ -1,3 +1,4 @@
+import { CONTENT_MAX_WIDTH, contentMaxStyle } from "../theme/responsive";
 import {ManagedInstructions} from "../components/ManagedInstructions";
 import { Entrance } from "../components/Entrance";
 import { useCallback, useRef, useState } from "react";
@@ -22,6 +23,7 @@ import { Ionicons } from "@expo/vector-icons";
 import api from "../api/client";
 import type { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { OfferMarqueeBanner } from "../components/OfferMarqueeBanner";
+import { chipForIndex } from "../theme/chips";
 import { radius, cardShadow, spacing } from "../theme/colors";
 import { fonts, textStyles, type as typeScale } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
@@ -151,20 +153,21 @@ export function HomeScreen() {
   const logoSize = scale(36);
   const lightboxImageHeight = Math.min(scale(320), wp(78));
   const gridPad = spacing.pagePad * 2;
-  const productColumns = Math.max(2, Math.floor((screenW - gridPad) / 180));
-  const productCardWidth = Math.floor((screenW - gridPad - spacing.sm * (productColumns - 1)) / productColumns);
-  const schoolColumns = Math.max(3, Math.floor((screenW - gridPad) / 150));
-  const schoolColWidth = Math.floor((screenW - gridPad - spacing.xs * (schoolColumns - 1)) / schoolColumns);
+  const contentW = Math.min(screenW, CONTENT_MAX_WIDTH);
+  const productColumns = Math.max(2, Math.floor((contentW - gridPad) / 180));
+  const productCardWidth = Math.floor((contentW - gridPad - spacing.sm * (productColumns - 1)) / productColumns);
+  const schoolColumns = Math.max(3, Math.floor((contentW - gridPad) / 150));
+  const schoolColWidth = Math.floor((contentW - gridPad - spacing.xs * (schoolColumns - 1)) / schoolColumns);
 
   return (
     <View style={[styles.safe, { backgroundColor: colors.background }]}>
       <LinearGradient
-        colors={[...headerGradient]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
+        colors={[colors.surface, colors.surface]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={[
           styles.header,
-          { paddingTop: insets.top + scale(12), paddingBottom: scale(16) },
+          { paddingTop: insets.top + scale(10), paddingBottom: scale(14), borderColor: colors.border },
         ]}
       >
         <View style={styles.headerLogoWrap}>
@@ -196,11 +199,11 @@ export function HomeScreen() {
           <Ionicons
             name="notifications-outline"
             size={icons.xl}
-            color="#FFFFFF"
+            color={colors.primaryOrange}
           />
           {unread > 0 ? (
-            <View style={[styles.badge, { backgroundColor: colors.brandGreen }]}>
-              <Text style={styles.badgeText}>
+            <View style={[styles.badge, { backgroundColor: colors.brandOrange, borderColor: colors.surface }]}>
+              <Text style={[styles.badgeText, { color: "#1E293B" }]}>
                 {unread > 9 ? "9+" : String(unread)}
               </Text>
             </View>
@@ -211,7 +214,7 @@ export function HomeScreen() {
           accessibilityLabel="Open menu"
           onPress={() => navigation.navigate("DrawerMenu" as any)}
         >
-          <Ionicons name="menu" size={icons.xl} color="#FFFFFF" />
+          <Ionicons name="menu" size={icons.xl} color={colors.primaryOrange} />
         </Pressable>
       </LinearGradient>
 
@@ -220,7 +223,7 @@ export function HomeScreen() {
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, contentMaxStyle]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -246,25 +249,26 @@ export function HomeScreen() {
             instructionsY.current = e.nativeEvent.layout.y;
           }}
         >
-          <View style={[styles.sectionRule, { backgroundColor: colors.primaryOrange }]} />
           <SectionTitle title="INSTRUCTIONS" accent={colors.primaryOrange} />
         </View>
         <ManagedInstructions />
         {INSTRUCTIONS.map((text, i) => (
-          <View
+          <Entrance
             key={text.slice(0, 20)}
+            delay={i * 40}
             style={[
               styles.instructionRow,
               {
                 backgroundColor: colors.surface,
                 borderColor: colors.borderLight,
+                borderLeftColor: chipForIndex(i).fg,
               },
             ]}
           >
             <View
               style={[
                 styles.instructionNum,
-                { backgroundColor: colors.primaryOrange },
+                { backgroundColor: chipForIndex(i).fg },
               ]}
             >
               <Text style={styles.instructionNumText}>{i + 1}</Text>
@@ -274,7 +278,7 @@ export function HomeScreen() {
             >
               {text}
             </Text>
-          </View>
+          </Entrance>
         ))}
         <SectionEnd accent={colors.primaryOrange} />
 
@@ -302,11 +306,13 @@ export function HomeScreen() {
               ]}
               onPress={() => setPreviewIndex(i)}
             >
-              <Image
-                source={p.image}
-                style={[styles.productImage, { height: productImageHeight }]}
-                resizeMode="contain"
-              />
+              <View style={[styles.productWell, { backgroundColor: chipForIndex(i).bg }]}>
+                <Image
+                  source={p.image}
+                  style={[styles.productImage, { height: productImageHeight }]}
+                  resizeMode="contain"
+                />
+              </View>
               <Text style={[styles.productText, { color: colors.text }]} numberOfLines={2}>
                 {p.name}
               </Text>
@@ -438,8 +444,12 @@ export function HomeScreen() {
 
 function SectionTitle({ title, accent }: { title: string; accent: string }) {
   const styles = useHomeStyles();
+  const { colors } = useTheme();
   return (
-    <Text style={[styles.sectionTitle, { color: accent }]}>{title}</Text>
+    <View style={styles.sectionTitleRow}>
+      <LinearGradient colors={[accent, colors.headerYellowEnd]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.sectionTitleBar} />
+      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{title}</Text>
+    </View>
   );
 }
 
@@ -459,7 +469,7 @@ function StarRating({ value }: { value: number }) {
         const name =
           i < full ? "star" : i === full && half ? "star-half" : "star-outline";
         return (
-          <Ionicons key={i} name={name} size={scale(10)} color="#F5A524" />
+          <Ionicons key={i} name={name} size={scale(10)} color="#F59E0B" />
         );
       })}
     </View>
@@ -478,11 +488,17 @@ function useHomeStyles() {
     gap: spacing.xs,
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,
+    borderBottomWidth: 1,
+    shadowColor: "#1E293B",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+    zIndex: 2,
   },
   headerLogoWrap: {
       backgroundColor:"transparent",
-      borderRadius:10,
-      paddingVertical:3,
+      paddingVertical:2,
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
@@ -514,8 +530,8 @@ function useHomeStyles() {
     lineHeight:typeScale.xs*1.15,
   },
   iconBtn: {
-    backgroundColor: "rgba(255,255,255,0.14)",
-    borderRadius: 14,
+    backgroundColor: colors.blueSoft,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -529,6 +545,7 @@ function useHomeStyles() {
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.xxs - 1,
+    borderWidth: 2,
   },
   badgeText: {
     color: "#FFFFFF",
@@ -536,23 +553,30 @@ function useHomeStyles() {
     fontFamily: fonts.bold,
   },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: spacing.pagePad, paddingTop: 0, paddingBottom: spacing.pagePad },
+  content: { paddingHorizontal: spacing.pagePad, paddingTop: 0, paddingBottom: spacing.pagePad + scale(120) },
   hero: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: 24,
+    backgroundColor: "transparent",
     paddingHorizontal: spacing.md,
     marginTop: spacing.md,
     alignItems: "center",
     paddingVertical: spacing.md,
     marginBottom: spacing.xs,
   },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  sectionTitleBar: {
+    width: scale(6),
+    height: scale(22),
+    borderRadius: scale(3),
+  },
   sectionTitle: {
     ...textStyles.h2,
-    paddingTop: spacing.sm,
-    marginTop: spacing.xs,
-    marginBottom: spacing.xs,
+    letterSpacing: 0.6,
   },
   sectionRule: {
     height: scale(1.5),
@@ -564,9 +588,9 @@ function useHomeStyles() {
   sectionEnd: {
     height: scale(1),
     width: "100%",
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
     marginBottom: spacing.xs,
-    opacity: 0.55,
+    opacity: 0.12,
   },
   stars: {
     flexDirection: "row",
@@ -577,7 +601,7 @@ function useHomeStyles() {
     flexDirection: "row",
     alignItems: "flex-start",
     borderRadius: radius.lg,
-    borderLeftWidth: 4,
+    borderLeftWidth: 5,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.cardGap,
@@ -621,11 +645,16 @@ function useHomeStyles() {
     alignItems: "center",
     borderWidth: 1,
     borderRadius: radius.card,
-    paddingHorizontal: spacing.sm,
-    paddingTop: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    paddingTop: spacing.xs,
     paddingBottom: spacing.sm,
     overflow: "hidden",
     ...cardShadow,
+  },
+  productWell: {
+    width: "100%",
+    borderRadius: radius.lg,
+    padding: spacing.xs,
   },
   productImage: {
     width: "100%",
@@ -641,25 +670,25 @@ function useHomeStyles() {
   },
   fabStack: {
     position: "absolute",
-    right: spacing.md,
-    gap: spacing.sm,
+    right: spacing.sm,
+    gap: spacing.xs,
     zIndex: 20,
   },
   fab: {
-    width: spacing.fabSize,
-    height: spacing.fabSize,
-    borderRadius: spacing.fabSize / 2,
+    width: scale(48),
+    height: scale(48),
+    borderRadius: scale(24),
     alignItems: "center",
     justifyContent: "center",
-    elevation: 6,
-    shadowColor: "#65568D",
-    shadowOpacity: 0.22,
-    shadowRadius: scale(6),
-    shadowOffset: { width: 0, height: scale(3) },
+    elevation: 8,
+    shadowColor: "#1E293B",
+    shadowOpacity: 0.28,
+    shadowRadius: scale(10),
+    shadowOffset: { width: 0, height: scale(5) },
   },
   lightbox: {
     flex: 1,
-    backgroundColor: "rgba(75,60,112,0.55)",
+    backgroundColor: "rgba(8,17,41,0.62)",
     alignItems: "center",
     justifyContent: "center",
     padding: spacing.lg,
@@ -667,8 +696,8 @@ function useHomeStyles() {
   lightboxCard: {
     width: "100%",
     backgroundColor: "#FFFFFF",
-    borderRadius: radius.lg,
-    padding: spacing.md,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
     maxHeight: "86%",
   },
   lightboxTitle: {
@@ -695,7 +724,7 @@ function useHomeStyles() {
     justifyContent: "center",
     paddingHorizontal: 12,
     marginTop: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: radius.buttonPill,
     paddingVertical: spacing.sm,
     alignItems: "center",
   },

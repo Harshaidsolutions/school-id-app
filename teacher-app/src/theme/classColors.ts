@@ -2,11 +2,8 @@ import { colors } from "./colors";
 
 /** Pastel square icon backgrounds for class rows (reference palette). */
 export const classIconPalette = [
-  { bg: colors.classIconYellow, fg: "#F9A825" },
-  { bg: colors.classIconOrange, fg: colors.primaryOrange },
-  { bg: colors.classIconGreen, fg: colors.brandGreenDark },
-  { bg: colors.classIconBlue, fg: "#1976D2" },
-  { bg: colors.classIconPurple, fg: "#7B1FA2" },
+  { bg: colors.classIconBlue, fg: colors.brandBlue },
+  { bg: colors.classIconOrange, fg: colors.orangeDark },
 ] as const;
 
 export function classIconForIndex(index: number): {

@@ -54,8 +54,8 @@ export function GradientButton({
       : variant === "orange"
         ? ([...orangeButtonGradient] as const)
         : variant === "sunset"
-          ? (["#FFC107", "#FF9800", "#18847E"] as const)
-          : (["#66BB6A", "#18847E", "#2E7D32"] as const);
+          ? (["#3B82F6", "#2563EB"] as const)
+          : (["#3B82F6", "#2563EB"] as const);
 
   return (
     <Pressable
@@ -89,11 +89,11 @@ const styles = StyleSheet.create({
   wrap: {
     borderRadius: radius.buttonPill,
     overflow: "hidden",
-    elevation: 3,
+    elevation: 5,
     shadowColor: colors.primaryOrange,
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
   btn: {
     paddingVertical: spacing.sm + 2,
@@ -112,14 +112,14 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.6 },
   outlineWrap: {
     borderRadius: radius.buttonPill,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: colors.primaryOrange,
     paddingVertical: spacing.sm + 2,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     minHeight: spacing.buttonHeight,
-    backgroundColor: colors.white,
+    backgroundColor: colors.blueSoft,
   },
   outlineText: {
     ...textStyles.button,

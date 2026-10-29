@@ -1,3 +1,4 @@
+import { contentMaxStyle } from "../theme/responsive";
 import {ManagedInstructions} from "../components/ManagedInstructions";
 import { Pressable } from "../components/Pressable";
 import {
@@ -246,7 +247,7 @@ export function InstructionsScreen(_props: Props) {
 
       <ScrollView
 
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, contentMaxStyle]}
 
         showsVerticalScrollIndicator={false}
 

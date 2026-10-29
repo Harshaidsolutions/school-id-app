@@ -17,7 +17,7 @@ type Props = {
   onPress: (student: TeacherStudent) => void;
 };
 
-/** ID photo grid cell — 2:3 portrait ratio, green name bar. */
+/** ID photo grid cell — 2:3 portrait ratio with a status dot. */
 export const StudentGridCell = memo(function StudentGridCell({
   item,
   width,
@@ -43,8 +43,8 @@ export const StudentGridCell = memo(function StudentGridCell({
           style={[
             styles.avatar,
             {
-              backgroundColor: captured ? colors.graySoft : colors.primaryOrange,
-              borderColor: captured ? colors.borderLight : colors.primaryOrange,
+              backgroundColor: captured ? colors.graySoft : colors.orangeSoft,
+              borderColor: captured ? colors.borderLight : colors.brandOrange,
             },
             !captured && styles.avatarPending,
           ]}
@@ -60,9 +60,15 @@ export const StudentGridCell = memo(function StudentGridCell({
             <Ionicons
               name="person"
               size={icons.hero}
-              color={captured ? colors.textSubtle : "#FFFFFF"}
+              color={captured ? colors.textSubtle : colors.brandOrange}
             />
           )}
+          <View
+            style={[styles.statusDot, { backgroundColor: captured ? colors.statusCaptured : colors.brandOrange, borderColor: colors.surface }]}
+            accessibilityLabel={captured ? "Captured" : "Pending"}
+          >
+            <Ionicons name={captured ? "checkmark" : "camera"} size={12} color="#FFFFFF" />
+          </View>
         </View>
         {captured && formatCapturedAt(item.photo_captured_at) ? (
           <Text
@@ -100,6 +106,11 @@ const styles = StyleSheet.create({
     padding: spacing.xxs,
     overflow: "hidden",
     borderWidth: 1,
+    shadowColor: "#1E293B",
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   avatar: {
     width: "100%",
@@ -111,6 +122,17 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   avatarPending: { borderStyle: "dashed" },
+  statusDot: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   avatarImg: { width: "100%", height: "100%" },
   nameBar: {
     paddingVertical: spacing.sm,

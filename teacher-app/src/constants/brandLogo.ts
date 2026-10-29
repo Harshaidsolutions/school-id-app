@@ -18,11 +18,11 @@ export const IN_APP_LOGO_SPLASH: ImageSourcePropType = require("../../assets/bra
 /** @deprecated Use IN_APP_LOGO — kept so existing imports keep the asset in the Metro bundle. */
 export const APP_LOGO_TRANSPARENT: ImageSourcePropType = IN_APP_LOGO;
 
-/** Pixel dimensions of in-app-logo.png (client artwork). */
-export const APP_LOGO_WIDTH = 1600;
-export const APP_LOGO_HEIGHT = 536;
+/** Pixel dimensions of brand-wordmark.png (transparent, trimmed). */
+export const APP_LOGO_WIDTH = 1419;
+export const APP_LOGO_HEIGHT = 276;
 
-export const BRAND_LOGO_ASPECT = 536 / 1600;
+export const BRAND_LOGO_ASPECT = 276 / 1419;
 
 export function brandLogoSource(): ImageSourcePropType {
   const resolved = Image.resolveAssetSource(BRAND_LOGO);

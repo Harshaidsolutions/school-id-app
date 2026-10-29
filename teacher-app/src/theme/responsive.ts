@@ -176,3 +176,21 @@ export function scaleReport(width: number): Record<string, number> {
     button54: scale(54, width),
   };
 }
+
+/**
+ * Column count for card/photo grids. Phones keep their design count;
+ * small tablets add one column, large tablets add two (single-column lists get 2).
+ */
+export function responsiveColumns(width: number, phoneColumns: number): number {
+  if (width >= 900) return phoneColumns + 2;
+  if (width >= 600) return phoneColumns + 1;
+  return phoneColumns;
+}
+
+/** Readable line length for single-column screens on tablets / landscape. */
+export const CONTENT_MAX_WIDTH = 720;
+export const contentMaxStyle = {
+  width: "100%" as const,
+  maxWidth: CONTENT_MAX_WIDTH,
+  alignSelf: "center" as const,
+};

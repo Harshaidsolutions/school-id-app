@@ -46,11 +46,10 @@ const styles = StyleSheet.create({
     ...textStyles.h2,
   },
   rule: {
-    height: scale(3),
-    width: scale(34),
-    backgroundColor: colors.primaryOrange,
-    opacity: 0.75,
-    borderRadius: scale(1),
+    height: scale(4),
+    width: scale(40),
+    backgroundColor: colors.brandOrange,
+    borderRadius: scale(2),
     marginBottom: spacing.xxs,
   },
 });

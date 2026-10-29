@@ -22,7 +22,7 @@ import { AppIcon } from "../components/AppIcon";
 import { IconChip } from "../components/IconChip";
 import { OnboardingTapZones } from "../components/OnboardingTapZones";
 import { OnboardingSwipeIndicator } from "../components/OnboardingSwipeIndicator";
-import { colors, fabGradient, spacing, radius, cardShadow } from "../theme/colors";
+import { colors, spacing, radius, cardShadow } from "../theme/colors";
 import { fonts, textStyles, type as typeScale } from "../theme/typography";
 import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
@@ -224,8 +224,8 @@ function OnboardingFooter({
   const footerH = Math.round(height * FOOTER_RATIO);
   const gradient =
     accent === "green"
-      ? ([colors.brandGreen, colors.brandGreenLight, "#63BDB4"] as const)
-      : fabGradient;
+      ? ([colors.primaryOrange, colors.headerOrangeMid] as const)
+      : ([colors.warmOrange, colors.primaryOrange] as const);
 
   return (
     <LinearGradient
@@ -612,7 +612,7 @@ function useOnboardingStyles() {
       alignItems: "center",
       justifyContent: "center",
       marginBottom: 0,
-      shadowColor: "#65568D",
+      shadowColor: "#1E293B",
       shadowOpacity: 0.1,
       shadowRadius: 6,
       shadowOffset: { width: 0, height: 2 },

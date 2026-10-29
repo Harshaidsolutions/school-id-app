@@ -1,3 +1,4 @@
+import { contentMaxStyle } from "../theme/responsive";
 import { Pressable } from "../components/Pressable";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -54,9 +55,9 @@ function DetailRow({
 
   return (
 
-    <View style={styles.detailRow}>
+    <View style={[styles.detailRow, { borderBottomColor: colors.borderLight }]}>
 
-      <Text style={[styles.detailLabel, { color: colors.textMuted, maxWidth: scale(120) }]}>
+      <Text style={[styles.detailLabel, { color: colors.textMuted }]} numberOfLines={2}>
 
         {label}
 
@@ -115,7 +116,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
         style={styles.scroll}
 
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, contentMaxStyle]}
 
         showsVerticalScrollIndicator={false}
 
@@ -212,7 +213,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
 
 
-        <View style={styles.detailsCard}>
+        <View style={[styles.detailsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
 
           {visibleFields.map((field) => (
 
@@ -239,15 +240,15 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           {allowRecordEdit ? (
           <Pressable
 
-            style={[styles.editBtn, { borderColor: colors.danger }]}
+            style={[styles.editBtn, { borderColor: colors.primaryOrange, backgroundColor: colors.blueSoft }]}
 
             onPress={() => navigation.navigate("EditStudent", { student })}
 
           >
 
-            <Ionicons name="create-outline" size={18} color={colors.danger} />
+            <Ionicons name="create-outline" size={18} color={colors.primaryOrange} />
 
-            <Text style={[styles.editBtnText, { color: colors.danger }]}>
+            <Text style={[styles.editBtnText, { color: colors.primaryOrange }]}>
 
               Edit Form
 
@@ -258,7 +259,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
           <Pressable
 
-            style={[styles.submitBtn, { backgroundColor: colors.danger }]}
+            style={[styles.submitBtn, { backgroundColor: colors.submitGreen }]}
 
           >
 
@@ -360,11 +361,19 @@ const styles = StyleSheet.create({
 
   detailsCard: {
 
-    paddingHorizontal: spacing.lg,
+    marginHorizontal: spacing.md,
 
-    gap: spacing.cardGap,
+    paddingHorizontal: spacing.md,
 
     paddingVertical: spacing.xxs,
+
+    borderRadius: radius.lg,
+
+    borderWidth: 1,
+
+    borderColor: "#E2E8F0",
+
+    backgroundColor: "#FFFFFF",
 
   },
 
@@ -374,15 +383,21 @@ const styles = StyleSheet.create({
 
     alignItems: "flex-start",
 
+    paddingVertical: spacing.sm,
+
+    borderBottomWidth: 1,
+
   },
 
   detailLabel: {
 
     fontFamily: fonts.medium,
 
-    fontSize: typeScale.rowTitle,
+    fontSize: typeScale.label,
 
-    width: "32%",
+    lineHeight: typeScale.label * 1.35,
+
+    width: "38%",
 
   },
 
@@ -390,7 +405,9 @@ const styles = StyleSheet.create({
 
     fontFamily: fonts.medium,
 
-    fontSize: typeScale.rowTitle,
+    fontSize: typeScale.label,
+
+    lineHeight: typeScale.label * 1.35,
 
   },
 
@@ -400,7 +417,9 @@ const styles = StyleSheet.create({
 
     fontFamily: fonts.semiBold,
 
-    fontSize: typeScale.rowTitle,
+    fontSize: typeScale.body,
+
+    lineHeight: typeScale.body * 1.3,
 
   },
 

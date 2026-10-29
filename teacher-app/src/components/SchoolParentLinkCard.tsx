@@ -93,15 +93,15 @@ export function SchoolParentLinkCard() {
 }
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#EFF6FF",
-    borderColor: "#BFDBFE",
+    backgroundColor: "#F3F5FA",
+    borderColor: "#E4E8F0",
     borderWidth: 1,
     borderRadius: 16,
     padding: 16,
     marginBottom: 18,
   },
-  title: { color: "#3730A3", fontSize: 17, fontFamily: fonts.semiBold },
-  description: {fontFamily:fonts.regular, color: "#475569", fontSize: 13, lineHeight: 19, marginTop: 5 },
+  title: { color: "#1E293B", fontSize: 17, fontFamily: fonts.semiBold },
+  description: {fontFamily:fonts.regular, color: "#5B6478", fontSize: 13, lineHeight: 19, marginTop: 5 },
   link: {fontFamily:fonts.regular, color: "#2563EB", fontSize: 13, lineHeight: 19, marginVertical: 12 },
   actions: { flexDirection: "row", gap: 12 },
   button: {
@@ -110,9 +110,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 10,
-    backgroundColor: "#4F46E5",
+    backgroundColor: "#2563EB",
     padding: 10,
   },
-  share: { backgroundColor: "#15803D" },
+  share: { backgroundColor: "#B45309" },
   buttonText: { color: "#FFFFFF", fontSize: 14, fontFamily: fonts.semiBold },
 });

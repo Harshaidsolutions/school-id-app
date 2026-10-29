@@ -42,7 +42,7 @@ import type { StudentsResponse, TeacherStudent } from "../types";
 import { radius, spacing } from "../theme/colors";
 import { fonts, type as typeScale } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
-import { gridItemWidth } from "../theme/responsive";
+import { gridItemWidth, responsiveColumns } from "../theme/responsive";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
 import { useFormConfig } from "../hooks/useFormConfig";
 import {
@@ -53,7 +53,7 @@ import {
 type Props = NativeStackScreenProps<RootStackParamList, "StudentList">;
 type TabKey = "all" | "pending-photos" | "pending-data" | "captured";
 
-const NUM_COLS = 2;
+const PHONE_COLS = 2;
 
 export function StudentListScreen({ navigation, route }: Props) {
   const styles = useStudentListStyles();
@@ -65,6 +65,7 @@ export function StudentListScreen({ navigation, route }: Props) {
   const { showCapturedSection } = useFormConfig();
   const gridGap = spacing.cardGap;
   const gridPad = spacing.sm;
+  const NUM_COLS = responsiveColumns(width, PHONE_COLS);
   const itemSize = gridItemWidth(NUM_COLS, gridPad, gridGap, width);
   const [students, setStudents] = useState<TeacherStudent[]>([]);
   const [tab, setTab] = useState<TabKey>("all");
@@ -380,6 +381,7 @@ export function StudentListScreen({ navigation, route }: Props) {
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
+        key={`cols-${NUM_COLS}`}
         numColumns={NUM_COLS}
         columnWrapperStyle={styles.gridRow}
         refreshControl={

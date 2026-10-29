@@ -1,3 +1,4 @@
+import { Entrance } from "../components/Entrance";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -66,7 +67,7 @@ export function DrawerMenuScreen({ navigation }: Props) {
   const { colors, headerGradient } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const panelW = Math.round(width * 0.78);
+  const panelW = Math.round(Math.min(width * 0.78, 420));
   const drawerLogoSize = wp(9.5);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
@@ -270,14 +271,16 @@ export function DrawerMenuScreen({ navigation }: Props) {
         ]}
       >
         <LinearGradient
-          colors={[...headerGradient]}
+          colors={[colors.surface, colors.surface]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={[
             styles.header,
             {
-              paddingTop: insets.top + scale(4),
-              paddingBottom: scale(4),
+              paddingTop: insets.top + scale(10),
+              paddingBottom: scale(12),
+              borderBottomWidth: 3,
+              borderBottomColor: colors.brandOrange,
             },
           ]}
         >
@@ -292,8 +295,8 @@ export function DrawerMenuScreen({ navigation }: Props) {
           showsVerticalScrollIndicator={false}
         >
           {menuItems.map((item, index) => (
+            <Entrance key={item.label} delay={index * 45}>
             <Pressable
-              key={item.label}
               style={({ pressed }) => [
                 styles.menuCard,
                 {
@@ -317,6 +320,7 @@ export function DrawerMenuScreen({ navigation }: Props) {
                 color={colors.textSubtle}
               />
             </Pressable>
+            </Entrance>
           ))}
 
           <Pressable
@@ -392,7 +396,7 @@ function useDrawerMenuStyles() {
     panel: {
       height: "100%",
       elevation: 16,
-      shadowColor: "#7267A0",
+      shadowColor: "#1E293B",
       shadowOpacity: 0.25,
       shadowRadius: 16,
       shadowOffset: { width: 4, height: 0 },

@@ -165,6 +165,11 @@ export default function App() {
 
   const [fontsLoaded, fontError] = useFonts({
 
+    // Outfit (SIL OFL) — bundled heading font, see assets/fonts/Outfit-OFL.txt
+    Outfit_400Regular: require("./assets/fonts/Outfit-Regular.ttf"),
+
+    Outfit_700Bold: require("./assets/fonts/Outfit-Bold.ttf"),
+
     Poppins_500Medium,
 
     Poppins_600SemiBold,

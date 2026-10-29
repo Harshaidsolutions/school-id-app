@@ -3,19 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#ffffff" />
   <title>Home | Harsha ID Solutions</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="icon" href="/assets/images/harsha-official-logo.png" type="image/png" />
   <link rel="apple-touch-icon" href="/assets/images/harsha-official-logo.png" />
-  <link rel="stylesheet" href="/assets/css/styles.css?v=150" />
+  <link rel="stylesheet" href="/assets/css/styles.css?v=160" />
 </head>
 <body data-page="home">
   <div data-header></div>
   <main id="main">
     <section class="hero" aria-label="Harsha ID Solutions">
+      <span class="hero-blob b1" aria-hidden="true"></span><span class="hero-blob b2" aria-hidden="true"></span><span class="hero-blob b3" aria-hidden="true"></span>
       <div class="wrap hero-grid">
         <div class="hero-copy">
+          <div class="hero-tiles" aria-hidden="true"><i style="--i:0">H</i><i style="--i:1">A</i><i style="--i:2">R</i><i style="--i:3">S</i><i style="--i:4">H</i><i style="--i:5">A</i></div>
           <span class="eyebrow">HARSHA ID SOLUTIONS · SINCE 2016</span>
           <h1>Small details.<br><span>Lasting identity.</span></h1>
           <p>Thoughtfully made ID cards, school essentials and personalised products. Everything your institution needs, from one trusted team.</p>
@@ -32,21 +35,21 @@
 
     <section class="section soft" id="products">
       <div class="wrap">
-        <h2 class="center">Made for your everyday.</h2>
+        <div class="section-head"><span class="eyebrow">Our products</span><h2>Made for your everyday.</h2><p>Tap Book Now to get price and availability on WhatsApp.</p></div>
         <div class="product-grid" data-products></div>
       </div>
     </section>
 
     <section class="section">
       <div class="wrap">
-        <h2 class="center">Part of their school story.</h2>
-        <div class="client-grid" data-clients></div>
+        <div class="section-head"><span class="eyebrow">Trusted by schools</span><h2>Part of their school story.</h2></div>
       </div>
+      <div class="client-grid" data-clients></div>
     </section>
 
     <section class="section soft">
       <div class="wrap">
-        <h2 class="center">Growing with our community.</h2>
+        <div class="section-head"><span class="eyebrow">Our journey</span><h2>Growing with our community.</h2></div>
         <div class="stat-grid">
           <article class="stat-card"><b>2016</b><span>EST.</span></article>
           <article class="stat-card"><b>1000+</b><span>Schools Served</span></article>
@@ -55,9 +58,18 @@
         </div>
       </div>
     </section>
+    <section class="section">
+      <div class="wrap">
+        <div class="promo">
+          <img src="/assets/images/my-school-id-card-icon.png" alt="" loading="lazy" />
+          <div><h2>My School ID Card app</h2><p>Collect student details and photos from your phone and prepare ID cards faster.</p></div>
+          <a class="button" href="/my-app">See the app ↗</a>
+        </div>
+      </div>
+    </section>
   </main>
   <div data-footer></div>
   <script src="/assets/js/site-content.js"></script>
-  <script src="/assets/js/site.js?v=150"></script>
+  <script src="/assets/js/site.js?v=160"></script>
 </body>
 </html>

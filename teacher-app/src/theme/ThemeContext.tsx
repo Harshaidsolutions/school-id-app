@@ -1,4 +1,3 @@
-import { useColorScheme } from "react-native";
 import {
   createContext,
   useCallback,
@@ -38,9 +37,9 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const systemMode = useColorScheme() === "dark" ? "dark" : "light";
+  // Light by default (client preference); dark only when chosen in Settings.
   const [override, setModeState] = useState<ThemeMode | null>(null);
-  const mode = override ?? systemMode;
+  const mode = override ?? "light";
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -79,19 +78,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setMode,
       toggleMode,
       headerGradient: isDark
-        ? ([colors.headerOrangeStart, colors.headerOrangeMid] as const)
+        ? (["#131C2E", "#0B1220"] as const)
         : lightHeaderGradient,
       idCardsHeaderGradient: isDark
-        ? ([colors.brandGreen, colors.brandGreenLight] as const)
+        ? (["#131C2E", "#0B1220"] as const)
         : lightIdCardsHeaderGradient,
-      fabGradient: isDark
-        ? ([colors.headerOrangeStart, colors.headerOrangeMid] as const)
-        : lightFabGradient,
+      fabGradient: lightFabGradient,
       orangeButtonGradient: isDark
-        ? ([colors.headerOrangeStart, colors.primaryOrange] as const)
+        ? (["#3A5AA8", "#2D4A8F"] as const)
         : lightOrangeButtonGradient,
       submitGradient: isDark
-        ? ([colors.primaryOrange, colors.submitGreen] as const)
+        ? (["#3A5AA8", "#2D4A8F"] as const)
         : lightSubmitGradient,
     };
   }, [mode, setMode, toggleMode]);

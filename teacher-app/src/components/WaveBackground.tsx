@@ -8,7 +8,7 @@ export function WaveBackground({ style }: { style?: ViewStyle }) {
   return (
     <View style={[StyleSheet.absoluteFill, style]} pointerEvents="none">
       <LinearGradient
-        colors={["#E8F5E9", "transparent"]}
+        colors={["#EEF2F9", "transparent"]}
         style={styles.topWave}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

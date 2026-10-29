@@ -1,3 +1,4 @@
+import { contentMaxStyle } from "../theme/responsive";
 import { useCallback, useEffect, useMemo, useRef, useState, memo, type ReactNode } from "react";
 import {
   ActivityIndicator,
@@ -718,7 +719,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
   const formScroll = (
     <ScrollView
       style={styles.flex}
-      contentContainerStyle={[
+      contentContainerStyle={[contentMaxStyle, 
         styles.scroll,
         {
           paddingBottom:
@@ -1156,7 +1157,7 @@ const UploadRow = memo(function UploadRow({
         <View style={styles.selectionHeader}>
           <IconChip name={icon} index={chipIndex} />
           <View style={styles.uploadTextWrap}>
-            <Text style={[styles.uploadLabel, { color: colors.text }]} numberOfLines={1}>
+            <Text style={[styles.uploadLabel, { color: colors.text }]} numberOfLines={2}>
               {label}
             </Text>
             {sublabel && !uri && !hasMultiTags ? (
@@ -1248,7 +1249,7 @@ const UploadRow = memo(function UploadRow({
     >
       <IconChip name={icon} index={chipIndex} />
       <View style={styles.uploadTextWrap}>
-        <Text style={[styles.uploadLabel, { color: colors.text }]} numberOfLines={1}>
+        <Text style={[styles.uploadLabel, { color: colors.text }]} numberOfLines={2}>
           {label}
         </Text>
         {sublabel ? (
@@ -1396,17 +1397,20 @@ function useOrgDetailsStyles() {
       flexDirection: "row",
       alignItems: "center",
       paddingVertical: spacing.sm,
-      gap: spacing.iconTextGap,
+      gap: spacing.sm,
       borderBottomWidth: StyleSheet.hairlineWidth,
     },
     uploadRowLast: { borderBottomWidth: 0, paddingBottom: spacing.xxs },
-    uploadTextWrap: { flex: 1 },
+    uploadTextWrap: { flex: 1, minWidth: 0 },
     uploadLabel: {
       ...textStyles.fieldLabel,
       fontSize: typeScale.subtitle,
+      lineHeight: typeScale.subtitle * 1.3,
     },
     uploadSublabel: {
       ...textStyles.body,
+      fontSize: typeScale.label,
+      lineHeight: typeScale.label * 1.4,
       marginTop: spacing.xxs / 2,
     },
     uploadedRight: {
@@ -1432,7 +1436,7 @@ function useOrgDetailsStyles() {
     selectionHeader: {
       flexDirection: "row",
       alignItems: "center",
-      gap: spacing.iconTextGap,
+      gap: spacing.sm,
     },
     selectionImageWrap: {
       width: "100%",

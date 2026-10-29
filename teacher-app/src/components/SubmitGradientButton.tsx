@@ -45,8 +45,8 @@ export function SubmitGradientButton({
     >
       <LinearGradient
         colors={[...submitGradient]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={[styles.btn, compact && styles.btnCompact]}
       >
         {loading ? (
@@ -68,7 +68,11 @@ const styles = StyleSheet.create({
   wrap: {
     borderRadius: radius.buttonPill,
     overflow: "hidden",
-    elevation: 3,
+    elevation: 5,
+    shadowColor: "#1E293B",
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
   btn: {
     flexDirection: "row",

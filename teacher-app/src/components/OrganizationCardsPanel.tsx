@@ -1,3 +1,4 @@
+import { contentMaxStyle, responsiveColumns } from "../theme/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StudentGridCell } from "./StudentGridCell";
@@ -132,7 +133,8 @@ export function OrganizationCardsPanel() {
   const current = visible[viewerIndex];
   const nameField = textFields.find(field => /name/i.test(field.field_name)) ?? textFields[0];
   const recordName = (row: Submission) => (nameField && row.values[nameField.id]?.text) || row.photoNumber || `Record ${row.serial}`;
-  const cardWidth = Math.max(100, (width - spacing.pagePad * 2 - spacing.cardGap) / 2);
+  const cardCols = responsiveColumns(width, 2);
+  const cardWidth = Math.max(100, (width - spacing.pagePad * 2 - spacing.cardGap * (cardCols - 1)) / cardCols);
   const textStyle = {color:colors.text, fontFamily:fonts.medium};
   function closeViewer() { if (!saving) {setViewerId(null);setEditingId(null);setViewPhoto(null);setError(null);} }
   function back() { if (groupOpen) {setGroupOpen(false);setCategoryValue("");setTab("all");setSearch("");} else navigation.navigate("Home" as never); }
@@ -168,14 +170,14 @@ export function OrganizationCardsPanel() {
         </View>
       </IdCardsGreenHeader>
       <IdCardsProgressSection total={groupOpen ? groupRows.length : counts.all} captured={groupOpen ? groupRows.filter(captured).length : counts.captured}/>
-      {!groupOpen ? <ScrollView contentContainerStyle={{padding:spacing.pagePad,gap:14,paddingBottom:insets.bottom+32}}>
+      {!groupOpen ? <ScrollView contentContainerStyle={{...contentMaxStyle,padding:spacing.pagePad,gap:14,paddingBottom:insets.bottom+32}}>
         <Text style={{color:colors.brandGreen,fontSize:21,fontFamily:fonts.bold}}>Select {categoryField?.field_name || "Records"}</Text>
         {["",...categoryOptions].map(category => {
           const members = category && categoryField ? rows.filter(row => (row.values[categoryField.id]?.text ?? "").trim() === category) : rows;
           const total = members.length, done = members.filter(captured).length;
           return <Pressable key={category || "all"} onPress={() => {setCategoryValue(category);setGroupOpen(true);}} style={{padding:18,borderWidth:1,borderColor:colors.greenSoft,borderRadius:24,backgroundColor:colors.surface,gap:14}}>
             <View style={{flexDirection:"row",alignItems:"center",gap:8}}><Text style={{...textStyle,flex:1,fontFamily:fonts.bold,fontSize:20}}>{category || "All Records"}</Text><Text style={{color:colors.textMuted}}>{total} Records</Text><Ionicons name="chevron-forward" size={22} color={colors.brandGreen}/></View>
-            <View style={{height:8,borderRadius:4,backgroundColor:colors.track,overflow:"hidden"}}><View style={{height:8,width:`${total ? done/total*100 : 0}%`,backgroundColor:colors.brandGreen}}/></View>
+            <View style={{height:8,borderRadius:4,backgroundColor:colors.track,overflow:"hidden"}}><View style={{height:8,width:`${total ? done/total*100 : 0}%`,backgroundColor:colors.brandOrange}}/></View>
             <Text style={{color:colors.textMuted,fontSize:16}}>{done} / {total} Photos</Text>
           </Pressable>;
         })}
@@ -190,7 +192,7 @@ export function OrganizationCardsPanel() {
           })}</ScrollView>
           <TextInput accessibilityLabel="Search records" placeholder="Search records" placeholderTextColor={colors.textMuted} value={search} onChangeText={setSearch} style={{...textStyle,padding:10,borderRadius:12,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surface}}/>
         </View>
-        <FlatList data={visible} numColumns={2} keyExtractor={row => row.id} columnWrapperStyle={{gap:spacing.cardGap}} contentContainerStyle={{paddingHorizontal:spacing.pagePad,gap:spacing.cardGap,paddingBottom:32+insets.bottom}}
+        <FlatList key={`cols-${cardCols}`} data={visible} numColumns={cardCols} keyExtractor={row => row.id} columnWrapperStyle={{gap:spacing.cardGap}} contentContainerStyle={{paddingHorizontal:spacing.pagePad,gap:spacing.cardGap,paddingBottom:32+insets.bottom}}
           refreshing={loading} onRefresh={() => {setLoading(true);void load();}}
           ListEmptyComponent={<Text style={{...textStyle,textAlign:"center",padding:20}}>{error || "No records in this section."}</Text>}
           renderItem={({item:row}) => <OrganizationGridCell row={row} field={photoFields[0]} width={cardWidth} name={recordName(row)} onPress={() => {setViewerId(row.id);setError(null);}}/>}/>

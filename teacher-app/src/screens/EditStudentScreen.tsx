@@ -1,3 +1,4 @@
+import { contentMaxStyle } from "../theme/responsive";
 import { Pressable } from "../components/Pressable";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -339,7 +340,7 @@ export function EditStudentScreen({ navigation, route }: Props) {
 
           <KeyboardAwareFormScrollView
             scrollRef={scrollRef}
-            contentContainerStyle={[
+            contentContainerStyle={[contentMaxStyle, 
               styles.scroll,
               { paddingBottom: insets.bottom + spacing.xxl + spacing.lg },
             ]}
@@ -496,7 +497,7 @@ export function EditStudentScreen({ navigation, route }: Props) {
                     styles.retakeBtn,
                     {
                       borderColor: colors.primaryOrange,
-                      backgroundColor: colors.orangeSoft,
+                      backgroundColor: colors.blueSoft,
                     },
                   ]}
                   onPress={() => void handleRetakePhoto()}

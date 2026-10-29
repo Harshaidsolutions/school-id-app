@@ -4,162 +4,163 @@
 import { scale as s } from "./responsive";
 
 export const colors = {
-  // Brand
-  primaryOrange: "#7650ED",
-  warmOrange: "#9C7BFF",
-  yellow: "#FACC15",
-  softYellow: "#FEF3C7",
-  green: "#5869E8",
-  successGreen: "#5869E8",
-  submitGreen: "#7B5FF1",
-  softGreen: "rgba(76,175,80,0.12)",
-  blue: "#487DCA",
-  softBlue: "rgba(33,150,243,0.12)",
-  purple: "#8A64C7",
-  softPurple: "rgba(156,39,176,0.12)",
-  pink: "#C95E8C",
-  softPink: "rgba(233,30,99,0.12)",
+  // Brand — bright Blue + Amber on white (two light, friendly colours).
+  // Token names are kept for compatibility; values define the look.
+  primaryOrange: "#2563EB",
+  warmOrange: "#3B82F6",
+  yellow: "#F59E0B",
+  softYellow: "rgba(245,158,11,0.14)",
+  green: "#2563EB",
+  successGreen: "#2563EB",
+  submitGreen: "#3B82F6",
+  softGreen: "rgba(37,99,235,0.08)",
+  blue: "#2563EB",
+  softBlue: "rgba(37,99,235,0.08)",
+  purple: "#3B82F6",
+  softPurple: "rgba(37,99,235,0.08)",
+  pink: "#C2690A",
+  softPink: "rgba(245,158,11,0.14)",
 
-  background: "#F6F7FC",
+  background: "#F8FAFC",
   surface: "#FFFFFF",
-  text: "#34334F",
-  textPrimary: "#34334F",
-  textSecondary: "#74758F",
-  textBody: "#5F607C",
-  textPlaceholder: "#85869D",
-  border: "#E5E3F3",
+  text: "#1E293B",
+  textPrimary: "#1E293B",
+  textSecondary: "#64748B",
+  textBody: "#334155",
+  textPlaceholder: "#94A3B8",
+  border: "#E2E8F0",
 
   // Header / gradients
-  headerOrangeStart: "#5975FF",
-  headerOrangeMid: "#8B45F6",
-  headerYellowEnd: "#7650ED",
+  headerOrangeStart: "#2563EB",
+  headerOrangeMid: "#1D4ED8",
+  headerYellowEnd: "#F59E0B",
 
-  brandOrange: "#7650ED",
-  brandOrangeLight: "#9C7BFF",
-  brandGreen: "#5869E8",
-  brandGreenLight: "#7B5FF1",
-  brandGreenDark: "#167D79",
-  brandGreenDeep: "#126A68",
-  brandNavy: "#34334F",
-  brandBlue: "#487DCA",
+  brandOrange: "#F59E0B",
+  brandOrangeLight: "#FBBF24",
+  brandGreen: "#2563EB",
+  brandGreenLight: "#3B82F6",
+  brandGreenDark: "#2563EB",
+  brandGreenDeep: "#1D4ED8",
+  brandNavy: "#1E293B",
+  brandBlue: "#2563EB",
 
-  splashGreen: "#5869E8",
-  splashGreenLight: "#7B5FF1",
-  splashGreenPale: "rgba(76,175,80,0.12)",
-  splashOrange: "#7650ED",
-  splashOrangeDeep: "#E06B10",
-  splashYellow: "#FACC15",
+  splashGreen: "#2563EB",
+  splashGreenLight: "#3B82F6",
+  splashGreenPale: "rgba(37,99,235,0.08)",
+  splashOrange: "#F59E0B",
+  splashOrangeDeep: "#B45309",
+  splashYellow: "#FBBF24",
 
-  gradientStart: "#9C7BFF",
-  gradientMid: "#7650ED",
-  gradientEnd: "#7B5FF1",
+  gradientStart: "#3B82F6",
+  gradientMid: "#2563EB",
+  gradientEnd: "#1D4ED8",
 
-  royalGreen: "#5869E8",
-  parrotGreen: "#7B5FF1",
+  royalGreen: "#2563EB",
+  parrotGreen: "#3B82F6",
 
-  orangeDark: "#E06B10",
-  orangeDeep: "#C45A12",
-  offerOrange: "#7650ED",
-  tabActive: "#7650ED",
+  orangeDark: "#C2690A",
+  orangeDeep: "#92400E",
+  offerOrange: "#C2690A",
+  tabActive: "#2563EB",
 
-  whatsappGreen: "#25D366",
+  whatsappGreen: "#2563EB",
 
   white: "#FFFFFF",
-  surfaceMuted: "#F6F7FC",
-  inputBg: "#FFFFFF",
-  borderLight: "#E5E3F3",
-  track: "#E5E3F3",
+  surfaceMuted: "#F8FAFC",
+  inputBg: "#F8FAFC",
+  borderLight: "#EEF2F7",
+  track: "#E2E8F0",
 
-  textMuted: "#74758F",
-  textSubtle: "#85869D",
-  textNav: "#34334F",
+  textMuted: "#64748B",
+  textSubtle: "#94A3B8",
+  textNav: "#1E293B",
 
-  classIconYellow: "#FEF3C7",
-  classIconOrange: "rgba(245,129,31,0.12)",
-  classIconGreen: "rgba(76,175,80,0.12)",
-  classIconBlue: "rgba(33,150,243,0.12)",
-  classIconPurple: "rgba(156,39,176,0.12)",
+  classIconYellow: "rgba(245,158,11,0.14)",
+  classIconOrange: "rgba(245,158,11,0.14)",
+  classIconGreen: "rgba(37,99,235,0.08)",
+  classIconBlue: "rgba(37,99,235,0.08)",
+  classIconPurple: "rgba(37,99,235,0.08)",
 
-  yellowSoft: "#FEF3C7",
-  greenSoft: "rgba(76,175,80,0.12)",
-  orangeSoft: "rgba(245,129,31,0.12)",
-  blueSoft: "rgba(33,150,243,0.12)",
-  purpleSoft: "rgba(156,39,176,0.12)",
-  pinkSoft: "rgba(233,30,99,0.12)",
-  graySoft: "#F5F5F5",
+  yellowSoft: "rgba(245,158,11,0.14)",
+  greenSoft: "rgba(37,99,235,0.08)",
+  orangeSoft: "rgba(245,158,11,0.14)",
+  blueSoft: "rgba(37,99,235,0.08)",
+  purpleSoft: "rgba(37,99,235,0.08)",
+  pinkSoft: "rgba(245,158,11,0.14)",
+  graySoft: "#F1F5F9",
 
-  chipYellow: "#FEF3C7",
-  chipGreen: "rgba(76,175,80,0.12)",
-  chipOrange: "rgba(245,129,31,0.12)",
-  chipBlue: "rgba(33,150,243,0.12)",
-  chipPurple: "rgba(156,39,176,0.12)",
-  chipPink: "rgba(233,30,99,0.12)",
+  chipYellow: "rgba(245,158,11,0.14)",
+  chipGreen: "rgba(37,99,235,0.08)",
+  chipOrange: "rgba(245,158,11,0.14)",
+  chipBlue: "rgba(37,99,235,0.08)",
+  chipPurple: "rgba(37,99,235,0.08)",
+  chipPink: "rgba(245,158,11,0.14)",
 
-  statusCaptured: "#168B76",
-  statusCapturedBg: "rgba(76,175,80,0.12)",
-  statusPending: "#BE751F",
-  statusPendingBg: "rgba(245,129,31,0.12)",
+  statusCaptured: "#2563EB",
+  statusCapturedBg: "rgba(37,99,235,0.08)",
+  statusPending: "#C2690A",
+  statusPendingBg: "rgba(245,158,11,0.14)",
 
-  progressRingGreen: "#5869E8",
-  progressRingOrange: "#7650ED",
+  progressRingGreen: "#2563EB",
+  progressRingOrange: "#F59E0B",
 
-  danger: "#EF4444",
-  dangerSoft: "#FEE2E2",
-  dangerBorder: "#FECACA",
+  danger: "#C8323F",
+  dangerSoft: "#FCEBEC",
+  dangerBorder: "#F5C6CB",
 
-  darkBlue: "#34334F",
-  cameraBg: "#56477A",
-  overlay: "rgba(79,65,119,0.40)",
-  overlayHeavy: "rgba(79,65,119,0.60)",
+  darkBlue: "#1E293B",
+  cameraBg: "#1D4ED8",
+  overlay: "rgba(15,23,42,0.40)",
+  overlayHeavy: "rgba(15,23,42,0.62)",
 
-  tabInactive: "#73778E",
+  tabInactive: "#94A3B8",
   tabBarBg: "#FFFFFF",
-  sectionOrange: "#7650ED",
+  sectionOrange: "#2563EB",
 } as const;
 
-/** ID Cards header — same green as Home "ID Solutions" text. */
+/** ID Cards flow header — same blue family as the main header. */
 export const idCardsHeaderGradient = [
-  colors.brandGreen,
-  colors.brandGreenLight,
+  "#3B82F6",
+  colors.headerOrangeStart,
 ] as const;
 
-/** Primary header: 135deg #9C7BFF → #7650ED */
+/** Primary header: blue → bright blue */
 export const headerGradient = [
+  "#3B82F6",
   colors.headerOrangeStart,
-  colors.headerOrangeMid,
 ] as const;
 
+/** Floating action: amber */
 export const fabGradient = [
-  colors.headerOrangeStart,
-  colors.headerOrangeMid,
+  "#FBBF24",
+  "#F59E0B",
 ] as const;
 
 export const primaryGradient = [
-  colors.headerOrangeStart,
+  colors.warmOrange,
   colors.primaryOrange,
-  colors.submitGreen,
 ] as const;
 
+/** Main buttons: blue */
 export const orangeButtonGradient = [
-  colors.headerOrangeStart,
+  colors.warmOrange,
   colors.primaryOrange,
 ] as const;
 
-/** Submit CTA: #7650ED → #7B5FF1 */
+/** Submit / confirm CTA: blue */
 export const submitGradient = [
+  colors.warmOrange,
   colors.primaryOrange,
-  colors.submitGreen,
 ] as const;
 
 export const loginGradient = [
-  colors.brandGreenLight,
-  colors.green,
+  colors.primaryOrange,
+  colors.headerOrangeMid,
 ] as const;
 
 export const splashGradient = [
-  colors.softGreen,
-  colors.green,
   colors.primaryOrange,
+  colors.headerOrangeMid,
 ] as const;
 
 /**
@@ -199,21 +200,21 @@ export const spacing = {
 export const radius = {
   sm: s(12),
   md: s(14),
-  lg: s(16),
-  xl: s(24),
-  card: s(24),
+  lg: s(18),
+  xl: s(28),
+  card: s(22),
   chip: s(12),
-  buttonPill: s(25),
+  buttonPill: s(18),
   full: 999,
 } as const;
 
 /** Card: soft shadow preferred over heavy border */
 export const cardShadow = {
-  elevation: 2,
-  shadowColor: "#7961CC",
-  shadowOpacity: 0.09,
-  shadowRadius: s(12),
-  shadowOffset: { width: 0, height: s(2) },
+  elevation: 3,
+  shadowColor: "#2563EB",
+  shadowOpacity: 0.07,
+  shadowRadius: s(16),
+  shadowOffset: { width: 0, height: s(6) },
 } as const;
 
 export type ColorToken = keyof typeof colors;

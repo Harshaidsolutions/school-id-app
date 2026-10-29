@@ -3,30 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#ffffff" />
   <title>Brochures | Harsha ID Solutions</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="icon" href="/assets/images/harsha-official-logo.png" type="image/png" />
   <link rel="apple-touch-icon" href="/assets/images/harsha-official-logo.png" />
-  <link rel="stylesheet" href="/assets/css/styles.css?v=150" />
+  <link rel="stylesheet" href="/assets/css/styles.css?v=160" />
 </head>
 <body data-page="brochures">
   <div data-header></div>
-  <main id="main" class="section">
+  <main id="main" class="page-hero">
     <div class="wrap">
       <div class="page-intro"><span class="eyebrow">A CLOSER LOOK</span><h1>Ideas for your next order.</h1><p>Explore our brochures. Open a design to see the details.</p></div>
-      <div class="brochure-grid" data-brochures></div>
+      <div class="brochure-grid" data-brochures><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+      <div style="height:70px"></div>
     </div>
   </main>
   <div data-footer></div>
   <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lbTitle">
-    <button class="lb-close" type="button">Close</button>
-    <button class="lb-prev" type="button">Previous</button>
+    <button class="lb-close" type="button" aria-label="Close">Close</button>
+    <button class="lb-prev" type="button" aria-label="Previous">Previous</button>
     <img alt="" />
-    <button class="lb-next" type="button">Next</button>
+    <button class="lb-next" type="button" aria-label="Next">Next</button>
     <p id="lbTitle"></p>
   </div>
   <script src="/assets/js/site-content.js"></script>
   <script src="/assets/js/gallery.js"></script>
-  <script src="/assets/js/site.js?v=150"></script>
+  <script src="/assets/js/site.js?v=160"></script>
 </body>
 </html>

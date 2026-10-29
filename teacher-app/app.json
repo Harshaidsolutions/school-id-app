@@ -2,7 +2,7 @@
   "expo": {
     "name": "My School ID Card",
     "slug": "teacher-app",
-    "version": "1.0.158",
+    "version": "1.0.159",
     "orientation": "default",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "automatic",
@@ -20,7 +20,7 @@
       }
     },
     "splash": {
-      "backgroundColor": "#FF8C1A"
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": true,
@@ -31,7 +31,7 @@
       }
     },
     "android": {
-      "versionCode": 158,
+      "versionCode": 159,
       "package": "com.schoolid.teacher",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
@@ -57,7 +57,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FF8C1A"
+          "backgroundColor": "#FFFFFF"
         }
       ],
       [
@@ -83,7 +83,7 @@
         "expo-notifications",
         {
           "icon": "./assets/android-icon-monochrome.png",
-          "color": "#FF8C1A",
+          "color": "#2563EB",
           "defaultChannel": "harsha_teacher_alerts_v2",
           "sounds": []
         }

@@ -1,3 +1,4 @@
+import { contentMaxStyle } from "../theme/responsive";
 import { Pressable } from "../components/Pressable";
 import { setNotificationPreference, useNotificationPreference } from "../utils/notificationPreference";
 import { useEffect, useState } from "react";
@@ -119,7 +120,7 @@ export function SettingsScreen({ navigation }: Props) {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[
+        contentContainerStyle={[contentMaxStyle, 
           styles.scrollContent,
           { paddingBottom: spacing.xxl + insets.bottom },
         ]}

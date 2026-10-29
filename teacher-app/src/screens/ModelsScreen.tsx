@@ -33,7 +33,7 @@ import type { RootStackParamList, MainTabParamList } from "../navigation/types";
 import { cardShadow, radius, spacing } from "../theme/colors";
 import { fonts, textStyles, type as typeScale } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
-import { gridItemWidth } from "../theme/responsive";
+import { gridItemWidth, responsiveColumns } from "../theme/responsive";
 import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
 
@@ -76,7 +76,8 @@ export function ModelsScreen() {
   const { width } = useWindowDimensions();
   const gap = spacing.cardGap;
   const pad = spacing.md;
-  const cardWidth = gridItemWidth(2, pad, gap, width);
+  const modelCols = responsiveColumns(width, 2);
+  const cardWidth = gridItemWidth(modelCols, pad, gap, width);
 
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [selectedTagNames, setSelectedTagNames] = useState<string[]>([]);
@@ -297,11 +298,11 @@ export function ModelsScreen() {
       </View>
 
       <FlatList
-        key={modelTab}
+        key={`${modelTab}-${modelCols}`}
         ref={listRef}
         data={modelNames}
         keyExtractor={(item) => item}
-        numColumns={modelTab === "tags" ? 1 : 2}
+        numColumns={modelTab === "tags" ? 1 : modelCols}
         columnWrapperStyle={modelTab === "tags" ? undefined : styles.row}
         contentContainerStyle={styles.grid}
         refreshControl={
@@ -544,7 +545,7 @@ function useModelsStyles() {
     borderRadius: radius.lg,
     overflow: "hidden",
     elevation: 2,
-    shadowColor: "#65568D",
+    shadowColor: "#1E293B",
     shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -593,7 +594,7 @@ function useModelsStyles() {
   },
   tagPreviewImage: {
     height: hp(52),
-    backgroundColor: "#F1F3FA",
+    backgroundColor: "#F0F2F6",
   },
   tabsWrap: {
     paddingHorizontal: spacing.md,

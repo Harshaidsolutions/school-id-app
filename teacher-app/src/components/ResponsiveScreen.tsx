@@ -1,3 +1,4 @@
+import { contentMaxStyle } from "../theme/responsive";
 import { useTheme } from "../theme/ThemeContext";
 import type { ReactNode } from "react";
 import {
@@ -47,7 +48,7 @@ export function ResponsiveScreen({
     <ScrollView
       {...scrollProps}
       style={styles.flex}
-      contentContainerStyle={[
+      contentContainerStyle={[contentMaxStyle, 
         { paddingHorizontal: pagePad },
         centerContent && styles.scrollCenter,
         contentStyle,

@@ -1,3 +1,4 @@
+import { contentMaxStyle } from "../theme/responsive";
 import { Pressable } from "../components/Pressable";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -173,7 +174,7 @@ export function AddDetailsScreen({ navigation, route }: Props) {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={[styles.scroll, contentMaxStyle]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}

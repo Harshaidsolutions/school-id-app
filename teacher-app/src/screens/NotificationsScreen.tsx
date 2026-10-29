@@ -1,3 +1,5 @@
+import { contentMaxStyle } from "../theme/responsive";
+import { Entrance } from "../components/Entrance";
 import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
@@ -93,7 +95,7 @@ function formatTimestamp(value: string | null): string {
 }
 
 export function NotificationsScreen({ navigation, route }: Props) {
-  const { colors, fabGradient } = useTheme();
+  const { colors, submitGradient } = useTheme();
   const { modalWidth } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -289,7 +291,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
             tintColor={colors.brandGreen}
           />
         }
-        contentContainerStyle={[
+        contentContainerStyle={[contentMaxStyle, 
           styles.list,
           items.length === 0 && styles.listEmpty,
           { paddingBottom: spacing.navHeight + spacing.xxl + insets.bottom },
@@ -306,10 +308,11 @@ export function NotificationsScreen({ navigation, route }: Props) {
             </Text>
           </View>
         }
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
           const unread = !item.is_read;
           const iconConfig = getNotifIcon(item.title, colors);
           return (
+            <Entrance delay={index * 50}>
             <Pressable
               style={[
                 styles.card,
@@ -394,6 +397,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
                 />
               ) : null}
             </Pressable>
+            </Entrance>
           );
         }}
       />
@@ -413,7 +417,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
             style={[styles.markAllWrap, { shadowColor: colors.brandGreen }]}
           >
             <LinearGradient
-              colors={[...fabGradient]}
+              colors={[...submitGradient]}
               start={{ x: 0, y: 0.5 }}
               end={{ x: 1, y: 0.5 }}
               style={styles.markAllBtn}
@@ -509,7 +513,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     elevation: 2,
-    shadowColor: "#65568D",
+    shadowColor: "#1E293B",
     shadowOpacity: 0.06,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },

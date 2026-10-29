@@ -33,7 +33,7 @@ async function ensureAndroidChannel(): Promise<void> {
     importance: Notifications.AndroidImportance.MAX,
     sound: "default",
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: "#FF8C1A",
+    lightColor: "#2563EB",
     enableVibrate: true,
     showBadge: true,
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,

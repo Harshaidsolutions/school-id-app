@@ -1,7 +1,8 @@
 /**
- * Typography tokens — only Poppins + Inter (no third family).
+ * Typography tokens — Outfit (headings) + Inter (body).
+ * Outfit ships as bundled TTFs (Regular/Bold); Poppins stays loaded only as a fallback.
  *
- * --font-heading (Poppins): headers, section titles, buttons, badges,
+ * --font-heading (Outfit): headers, section titles, buttons, badges,
  *   logo text, onboarding headlines, card/row titles
  * --font-body (Inter): body, field labels, inputs, placeholders,
  *   descriptions, tab labels, secondary/meta
@@ -9,15 +10,15 @@
 import { colors } from "./colors";
 import { scale as s } from "./responsive";
 
-export const fontHeading = "Poppins";
+export const fontHeading = "Outfit";
 export const fontBody = "Inter";
 
 export const fonts = {
-  /** Poppins — heading roles */
-  poppinsMedium: "Poppins_500Medium",
-  poppinsSemiBold: "Poppins_600SemiBold",
-  poppinsBold: "Poppins_700Bold",
-  poppinsExtraBold: "Poppins_800ExtraBold",
+  /** Outfit — heading roles (key names kept for compatibility) */
+  poppinsMedium: "Outfit_400Regular",
+  poppinsSemiBold: "Outfit_700Bold",
+  poppinsBold: "Outfit_700Bold",
+  poppinsExtraBold: "Outfit_700Bold",
 
   /** Inter — body roles */
   interRegular: "Inter_400Regular",
@@ -26,13 +27,13 @@ export const fonts = {
 
   /**
    * Role aliases (prefer textStyles):
-   * heading weights → Poppins; body weights → Inter
+   * heading weights → Outfit; body weights → Inter
    */
-  heading: "Poppins_700Bold",
-  headingMedium: "Poppins_500Medium",
-  headingSemiBold: "Poppins_600SemiBold",
-  headingBold: "Poppins_700Bold",
-  headingExtraBold: "Poppins_800ExtraBold",
+  heading: "Outfit_700Bold",
+  headingMedium: "Outfit_400Regular",
+  headingSemiBold: "Outfit_700Bold",
+  headingBold: "Outfit_700Bold",
+  headingExtraBold: "Outfit_700Bold",
 
   body: "Inter_400Regular",
   bodyMedium: "Inter_500Medium",
@@ -41,10 +42,10 @@ export const fonts = {
   /** Legacy aliases used across screens */
   regular: "Inter_400Regular",
   medium: "Inter_500Medium",
-  /** Row/card titles & buttons → Poppins */
-  semiBold: "Poppins_600SemiBold",
-  bold: "Poppins_700Bold",
-  extraBold: "Poppins_800ExtraBold",
+  /** Row/card titles & buttons → Outfit */
+  semiBold: "Outfit_700Bold",
+  bold: "Outfit_700Bold",
+  extraBold: "Outfit_700Bold",
 } as const;
 
 export const type = {
@@ -94,7 +95,7 @@ export const textStyles = {
     color: colors.sectionOrange,
     textTransform: "none" as const,
   },
-  /** Card / row titles — Poppins */
+  /** Card / row titles — Outfit */
   h3: {
     fontFamily: fonts.headingSemiBold,
     fontSize: type.rowTitle,

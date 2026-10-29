@@ -110,7 +110,7 @@ export function PreviewScreen({ navigation, route }: Props) {
   if (photoOnly) {
     return (
       <>
-        <View style={[styles.confirmRoot, { backgroundColor: "#65568D" }]}>
+        <View style={[styles.confirmRoot, { backgroundColor: "#111827" }]}>
           <Image source={{ uri: photoUri }} style={styles.fullPhoto} resizeMode="contain" />
 
           <View

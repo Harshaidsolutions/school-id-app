@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, View } from "react-native";
+import { Animated, Easing, Image, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { AppIcon } from "../components/AppIcon";
+import { FloatingShapes } from "../components/FloatingShapes";
 import { BrandLockup } from "../components/BrandLockup";
 import { BRAND } from "../constants/brand";
 import { loginLogoSize } from "../constants/headerLogo";
@@ -16,7 +17,7 @@ type Props = {
 
 /**
  * Branded intro — login logo + wordmark on gradient.
- * Native Android splash shows solid orange only; this screen follows immediately.
+ * Native Android splash shows solid deep blue only; this screen follows immediately.
  */
 export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
   const styles = useLaunchSplashStyles();
@@ -58,13 +59,18 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
 
   return (
     <LinearGradient
-      colors={["#FF8C1A", "#7650ED", "#25A59C", "#168B86"]}
-      locations={[0, 0.38, 0.72, 1]}
+      colors={["#FFFFFF", "#EEF2F9"]}
+      locations={[0, 1]}
       start={{ x: 0.1, y: 0 }}
       end={{ x: 0.9, y: 1 }}
       style={styles.root}
       onLayout={signalReady}
     >
+      <FloatingShapes color="#2563EB" shapes={[
+        { kind: "ring", size: 280, top: -110, right: -100, drift: 10, duration: 6000, opacity: 0.06 },
+        { kind: "ring", size: 200, bottom: -80, left: -80, drift: 8, duration: 7000, delay: 400, opacity: 0.05 },
+        { kind: "dot", size: 12, top: "26%", right: "20%", drift: 10, duration: 3600, opacity: 0.9 },
+      ]} />
       {fontsReady ? (
         <Animated.View
           style={[
@@ -82,7 +88,7 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
               },
             ]}
           >
-
+            <Image source={require("../../assets/app-icon.png")} style={{ width: Math.round(circleSize * 0.78), height: Math.round(circleSize * 0.78), borderRadius: Math.round(circleSize * 0.39) }} resizeMode="contain" accessibilityLabel="My School ID Card" />
           </View>
           <BrandLockup
             variant="splash"
@@ -114,6 +120,13 @@ function useLaunchSplashStyles() {
       backgroundColor: "#FFFFFF",
       alignItems: "center",
       justifyContent: "center",
+      borderWidth: 1,
+      borderColor: "#E4E8F0",
+      shadowColor: "#1E293B",
+      shadowOpacity: 0.12,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 12 },
+      elevation: 12,
     },
   }));
 }

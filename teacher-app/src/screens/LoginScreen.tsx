@@ -18,7 +18,8 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { FloatingShapes } from "../components/FloatingShapes";
 import api, { getErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { AppIcon } from "../components/AppIcon";
@@ -47,7 +48,9 @@ const REMEMBER_FLAG = "teacher_remember_me";
 
 export function LoginScreen(_props: Props) {
   const styles = useLoginStyles();
-  const { colors } = useTheme();
+  const { colors, isDark, submitGradient } = useTheme();
+  const insets = useSafeAreaInsets();
+  const [focused, setFocused] = useState<"user" | "pass" | null>(null);
   const { width } = useResponsiveLayout();
   const logoSize = loginLogoSize(width);
   const { login } = useAuth();
@@ -138,7 +141,7 @@ export function LoginScreen(_props: Props) {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["top", "bottom"]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["bottom"]}>
       <KeyboardDismissView style={styles.flex}>
         <KeyboardAvoidingView
           style={styles.flex}
@@ -149,99 +152,125 @@ export function LoginScreen(_props: Props) {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.identityPanel}>
-            <BrandLockup
-              variant="hero"
-              harshaColor={colors.textPrimary}
-              solutionsColor={colors.primaryOrange}
-              taglineColor={colors.textMuted}
-              title={BRAND.appName}
-              subtitle={BRAND.headerSubtitle}
-              showTagline={false}
-              singleLine
-              style={{ marginTop: spacing.sm }}
-            />
+            <LinearGradient colors={isDark ? ["#131C2E", "#0B1220"] : ["#FFFFFF", "#EEF2F9"]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[styles.hero, { paddingTop: insets.top + spacing.xl }]}>
+              <FloatingShapes color={isDark ? "#FFFFFF" : colors.primaryOrange} />
+              <View style={styles.heroAccent} />
+              <Entrance style={styles.identityPanel}>
+                <View style={styles.logoCard}>
+                  <BrandLockup
+                    variant="hero"
+                    harshaColor={colors.textPrimary}
+                    solutionsColor={colors.primaryOrange}
+                    taglineColor={colors.textMuted}
+                    title={BRAND.appName}
+                    subtitle={BRAND.headerSubtitle}
+                    showTagline={false}
+                    singleLine
+                  />
+                </View>
+              </Entrance>
+            </LinearGradient>
 
-            </View>
-            <Entrance style={styles.authPanel}>
-            <Text style={styles.title}>Welcome Back!</Text>
-            <Text style={styles.subtitle}>Login to continue</Text>
+            <Entrance style={styles.authPanel} delay={120}>
+              <View style={styles.titleBadge}>
+                <Ionicons name="shield-checkmark" size={14} color={colors.orangeDark} />
+                <Text style={styles.titleBadgeText}>Teacher & staff login</Text>
+              </View>
+              <Text style={styles.title}>Welcome Back!</Text>
+              <Text style={styles.subtitle}>Login to continue</Text>
 
-            <View style={styles.formGroup}>
-              <View style={styles.formRow}>
-                <Ionicons name="person-outline" size={18} color="#7A83A0" />
+              <View style={[styles.field, focused === "user" && styles.fieldFocused]}>
+                <View style={[styles.fieldIcon, focused === "user" && styles.fieldIconFocused]}>
+                  <Ionicons name="person" size={17} color={focused === "user" ? "#FFFFFF" : colors.primaryOrange} />
+                </View>
                 <TextInput
                   style={styles.input}
                   placeholder="Username"
-                  placeholderTextColor="#B0B8C4"
+                  placeholderTextColor={colors.textPlaceholder}
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardType="default"
                   value={username}
                   onChangeText={setUsername}
+                  onFocus={() => setFocused("user")}
+                  onBlur={() => setFocused(null)}
                 />
               </View>
-              <View style={styles.formDivider} />
-              <View style={styles.formRow}>
-                <Ionicons name="lock-closed-outline" size={18} color="#7A83A0" />
+              <View style={[styles.field, focused === "pass" && styles.fieldFocused]}>
+                <View style={[styles.fieldIcon, focused === "pass" && styles.fieldIconFocused]}>
+                  <Ionicons name="lock-closed" size={16} color={focused === "pass" ? "#FFFFFF" : colors.primaryOrange} />
+                </View>
                 <TextInput
                   style={styles.input}
                   placeholder="Password"
-                  placeholderTextColor="#B0B8C4"
+                  placeholderTextColor={colors.textPlaceholder}
                   secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
+                  onFocus={() => setFocused("pass")}
+                  onBlur={() => setFocused(null)}
                 />
-                <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+                <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8} accessibilityLabel={showPassword ? "Hide password" : "Show password"}>
                   <Ionicons
                     name={showPassword ? "eye-off-outline" : "eye-outline"}
                     size={20}
-                    color="#7A83A0"
+                    color={colors.textMuted}
                   />
                 </Pressable>
               </View>
-            </View>
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+              {error ? (
+                <View style={styles.errorBox}>
+                  <Ionicons name="alert-circle" size={18} color={colors.danger} />
+                  <Text style={styles.error}>{error}</Text>
+                </View>
+              ) : null}
 
-            <Pressable
-              onPress={() => void handleLogin()}
-              disabled={loading}
-              style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
-            >
-              <LinearGradient colors={["#833BFA", "#517CFF"]} start={{x:0,y:0}} end={{x:1,y:1}} style={styles.loginGradient}>
-              <Text style={styles.loginBtnText}>
-                {loading ? "Logging in…" : "Login"}
-              </Text>
-              </LinearGradient>
-            </Pressable>
-
+              <Pressable
+                onPress={() => void handleLogin()}
+                disabled={loading}
+                style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
+              >
+                <LinearGradient colors={[...submitGradient]} start={{x:0,y:0}} end={{x:1,y:1}} style={styles.loginGradient}>
+                  <Text style={styles.loginBtnText}>
+                    {loading ? "Logging in…" : "Login"}
+                  </Text>
+                  {!loading ? <View style={styles.loginArrow}><Ionicons name="arrow-forward" size={18} color="#FFFFFF" /></View> : null}
+                </LinearGradient>
+              </Pressable>
             </Entrance>
-            <ServiceRegistration />
-            <Text style={styles.contactPrompt}>
-              Please contact us if you want login
-            </Text>
 
-            <View style={styles.contactBtns}>
-              <Pressable style={styles.waBtn} onPress={handleWhatsAppPress}>
-                <Ionicons name="logo-whatsapp" size={20} color="#FFFFFF" />
-                <Text style={styles.contactBtnText}>WhatsApp</Text>
-              </Pressable>
-              <Pressable style={styles.callBtn} onPress={openCall}>
-                <Ionicons name="call" size={18} color="#FFFFFF" />
-                <Text style={styles.contactBtnText}>Call</Text>
-              </Pressable>
-            </View>
+            <Entrance style={styles.below} delay={240}>
+              <ServiceRegistration />
+              <View style={styles.contactCard}>
+                <Text style={styles.contactPrompt}>
+                  Please contact us if you want login
+                </Text>
 
-            <Pressable style={styles.contactRow} onPress={openWebsite}>
-              <Ionicons name="globe-outline" size={18} color="#7650ED" />
-              <Text style={styles.contactText}>www.harshaidsolutions.in</Text>
-            </Pressable>
+                <View style={styles.contactBtns}>
+                  <Pressable style={styles.waBtn} onPress={handleWhatsAppPress}>
+                    <Ionicons name="logo-whatsapp" size={20} color="#FFFFFF" />
+                    <Text style={styles.contactBtnText}>WhatsApp</Text>
+                  </Pressable>
+                  <Pressable style={styles.callBtn} onPress={openCall}>
+                    <Ionicons name="call" size={18} color={colors.primaryOrange} />
+                    <Text style={[styles.contactBtnText, { color: colors.primaryOrange }]}>Call</Text>
+                  </Pressable>
+                </View>
 
-            <Pressable style={styles.contactRow} onPress={openMail}>
-              <Ionicons name="mail" size={18} color="#7650ED" />
-              <Text style={styles.contactText}>{SUPPORT_EMAIL}</Text>
-            </Pressable>
+                <View style={styles.linkRow}>
+                  <Pressable style={styles.contactRow} onPress={openWebsite}>
+                    <Ionicons name="globe-outline" size={16} color={colors.primaryOrange} />
+                    <Text style={styles.contactText} numberOfLines={1}>www.harshaidsolutions.in</Text>
+                  </Pressable>
+
+                  <Pressable style={styles.contactRow} onPress={openMail}>
+                    <Ionicons name="mail-outline" size={16} color={colors.primaryOrange} />
+                    <Text style={styles.contactText} numberOfLines={1}>{SUPPORT_EMAIL}</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </Entrance>
           </ScrollView>
         </KeyboardAvoidingView>
       </KeyboardDismissView>
@@ -258,100 +287,142 @@ function useLoginStyles() {
       flex: { flex: 1 },
       scroll: {
         flexGrow: 1,
-        justifyContent: "center",
         alignItems: "center",
-        paddingHorizontal: spacing.pagePad,
-        paddingVertical: spacing.lg,
+        paddingBottom: spacing.xl,
       },
-      identityPanel: { alignItems: "center", width: formW, paddingBottom: spacing.lg },
-      authPanel: { width: formW, padding: spacing.lg, backgroundColor: colors.surface, borderRadius: scale(28), borderWidth: 1, borderColor: "#E5E3F3", ...cardShadow },
+      hero: {
+        width: "100%",
+        alignItems: "center",
+        paddingBottom: scale(84),
+        borderBottomLeftRadius: scale(32),
+        borderBottomRightRadius: scale(32),
+        overflow: "hidden",
+      },
+      identityPanel: { alignItems: "center", width: formW },
+      logoCard: {
+        alignItems: "center",
+        paddingHorizontal: spacing.xs,
+      },
+      heroAccent: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: 3,
+        backgroundColor: colors.brandOrange,
+        opacity: 0.85,
+      },
+      authPanel: {
+        width: formW,
+        marginTop: -scale(56),
+        borderWidth: 1,
+        borderColor: colors.border,
+        padding: spacing.lg,
+        backgroundColor: colors.surface,
+        borderRadius: scale(28),
+        shadowColor: "#1E293B",
+        shadowOpacity: 0.12,
+        shadowRadius: 24,
+        shadowOffset: { width: 0, height: 12 },
+        elevation: 6,
+      },
+      titleBadge: {
+        alignSelf: "center",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: scale(5),
+        borderRadius: radius.full,
+        backgroundColor: colors.orangeSoft,
+      },
+      titleBadgeText: { fontFamily: fonts.headingSemiBold, fontSize: scale(12), color: colors.orangeDark },
       title: {
         marginTop: spacing.sm,
-        fontSize: scale(25),
-        fontFamily: fonts.headingBold,
+        fontSize: scale(28),
+        letterSpacing: -0.3,
+        fontFamily: fonts.headingExtraBold,
         textAlign: "center",
         color: colors.textPrimary,
       },
       subtitle: {
-        marginTop: scale(4),
-        marginBottom: spacing.md,
+        marginTop: scale(2),
+        marginBottom: spacing.lg,
         fontFamily: fonts.body,
         fontSize: typeScale.subtitle,
         color: colors.textMuted,
         textAlign: "center",
       },
-      formGroup: {
-        width: "100%",
-        alignSelf: "center",
-        backgroundColor: colors.surface,
-        borderRadius: radius.card,
-        borderWidth: 1,
-        borderColor: "#E5E3F3",
-        marginBottom: spacing.sm,
-        overflow: "hidden",
-        ...cardShadow,
-      },
-      formRow: {
+      field: {
         flexDirection: "row",
         alignItems: "center",
-        paddingHorizontal: spacing.md,
         gap: spacing.sm,
-        minHeight: scale(52),
+        minHeight: scale(56),
+        paddingLeft: scale(8),
+        paddingRight: spacing.md,
+        marginBottom: spacing.sm,
+        borderRadius: scale(18),
+        borderWidth: 1.5,
+        borderColor: colors.border,
+        backgroundColor: colors.inputBg,
       },
-      formDivider: {
-        height: 1,
-        backgroundColor: "#E5E3F3",
-        marginHorizontal: spacing.md,
-      },
+      fieldFocused: { borderColor: colors.primaryOrange, backgroundColor: colors.surface },
+      fieldIcon: { width: scale(40), height: scale(40), borderRadius: scale(13), alignItems: "center", justifyContent: "center", backgroundColor: colors.blueSoft },
+      fieldIconFocused: { backgroundColor: colors.primaryOrange },
       input: {
         flex: 1,
         ...textStyles.input,
         color: colors.textPrimary,
         paddingVertical: Platform.OS === "ios" ? spacing.sm : spacing.xs,
       },
+      errorBox: { flexDirection: "row", alignItems: "flex-start", gap: spacing.xs, padding: spacing.sm, borderRadius: scale(14), backgroundColor: colors.dangerSoft, marginBottom: spacing.sm },
       error: {
-        marginBottom: spacing.xs,
-        fontFamily: fonts.body,
-        fontSize: typeScale.body,
-        color: "#DC2626",
-        textAlign: "center",
-        width: "100%",
+        flex: 1,
+        fontFamily: fonts.bodyMedium,
+        fontSize: typeScale.label,
+        color: colors.danger,
       },
       loginBtn: {
         width: "100%",
         alignSelf: "center",
-        backgroundColor: "#7650ED",
-        borderRadius: radius.full,
-        minHeight: scale(54),
-        alignItems: "center",
-        justifyContent: "center",
+        borderRadius: scale(18),
+        minHeight: scale(56),
         marginTop: spacing.xs,
-        elevation: 2,
-        shadowColor: "#7650ED",
-        shadowOpacity: 0.25,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 2 },
+        overflow: "hidden",
+        elevation: 6,
+        shadowColor: "#1E293B",
+        shadowOpacity: 0.35,
+        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 8 },
       },
-      loginGradient: { width: "100%", minHeight: scale(54), paddingVertical: spacing.sm, borderRadius: radius.full, alignItems: "center", justifyContent: "center" },
+      loginGradient: { width: "100%", minHeight: scale(56), paddingVertical: spacing.sm, borderRadius: scale(18), flexDirection: "row", gap: spacing.sm, alignItems: "center", justifyContent: "center" },
+      loginArrow: { width: scale(28), height: scale(28), borderRadius: scale(14), backgroundColor: "rgba(255,255,255,0.22)", alignItems: "center", justifyContent: "center" },
       loginBtnDisabled: { opacity: 0.65 },
       loginBtnText: {
         ...textStyles.button,
         color: "#FFFFFF",
       },
+      below: { width: formW, alignItems: "center" },
+      contactCard: {
+        width: "100%",
+        marginTop: spacing.md,
+        padding: spacing.md,
+        borderRadius: scale(24),
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+      },
       contactPrompt: {
         textAlign: "center",
-        fontFamily: fonts.body,
-        fontSize: typeScale.subtitle,
+        fontFamily: fonts.headingSemiBold,
+        fontSize: typeScale.label,
         color: colors.textPrimary,
-        marginTop: spacing.md,
         marginBottom: spacing.sm,
-        width: formW,
       },
       contactBtns: {
         flexDirection: "row",
         gap: spacing.sm,
         marginBottom: spacing.sm,
-        width: formW,
       },
       waBtn: {
         flex: 1,
@@ -359,9 +430,9 @@ function useLoginStyles() {
         alignItems: "center",
         justifyContent: "center",
         gap: spacing.xs,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.buttonPill,
-        backgroundColor: "#287F79",
+        minHeight: scale(48),
+        borderRadius: scale(16),
+        backgroundColor: colors.whatsappGreen,
       },
       callBtn: {
         flex: 1,
@@ -369,27 +440,28 @@ function useLoginStyles() {
         alignItems: "center",
         justifyContent: "center",
         gap: spacing.xs,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.buttonPill,
-        backgroundColor: "#7650ED",
+        minHeight: scale(48),
+        borderRadius: scale(16),
+        backgroundColor: colors.blueSoft,
       },
       contactBtnText: {
         fontFamily: fonts.headingSemiBold,
         fontSize: typeScale.body,
         color: "#FFFFFF",
       },
+      linkRow: { gap: scale(6), alignItems: "center" },
       contactRow: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
         gap: spacing.xs,
-        marginBottom: spacing.xs,
-        width: formW,
+        paddingVertical: scale(4),
+        maxWidth: "100%",
       },
       contactText: {
-        fontFamily: fonts.body,
-        fontSize: typeScale.subtitle,
-        color: colors.textPrimary,
+        fontFamily: fonts.bodyMedium,
+        fontSize: typeScale.label,
+        color: colors.textBody,
       },
     };
   }, [colors]);

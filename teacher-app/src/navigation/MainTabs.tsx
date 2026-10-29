@@ -1,5 +1,6 @@
 import { useReducedMotion } from "../hooks/useReducedMotion";
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, StyleSheet, Text, View } from "react-native";
 import { Pressable } from "../components/Pressable";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -54,7 +55,7 @@ const TAB_CONFIG: {
   },
 ];
 
-function CustomTabBar({ state, navigation }: BottomTabBarProps) {
+export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const rootNav =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
@@ -67,7 +68,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         styles.bar,
         {
           backgroundColor: colors.tabBarBg,
-          borderTopColor: colors.border,
+          borderColor: colors.border,
           paddingBottom: bottomPad,
           minHeight: spacing.navHeight + bottomPad,
         },
@@ -90,32 +91,48 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
                 colors={[...fabGradient]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.fab}
+                style={[styles.fab, { borderColor: colors.tabBarBg }]}
               >
-                <Ionicons name="add" size={icons.xxl} color="#FFFFFF" />
+                <Ionicons name="add" size={icons.xxl} color="#1E293B" />
               </LinearGradient>
             </Pressable>
           );
         }
 
-        const tint = isFocused ? colors.tabActive : colors.tabInactive;
-
         return (
-          <Pressable
+          <TabItem
             key={route.key}
+            focused={isFocused}
+            icon={isFocused ? config.iconFocused : config.icon}
+            label={config.label}
             onPress={() => navigation.navigate(route.name)}
-            style={[styles.item, {backgroundColor:isFocused ? colors.purpleSoft : "transparent",borderRadius:16,marginHorizontal:3}]}
-          >
-            <Ionicons
-              name={isFocused ? config.iconFocused : config.icon}
-              size={icons.lg}
-              color={tint}
-            />
-            <Text style={[styles.label, { color: tint }]}>{config.label}</Text>
-          </Pressable>
+          />
         );
       })}
     </View>
+  );
+}
+
+function TabItem({ focused, icon, label, onPress }: { focused: boolean; icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) {
+  const { colors } = useTheme();
+  const reducedMotion = useReducedMotion();
+  const anim = useRef(new Animated.Value(focused ? 1 : 0)).current;
+  useEffect(() => {
+    if (reducedMotion) { anim.setValue(focused ? 1 : 0); return; }
+    const a = Animated.spring(anim, { toValue: focused ? 1 : 0, useNativeDriver: true, speed: 18, bounciness: 8 });
+    a.start();
+    return () => a.stop();
+  }, [anim, focused, reducedMotion]);
+  const tint = focused ? colors.tabActive : colors.tabInactive;
+  const scale = anim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] });
+  const lift = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -2] });
+  return (
+    <Pressable onPress={onPress} style={styles.item} accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={label}>
+      <Animated.View style={[styles.iconPill, { backgroundColor: focused ? colors.blueSoft : "transparent", transform: [{ translateY: lift }, { scale }] }]}>
+        <Ionicons name={icon} size={icons.lg} color={tint} />
+      </Animated.View>
+      <Text style={[styles.label, { color: tint }, focused && styles.labelActive]} numberOfLines={1}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -140,41 +157,58 @@ export function MainTabs() {
 const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
-    borderTopWidth: 1,
-    borderTopLeftRadius:24,
-    borderTopRightRadius:24,
-    paddingHorizontal:8,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 8,
     paddingTop: moderateScale(8),
     alignItems: "center",
+    shadowColor: "#1E293B",
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 16,
   },
   item: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 52,
     minWidth: 0,
     alignItems: "center",
     justifyContent: "center",
-    gap: moderateScale(4),
-    paddingVertical: moderateScale(4),
+    gap: moderateScale(2),
+    paddingVertical: moderateScale(2),
+  },
+  iconPill: {
+    width: moderateScale(48),
+    height: moderateScale(32),
+    borderRadius: moderateScale(16),
+    alignItems: "center",
+    justifyContent: "center",
   },
   label: {
     ...textStyles.nav,
     textAlign: "center",
   },
+  labelActive: {
+    fontFamily: "Outfit_700Bold",
+  },
   fabWrap: {
     flex: 1,
     alignItems: "center",
-    marginTop: -spacing.fabLift - moderateScale(20),
+    marginTop: -spacing.fabLift - moderateScale(24),
   },
   fab: {
-    width: spacing.fabSize,
-    height: spacing.fabSize,
-    borderRadius: spacing.fabSize / 2,
+    width: spacing.fabSize + 6,
+    height: spacing.fabSize + 6,
+    borderRadius: (spacing.fabSize + 6) / 2,
     alignItems: "center",
     justifyContent: "center",
-    elevation: 8,
-    shadowColor: "#7650ED",
-    shadowOpacity: 0.18,
-    shadowRadius: moderateScale(10),
-    shadowOffset: { width: 0, height: moderateScale(4) },
+    borderWidth: 4,
+    elevation: 10,
+    shadowColor: "#F59E0B",
+    shadowOpacity: 0.4,
+    shadowRadius: moderateScale(12),
+    shadowOffset: { width: 0, height: moderateScale(6) },
   },
 });

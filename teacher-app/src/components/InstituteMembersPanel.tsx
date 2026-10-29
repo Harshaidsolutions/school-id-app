@@ -26,7 +26,7 @@ import type { TeacherStudent } from "../types";
 import { radius, spacing } from "../theme/colors";
 import { fonts, type as typeScale } from "../theme/typography";
 import type { AppColors } from "../theme/palettes";
-import { gridItemWidth } from "../theme/responsive";
+import { gridItemWidth, responsiveColumns } from "../theme/responsive";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
 import {
   getCachedStudents,
@@ -47,7 +47,7 @@ import {
 } from "../utils/recordStatus";
 
 const INSTITUTE_CACHE_KEY = "__institute__";
-const NUM_COLS = 2;
+const PHONE_COLS = 2;
 
 type TabKey = "all" | "pending-photos" | "pending-data" | "captured";
 
@@ -66,6 +66,7 @@ export function InstituteMembersPanel({
   const { showToast } = useToast();
   const gridGap = spacing.cardGap;
   const gridPad = spacing.sm;
+  const NUM_COLS = responsiveColumns(width, PHONE_COLS);
   const itemSize = gridItemWidth(NUM_COLS, gridPad, gridGap, width);
 
   const [students, setStudents] = useState<TeacherStudent[]>([]);
@@ -348,6 +349,7 @@ export function InstituteMembersPanel({
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
+        key={`cols-${NUM_COLS}`}
         numColumns={NUM_COLS}
         columnWrapperStyle={styles.gridRow}
         refreshControl={

@@ -1,3 +1,4 @@
+import { contentMaxStyle } from "../theme/responsive";
 import { useRef } from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,7 +26,7 @@ export function AddStudentScreen({ navigation, route }: Props) {
       <KeyboardDismissView style={styles.flex}>
         <KeyboardAwareFormScrollView
           scrollRef={scrollRef}
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={[styles.scroll, contentMaxStyle]}
           showsVerticalScrollIndicator={false}
           persistentScrollbar={false}
         >

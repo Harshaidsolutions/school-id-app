@@ -30,7 +30,7 @@ export function IdCardsProgressSection({
             styles.fill,
             {
               width: `${pct}%`,
-              backgroundColor: colors.brandGreen,
+              backgroundColor: colors.brandOrange,
             },
           ]}
         />
