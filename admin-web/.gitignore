@@ -4,3 +4,7 @@ dist
 *.local
 .env
 .env.*
+
+# Photo AI virtualenv created on the server by scripts/setup-photo-ai.sh
+backend/.photo-ai/
+__pycache__/

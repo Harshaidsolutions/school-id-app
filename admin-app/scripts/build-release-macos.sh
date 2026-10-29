@@ -37,8 +37,8 @@ import json,sys
 with open(sys.argv[2],'w') as f:
  json.dump([{'relation':['delegate_permission/common.handle_all_urls'],'target':{'namespace':'android_app','package_name':'com.schoolid.admin','sha256_cert_fingerprints':[sys.argv[1]]}}],f,indent=2)
 PY
-cp "$APK" "$HOME/Desktop/MySchoolIDCard-Admin-v1.0.0.apk"
-echo "APK saved: $HOME/Desktop/MySchoolIDCard-Admin-v1.0.0.apk"
+cp "$APK" "$HOME/Desktop/MySchoolIDCard-Admin-v1.1.0.apk"
+echo "APK saved: $HOME/Desktop/MySchoolIDCard-Admin-v1.1.0.apk"
 echo "Association file: $APP_DIR/output/assetlinks.json"
 echo 'Back up ~/.school-id-admin-signing/admin-release.jks and your password securely.'
 echo 'Deploy the certificate association on EC2 before testing fullscreen mode. See admin-app/README.md.'

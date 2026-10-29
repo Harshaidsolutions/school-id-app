@@ -1245,7 +1245,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   ) : null}
                   <td className="col-sno text-text-muted">{serial}</td>
                   {enabledFields.map((field) => (
-                    <td key={field.key} className={fieldColumnClass(field)}>
+                    <td key={field.key} className={fieldColumnClass(field)} data-label={field.label}>
                       {field.key === "signature_upload" ? (
                         <SignatureThumb student={student} onOpen={() => setSignatureStudent(student)} />
                       ) : isIdentityColumn(field) ? (
@@ -1278,7 +1278,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                       )}
                     </td>
                   ))}
-                  <td className="col-captured">
+                  <td className="col-captured" data-label="Captured">
                     {captured ? (
                       <span
                         className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-green-soft text-royal-green"
@@ -1295,7 +1295,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                       </span>
                     )}
                   </td>
-                  <td className="col-field">
+                  <td className="col-field" data-label="Created">
                     {(() => {
                       const created = student.photo_url?.trim()
                         ? formatCreated(student.photo_captured_at ?? null)

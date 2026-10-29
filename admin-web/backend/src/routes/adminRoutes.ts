@@ -1,6 +1,17 @@
 import {photoArchiveUpload,importPhotos} from "../controllers/photoImportController";
 import {uploadInstructionMedia,messageTemplates,instructionContent,registrations,setCandidateVisibility} from "../controllers/workspaceToolsController";
 import {getSchoolParentLink, setSchoolParentFormEnabled,createSchoolParentLink} from "../controllers/schoolParentFormController";
+import {
+  convertGeneratorPdfToCmyk,
+  generatorCapabilities,
+  generatorPdfUpload,
+  generatorPhotoUpload,
+  generatorSheetUpload,
+  generatorTemplateImage,
+  parseGeneratorSheet,
+  processGeneratorPhoto,
+  rasterizeGeneratorPdf,
+} from "../controllers/idGeneratorController";
 import { Router } from "express";
 import { authMiddleware, requireRole } from "../middleware/auth";
 import {
@@ -240,6 +251,13 @@ router.patch("/institutes/:id/app-settings", updateInstituteAppSettings);
 router.get("/institutes/:id/organization-info", getInstituteOrganizationInfo);
 
 // Templates (global — shared by all schools)
+// Bulk ID Card Generator
+router.get("/id-generator/capabilities", generatorCapabilities);
+router.post("/id-generator/parse-sheet", generatorSheetUpload, parseGeneratorSheet);
+router.post("/id-generator/process-photo", generatorPhotoUpload, processGeneratorPhoto);
+router.get("/id-generator/template-image/:id", generatorTemplateImage);
+router.post("/id-generator/rasterize-pdf", generatorPdfUpload, rasterizeGeneratorPdf);
+router.post("/id-generator/cmyk-pdf", generatorPdfUpload, convertGeneratorPdfToCmyk);
 router.post("/templates/bulk-delete", bulkDeleteTemplates);
 router.post("/templates", uploadTemplateImageField, createTemplate);
 router.get("/templates", listTemplates);

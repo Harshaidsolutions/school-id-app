@@ -44,7 +44,7 @@
             & .\gradlew.bat assembleRelease
             if ($LASTEXITCODE -ne 0) { throw 'Admin APK build failed. Send the FAILURE section.' }
             $desktop = [Environment]::GetFolderPath('Desktop')
-            $target = Join-Path $desktop 'MySchoolIDCard-Admin-v1.0.0.apk'
+            $target = Join-Path $desktop 'MySchoolIDCard-Admin-v1.1.0.apk'
             Copy-Item '.\app\build\outputs\apk\release\app-release.apk' $target -Force
         } finally { Pop-Location }
         Write-Host "APK saved: $target"

@@ -1,8 +1,8 @@
-# My School ID Admin — Android 1.0.0
+# My School ID Admin — Android 1.1.0
 
 Separate Android package `com.schoolid.admin`. The school/teacher APK is unchanged.
 
-This is an online Trusted Web Activity (TWA), not a separately rewritten native admin frontend. It opens the existing HTTPS admin website with the same login, permissions, records and operations. The phone layout uses the existing responsive navigation and the new lavender/cyan theme with reduced-motion-aware animations. Website deployments update the app's screens without rebuilding its APK. Uploads/downloads and external links use the browser engine rather than custom WebView bridges.
+This is an online Trusted Web Activity (TWA), not a separately rewritten native admin frontend. It opens the existing HTTPS admin website with the same login, permissions, records and operations. The phone layout uses the existing responsive navigation and the green and orange My School ID Card theme with reduced-motion-aware animations. Website deployments update the app's screens without rebuilding its APK. Uploads/downloads and external links use the browser engine rather than custom WebView bridges.
 
 ## Build on Windows
 
@@ -14,7 +14,7 @@ From the repository root:
 powershell -ExecutionPolicy Bypass -File .\admin-app\scripts\build-release.ps1
 ```
 
-The script downloads Gradle through the checked-in wrapper, runs `assembleRelease`, signs the APK, and copies `MySchoolIDCard-Admin-v1.0.0.apk` to your Desktop. On first build choose a signing password. On subsequent builds use the same password. Back up `%USERPROFILE%\.school-id-admin-signing\admin-release.jks` securely; losing it prevents updates to installed copies. Never commit the key or its password.
+The script downloads Gradle through the checked-in wrapper, runs `assembleRelease`, signs the APK, and copies `MySchoolIDCard-Admin-v1.1.0.apk` to your Desktop. On first build choose a signing password. On subsequent builds use the same password. Back up `%USERPROFILE%\.school-id-admin-signing\admin-release.jks` securely; losing it prevents updates to installed copies. Never commit the key or its password.
 
 ## Full-screen verification (required once per signing key)
 
