@@ -391,7 +391,7 @@ export function AppLayout() {
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header
-          className={`app-header z-20 flex shrink-0 items-center gap-4 border-b border-[#E2E8F0] px-4 py-3 sm:px-6 ${
+          className={`app-header z-20 flex shrink-0 items-center gap-4 border-b border-[#E6E4F5] px-4 py-3 sm:px-6 ${
             useLockedPageScroll ? "" : "sticky top-0"
           }`}
         >

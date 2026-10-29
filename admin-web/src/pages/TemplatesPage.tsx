@@ -1,15 +1,52 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
 import { SearchInput } from "../components/ui/SearchInput";
 import { UploadDropzone } from "../components/ui/UploadDropzone";
 import { TemplateFormModal } from "../components/TemplateFormModal";
-import { CatalogPreviewThumb, ImagePreviewModal } from "../components/ImagePreviewModal";
+import { CatalogPreviewThumb, ImagePreviewModal, isPdfUrl } from "../components/ImagePreviewModal";
 import { BulkActionBar, BulkModeButtons, bulkDeleteMessage } from "../components/BulkActionBar";
 import type { ApiErrorBody, Template, TemplateOrientation } from "../types";
 import { TEMPLATE_TABS as TABS } from "../types";
 
 type TemplateTab = TemplateOrientation | "all";
+
+/** PDF templates are rendered to images by the server (page 1 = front, page 2 = back). */
+const pdfPageCache = new Map<string, Promise<string | null>>();
+function pdfPage(templateId: string, page: number): Promise<string | null> {
+  const key = `${templateId}:${page}`;
+  const hit = pdfPageCache.get(key);
+  if (hit) return hit;
+  const created: Promise<string | null> = api
+    .get(`/admin/id-generator/template-image/${templateId}`, { params: { page }, responseType: "blob" })
+    .then((r: { data: Blob }) => URL.createObjectURL(r.data))
+    .catch(() => null);
+  pdfPageCache.set(key, created);
+  return created;
+}
+
+function usePdfPages(template: Template | null, pages: number[]): { urls: (string | null)[]; loading: boolean } {
+  const [state, setState] = useState<{ id: string | null; urls: (string | null)[] }>({ id: null, urls: [] });
+  const isPdf = Boolean(template?.image_url && isPdfUrl(template.image_url));
+  const id = template?.id ?? null;
+  const pageKey = pages.join(",");
+  useEffect(() => {
+    if (!isPdf || !id) return;
+    let live = true;
+    void Promise.all(pageKey.split(",").map((p) => pdfPage(id, Number(p)))).then((urls) => {
+      if (live) setState({ id, urls });
+    });
+    return () => { live = false; };
+  }, [id, isPdf, pageKey]);
+  if (!isPdf || !id) return { urls: [], loading: false };
+  return { urls: state.id === id ? state.urls : [], loading: state.id !== id };
+}
+
+function TemplateThumb({ tpl, onOpen }: { tpl: Template; onOpen: () => void }) {
+  const { urls } = usePdfPages(tpl, [1]);
+  return <CatalogPreviewThumb imageUrl={tpl.image_url} thumbUrl={urls[0] ?? null} alt={tpl.name} onClick={onOpen} />;
+}
 
 function nameFromFilename(filename: string): string {
   return filename.replace(/\.[^.]+$/, "").trim() || filename;
@@ -35,6 +72,8 @@ export function TemplatesPage() {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const navigate = useNavigate();
+  const previewPdf = usePdfPages(previewTemplate, [1, 2]);
 
   async function loadTemplates() {
     setLoading(true);
@@ -251,12 +290,7 @@ export function TemplatesPage() {
                     Select
                   </label>
                   ) : null}
-                  <CatalogPreviewThumb
-                    imageUrl={tpl.image_url}
-                    alt={tpl.name}
-                    className="max-h-64 w-full object-contain bg-content-bg p-2"
-                    onClick={() => setPreviewTemplate(tpl)}
-                  />
+                  <TemplateThumb tpl={tpl} onOpen={() => setPreviewTemplate(tpl)} />
                   <div className="flex items-start justify-between gap-2 p-3">
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold text-text-navy">{tpl.name}</div>
@@ -265,6 +299,14 @@ export function TemplatesPage() {
                       </div>
                     </div>
                     <div className="flex gap-2 text-xs font-medium">
+                      <button
+                        type="button"
+                        className="text-button-blue hover:underline"
+                        onClick={() => navigate(`/id-card-generator?templateId=${encodeURIComponent(tpl.id)}`)}
+                        title="Open this template in the ID Card Generator"
+                      >
+                        Use
+                      </button>
                       <button
                         type="button"
                         className="text-button-blue hover:underline"
@@ -378,7 +420,7 @@ export function TemplatesPage() {
                 {uploadingTemplate ? "Submitting…" : "Submit"}
               </button>
               {uploadSuccess && (
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600" title="Uploaded">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#E6F7F5] text-[#0D9488]" title="Uploaded">
                   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M5 13l4 4L19 7" />
                   </svg>
@@ -417,6 +459,10 @@ export function TemplatesPage() {
         open={Boolean(previewTemplate)}
         title={previewTemplate?.name ?? "Template preview"}
         imageUrl={previewTemplate?.image_url}
+        pages={previewPdf.urls.filter(Boolean).map((src, i) => ({ src: src as string, label: i === 0 ? "Front" : "Back" }))}
+        loading={previewPdf.loading}
+        index={previewTemplate ? templateRows.findIndex((t) => t.id === previewTemplate.id) : undefined}
+        total={templateRows.length}
         onClose={() => setPreviewTemplate(null)}
         hasPrevious={
           previewTemplate

@@ -61,9 +61,9 @@ export function PublicOrgFormPage({ school = false }: {school?:boolean}) {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-lg items-center px-4 py-8">
       <div className="w-full rounded-2xl border border-border bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-bold text-[#16843F]">{organizationName || (school ? "School student form" : "Organization form")}</h1>
+        <h1 className="text-xl font-bold text-[#4F46E5]">{organizationName || (school ? "School student form" : "Organization form")}</h1>
         {loading ? <p className="mt-4 text-sm text-text-muted">Loading…</p> : null}
-        {done ? <p className="mt-4 text-sm font-medium text-[#16A34A]">Submitted successfully. Your details have been sent to the {school ? "school" : "organization"}.</p> : null}
+        {done ? <p className="mt-4 text-sm font-medium text-[#4F46E5]">Submitted successfully. Your details have been sent to the {school ? "school" : "organization"}.</p> : null}
         {!loading && !done ? (
           <form className="mt-4 space-y-4" onSubmit={(event) => void submit(event)}>
             {fields.map((field) => (

@@ -17,7 +17,7 @@ function IconField({
 }) {
   return (
     <label className="block w-full">
-      <span className="mb-1 block text-[13px] font-semibold text-[#26332B]">{label}</span>
+      <span className="mb-1 block text-[13px] font-semibold text-[#3D3A6B]">{label}</span>
       <div className="relative w-full">
         <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-muted">
           {icon}
@@ -220,36 +220,36 @@ function SuperAdminContacts({
     <div className="login-support">
       {mail ? (
         <a
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#EAF6EE]"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#EEF0FF]"
           href={`mailto:${mail}`}
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EAF6EE] text-[#16843F]">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EEF0FF] text-[#4F46E5]">
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
               <rect x="3" y="5" width="18" height="14" rx="2" />
               <path d="M3 7l9 7 9-7" />
             </svg>
           </span>
           <span className="min-w-0 text-left">
-            <span className="block text-[11px] font-semibold text-[#26332B]">Email</span>
-            <span className="block whitespace-nowrap text-[11px] font-medium text-[#64748B]">{mail}</span>
+            <span className="block text-[11px] font-semibold text-[#3D3A6B]">Email</span>
+            <span className="block whitespace-nowrap text-[11px] font-medium text-[#77759A]">{mail}</span>
           </span>
         </a>
       ) : null}
       {chat ? (
         <a
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#F0FDF4]"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 hover:bg-[#EEF0FF]"
           href={`https://wa.me/${waDigits(chat)}`}
           target="_blank"
           rel="noreferrer"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F0FDF4] text-[#22C55E]">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EEF0FF] text-[#0D9488]">
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
               <path d="M21 11.5a8.4 8.4 0 0 1-9.1 8.4L6 21l1.2-4.4A8.5 8.5 0 1 1 21 11.5z" />
             </svg>
           </span>
           <span className="min-w-0 text-left">
-            <span className="block text-[11px] font-semibold text-[#26332B]">WhatsApp</span>
-            <span className="block truncate text-[11px] font-medium text-[#64748B]">{formatWhatsApp(chat)}</span>
+            <span className="block text-[11px] font-semibold text-[#3D3A6B]">WhatsApp</span>
+            <span className="block truncate text-[11px] font-medium text-[#77759A]">{formatWhatsApp(chat)}</span>
           </span>
         </a>
       ) : null}

@@ -15,7 +15,7 @@ function IconField({
 }) {
   return (
     <label className="block w-full">
-      <span className="mb-1 block text-[13px] font-semibold text-[#26332B]">{label}</span>
+      <span className="mb-1 block text-[13px] font-semibold text-[#3D3A6B]">{label}</span>
       <div className="relative w-full">
         <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-muted">
           {icon}
@@ -80,7 +80,7 @@ export function ForgotPasswordPage() {
       appBrand
       brandAccent
       title="Forgot Password"
-      titleClassName="text-[#22C55E]"
+      titleClassName="text-[#0D9488]"
       footer={
         <div className="text-center">
           <Link to="/login" className="text-sm font-medium text-button-blue hover:underline">

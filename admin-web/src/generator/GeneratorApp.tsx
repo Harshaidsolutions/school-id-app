@@ -11,9 +11,10 @@ import { ensureFonts, restoreCustomFonts } from "./fonts";
 import { CARD_SIZES, SHEET_SIZES, cropMarks, impose } from "./impose";
 import { addToStore, emptyMedia, filesFromInput, filesFromZip, findMedia, type IntakeSummary } from "./media";
 import { runPreflight, type PreflightReport } from "./preflight";
-import { blobToBitmap, mediaLabel, type Bitmap, type MediaResolver } from "./render";
+import { blobToBitmap, canvasBlob, mediaLabel, renderCard, type Bitmap, type MediaResolver } from "./render";
 import type { CardElement, Layout, MediaKind, MediaStore, Row, Side } from "./types";
 import { CardCanvas } from "./ui/CardCanvas";
+import { MediaLightbox } from "../components/MediaLightbox";
 import { Colour, Field, Num, Properties, TextToolbar } from "./ui/Inspector";
 
 type Source = "records" | "upload";
@@ -21,7 +22,7 @@ type TemplateSlot = { bitmap: Bitmap; url: string; name: string; blob: Blob; lib
 type Caps = { photoAi: boolean; backgroundRemoval: boolean; faceDetection: boolean; ghostscript: boolean };
 
 const STEPS = ["Data & photos", "Card layout", "Photo AI", "Pre-flight check", "Print & export"] as const;
-const BG_SWATCHES = ["#ffffff", "#dbeafe", "#bfdbfe", "#e0f2fe", "#dcfce7", "#fef3c7", "#fee2e2", "#e5e7eb"];
+const BG_SWATCHES = ["#ffffff", "#dbeafe", "#bfdbfe", "#e0f2fe", "#E0E7FF", "#FFE4E8", "#fee2e2", "#e5e7eb"];
 
 function studentsToRows(students: Student[]): { columns: string[]; rows: Row[]; roles: Record<string, string> } {
   const base: [string, (s: Student) => string | null | undefined][] = [
@@ -127,6 +128,18 @@ export function GeneratorApp() {
       .catch(() => say("Records could not be loaded.", "error"));
     return () => { live = false; };
   }, [source, orgId, orgKind]);
+
+  // Opened from Templates → "Use": load that template as the front side (or its saved layout)
+  const templateParam = params.get("templateId");
+  const templateApplied = useRef(false);
+  useEffect(() => {
+    if (!templateParam || templateApplied.current || !library.length) return;
+    const t = library.find((x) => x.id === templateParam);
+    if (!t) return;
+    templateApplied.current = true;
+    void loadLibraryTemplate("front", t, true).then(() => say(`Template “${t.name}” is on the card. Now add the data and photos.`, "ok"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateParam, library]);
 
   const orgName = orgs.find((o) => o.id === orgId)?.name ?? params.get("schoolName") ?? params.get("instituteName") ?? "";
   const jobName = (orgName || sheetName || layout.name || "ID cards").trim();
@@ -448,6 +461,7 @@ export function GeneratorApp() {
   const [skipErrors, setSkipErrors] = useState(true);
   const [range, setRange] = useState({ from: 1, to: 0 });
   const [outputs, setOutputs] = useState<ExportFile[]>([]);
+  const [batchOpen, setBatchOpen] = useState(false);
   const sheet = SHEET_SIZES.find((s) => s.key === sheetKey) ?? SHEET_SIZES[0];
   const imp = useMemo(() => impose({ sheet, card: layout.card, margin, gap, perSheet, allowRotate }), [sheet, layout.card, margin, gap, perSheet, allowRotate]);
   const maxFit = useMemo(() => impose({ sheet, card: layout.card, margin, gap, perSheet: 0, allowRotate }).capacity, [sheet, layout.card, margin, gap, allowRotate]);
@@ -939,7 +953,10 @@ export function GeneratorApp() {
               )}
             </div>
             <div className="idg-generate">
-              <button type="button" className="btn-primary idg-cta" disabled={Boolean(busy) || !exportRows.length} onClick={() => void generate()}>Generate {exportRows.length} ID cards</button>
+              <div className="idg-generate-row">
+                <button type="button" className="btn-secondary" disabled={Boolean(busy) || !exportRows.length} onClick={() => setBatchOpen(true)}>Preview batch</button>
+                <button type="button" className="btn-primary idg-cta" disabled={Boolean(busy) || !exportRows.length} onClick={() => void generate()}>Generate {exportRows.length} ID cards</button>
+              </div>
               {outputs.length > 0 && (
                 <ul className="idg-outputs">
                   {outputs.map((f) => <li key={f.name}><button type="button" className="idg-link" onClick={() => download(f)}>{f.name}</button><small>{fmtBytes(f.blob.size)}</small></li>)}
@@ -989,6 +1006,102 @@ export function GeneratorApp() {
           )}
         </div>
       )}
+      {batchOpen && (
+        <BatchPreview
+          layout={layout}
+          rows={exportRows}
+          templates={{ front: templates.front?.bitmap ?? null, back: templates.back?.bitmap ?? null }}
+          resolverFor={resolverFor}
+          nameCol={layout.roles.name}
+          onClose={() => setBatchOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Gallery of the real cards (front + back) before printing; click any card for the large viewer. */
+function BatchPreview({ layout, rows, templates, resolverFor, nameCol, onClose }: {
+  layout: Layout;
+  rows: { row: Row; index: number }[];
+  templates: { front: Bitmap | null; back: Bitmap | null };
+  resolverFor: (i: number) => MediaResolver;
+  nameCol?: string;
+  onClose: () => void;
+}) {
+  const per = 12;
+  const [page, setPage] = useState(0);
+  const [cards, setCards] = useState<{ index: number; front: string; back: string | null; issues: number }[]>([]);
+  const [open, setOpen] = useState<number | null>(null);
+  const hasBack = Boolean(templates.back) || layout.elements.some((e) => e.side === "back");
+  useEffect(() => {
+    let live = true;
+    const made: string[] = [];
+    setCards([]);
+    (async () => {
+      const c = document.createElement("canvas");
+      const out: { index: number; front: string; back: string | null; issues: number }[] = [];
+      for (const item of rows.slice(page * per, (page + 1) * per)) {
+        const media = resolverFor(item.index);
+        const i1 = await renderCard(c, { layout, side: "front", row: item.row, dpi: 150, template: templates.front, media });
+        const front = URL.createObjectURL(await canvasBlob(c, "image/jpeg", 0.88));
+        made.push(front);
+        let back: string | null = null;
+        let i2: unknown[] = [];
+        if (hasBack) {
+          i2 = await renderCard(c, { layout, side: "back", row: item.row, dpi: 150, template: templates.back, media });
+          back = URL.createObjectURL(await canvasBlob(c, "image/jpeg", 0.88));
+          made.push(back);
+        }
+        if (!live) return;
+        out.push({ index: item.index, front, back, issues: i1.length + i2.length });
+        setCards([...out]);
+      }
+    })();
+    return () => { live = false; made.forEach((u) => URL.revokeObjectURL(u)); };
+  }, [page, rows, layout, templates, resolverFor, hasBack]);
+  const pages = Math.max(1, Math.ceil(rows.length / per));
+  const current = open !== null ? cards[open] : null;
+  return (
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Preview batch">
+      <div className="card idg-batch" onClick={(e) => e.stopPropagation()}>
+        <div className="idg-batch-head">
+          <div>
+            <h3>Preview batch</h3>
+            <p className="idg-muted">{rows.length} cards · showing {page * per + 1}–{Math.min(rows.length, (page + 1) * per)}. Click a card to see it large.</p>
+          </div>
+          <div className="idg-preview-nav">
+            <button type="button" className="idg-tool" disabled={page === 0} onClick={() => setPage((p) => p - 1)} aria-label="Previous page">‹</button>
+            <span>{page + 1} / {pages}</span>
+            <button type="button" className="idg-tool" disabled={page >= pages - 1} onClick={() => setPage((p) => p + 1)} aria-label="Next page">›</button>
+            <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
+          </div>
+        </div>
+        <div className="idg-batch-grid">
+          {cards.map((c, k) => (
+            <button key={c.index} type="button" className={`idg-batch-card${c.issues ? " has-issue" : ""}`} onClick={() => setOpen(k)}>
+              <span className="idg-batch-sides">
+                <img src={c.front} alt="Front" />
+                {c.back && <img src={c.back} alt="Back" />}
+              </span>
+              <span className="idg-batch-name">{c.index + 1}. {nameCol ? rows.find((r) => r.index === c.index)?.row[nameCol] : ""}</span>
+              {c.issues > 0 && <span className="idg-batch-flag">{c.issues} issue{c.issues > 1 ? "s" : ""}</span>}
+            </button>
+          ))}
+          {cards.length < Math.min(per, rows.length - page * per) && <div className="idg-batch-loading">Rendering cards…</div>}
+        </div>
+      {current && (
+        <MediaLightbox
+          title={`Card ${current.index + 1}${nameCol ? " · " + (rows.find((r) => r.index === current.index)?.row[nameCol] ?? "") : ""}`}
+          index={open ?? 0}
+          total={cards.length}
+          pages={[{ src: current.front, label: "Front" }, ...(current.back ? [{ src: current.back, label: "Back" }] : [])]}
+          onPrevious={open! > 0 ? () => setOpen((o) => (o ?? 1) - 1) : null}
+          onNext={open! < cards.length - 1 ? () => setOpen((o) => (o ?? 0) + 1) : null}
+          onClose={() => setOpen(null)}
+        />
+      )}
+      </div>
     </div>
   );
 }
@@ -997,9 +1110,9 @@ function SheetPreview({ sheet, imp, marks }: { sheet: { w: number; h: number }; 
   const m = cropMarks(imp, sheet);
   return (
     <svg className="idg-sheet" viewBox={`0 0 ${sheet.w} ${sheet.h}`} role="img" aria-label={`${imp.capacity} cards on the sheet`}>
-      <rect x={0} y={0} width={sheet.w} height={sheet.h} fill="#fff" stroke="#c4ebd2" strokeWidth={1} />
-      {imp.slots.map((s, i) => <rect key={i} x={s.x} y={s.y} width={imp.cellW} height={imp.cellH} rx={2} fill="#e9f8ef" stroke="#16a34a" strokeWidth={0.6} />)}
-      {marks && m.lines.map((l, i) => <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="#17462e" strokeWidth={0.4} />)}
+      <rect x={0} y={0} width={sheet.w} height={sheet.h} fill="#fff" stroke="#DDD9FB" strokeWidth={1} />
+      {imp.slots.map((s, i) => <rect key={i} x={s.x} y={s.y} width={imp.cellW} height={imp.cellH} rx={2} fill="#EEF0FF" stroke="#4F46E5" strokeWidth={0.6} />)}
+      {marks && m.lines.map((l, i) => <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="#1E1B4B" strokeWidth={0.4} />)}
     </svg>
   );
 }

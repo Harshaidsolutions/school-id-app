@@ -9,7 +9,7 @@ export function newText(side: Side, column: string, at: Partial<TextElement> = {
     column, prefix: "", suffix: "", staticText: column ? "" : "Text",
     font: "Poppins", weight: 500, italic: false, underline: false, size: 9, minSize: 5, autoShrink: true, multiline: false,
     textCase: "none", align: "left", vAlign: "middle", letterSpacing: 0, lineHeight: 1.15,
-    color: "#17462e", gradient: { on: false, color2: "#f7941d", angle: 0 }, stroke: { width: 0, color: "#ffffff" },
+    color: "#1E1B4B", gradient: { on: false, color2: "#F43F5E", angle: 0 }, stroke: { width: 0, color: "#ffffff" },
     ...at,
   };
 }
@@ -20,7 +20,7 @@ export function newImage(side: Side, media: MediaKind, at: Partial<ImageElement>
     id: uid(), kind: "image", side, media, rotation: 0, required: media === "photo",
     x: sign ? 30 : 15, y: sign ? 74 : 14, w: sign ? 20 : 24, h: sign ? 8 : 30,
     fit: sign || media === "logo" ? "contain" : "cover", shape: "rounded", radius: 2,
-    border: { width: media === "photo" ? 0.4 : 0, color: "#16a34a" }, shadow: { on: false, blur: 1.5, color: "rgba(23,70,46,0.35)" },
+    border: { width: media === "photo" ? 0.4 : 0, color: "#4F46E5" }, shadow: { on: false, blur: 1.5, color: "rgba(30,27,75,0.35)" },
     cleanSignature: sign,
     ...at,
   };
@@ -30,7 +30,7 @@ export function newQr(side: Side, column: string, at: Partial<QrElement> = {}): 
   return {
     id: uid(), kind: "qr", side, x: 37, y: 66, w: 14, h: 14, rotation: 0, required: true,
     content: column ? "column" : "vcard", column, columns: [], urlTemplate: "https://myschoolidcard.in/verify?id={" + (column || "Admission No") + "}",
-    ecc: "M", logo: false, color: "#0f3d26", background: "#ffffff",
+    ecc: "M", logo: false, color: "#1E1B4B", background: "#ffffff",
     ...at,
   };
 }
@@ -38,7 +38,7 @@ export function newQr(side: Side, column: string, at: Partial<QrElement> = {}): 
 export function newBarcode(side: Side, column: string, at: Partial<BarcodeElement> = {}): BarcodeElement {
   return {
     id: uid(), kind: "barcode", side, x: 6, y: 74, w: 42, h: 9, rotation: 0, required: true,
-    format: "code128", column, showText: true, color: "#0f3d26", background: "#ffffff",
+    format: "code128", column, showText: true, color: "#1E1B4B", background: "#ffffff",
     ...at,
   };
 }
@@ -46,7 +46,7 @@ export function newBarcode(side: Side, column: string, at: Partial<BarcodeElemen
 /** Starting layout for a vertical CR80 card, bound to whatever columns were detected. */
 export function defaultLayout(roles: Record<string, string>, matchColumn = ""): Layout {
   const card = CARD_SIZES[0];
-  const elements: CardElement[] = [newImage("front", "photo", { x: 15, y: 18, w: 24, h: 30, border: { width: 0.5, color: "#16a34a" } })];
+  const elements: CardElement[] = [newImage("front", "photo", { x: 15, y: 18, w: 24, h: 30, border: { width: 0.5, color: "#4F46E5" } })];
   let y = 50;
   const line = (role: string, prefix: string, extra: Partial<TextElement> = {}) => {
     const col = roles[role];

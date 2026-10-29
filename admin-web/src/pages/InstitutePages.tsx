@@ -564,7 +564,7 @@ function DeleteInstituteOtpModal({
         {error && <div className="mb-3 alert-error">{error}</div>}
         {info && <div className="mb-3 alert-success">{info}</div>}
         {devOtp && (
-          <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <div className="mb-3 rounded-lg border border-[#FECDD6] bg-[#FFF1F3] px-3 py-2 text-sm text-[#9F1239]">
             Dev OTP: <span className="font-mono font-bold tracking-widest">{devOtp}</span>
           </div>
         )}

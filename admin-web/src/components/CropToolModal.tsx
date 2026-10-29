@@ -698,7 +698,7 @@ export function CropToolModal({
 
   const shell = layout === "page"
     ? "crop-tool-shell flex min-h-0 flex-1 flex-col overflow-hidden"
-    : "fixed inset-0 z-50 flex items-center justify-center bg-[#0F5E2E]/35 px-3 py-4";
+    : "fixed inset-0 z-50 flex items-center justify-center bg-[#312E81]/35 px-3 py-4";
 
   return (
     <div className={shell} role={layout === "page" ? undefined : "dialog"} aria-modal={layout === "page" ? undefined : true} aria-label="Cropping Tool">
@@ -707,17 +707,17 @@ export function CropToolModal({
         <span>{schoolName || "Cropping Tool"}</span><span>{!browsing && student ? `Photo ${student.photo_id || "—"} · ${student.student_name || ""}` : "Photos"}</span>
         {layout==="modal" && <button aria-label="Close cropping tool" onClick={()=>{if(canLeaveEditor())onClose();}}>×</button>}
       </div>
-      <div className={`crop-tool-layout ${layout === "page" ? "flex min-h-0 flex-1 overflow-hidden" : "flex h-[min(92vh,860px)] w-full max-w-6xl overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white"}`}>
-        <aside className="crop-settings flex w-[17.5rem] shrink-0 flex-col gap-3 overflow-y-auto border-r border-[#E2E8F0] bg-white p-4">
+      <div className={`crop-tool-layout ${layout === "page" ? "flex min-h-0 flex-1 overflow-hidden" : "flex h-[min(92vh,860px)] w-full max-w-6xl overflow-hidden rounded-2xl border border-[#E6E4F5] bg-white"}`}>
+        <aside className="crop-settings flex w-[17.5rem] shrink-0 flex-col gap-3 overflow-y-auto border-r border-[#E6E4F5] bg-white p-4">
           <div className="flex items-center justify-between gap-2">
-            <p className="min-w-0 truncate text-xs font-semibold text-[#64748B]">
+            <p className="min-w-0 truncate text-xs font-semibold text-[#77759A]">
               {student && !browsing ? student.student_name ?? "Student" : `${gallery.length} photo${gallery.length === 1 ? "" : "s"}`}
               {student && !browsing && student.photo_id ? ` · Photo ${student.photo_id}` : ""}
             </p>
 
           </div>
           {field ? (
-            <label className="min-w-[12rem] text-xs font-semibold text-[#34413A]">
+            <label className="min-w-[12rem] text-xs font-semibold text-[#3D3A6B]">
               {field.label}
               <select className="input-field mt-1" value={selected} onChange={(event) => { if (!canLeaveEditor()) return; setSelected(event.target.value); setIndex(0); setBrowsing(true); }}>
                 <option value="">{`All ${field.label}`}</option>
@@ -727,7 +727,7 @@ export function CropToolModal({
               </select>
             </label>
           ) : null}
-          <label className="min-w-[12rem] text-xs font-semibold text-[#34413A]">
+          <label className="min-w-[12rem] text-xs font-semibold text-[#3D3A6B]">
             Date
             <select className="input-field mt-1" value={captureDay} onChange={(event) => { if (!canLeaveEditor()) return; setCaptureDay(event.target.value); setCaptureHour(""); setIndex(0); setBrowsing(true); }}>
               <option value="">All dates</option>
@@ -736,7 +736,7 @@ export function CropToolModal({
               ))}
             </select>
           </label>
-          <label className="min-w-[11rem] text-xs font-semibold text-[#34413A]">
+          <label className="min-w-[11rem] text-xs font-semibold text-[#3D3A6B]">
             Status
             <select
               className="input-field mt-1"
@@ -752,7 +752,7 @@ export function CropToolModal({
               <option value="cropped">Cropped</option>
             </select>
           </label>
-          <label className="min-w-[14rem] text-xs font-semibold text-[#34413A]">
+          <label className="min-w-[14rem] text-xs font-semibold text-[#3D3A6B]">
             Hour
             <select className="input-field mt-1" value={captureHour} disabled={!captureDay} onChange={(event) => { if (!canLeaveEditor()) return; setCaptureHour(event.target.value); setIndex(0); setBrowsing(true); }}>
               <option value="">{captureDay ? "All hours" : "Select a date first"}</option>
@@ -761,7 +761,7 @@ export function CropToolModal({
               ))}
             </select>
           </label>
-          <label className="min-w-[7rem] text-xs font-semibold text-[#34413A]">
+          <label className="min-w-[7rem] text-xs font-semibold text-[#3D3A6B]">
             Unit
             <select
               aria-label="Crop size unit"
@@ -775,23 +775,23 @@ export function CropToolModal({
               <option value="mm">Millimeters</option>
             </select>
           </label>
-          <label className="text-xs font-semibold text-[#34413A]">
+          <label className="text-xs font-semibold text-[#3D3A6B]">
             Width
             <input value={limitWidth} inputMode="decimal" aria-label="Crop width"  className="input-field mt-1" onChange={(event) => updateCropLimit("width", event.target.value)} />
           </label>
-          <label className="text-xs font-semibold text-[#34413A]">
+          <label className="text-xs font-semibold text-[#3D3A6B]">
             Height
             <input value={limitHeight} inputMode="decimal" aria-label="Crop height"  className="input-field mt-1" onChange={(event) => updateCropLimit("height", event.target.value)} />
           </label>
 
-          <p className="text-[11px] font-medium text-[#64748B]">
+          <p className="text-[11px] font-medium text-[#77759A]">
             {limitWidth && limitHeight
               ? `${limitWidth} × ${limitHeight} ${limitUnit === "in" ? "inches" : limitUnit === "mm" ? "mm" : "cm"} · 300 DPI`
               : "Choose inches, centimeters, or millimeters, then enter width and height."}
           </p>
           {!browsing ? (
             <>
-              <label className="text-xs font-semibold text-[#34413A]">
+              <label className="text-xs font-semibold text-[#3D3A6B]">
                 Rotate
                 <select
                   aria-label="Rotate"
@@ -810,7 +810,7 @@ export function CropToolModal({
                   <option value="right">Rotate Right</option>
                 </select>
               </label>
-              <p className="text-[11px] font-medium text-[#64748B]">Drag on the photo to crop. Shift+Z undo · Shift+S save</p>
+              <p className="text-[11px] font-medium text-[#77759A]">Drag on the photo to crop. Shift+Z undo · Shift+S save</p>
             </>
           ) : null}
         </aside>
@@ -841,7 +841,7 @@ export function CropToolModal({
               />
             ))}
             {gallery.length === 0 ? (
-              <p className="col-span-full px-2 py-16 text-center text-sm font-medium text-[#64748B]">
+              <p className="col-span-full px-2 py-16 text-center text-sm font-medium text-[#77759A]">
                 {photos.length === 0
                   ? cropView === "cropped"
                     ? "No cropped photos."
@@ -851,7 +851,7 @@ export function CropToolModal({
             ) : null}
           </div>
         ) : (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#EAF6EE]">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#EEF0FF]">
             <div className="crop-image-area relative min-h-0 flex-1">
               <div
                 ref={workspaceRef}
@@ -900,12 +900,12 @@ export function CropToolModal({
                         {HANDLES.map((handle) => (
                           <span
                             key={handle}
-                            className="pointer-events-none absolute h-2 w-2 border border-[#16843F] bg-white"
+                            className="pointer-events-none absolute h-2 w-2 border border-[#4F46E5] bg-white"
                             style={handleStyle(handle)}
                           />
                         ))}
                         <span className="pointer-events-none absolute left-1/2 top-0 h-4 w-px -translate-x-1/2 -translate-y-full bg-white" />
-                        <span className="pointer-events-none absolute left-1/2 top-0 flex h-6 w-6 -translate-x-1/2 -translate-y-[1.7rem] items-center justify-center rounded-full border border-[#16843F] bg-white text-[#16843F] shadow-sm">
+                        <span className="pointer-events-none absolute left-1/2 top-0 flex h-6 w-6 -translate-x-1/2 -translate-y-[1.7rem] items-center justify-center rounded-full border border-[#4F46E5] bg-white text-[#4F46E5] shadow-sm">
                           <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M20 12a8 8 0 1 1-2.2-5.5" />
                             <path d="M20 4v4h-4" />
@@ -915,18 +915,18 @@ export function CropToolModal({
                     </div> : null}
                   </div>
                 ) : (
-                  <p className="text-sm text-[#64748B]">{student ? "Loading photo…" : "Choose a photo."}</p>
+                  <p className="text-sm text-[#77759A]">{student ? "Loading photo…" : "Choose a photo."}</p>
                 )}
               </div>
             </div>
-            <div className="relative z-10 shrink-0 border-t border-[#E2E8F0] bg-white px-3 py-1.5">
+            <div className="relative z-10 shrink-0 border-t border-[#E6E4F5] bg-white px-3 py-1.5">
               <button
                 ref={toneButtonRef}
                 type="button"
                 className={`inline-flex h-8 items-center gap-1.5 rounded-[10px] border px-3 text-sm font-semibold ${
                   toneOpen
-                    ? "border-[#9FD3B1] bg-[#F3F8F4] text-[#16843F]"
-                    : "border-[#CDEBD6] bg-white text-[#16843F]"
+                    ? "border-[#A5B4FC] bg-[#F4F3FF] text-[#4F46E5]"
+                    : "border-[#DDD9FB] bg-white text-[#4F46E5]"
                 }`}
                 disabled={!cropArmed || saving}
                 aria-expanded={toneOpen}
@@ -941,9 +941,9 @@ export function CropToolModal({
               {toneOpen ? (
                 <div
                   ref={tonePanelRef}
-                  className="absolute bottom-full left-3 z-20 mb-2 w-72 rounded-xl border border-[#E2E8F0] bg-white p-3 shadow-[0_12px_28px_rgba(49,46,129,0.12)]"
+                  className="absolute bottom-full left-3 z-20 mb-2 w-72 rounded-xl border border-[#E6E4F5] bg-white p-3 shadow-[0_12px_28px_rgba(49,46,129,0.12)]"
                 >
-                  <label className="flex items-center gap-2 text-xs font-semibold text-[#34413A]">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#3D3A6B]">
                     <span className="w-[4.6rem] shrink-0">Brightness</span>
                     <input
                       ref={brightnessInputRef}
@@ -952,14 +952,14 @@ export function CropToolModal({
                       max={100}
                       defaultValue={0}
                       aria-label="Brightness"
-                      className="min-w-0 flex-1 accent-[#16843F]"
+                      className="min-w-0 flex-1 accent-[#4F46E5]"
                       onInput={(event) => applyTone(Number(event.currentTarget.value), toneRef.current.contrast)}
                       onPointerUp={endToneGesture}
                       onPointerCancel={endToneGesture}
                     />
-                    <span ref={brightnessLabelRef} className="w-8 text-right tabular-nums text-[#64748B]">0</span>
+                    <span ref={brightnessLabelRef} className="w-8 text-right tabular-nums text-[#77759A]">0</span>
                   </label>
-                  <label className="mt-2 flex items-center gap-2 text-xs font-semibold text-[#34413A]">
+                  <label className="mt-2 flex items-center gap-2 text-xs font-semibold text-[#3D3A6B]">
                     <span className="w-[4.6rem] shrink-0">Contrast</span>
                     <input
                       ref={contrastInputRef}
@@ -968,12 +968,12 @@ export function CropToolModal({
                       max={100}
                       defaultValue={0}
                       aria-label="Contrast"
-                      className="min-w-0 flex-1 accent-[#16843F]"
+                      className="min-w-0 flex-1 accent-[#4F46E5]"
                       onInput={(event) => applyTone(toneRef.current.brightness, Number(event.currentTarget.value))}
                       onPointerUp={endToneGesture}
                       onPointerCancel={endToneGesture}
                     />
-                    <span ref={contrastLabelRef} className="w-8 text-right tabular-nums text-[#64748B]">0</span>
+                    <span ref={contrastLabelRef} className="w-8 text-right tabular-nums text-[#77759A]">0</span>
                   </label>
                   <button type="button" className="btn-secondary mt-3 px-3 py-1.5 text-sm" onClick={resetTone}>Reset Adjustments</button>
                 </div>
@@ -1174,16 +1174,16 @@ function GalleryThumb({
       onClick={onClick}
       className={`flex w-full text-left ${
         large ? "flex-col gap-2 rounded-xl border bg-white p-3" : "items-center gap-2 rounded-lg border px-2 py-1.5"
-      } ${student.photo_cropped ? "border-[#BBF7D0] bg-[#F0FDF4]" : active ? "border-[#16843F] bg-[#F3F8F4]" : "border-[#E2E8F0]"}`}
+      } ${student.photo_cropped ? "border-[#C7D2FE] bg-[#EEF0FF]" : active ? "border-[#4F46E5] bg-[#F4F3FF]" : "border-[#E6E4F5]"}`}
     >
       <span className={large ? "relative block h-40 w-full" : "relative block h-11 w-11 shrink-0"}>
         {src ? (
-          <img src={src} alt="" className={large ? "h-40 w-full rounded-lg bg-[#F8FAFC] object-contain" : "h-11 w-11 rounded object-cover"} />
+          <img src={src} alt="" className={large ? "h-40 w-full rounded-lg bg-[#F7F7FC] object-contain" : "h-11 w-11 rounded object-cover"} />
         ) : (
-          <span className={large ? "block h-40 w-full animate-pulse rounded-lg bg-[#EAF6EE]" : "block h-11 w-11 animate-pulse rounded bg-[#EAF6EE]"} />
+          <span className={large ? "block h-40 w-full animate-pulse rounded-lg bg-[#EEF0FF]" : "block h-11 w-11 animate-pulse rounded bg-[#EEF0FF]"} />
         )}
         {large && (status === "cropped" || student.photo_cropped) ? (
-          <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-[#16A34A] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+          <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-[#4F46E5] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
             <svg className="h-3 w-3" viewBox="0 0 16 16" aria-hidden>
               <path d="M3.5 8.2 6.4 11 12.5 4.8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -1192,13 +1192,13 @@ function GalleryThumb({
         ) : null}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-semibold text-[#34413A]">
+        <span className="block truncate text-xs font-semibold text-[#3D3A6B]">
           {student.photo_id || student.student_name || "Photo"}
         </span>
         {status === "saved" ? (
-          <span className="text-[11px] font-semibold text-[#22C55E]">Saved</span>
+          <span className="text-[11px] font-semibold text-[#0D9488]">Saved</span>
         ) : status === "editing" ? (
-          <span className="text-[11px] font-semibold text-[#C46A06]">Editing</span>
+          <span className="text-[11px] font-semibold text-[#E11D48]">Editing</span>
         ) : null}
       </span>
     </button>

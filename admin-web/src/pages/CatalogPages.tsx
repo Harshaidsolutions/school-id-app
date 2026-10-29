@@ -251,6 +251,8 @@ export function CatalogGridPage({
         open={Boolean(previewItem)}
         title={previewItem?.name ?? title}
         imageUrl={previewItem?.image_url}
+        index={previewIndex >= 0 ? previewIndex : undefined}
+        total={filtered.length}
         onClose={() => setPreviewItem(null)}
         hasPrevious={previewIndex > 0}
         hasNext={previewIndex >= 0 && previewIndex < filtered.length - 1}

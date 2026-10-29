@@ -73,11 +73,11 @@ function DetailSwitch({
       disabled={disabled}
       onClick={() => onToggle(!on)}
       className={`inline-flex h-8 items-center gap-2 rounded-full border px-1.5 text-xs font-semibold disabled:opacity-60 ${
-        on ? "border-[#86EFAC] bg-[#F0FDF4] text-[#15803D]" : "border-[#E2E8F0] bg-[#F8FAFC] text-[#64748B]"
+        on ? "border-[#A5B4FC] bg-[#EEF0FF] text-[#4338CA]" : "border-[#E6E4F5] bg-[#F7F7FC] text-[#77759A]"
       }`}
     >
       <span
-        className={`h-6 w-11 rounded-full p-0.5 transition ${on ? "bg-[#22C55E]" : "bg-[#CBD5E1]"}`}
+        className={`h-6 w-11 rounded-full p-0.5 transition ${on ? "bg-[#0D9488]" : "bg-[#D4D1EC]"}`}
       >
         <span className={`block h-5 w-5 rounded-full bg-white shadow ${on ? "translate-x-5" : "translate-x-0"}`} />
       </span>

@@ -105,7 +105,7 @@ export function CropToolPage() {
 
   return (
     <div className="app-page flex min-h-0 flex-1 flex-col">
-      {loading ? <p className="text-sm text-[#64748B]">Loading photos…</p> : (
+      {loading ? <p className="text-sm text-[#77759A]">Loading photos…</p> : (
         <CropToolModal
           layout="page"
           schoolName={orgName}

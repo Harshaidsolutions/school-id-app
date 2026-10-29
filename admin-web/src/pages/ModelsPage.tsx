@@ -418,7 +418,7 @@ export function ModelsPage() {
                         <video
                           src={item.video_url}
                           controls
-                          className="mt-2 h-16 w-24 rounded bg-[#EAF6EE]"
+                          className="mt-2 h-16 w-24 rounded bg-[#EEF0FF]"
                         />
                       ) : null}
                     </td>
@@ -541,7 +541,7 @@ export function ModelsPage() {
                 />
               </div>
               {videoPreview ? (
-                <video src={videoPreview} controls className="mt-2 h-28 w-full rounded bg-[#EAF6EE]" />
+                <video src={videoPreview} controls className="mt-2 h-28 w-full rounded bg-[#EEF0FF]" />
               ) : null}
               {videoFile ? (
                 <button type="button" className="mt-1 text-xs text-danger" onClick={() => setVideoFile(null)}>
@@ -610,6 +610,8 @@ export function ModelsPage() {
         open={Boolean(previewItem)}
         title={previewItem?.name ?? `${itemLabel} preview`}
         imageUrl={previewItem?.image_url}
+        index={previewIndex >= 0 ? previewIndex : undefined}
+        total={filtered.length}
         onClose={() => setPreviewItem(null)}
         hasPrevious={previewIndex > 0}
         hasNext={previewIndex >= 0 && previewIndex < filtered.length - 1}

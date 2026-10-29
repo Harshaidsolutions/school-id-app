@@ -384,17 +384,17 @@ export function DashboardPage() {
 
   const cardStyle = [
 
-    { iconBg: "bg-white/80", iconColor: "text-button-blue", cardClass: "bg-[#EAF6EE]" },
+    { iconBg: "bg-white/80", iconColor: "text-button-blue", cardClass: "bg-[#EEF0FF]" },
 
-    { iconBg: "bg-white/80", iconColor: "text-[#22C55E]", cardClass: "bg-[#F0FDF4]" },
+    { iconBg: "bg-white/80", iconColor: "text-[#0D9488]", cardClass: "bg-[#EEF0FF]" },
 
-    { iconBg: "bg-white/80", iconColor: "text-primary-orange", cardClass: "bg-[#FFF7ED]" },
+    { iconBg: "bg-white/80", iconColor: "text-primary-orange", cardClass: "bg-[#FFF1F3]" },
 
-    { iconBg: "bg-white/80", iconColor: "text-accent-purple", cardClass: "bg-[#F3F8F4]" },
+    { iconBg: "bg-white/80", iconColor: "text-accent-purple", cardClass: "bg-[#F4F3FF]" },
 
-    { iconBg: "bg-white/80", iconColor: "text-[#3B4B63]", cardClass: "bg-[#F7F9F8]" },
+    { iconBg: "bg-white/80", iconColor: "text-[#4338CA]", cardClass: "bg-[#F7F7FC]" },
 
-    { iconBg: "bg-white/80", iconColor: "text-accent-pink", cardClass: "bg-[#FFF4E3]" },
+    { iconBg: "bg-white/80", iconColor: "text-accent-pink", cardClass: "bg-[#FFF1F3]" },
 
   ];
 
@@ -456,7 +456,7 @@ export function DashboardPage() {
 
                 value={summary?.activeSchools ?? 0}
 
-                tone="border-[#BBF7D0] bg-[#F0FDF4] text-[#22C55E]"
+                tone="border-[#C7D2FE] bg-[#EEF0FF] text-[#0D9488]"
 
               />
 
@@ -466,7 +466,7 @@ export function DashboardPage() {
 
                 value={summary?.inactiveSchools ?? 0}
 
-                tone="border-[#E2E8F0] bg-[#EAF6EE] text-[#64748B]"
+                tone="border-[#E6E4F5] bg-[#EEF0FF] text-[#77759A]"
 
               />
 
@@ -476,7 +476,7 @@ export function DashboardPage() {
 
                 value={summary?.activeInstitutes ?? 0}
 
-                tone="border-[#BBF7D0] bg-[#F0FDF4] text-[#22C55E]"
+                tone="border-[#C7D2FE] bg-[#EEF0FF] text-[#0D9488]"
 
               />
 
@@ -486,7 +486,7 @@ export function DashboardPage() {
 
                 value={summary?.inactiveInstitutes ?? 0}
 
-                tone="border-[#E2E8F0] bg-[#EAF6EE] text-[#64748B]"
+                tone="border-[#E6E4F5] bg-[#EEF0FF] text-[#77759A]"
 
               />
 

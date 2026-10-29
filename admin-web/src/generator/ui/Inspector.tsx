@@ -100,7 +100,7 @@ export function TextToolbar({ el, patch }: { el: TextElement | null; patch: Patc
       <button type="button" className={`idg-tool${t.weight >= 700 ? " is-on" : ""}`} disabled={disabled} onClick={() => patch({ weight: t.weight >= 700 ? 400 : 700 } as Partial<TextElement>)} aria-label="Bold"><b>B</b></button>
       <button type="button" className={`idg-tool${t.italic ? " is-on" : ""}`} disabled={disabled} onClick={() => patch({ italic: !t.italic } as Partial<TextElement>)} aria-label="Italic"><i>I</i></button>
       <button type="button" className={`idg-tool${t.underline ? " is-on" : ""}`} disabled={disabled} onClick={() => patch({ underline: !t.underline } as Partial<TextElement>)} aria-label="Underline"><u>U</u></button>
-      <Colour label="Text colour" value={t.color ?? "#17462e"} onChange={(v) => patch({ color: v } as Partial<TextElement>)} />
+      <Colour label="Text colour" value={t.color ?? "#1E1B4B"} onChange={(v) => patch({ color: v } as Partial<TextElement>)} />
       <span className="idg-sep" />
       {(["left", "center", "right"] as const).map((a) => (
         <button key={a} type="button" className={`idg-tool${t.align === a ? " is-on" : ""}`} disabled={disabled} onClick={() => patch({ align: a } as Partial<TextElement>)} aria-label={`Align ${a}`}>
