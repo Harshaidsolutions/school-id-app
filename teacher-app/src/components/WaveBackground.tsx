@@ -1,3 +1,4 @@
+import { BRAND } from "../theme/brandTheme";
 import { View, StyleSheet, type ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors } from "../theme/colors";
@@ -8,7 +9,7 @@ export function WaveBackground({ style }: { style?: ViewStyle }) {
   return (
     <View style={[StyleSheet.absoluteFill, style]} pointerEvents="none">
       <LinearGradient
-        colors={["#EEF2F9", "transparent"]}
+        colors={[BRAND.background, "transparent"]}
         style={styles.topWave}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

@@ -1,3 +1,4 @@
+import { BRAND as THEME } from "../theme/brandTheme";
 import { Pressable } from "../components/Pressable";
 import { useRef, useState } from "react";
 import {
@@ -612,7 +613,7 @@ function useOnboardingStyles() {
       alignItems: "center",
       justifyContent: "center",
       marginBottom: 0,
-      shadowColor: "#1E293B",
+      shadowColor: THEME.primaryDeep,
       shadowOpacity: 0.1,
       shadowRadius: 6,
       shadowOffset: { width: 0, height: 2 },

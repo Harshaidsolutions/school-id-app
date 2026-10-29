@@ -1,3 +1,4 @@
+import { BRAND } from "../theme/brandTheme";
 import { Pressable } from "./Pressable";
 import { memo } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
     padding: spacing.xxs,
     overflow: "hidden",
     borderWidth: 1,
-    shadowColor: "#1E293B",
+    shadowColor: BRAND.primaryDeep,
     shadowOpacity: 0.07,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },

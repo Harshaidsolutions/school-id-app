@@ -1,3 +1,4 @@
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { contentMaxStyle } from "../theme/responsive";
 import { Pressable } from "../components/Pressable";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -98,7 +99,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
   return (
 
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}><ScreenBackdrop />
 
       <OrangeGradientHeader
 

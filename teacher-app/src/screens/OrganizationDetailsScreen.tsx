@@ -1,3 +1,4 @@
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { contentMaxStyle } from "../theme/responsive";
 import { useCallback, useEffect, useMemo, useRef, useState, memo, type ReactNode } from "react";
 import {
@@ -1022,7 +1023,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}><ScreenBackdrop />
       <OrangeGradientHeader
         title="REQUIRED DETAILS"
         subtitle="Only Principal can Upload this form"

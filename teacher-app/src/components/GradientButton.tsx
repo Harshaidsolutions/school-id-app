@@ -1,3 +1,4 @@
+import { BRAND } from "../theme/brandTheme";
 import { StyleSheet, Text, View, type ViewStyle } from "react-native";
 import { Pressable } from "./Pressable";
 import { LinearGradient } from "expo-linear-gradient";
@@ -54,8 +55,8 @@ export function GradientButton({
       : variant === "orange"
         ? ([...orangeButtonGradient] as const)
         : variant === "sunset"
-          ? (["#3B82F6", "#2563EB"] as const)
-          : (["#3B82F6", "#2563EB"] as const);
+          ? ([BRAND.accentLight, BRAND.accent] as const)
+          : ([BRAND.primaryLight, BRAND.primary] as const);
 
   return (
     <Pressable

@@ -1,3 +1,5 @@
+import { Entrance } from "../components/Entrance";
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { Pressable } from "../components/Pressable";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
@@ -251,7 +253,8 @@ export function StudentListScreen({ navigation, route }: Props) {
   }
 
   const renderStudent = useCallback(
-    ({ item }: { item: TeacherStudent }) => (
+    ({ item, index }: { item: TeacherStudent; index: number }) => (
+      <Entrance delay={(index % 8) * 45}>
       <StudentGridCell
         item={item}
         width={itemSize}
@@ -259,6 +262,7 @@ export function StudentListScreen({ navigation, route }: Props) {
         colors={colors}
         onPress={openStudentModal}
       />
+      </Entrance>
     ),
     [colors, itemSize, openStudentModal]
   );
@@ -271,7 +275,7 @@ export function StudentListScreen({ navigation, route }: Props) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}><ScreenBackdrop />
       <IdCardsGreenHeader>
         <View style={styles.headerRow}>
           <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.backBtn}>

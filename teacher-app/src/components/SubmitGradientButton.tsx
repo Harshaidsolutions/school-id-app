@@ -1,3 +1,4 @@
+import { BRAND } from "../theme/brandTheme";
 import { Pressable } from "./Pressable";
 import {
   ActivityIndicator,
@@ -69,7 +70,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.buttonPill,
     overflow: "hidden",
     elevation: 5,
-    shadowColor: "#1E293B",
+    shadowColor: BRAND.primaryDeep,
     shadowOpacity: 0.3,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },

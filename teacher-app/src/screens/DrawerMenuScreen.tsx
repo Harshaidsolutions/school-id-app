@@ -1,3 +1,4 @@
+import { BRAND } from "../theme/brandTheme";
 import { Entrance } from "../components/Entrance";
 import { useEffect, useState } from "react";
 import {
@@ -396,7 +397,7 @@ function useDrawerMenuStyles() {
     panel: {
       height: "100%",
       elevation: 16,
-      shadowColor: "#1E293B",
+      shadowColor: BRAND.primaryDeep,
       shadowOpacity: 0.25,
       shadowRadius: 16,
       shadowOffset: { width: 4, height: 0 },

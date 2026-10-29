@@ -1,3 +1,4 @@
+import { BRAND } from "../theme/brandTheme";
 import { useCallback, useState } from "react";
 import { Alert, AppState, Share, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
@@ -100,9 +101,9 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 18,
   },
-  title: { color: "#1E293B", fontSize: 17, fontFamily: fonts.semiBold },
+  title: { color: BRAND.ink, fontSize: 17, fontFamily: fonts.semiBold },
   description: {fontFamily:fonts.regular, color: "#5B6478", fontSize: 13, lineHeight: 19, marginTop: 5 },
-  link: {fontFamily:fonts.regular, color: "#2563EB", fontSize: 13, lineHeight: 19, marginVertical: 12 },
+  link: {fontFamily:fonts.regular, color: BRAND.primary, fontSize: 13, lineHeight: 19, marginVertical: 12 },
   actions: { flexDirection: "row", gap: 12 },
   button: {
     flex: 1,
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 10,
-    backgroundColor: "#2563EB",
+    backgroundColor: BRAND.primary,
     padding: 10,
   },
   share: { backgroundColor: "#B45309" },

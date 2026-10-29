@@ -1,3 +1,5 @@
+import { BRAND } from "../theme/brandTheme";
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { Entrance } from "../components/Entrance";
 import { Pressable } from "../components/Pressable";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -378,7 +380,7 @@ export function TemplateScreen() {
   const previewImages = templateViewerItems.map((entry) => entry.uri);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surfaceMuted }]}>
+    <View style={[styles.container, { backgroundColor: colors.surfaceMuted }]}><ScreenBackdrop />
       <OrangeGradientHeader
         title="TEMPLATES"
         subtitle="Select one design."
@@ -633,7 +635,7 @@ function useTemplateStyles() {
       paddingHorizontal: spacing.sm,
       borderWidth: 1,
       elevation: 1,
-      shadowColor: "#1E293B",
+      shadowColor: BRAND.primaryDeep,
       shadowOpacity: 0.05,
       shadowRadius: scale(3),
       shadowOffset: { width: 0, height: scale(1) },
@@ -747,7 +749,7 @@ function useTemplateStyles() {
       overflow: "hidden",
       position: "relative",
       elevation: 2,
-      shadowColor: "#1E293B",
+      shadowColor: BRAND.primaryDeep,
       shadowOpacity: 0.06,
       shadowRadius: 6,
       shadowOffset: { width: 0, height: 2 },

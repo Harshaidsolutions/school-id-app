@@ -1,3 +1,5 @@
+import { BRAND as THEME } from "../theme/brandTheme";
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import {ServiceRegistration} from "../components/ServiceRegistration";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../theme/ThemeContext";
@@ -141,7 +143,7 @@ export function LoginScreen(_props: Props) {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["bottom"]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["bottom"]}><ScreenBackdrop />
       <KeyboardDismissView style={styles.flex}>
         <KeyboardAvoidingView
           style={styles.flex}
@@ -152,7 +154,7 @@ export function LoginScreen(_props: Props) {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <LinearGradient colors={isDark ? ["#131C2E", "#0B1220"] : ["#FFFFFF", "#EEF2F9"]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[styles.hero, { paddingTop: insets.top + spacing.xl }]}>
+            <LinearGradient colors={isDark ? ["rgba(19,28,46,0.6)", "rgba(11,18,32,0)"] : ["rgba(255,255,255,0.75)", "rgba(255,255,255,0)"]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[styles.hero, { paddingTop: insets.top + spacing.xl }]}>
               <FloatingShapes color={isDark ? "#FFFFFF" : colors.primaryOrange} />
               <View style={styles.heroAccent} />
               <Entrance style={styles.identityPanel}>
@@ -320,7 +322,7 @@ function useLoginStyles() {
         padding: spacing.lg,
         backgroundColor: colors.surface,
         borderRadius: scale(28),
-        shadowColor: "#1E293B",
+        shadowColor: THEME.primaryDeep,
         shadowOpacity: 0.12,
         shadowRadius: 24,
         shadowOffset: { width: 0, height: 12 },
@@ -390,7 +392,7 @@ function useLoginStyles() {
         marginTop: spacing.xs,
         overflow: "hidden",
         elevation: 6,
-        shadowColor: "#1E293B",
+        shadowColor: THEME.primaryDeep,
         shadowOpacity: 0.35,
         shadowRadius: 14,
         shadowOffset: { width: 0, height: 8 },

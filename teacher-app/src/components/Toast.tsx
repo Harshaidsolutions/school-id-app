@@ -1,3 +1,4 @@
+import { BRAND } from "../theme/brandTheme";
 import {
   createContext,
   useCallback,
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     elevation: 4,
-    shadowColor: "#1E293B",
+    shadowColor: BRAND.primaryDeep,
     shadowOpacity: 0.12,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },

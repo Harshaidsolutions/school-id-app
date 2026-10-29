@@ -1,3 +1,4 @@
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { contentMaxStyle } from "../theme/responsive";
 import { Pressable } from "../components/Pressable";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -162,7 +163,7 @@ export function AddDetailsScreen({ navigation, route }: Props) {
     <SafeAreaView
       style={[styles.safe, { backgroundColor: colors.background }]}
       edges={["bottom"]}
-    >
+    ><ScreenBackdrop />
       <OrangeGradientHeader
         title="Add Details"
         variant="green"

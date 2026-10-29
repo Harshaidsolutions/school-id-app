@@ -131,9 +131,9 @@ function AppShell({
 
     <>
 
-      <StatusBar style={inApp ? (isDark ? "light" : "dark") : "light"} />
+      <StatusBar style={inApp && isDark ? "light" : "dark"} />
 
-      <View style={{ flex: 1, backgroundColor: showBrandedSplash ? "#FF8C1A" : themeColors.background }}>
+      <View style={{ flex: 1, backgroundColor: showBrandedSplash ? "#FFFFFF" : themeColors.background }}>
 
         {showBrandedSplash ? (
 

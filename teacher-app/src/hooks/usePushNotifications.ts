@@ -1,3 +1,4 @@
+import { BRAND } from "../theme/brandTheme";
 import { notificationAlertsEnabled, registerNotificationToken, useNotificationPreference } from "../utils/notificationPreference";
 import { useEffect, useRef } from "react";
 import { Platform } from "react-native";
@@ -33,7 +34,7 @@ async function ensureAndroidChannel(): Promise<void> {
     importance: Notifications.AndroidImportance.MAX,
     sound: "default",
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: "#2563EB",
+    lightColor: BRAND.primary,
     enableVibrate: true,
     showBadge: true,
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,

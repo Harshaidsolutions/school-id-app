@@ -1,3 +1,5 @@
+import { BRAND } from "../theme/brandTheme";
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { contentMaxStyle } from "../theme/responsive";
 import { Entrance } from "../components/Entrance";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -131,7 +133,7 @@ function SchoolIdCardsScreen() {
   const captured = overall?.captured ?? 0;
 
   return (
-    <View style={[styles.safe, { backgroundColor: colors.background }]}>
+    <View style={[styles.safe, { backgroundColor: colors.background }]}><ScreenBackdrop />
       <IdCardsGreenHeader>
         <View style={styles.idHeaderRow}>
           <Pressable onPress={() => navigation.navigate("Home" as never)} hitSlop={12}>
@@ -487,7 +489,7 @@ function useIdCardsStyles() {
         borderRadius: radius.md,
         paddingVertical: spacing.xxs + 2,
         elevation: 6,
-        shadowColor: "#1E293B",
+        shadowColor: BRAND.primaryDeep,
         shadowOpacity: 0.2,
         shadowRadius: 8,
         shadowOffset: { width: 0, height: 4 },

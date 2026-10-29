@@ -1,3 +1,5 @@
+import { BRAND } from "../theme/brandTheme";
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { contentMaxStyle } from "../theme/responsive";
 import { Entrance } from "../components/Entrance";
 import { useCallback, useEffect, useState } from "react";
@@ -273,7 +275,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
   return (
     <View
       style={[styles.container, { backgroundColor: colors.surfaceMuted }]}
-    >
+    ><ScreenBackdrop />
       <OrangeGradientHeader
         title="Notifications"
         onBack={() => navigation.goBack()}
@@ -513,7 +515,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     elevation: 2,
-    shadowColor: "#1E293B",
+    shadowColor: BRAND.primaryDeep,
     shadowOpacity: 0.06,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },

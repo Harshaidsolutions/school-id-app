@@ -1,3 +1,4 @@
+import { BRAND } from "../theme/brandTheme";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
@@ -15,7 +16,7 @@ import { ModelsScreen } from "../screens/ModelsScreen";
 import { IdCardsScreen } from "../screens/IdCardsScreen";
 import type { MainTabParamList, RootStackParamList } from "./types";
 import { spacing } from "../theme/colors";
-import { textStyles } from "../theme/typography";
+import { fonts, textStyles } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
 import { useAuth } from "../auth/AuthContext";
 import { moderateScale, icons } from "../theme/responsive";
@@ -93,7 +94,7 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
                 end={{ x: 1, y: 1 }}
                 style={[styles.fab, { borderColor: colors.tabBarBg }]}
               >
-                <Ionicons name="add" size={icons.xxl} color="#1E293B" />
+                <Ionicons name="add" size={icons.xxl} color={colors.onAccent} />
               </LinearGradient>
             </Pressable>
           );
@@ -164,7 +165,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingTop: moderateScale(8),
     alignItems: "center",
-    shadowColor: "#1E293B",
+    shadowColor: BRAND.primaryDeep,
     shadowOpacity: 0.1,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: -4 },
@@ -191,7 +192,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   labelActive: {
-    fontFamily: "Outfit_700Bold",
+    fontFamily: fonts.headingBold,
   },
   fabWrap: {
     flex: 1,
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 4,
     elevation: 10,
-    shadowColor: "#F59E0B",
+    shadowColor: BRAND.accent,
     shadowOpacity: 0.4,
     shadowRadius: moderateScale(12),
     shadowOffset: { width: 0, height: moderateScale(6) },

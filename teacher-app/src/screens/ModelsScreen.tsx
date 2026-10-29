@@ -1,3 +1,5 @@
+import { BRAND } from "../theme/brandTheme";
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { Pressable } from "../components/Pressable";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
@@ -258,7 +260,7 @@ export function ModelsScreen() {
   const previewImages = modelViewerItems.map((entry) => entry.uri);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}><ScreenBackdrop />
       <OrangeGradientHeader
         title="MODELS"
         subtitle="Select One Model and Tag"
@@ -545,7 +547,7 @@ function useModelsStyles() {
     borderRadius: radius.lg,
     overflow: "hidden",
     elevation: 2,
-    shadowColor: "#1E293B",
+    shadowColor: BRAND.primaryDeep,
     shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },

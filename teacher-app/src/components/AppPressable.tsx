@@ -25,7 +25,7 @@ export function AppPressable({ style, android_ripple, onPressIn, onPressOut, ...
 
   function animate(value: number) {
     if (reduceMotion) { scale.setValue(1); return; }
-    Animated.spring(scale, { toValue: value, useNativeDriver: true, speed: 32, bounciness: 0 }).start();
+    Animated.spring(scale, { toValue: value, useNativeDriver: true, speed: 28, bounciness: value === 1 ? 10 : 0 }).start();
   }
 
   const state = { pressed, hovered: false } as PressableStateCallbackType;
@@ -37,7 +37,7 @@ export function AppPressable({ style, android_ripple, onPressIn, onPressOut, ...
     <AnimatedPressable
       {...rest}
       android_ripple={android_ripple ?? null}
-      onPressIn={(event) => { setPressed(true); animate(0.975); onPressIn?.(event); }}
+      onPressIn={(event) => { setPressed(true); animate(0.96); onPressIn?.(event); }}
       onPressOut={(event) => { setPressed(false); animate(1); onPressOut?.(event); }}
       style={[flattened, { transform: [...ownTransform, { scale }] }, pressed ? { opacity: 0.9 } : null]}
     />

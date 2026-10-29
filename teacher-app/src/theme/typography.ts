@@ -9,16 +9,21 @@
  */
 import { colors } from "./colors";
 import { scale as s } from "./responsive";
+import { BRAND } from "./brandTheme";
+
+const H = BRAND.headingFont === "Poppins"
+  ? { regular: "Poppins_500Medium", semi: "Poppins_600SemiBold", bold: "Poppins_700Bold", extra: "Poppins_800ExtraBold" }
+  : { regular: "Outfit_400Regular", semi: "Outfit_700Bold", bold: "Outfit_700Bold", extra: "Outfit_700Bold" };
 
 export const fontHeading = "Outfit";
 export const fontBody = "Inter";
 
 export const fonts = {
   /** Outfit — heading roles (key names kept for compatibility) */
-  poppinsMedium: "Outfit_400Regular",
-  poppinsSemiBold: "Outfit_700Bold",
-  poppinsBold: "Outfit_700Bold",
-  poppinsExtraBold: "Outfit_700Bold",
+  poppinsMedium: H.regular,
+  poppinsSemiBold: H.semi,
+  poppinsBold: H.bold,
+  poppinsExtraBold: H.extra,
 
   /** Inter — body roles */
   interRegular: "Inter_400Regular",
@@ -29,11 +34,11 @@ export const fonts = {
    * Role aliases (prefer textStyles):
    * heading weights → Outfit; body weights → Inter
    */
-  heading: "Outfit_700Bold",
-  headingMedium: "Outfit_400Regular",
-  headingSemiBold: "Outfit_700Bold",
-  headingBold: "Outfit_700Bold",
-  headingExtraBold: "Outfit_700Bold",
+  heading: H.bold,
+  headingMedium: H.regular,
+  headingSemiBold: H.semi,
+  headingBold: H.bold,
+  headingExtraBold: H.extra,
 
   body: "Inter_400Regular",
   bodyMedium: "Inter_500Medium",
@@ -43,9 +48,9 @@ export const fonts = {
   regular: "Inter_400Regular",
   medium: "Inter_500Medium",
   /** Row/card titles & buttons → Outfit */
-  semiBold: "Outfit_700Bold",
-  bold: "Outfit_700Bold",
-  extraBold: "Outfit_700Bold",
+  semiBold: H.semi,
+  bold: H.bold,
+  extraBold: H.extra,
 } as const;
 
 export const type = {

@@ -1,3 +1,4 @@
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -29,7 +30,7 @@ export function ReadInstructionsScreen({ navigation }: Props) {
     <SafeAreaView
       style={[styles.safe, { backgroundColor: colors.background }]}
       edges={["top", "bottom"]}
-    >
+    ><ScreenBackdrop />
       <View style={styles.container}>
         {/* Clipboard illustration */}
         <View style={styles.clipboardWrap}>

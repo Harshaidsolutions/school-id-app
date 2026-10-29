@@ -1,3 +1,4 @@
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { contentMaxStyle } from "../theme/responsive";
 import { useRef } from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -22,7 +23,7 @@ export function AddStudentScreen({ navigation, route }: Props) {
     <SafeAreaView
       style={[styles.safe, { backgroundColor: colors.background }]}
       edges={["bottom"]}
-    >
+    ><ScreenBackdrop />
       <KeyboardDismissView style={styles.flex}>
         <KeyboardAwareFormScrollView
           scrollRef={scrollRef}

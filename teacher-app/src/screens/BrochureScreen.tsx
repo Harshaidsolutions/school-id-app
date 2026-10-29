@@ -1,3 +1,4 @@
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { Pressable } from "../components/Pressable";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -157,7 +158,7 @@ export function BrochureScreen() {
     .filter((uri): uri is string => Boolean(uri));
 
   return (
-    <View style={[styles.safe, { backgroundColor: colors.background }]}>
+    <View style={[styles.safe, { backgroundColor: colors.background }]}><ScreenBackdrop />
       <OrangeGradientHeader title="Brochures" onBack={() => navigation.goBack()} />
       <ScrollView
         contentContainerStyle={styles.container}

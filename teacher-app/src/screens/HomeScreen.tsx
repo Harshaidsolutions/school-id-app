@@ -1,3 +1,6 @@
+import { AdminHeroCard } from "../components/AdminHeroCard";
+import { BRAND as THEME } from "../theme/brandTheme";
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { CONTENT_MAX_WIDTH, contentMaxStyle } from "../theme/responsive";
 import {ManagedInstructions} from "../components/ManagedInstructions";
 import { Entrance } from "../components/Entrance";
@@ -160,7 +163,7 @@ export function HomeScreen() {
   const schoolColWidth = Math.floor((contentW - gridPad - spacing.xs * (schoolColumns - 1)) / schoolColumns);
 
   return (
-    <View style={[styles.safe, { backgroundColor: colors.background }]}>
+    <View style={[styles.safe, { backgroundColor: colors.background }]}><ScreenBackdrop />
       <LinearGradient
         colors={[colors.surface, colors.surface]}
         start={{ x: 0, y: 0 }}
@@ -203,7 +206,7 @@ export function HomeScreen() {
           />
           {unread > 0 ? (
             <View style={[styles.badge, { backgroundColor: colors.brandOrange, borderColor: colors.surface }]}>
-              <Text style={[styles.badgeText, { color: "#1E293B" }]}>
+              <Text style={[styles.badgeText, { color: colors.onAccent }]}>
                 {unread > 9 ? "9+" : String(unread)}
               </Text>
             </View>
@@ -234,11 +237,11 @@ export function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Entrance style={styles.hero}>
-          {!ready ? null : childBrand ? (
-            brand.photoUrl ? <Image source={{uri:brand.photoUrl}} accessibilityLabel="Your admin logo" resizeMode="contain" style={{width:"80%",height:scale(115),alignSelf:"center"}} /> : <BrandLockup variant="homeHero" showTagline />
-          ) : (
-            <BrandLockup variant="homeHero" showTagline />
-          )}
+          <AdminHeroCard
+            loading={!ready}
+            adminName={childBrand ? brand.adminName : "Harsha ID Solutions"}
+            photoUrl={childBrand ? brand.photoUrl : null}
+          />
         </Entrance>
         {brandError && !ready ? (
           <Text style={[styles.footer, { color: colors.textMuted }]}>{brandError}</Text>
@@ -489,7 +492,7 @@ function useHomeStyles() {
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,
     borderBottomWidth: 1,
-    shadowColor: "#1E293B",
+    shadowColor: THEME.primaryDeep,
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -499,8 +502,8 @@ function useHomeStyles() {
   headerLogoWrap: {
       backgroundColor:"transparent",
       paddingVertical:2,
-    flexShrink: 0,
-    alignItems: "center",
+    flex: 1,
+    alignItems: "flex-start",
     justifyContent: "center",
     paddingHorizontal: spacing.xxs,
     minWidth: scale(36),
@@ -556,10 +559,7 @@ function useHomeStyles() {
   content: { paddingHorizontal: spacing.pagePad, paddingTop: 0, paddingBottom: spacing.pagePad + scale(120) },
   hero: {
     backgroundColor: "transparent",
-    paddingHorizontal: spacing.md,
     marginTop: spacing.md,
-    alignItems: "center",
-    paddingVertical: spacing.md,
     marginBottom: spacing.xs,
   },
   sectionTitleRow: {
@@ -681,7 +681,7 @@ function useHomeStyles() {
     alignItems: "center",
     justifyContent: "center",
     elevation: 8,
-    shadowColor: "#1E293B",
+    shadowColor: THEME.primaryDeep,
     shadowOpacity: 0.28,
     shadowRadius: scale(10),
     shadowOffset: { width: 0, height: scale(5) },

@@ -1,3 +1,4 @@
+import { ScreenBackdrop } from "./ScreenBackdrop";
 import { contentMaxStyle, responsiveColumns } from "../theme/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -160,7 +161,7 @@ export function OrganizationCardsPanel() {
   const headerAction = link ? <Pressable accessibilityLabel="Add record using organization form" style={{backgroundColor:"#fff",borderRadius:radius.full,padding:10}} onPress={() => void Linking.openURL(link).catch(() => setError("Could not open the form link."))}><Text style={{color:colors.brandGreen,fontFamily:fonts.semiBold}}>＋ Add Record</Text></Pressable> : null;
   const tabs = ([["all","All"],["pending","Pending"],["captured","Captured"],["pending-data","Pending Data"]] as const).filter(([key]) => key !== "captured" || visibility.show_captured_section !== false);
   return (
-    <View style={{flex:1,backgroundColor:colors.background}}>
+    <View style={{flex:1,backgroundColor:colors.background}}><ScreenBackdrop />
       <IdCardsGreenHeader>
         <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
           <Pressable onPress={back} accessibilityLabel="Back" hitSlop={12}><Ionicons name="arrow-back" size={24} color="#fff" /></Pressable>

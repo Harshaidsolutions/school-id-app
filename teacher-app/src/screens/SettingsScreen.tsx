@@ -1,3 +1,4 @@
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { contentMaxStyle } from "../theme/responsive";
 import { Pressable } from "../components/Pressable";
 import { setNotificationPreference, useNotificationPreference } from "../utils/notificationPreference";
@@ -112,7 +113,7 @@ export function SettingsScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}><ScreenBackdrop />
       <OrangeGradientHeader
         title="Settings"
         onBack={() => navigation.goBack()}

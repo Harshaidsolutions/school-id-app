@@ -1,3 +1,4 @@
+import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { contentMaxStyle } from "../theme/responsive";
 import {ManagedInstructions} from "../components/ManagedInstructions";
 import { Pressable } from "../components/Pressable";
@@ -163,7 +164,7 @@ export function InstructionsScreen(_props: Props) {
 
       edges={["top", "bottom"]}
 
-    >
+    ><ScreenBackdrop />
 
       <View style={styles.header}>
 

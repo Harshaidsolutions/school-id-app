@@ -1,3 +1,4 @@
+import { BRAND as THEME } from "../theme/brandTheme";
 import {
   Image,
   StyleSheet,
@@ -102,7 +103,7 @@ export function BrandLockup({
         : { mascot: wp(28, screenW), harsha: 44, solutions: 24, tag: 14, gap: 0 };
 
   const hColor = harshaColor ?? (variant === "splash" ? "#FFFFFF" : "#0F1B3D");
-  const sColor = solutionsColor ?? (variant === "splash" ? "#FFFFFF" : "#2563EB");
+  const sColor = solutionsColor ?? (variant === "splash" ? "#FFFFFF" : THEME.primary);
   const tColor = taglineColor ?? (variant === "splash" ? "rgba(255,255,255,0.9)" : "#5B6478");
 
   const harshaStyle: TextStyle = {

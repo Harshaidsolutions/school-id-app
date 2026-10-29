@@ -4,6 +4,7 @@
  */
 
 import { colors } from "./colors";
+import { BRAND } from "./brandTheme";
 export const lightPalette = colors;
 
 export type LightPalette = typeof lightPalette;
@@ -12,7 +13,7 @@ export type AppColors = { [K in keyof LightPalette]: string };
 export const darkPalette: AppColors = {
   ...lightPalette,
   background: "#0B1220",
-  surface: "#131C2E",
+  surface: "rgba(19,28,46,0.88)",
   surfaceMuted: "#0B1220",
   inputBg: "#1A2438",
   text: "#F1F4F9",
@@ -31,11 +32,11 @@ export const darkPalette: AppColors = {
   graySoft: "#1A2438",
   tabBarBg: "#131C2E",
   tabInactive: "#7F889B",
-  primaryOrange: "#60A5FA",
-  blue: "#60A5FA",
-  brandBlue: "#60A5FA",
-  tabActive: "#FBBF24",
-  brandGreen: "#60A5FA",
+  primaryOrange: BRAND.primaryLight,
+  blue: BRAND.primaryLight,
+  brandBlue: BRAND.primaryLight,
+  tabActive: BRAND.accentLight,
+  brandGreen: BRAND.primaryLight,
   sectionOrange: "#F1F4F9",
   offerOrange: "#FBBF24",
   orangeDark: "#FBBF24",
