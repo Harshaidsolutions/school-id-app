@@ -217,6 +217,8 @@ function noticeHeadline(
   return title;
 }
 
+const EMBED_PATHS = new Set(["/id-card-generator", "/crop-tool"]);
+
 export function AppLayout() {
   const { user, logout, login, token } = useAuth();
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -392,6 +394,15 @@ export function AppLayout() {
     isOrganizationDetail;
   const useLockedPageScroll = isOrgListPage || isOrgDetailListPage || location.pathname === "/crop-tool";
   const showCenteredHeading = true;
+
+  // Opened inside the My School ID Admin Android app (design tools only): no sidebar/header.
+  const embedded = typeof window !== "undefined" && Boolean((window as unknown as { __MSIDC_EMBED__?: boolean }).__MSIDC_EMBED__);
+  if (embedded) {
+    if (!EMBED_PATHS.has(location.pathname)) {
+      (window as unknown as { ReactNativeWebView?: { postMessage: (m: string) => void } }).ReactNativeWebView?.postMessage("close");
+    }
+    return <div className="msidc-embed min-h-screen bg-white p-2 sm:p-4"><Outlet /></div>;
+  }
 
   const sidebarContent = (
     <>

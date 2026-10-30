@@ -18,5 +18,7 @@ get-in-touch get-in-touch.html
 my-app my-app.html
 videos videos.html
 buy-now buy-now.html
+privacy-policy privacy-policy.html
+delete-account delete-account.html
 ROUTES
 printf '%s\n' 'Public website updated. Open an Incognito tab to check it.'

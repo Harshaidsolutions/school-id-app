@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "My School ID Admin",
+    "slug": "my-school-id-admin",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/app-icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": { "backgroundColor": "#FFFFFF" },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.schoolid.admin",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Take ID card photos of students and members.",
+        "NSPhotoLibraryUsageDescription": "Choose ID card photos, logos and templates."
+      }
+    },
+    "android": {
+      "package": "com.schoolid.admin",
+      "versionCode": 10,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon-foreground.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "permissions": ["android.permission.CAMERA", "android.permission.INTERNET"],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
+      "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "plugins": [
+      ["expo-splash-screen", { "backgroundColor": "#FFFFFF", "image": "./assets/splash-blank.png", "imageWidth": 120, "resizeMode": "contain" }],
+      ["expo-image-picker", {
+        "photosPermission": "Choose ID card photos, logos and templates.",
+        "cameraPermission": "Take ID card photos of students and members.",
+        "microphonePermission": false
+      }],
+      "expo-secure-store",
+      "expo-font",
+      "@react-native-community/datetimepicker"
+    ],
+    "extra": { "apiUrl": "https://myschoolidcard.in" }
+  }
+}

@@ -23,22 +23,32 @@ if [[ ! -f "$ADMIN_KEYSTORE_PATH" ]]; then
   keytool -genkeypair -keystore "$ADMIN_KEYSTORE_PATH" -storepass:env ADMIN_KEYSTORE_PASSWORD -keypass:env ADMIN_KEYSTORE_PASSWORD -alias school-id-admin -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=My School ID Admin, O=Harsha ID Solutions, C=IN'
 fi
 keytool -list -keystore "$ADMIN_KEYSTORE_PATH" -storepass:env ADMIN_KEYSTORE_PASSWORD -alias school-id-admin >/dev/null
+REPO_DIR="$(cd "$APP_DIR/.." && pwd)"
+command -v npm >/dev/null || { echo 'Install Node.js 20+ first (same as for the teacher app).'; exit 1; }
+echo ""
+echo "Step 1/2: Building all admin screens (admin-web)…"
+cd "$REPO_DIR/admin-web"
+npm install --include=dev --no-audit --no-fund
+npx vite build
+[[ -s dist/index.html ]] || { echo 'Admin screens build failed.'; exit 1; }
+echo ""
+echo "Step 2/2: Building the Android APK…"
 cd "$APP_DIR/android"
 chmod +x gradlew
-./gradlew assembleRelease
+./gradlew clean assembleRelease bundleRelease
 APK="$APP_DIR/android/app/build/outputs/apk/release/app-release.apk"
 [[ -s "$APK" ]] || { echo 'Release APK was not generated.'; exit 1; }
-CERT="$APP_DIR/output/admin-signing-certificate.der"
-keytool -exportcert -keystore "$ADMIN_KEYSTORE_PATH" -storepass:env ADMIN_KEYSTORE_PASSWORD -alias school-id-admin -file "$CERT"
-FINGERPRINT="$(openssl x509 -inform DER -in "$CERT" -noout -fingerprint -sha256 | cut -d= -f2)"
-printf 'ADMIN_ANDROID_CERT_SHA256=%s\n' "$FINGERPRINT" > "$APP_DIR/output/admin-android.env"
-python3 - "$FINGERPRINT" "$APP_DIR/output/assetlinks.json" <<'PY'
-import json,sys
-with open(sys.argv[2],'w') as f:
- json.dump([{'relation':['delegate_permission/common.handle_all_urls'],'target':{'namespace':'android_app','package_name':'com.schoolid.admin','sha256_cert_fingerprints':[sys.argv[1]]}}],f,indent=2)
-PY
-cp "$APK" "$HOME/Desktop/MySchoolIDCard-Admin-v1.1.0.apk"
-echo "APK saved: $HOME/Desktop/MySchoolIDCard-Admin-v1.1.0.apk"
-echo "Association file: $APP_DIR/output/assetlinks.json"
-echo 'Back up ~/.school-id-admin-signing/admin-release.jks and your password securely.'
-echo 'Deploy the certificate association on EC2 before testing fullscreen mode. See admin-app/README.md.'
+VERSION="$(sed -n "s/.*versionName '\\(.*\\)'.*/\\1/p" app/build.gradle | head -1)"
+OUT="$HOME/Desktop/MySchoolIDCard-Admin-v${VERSION}.apk"
+AAB="$APP_DIR/android/app/build/outputs/bundle/release/app-release.aab"
+[[ -s "$AAB" ]] || { echo 'Play Store bundle (.aab) was not generated.'; exit 1; }
+OUT_AAB="$HOME/Desktop/MySchoolIDCard-Admin-v${VERSION}-PlayStore.aab"
+cp "$APK" "$OUT"
+cp "$AAB" "$OUT_AAB"
+"$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | tail -1)/apksigner" verify --print-certs "$OUT" | head -3 || true
+echo ""
+echo "DONE. Saved on your Desktop:"
+echo "  Play Store upload file : $OUT_AAB"
+echo "  Phone test file (APK)  : $OUT"
+echo "Send it to the phone with WhatsApp (as Document) or Google Drive, then tap it to install."
+echo "Back up ~/.school-id-admin-signing/admin-release.jks and your password securely."

@@ -93,7 +93,7 @@
           </div>
         </div>
       </div>
-      <div class="wrap footer-bottom"><span>© All Rights Reserved to Harsha ID Solutions</span><span>${escapeHtml(site.tagline)}</span></div>
+      <div class="wrap footer-bottom"><span>© All Rights Reserved to Harsha ID Solutions · <a href="/privacy-policy">Privacy Policy</a> · <a href="/delete-account">Delete account</a></span><span>${escapeHtml(site.tagline)}</span></div>
     </footer>
     <a class="wa-float" href="${site.whatsapp}" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">${ICONS.whatsapp}</a>`;
 
