@@ -19,18 +19,23 @@ import { requireSuperAdmin } from "../utils/adminScope";
 
 const PRODUCT = "msidc-desktop-generator";
 let cachedKey: KeyObject | null = null;
+let cachedPem = "";
 
-function privateKey(): KeyObject {
-  if (cachedKey) return cachedKey;
+function privatePem(): string {
+  if (cachedPem) return cachedPem;
   const raw = (process.env.DESKTOP_LICENSE_PRIVATE_KEY ?? "").trim();
   if (!raw) throw new AppError("Desktop licensing is not configured on the server (DESKTOP_LICENSE_PRIVATE_KEY).", 503);
-  const pem = raw.includes("BEGIN") ? raw.replace(/\\n/g, "\n") : Buffer.from(raw, "base64").toString("utf8");
-  cachedKey = createPrivateKey(pem);
+  cachedPem = raw.includes("BEGIN") ? raw.replace(/\\n/g, "\n") : Buffer.from(raw, "base64").toString("utf8");
+  return cachedPem;
+}
+
+function privateKey(): KeyObject {
+  if (!cachedKey) cachedKey = createPrivateKey(privatePem());
   return cachedKey;
 }
 
 export function desktopLicensePublicKeyPem(): string {
-  return createPublicKey(privateKey()).export({ type: "spki", format: "pem" }).toString();
+  return createPublicKey({ key: privatePem(), format: "pem" }).export({ type: "spki", format: "pem" }).toString();
 }
 
 function newKey(): string {
