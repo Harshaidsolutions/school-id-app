@@ -20,7 +20,7 @@ function createWindow() {
     minHeight: 700,
     title: "My School ID Card – ID Card Generator",
     backgroundColor: "#f6f5ff",
-    icon: path.join(__dirname, "..", "build", "icon.png"),
+    icon: path.join(__dirname, "..", "installer", "icon.png"),
     show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),

@@ -40,17 +40,17 @@
     "copyright": "\u00a9 Harsha ID Solutions",
     "directories": {
       "output": "release",
-      "buildResources": "build"
+      "buildResources": "installer"
     },
     "files": [
       "electron/**/*",
       "dist-renderer/**/*",
-      "build/icon.png",
+      "installer/icon.png",
       "package.json"
     ],
     "asar": true,
     "win": {
-      "icon": "build/icon.ico",
+      "icon": "installer/icon.ico",
       "target": [
         "nsis",
         "msi"
@@ -64,9 +64,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "ID Card Generator",
-      "license": "build/license.txt",
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico"
+      "license": "installer/license.txt",
+      "installerIcon": "installer/icon.ico",
+      "uninstallerIcon": "installer/icon.ico"
     },
     "msi": {
       "oneClick": false,
