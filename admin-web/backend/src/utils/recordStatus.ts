@@ -371,9 +371,15 @@ export function collectRecordFacets(
       const label = labels[key] == null ? key : String(labels[key]);
       values.push({ key, label, value });
     }
+    // Count each record once per value: the class is stored both in class_section and in
+    // the Excel CLASS column, which used to count every captured photo twice.
+    const counted = new Set<string>();
     for (const item of values) {
       const kind = fieldKind(item.key, item.label);
       if (!kind) continue;
+      const once = `${kind}\u0000${item.value}`;
+      if (counted.has(once)) continue;
+      counted.add(once);
       const current = buckets[kind].get(item.value) ?? { count: 0, key: item.key };
       if (hasPhoto) current.count += 1;
       buckets[kind].set(item.value, current);

@@ -439,7 +439,7 @@ async function listPhotoCaptureCounts(
       `SELECT class_section, extra_fields, field_labels, photo_url,
               photo_captured_at, updated_at
        FROM students
-       WHERE ${whereOrg}`,
+       WHERE ${whereOrg} AND app_visible = true`,
       [orgId]
     );
     const facets = collectRecordFacets(facetRows.rows);

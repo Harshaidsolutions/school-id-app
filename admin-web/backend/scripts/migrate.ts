@@ -981,6 +981,52 @@ async function migrate() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
   `);
+  // One-time data fixes: each runs once, ever (recorded in one_time_migrations).
+  await pool.query(`CREATE TABLE IF NOT EXISTS one_time_migrations (
+    name TEXT PRIMARY KEY,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  const runOnce = async (name: string, sql: string) => {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const mark = await client.query(
+        `INSERT INTO one_time_migrations (name) VALUES ($1) ON CONFLICT DO NOTHING RETURNING name`,
+        [name]
+      );
+      if (mark.rowCount) await client.query(sql);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  };
+  // Signature Upload is OFF by default. Switch it off wherever it is on but no
+  // signature was ever uploaded (admins can turn it on again in Form Setup).
+  await runOnce(
+    "2026-10-signature-upload-default-off",
+    `UPDATE form_configs fc
+        SET fields = (
+              SELECT jsonb_agg(
+                       CASE WHEN f->>'key' = 'signature_upload'
+                            THEN jsonb_set(f, '{enabled}', 'false'::jsonb, true)
+                            ELSE f END
+                       ORDER BY ord)
+                FROM jsonb_array_elements(fc.fields) WITH ORDINALITY AS t(f, ord)),
+            updated_at = NOW()
+      WHERE jsonb_typeof(fc.fields) = 'array'
+        AND EXISTS (
+              SELECT 1 FROM jsonb_array_elements(fc.fields) f
+               WHERE f->>'key' = 'signature_upload'
+                 AND COALESCE(f->>'enabled', 'true') <> 'false')
+        AND NOT EXISTS (
+              SELECT 1 FROM students s
+               WHERE ((fc.school_id IS NOT NULL AND s.school_id = fc.school_id)
+                   OR (fc.institute_id IS NOT NULL AND s.institute_id = fc.institute_id))
+                 AND NULLIF(btrim(s.signature_url), '') IS NOT NULL)`
+  );
+
   console.log("Migration completed successfully.");
 }
 
