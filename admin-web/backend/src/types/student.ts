@@ -16,6 +16,7 @@ export interface Student {
   photo_captured_at?: string | Date | null;
   photo_cropped?: boolean;
   signature_url?: string | null;
+  signature_cropped?: boolean;
   status: string | null;
   import_batch_id: string | null;
   printed_at: Date | null;

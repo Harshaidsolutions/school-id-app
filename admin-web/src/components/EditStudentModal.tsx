@@ -4,7 +4,7 @@ import axios from "axios";
 import api from "../api/client";
 import type { ApiErrorBody, Student } from "../types";
 import type { FormFieldConfig } from "../constants/formFields";
-import { activeFormFields, isPlainPhotoPrompt } from "../utils/formFieldHelpers";
+import { activeFormFields, isClassCategoryField, isPlainPhotoPrompt } from "../utils/formFieldHelpers";
 import {
   authenticatedStudentPhotoUrl,
   invalidateStudentPhotoCache,
@@ -33,7 +33,10 @@ export function EditStudentModal({
     /^(id|photoid|photonumber|photono|photoidnumber)$/.test(field.label.toLowerCase().replace(/[^a-z0-9]/g, "")) ||
     isPlainPhotoPrompt(field);
   const numberField = fields.find(isIdentity);
+  // Class is locked too; everything else can be edited or emptied.
+  const isClassField = (field: FormFieldConfig) => field.key === "class_section" || isClassCategoryField(field);
   const editableFields = fields.filter((field) => !isIdentity(field));
+  const changeableFields = editableFields.filter((field) => !isClassField(field));
   const original = useRef<Record<string, string>>({});
   const [values, setValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -168,14 +171,14 @@ export function EditStudentModal({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    for (const field of editableFields) {
+    for (const field of changeableFields) {
       const problem = fieldProblem(field.key, field.label, fieldValue(field.key));
       if (problem) {
         setError(problem);
         return;
       }
     }
-    const cleared = editableFields
+    const cleared = changeableFields
       .filter((field) => field.key !== "signature_upload")
       .filter((field) => (original.current[field.key] ?? "").trim() && !fieldValue(field.key).trim())
       .map((field) => field.label.trim());
@@ -206,7 +209,7 @@ export function EditStudentModal({
     };
 
     const extraFields: Record<string, string | null> = {};
-    for (const field of editableFields) {
+    for (const field of changeableFields) {
       if (field.key === "signature_upload") continue;
       extraFields[field.key] = fieldValue(field.key).trim() || null;
     }
@@ -214,10 +217,11 @@ export function EditStudentModal({
       ...payload,
       extra_fields: extraFields,
     };
-    for (const field of editableFields) {
+    for (const field of changeableFields) {
       if (field.key === "signature_upload") continue;
       requestBody[field.key] = fieldValue(field.key).trim() || null;
     }
+    delete requestBody.class_section;
     requestBody.photo_id = student.photo_id ?? null;
 
     try {
@@ -246,6 +250,17 @@ export function EditStudentModal({
   function renderField(field: FormFieldConfig) {
     const label = field.label;
     const key = field.key;
+
+    if (isClassField(field)) {
+      return (
+        <label key={key} className="block text-sm">
+          <span className="mb-1 block font-medium text-text-navy">
+            {label} <span className="text-xs font-normal text-text-muted">(cannot be changed)</span>
+          </span>
+          <input value={fieldValue(key)} readOnly disabled className="input-field cursor-not-allowed bg-content-bg text-text-muted" />
+        </label>
+      );
+    }
 
     if (key === "class_section") {
       return (

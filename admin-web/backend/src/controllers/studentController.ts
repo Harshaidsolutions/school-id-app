@@ -29,6 +29,8 @@ import {
   buildFieldLabelsFromConfig,
   mergeExtraFieldsForSave,
   parseExtraFields,
+  canonicalSyncFromExtra,
+  classFieldKeys,
   rowToInsertParams,
 } from "../utils/studentFieldAccess";
 import { deriveCanonicalValuesFromExtraFields, isClassCategoryField } from "../utils/excelSchema";
@@ -129,7 +131,7 @@ async function appendPendingDataIds(
 
 const STUDENT_SELECT = `
   id, school_id, institute_id, class_section, roll_no, student_name, parent_name, parent_phone,
-  app_visible, address, photo_id, photo_url, photo_captured_at, photo_cropped, signature_url, status, import_batch_id, printed_at, created_at, updated_at,
+  app_visible, address, photo_id, photo_url, photo_captured_at, photo_cropped, signature_url, signature_cropped, status, import_batch_id, printed_at, created_at, updated_at,
   custom_1, custom_2, custom_3, dob, gender, blood_group, extra_fields, field_labels
 `;
 
@@ -650,18 +652,12 @@ export async function updateStudentAdmin(
       return value;
     };
 
-    const studentName =
+    let studentName =
       req.body.student_name !== undefined || req.body.studentName !== undefined
         ? textValue(req.body.student_name ?? req.body.studentName) || ""
         : student.student_name;
-    if (!studentName.trim()) throw new AppError("Name is required", 400);
-    const classSection =
-      req.body.class_section !== undefined || req.body.classSection !== undefined
-        ? textValue(req.body.class_section ?? req.body.classSection) || ""
-        : student.class_section;
-    if (!classSection.trim() && student.school_id) {
-      throw new AppError("Class is required", 400);
-    }
+    // Class cannot be changed in the edit form (like the photo number).
+    const classSection = student.class_section;
 
     const orgScope = student.school_id
       ? { schoolId: student.school_id }
@@ -672,14 +668,14 @@ export async function updateStudentAdmin(
       const value = optional(key, alt);
       return value === undefined ? previous ?? null : value;
     };
-    const rollNo = nextText("roll_no", student.roll_no, "rollNo");
-    const parentName = nextText("parent_name", student.parent_name, "parentName");
-    const parentPhone = nextText("parent_phone", student.parent_phone, "parentPhone");
-    const address = nextText("address", student.address);
+    let rollNo = nextText("roll_no", student.roll_no, "rollNo");
+    let parentName = nextText("parent_name", student.parent_name, "parentName");
+    let parentPhone = nextText("parent_phone", student.parent_phone, "parentPhone");
+    let address = nextText("address", student.address);
     const requestedDob = optionalDate("dob");
-    const dob = requestedDob === undefined ? student.dob : requestedDob;
-    const gender = nextText("gender", student.gender);
-    const bloodGroup = nextText("blood_group", student.blood_group, "bloodGroup");
+    let dob = requestedDob === undefined ? student.dob : requestedDob;
+    let gender = nextText("gender", student.gender);
+    let bloodGroup = nextText("blood_group", student.blood_group, "bloodGroup");
     const custom1 = nextText("custom_1", student.custom_1, "custom1");
     const custom2 = nextText("custom_2", student.custom_2, "custom2");
     const custom3 = nextText("custom_3", student.custom_3, "custom3");
@@ -722,6 +718,23 @@ export async function updateStudentAdmin(
         }
       }
     }
+
+    // Class fields are locked: keep their saved values.
+    for (const key of classFieldKeys(formFields)) {
+      if (key === "class_section") continue;
+      extraFields[key] = previousExtra[key] ?? null;
+    }
+    // Fixed columns follow the edited (or emptied) Excel fields.
+    const sync = canonicalSyncFromExtra(formFields, parseExtraFields(req.body.extra_fields));
+    if ("student_name" in sync && sync.student_name) studentName = sync.student_name;
+    if ("roll_no" in sync) rollNo = sync.roll_no ?? null;
+    if ("parent_name" in sync) parentName = sync.parent_name ?? null;
+    if ("parent_phone" in sync) parentPhone = sync.parent_phone ?? null;
+    if ("address" in sync) address = sync.address ?? null;
+    if ("dob" in sync) dob = sync.dob ?? null;
+    if ("gender" in sync) gender = sync.gender ?? null;
+    if ("blood_group" in sync) bloodGroup = sync.blood_group ?? null;
+    if (!String(studentName ?? "").trim()) throw new AppError("Name is required", 400);
 
     const updated = await pool.query<Student>(
       `UPDATE students
@@ -875,6 +888,9 @@ export async function listStudentsAdmin(
     if (statusFilter) {
       values.push(statusFilter);
       conditions.push(`status = $${values.length}`);
+    }
+    if (req.query.cropSignatures === "1" || req.query.cropSignatures === "true") {
+      conditions.push(`signature_url IS NOT NULL AND btrim(signature_url) <> ''`);
     }
     if (req.query.cropQueue === "1" || req.query.cropQueue === "true") {
       conditions.push(`photo_url IS NOT NULL AND btrim(photo_url) <> '' AND photo_cropped = false`);
@@ -1067,13 +1083,15 @@ export async function uploadStudentSignatureAdmin(
       throw new AppError("Signature upload is turned off for this organization", 403);
     }
 
+    // From the Cropping Tool (Signatures) the cropped signature is marked as cropped.
+    const markCropped = ["1", "true", "yes"].includes(String(req.body?.markCropped ?? "").trim().toLowerCase());
     const signatureUrl = await uploadMemberSignatureToStorage(orgId, student.id, req.file);
     const updated = await pool.query<Student>(
       `UPDATE students
-       SET signature_url = $1, updated_at = NOW()
+       SET signature_url = $1, signature_cropped = $3, updated_at = NOW()
        WHERE id = $2
        RETURNING ${STUDENT_SELECT}`,
-      [signatureUrl, student.id]
+      [signatureUrl, student.id, markCropped]
     );
     const row = updated.rows[0];
     if (!row) throw new AppError("Failed to save signature", 500);

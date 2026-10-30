@@ -264,3 +264,39 @@ export function studentToApiJson(student: Student): Record<string, unknown> {
     field_labels: student.field_labels ?? null,
   };
 }
+
+const SYNCED_COLUMNS = ["student_name", "parent_name", "parent_phone", "address", "roll_no", "dob", "gender", "blood_group"] as const;
+export type SyncedColumn = (typeof SYNCED_COLUMNS)[number];
+
+/**
+ * Excel columns (fld_N) are also copied into the fixed student columns (parent_phone, …).
+ * When an admin or teacher edits or EMPTIES one of those Excel fields, the fixed column
+ * must follow — otherwise the old value keeps showing (and the record never becomes
+ * "pending data"). Returns the fixed-column values that follow the edited Excel fields.
+ */
+export function canonicalSyncFromExtra(
+  formFields: Array<{ key: string; label: string; enabled?: boolean }>,
+  extra: Record<string, string | null>
+): Partial<Record<SyncedColumn, string | null>> {
+  const out: Partial<Record<SyncedColumn, string | null>> = {};
+  for (const field of formFields) {
+    if (field.enabled === false || !isFieldKeyColumnIndex(field.key)) continue;
+    if (!Object.prototype.hasOwnProperty.call(extra, field.key)) continue;
+    const semantic = inferSemanticKey(normalizeHeaderForMatch(field.label));
+    if (!semantic || !(SYNCED_COLUMNS as readonly string[]).includes(semantic)) continue;
+    const column = semantic as SyncedColumn;
+    if (column in out) continue;
+    const value = extra[field.key] == null ? null : String(extra[field.key]).trim() || null;
+    if (column === "student_name" && !value) continue; // name column is required
+    if (column === "dob" && value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) continue; // keep a valid date column
+    out[column] = value;
+  }
+  return out;
+}
+
+/** Keys of form fields that hold the class (locked: cannot be edited). */
+export function classFieldKeys(formFields: Array<{ key: string; label: string }>): string[] {
+  return formFields
+    .filter((f) => f.key === "class_section" || inferSemanticKey(normalizeHeaderForMatch(f.label)) === "class_section")
+    .map((f) => f.key);
+}

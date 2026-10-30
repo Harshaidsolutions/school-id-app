@@ -9,7 +9,8 @@ import { isPhotoNumberLabel, isSignatureLabel, organizationCategoryFields } from
 
 export function CropToolPage() {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  const asset: "photo" | "signature" = params.get("asset") === "signature" ? "signature" : "photo";
   const schoolId = params.get("schoolId") ?? "";
   const instituteId = params.get("instituteId") ?? "";
   const organizationId = params.get("organizationId") ?? "";
@@ -38,7 +39,7 @@ export function CropToolPage() {
       }>(`/admin/organizations/${organizationId}`).then(({ data }) => {
         if (cancelled) return;
         const formFields = (data.form?.fields ?? []).filter((field) => field.enabled !== false);
-        const photoFields = formFields.filter((field) => field.field_type === "photo" && !isSignatureLabel(field.field_name));
+        const photoFields = formFields.filter((field) => field.field_type === "photo" && isSignatureLabel(field.field_name) === (asset === "signature"));
         const groupFields = organizationCategoryFields(formFields);
         const classField = groupFields.find((field) => field.kind === "class");
         const nameField = formFields.find((field) => field.field_type === "text" && /^(person|student|member|full|employee)?[ _]*name$/i.test(field.field_name.trim())) ?? formFields.find((field) => field.field_type === "text" && /name/i.test(field.field_name) && !/parent|father|mother|guardian/i.test(field.field_name) && !isPhotoNumberLabel(field.field_name));
@@ -82,16 +83,16 @@ export function CropToolPage() {
         cancelled = true;
       };
     }
-    const query = isInstitute
-      ? { instituteId, cropPhotos: "1" }
-      : { schoolId, cropPhotos: "1" };
+    const org = isInstitute ? { instituteId } : { schoolId };
+    const query = asset === "signature" ? { ...org, cropSignatures: "1" } : { ...org, cropPhotos: "1" };
     setLoading(true);
     void Promise.all([
       api.get<StudentsResponse>("/admin/students", { params: query }),
-      api.get<{ fields: FormFieldConfig[] }>("/admin/form-config", { params: query }),
+      api.get<{ fields: FormFieldConfig[] }>("/admin/form-config", { params: org }),
     ]).then(([studentsRes, configRes]) => {
       if (cancelled) return;
-      setStudents(studentsRes.data.students ?? []);
+      const rows = studentsRes.data.students ?? [];
+      setStudents(asset === "signature" ? rows.map(asSignatureItem) : rows);
       setFields(sortFormFields(configRes.data.fields ?? []));
     }).finally(() => {
       if (!cancelled) setLoading(false);
@@ -99,21 +100,30 @@ export function CropToolPage() {
     return () => {
       cancelled = true;
     };
-  }, [schoolId, instituteId, organizationId, isInstitute]);
+  }, [schoolId, instituteId, organizationId, isInstitute, asset]);
 
   const back = isOrganization ? `/extra-2/${encodeURIComponent(organizationId)}` : isInstitute ? `/institute-members?instituteId=${encodeURIComponent(instituteId)}&instituteName=${encodeURIComponent(orgName)}` : `/students?schoolId=${encodeURIComponent(schoolId)}&schoolName=${encodeURIComponent(orgName)}`;
 
   return (
     <div className="app-page flex min-h-0 flex-1 flex-col">
-      {loading ? <p className="text-sm text-[#77759A]">Loading photos…</p> : (
+      {loading ? <p className="text-sm text-[#77759A]">{asset === "signature" ? "Loading signatures…" : "Loading photos…"}</p> : (
         <CropToolModal
+          key={asset}
           layout="page"
+          asset={asset}
+          onAssetChange={(next) => {
+            const nextParams = new URLSearchParams(params);
+            if (next === "signature") nextParams.set("asset", "signature");
+            else nextParams.delete("asset");
+            setParams(nextParams, { replace: true });
+          }}
           schoolName={orgName}
           storageKey={organizationId ? `organization:${organizationId}` : instituteId ? `institute:${instituteId}` : `school:${schoolId}`}
           students={students}
           categories={isOrganization ? organizationCategories : configuredCategoryFields(fields)}
           onClose={() => navigate(back)}
-          onSaved={(student) => {
+          onSaved={(saved) => {
+            const student = asset === "signature" && !isOrganization ? asSignatureItem(saved) : saved;
             if (!student.photo_cropped) return;
             setStudents((current) => current.map((item) => item.id === student.id ? {
               ...item,
@@ -129,4 +139,14 @@ export function CropToolPage() {
       )}
     </div>
   );
+}
+
+/** A school / institute signature shown in the Cropping Tool like a photo. */
+function asSignatureItem(student: Student): Student {
+  return {
+    ...student,
+    photo_url: `/admin/students/${student.id}/signature?v=${encodeURIComponent(student.updated_at ?? "")}`,
+    photo_cropped: student.signature_cropped === true,
+    photo_captured_at: student.updated_at ?? student.photo_captured_at ?? null,
+  };
 }

@@ -1,4 +1,5 @@
 import { assertPhotoNumberFree } from "../utils/photoNumber";
+import { canonicalSyncFromExtra, classFieldKeys } from "../utils/studentFieldAccess";
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
@@ -728,7 +729,7 @@ export async function uploadMemberSignature(
     );
     const updated = await pool.query<TeacherStudentRow>(
       `UPDATE students
-       SET signature_url = $1, updated_at = NOW()
+       SET signature_url = $1, signature_cropped = false, updated_at = NOW()
        WHERE id = $2 AND (school_id = $3 OR institute_id = $3)
        RETURNING ${TEACHER_STUDENT_SELECT}`,
       [signatureUrl, student.id, orgId]
@@ -801,41 +802,15 @@ export async function updateTeacherStudent(
       throw new AppError("Name is required", 400);
     }
 
-    let classSection = student.class_section;
-    if (
-      req.body.class_section !== undefined ||
-      req.body.classSection !== undefined
-    ) {
-      classSection =
-        nullableText(req.body.class_section ?? req.body.classSection) ||
-        (isInstituteStaff(req.user) ? student.class_section || "ALL" : "");
-    } else if (
-      req.body.class !== undefined ||
-      req.body.section !== undefined
-    ) {
-      const className =
-        req.body.class !== undefined
-          ? String(req.body.class).trim()
-          : student.class_section;
-      const section =
-        req.body.section !== undefined
-          ? String(req.body.section).trim()
-          : "";
-      classSection = section ? `${className} ${section}`.trim() : className;
-    }
-    if (!classSection && !isInstituteStaff(req.user)) {
-      throw new AppError("Class / Section is required", 400);
-    }
-    if (!classSection && isInstituteStaff(req.user)) {
-      classSection = student.class_section || "ALL";
-    }
+    // Class cannot be changed in the edit form (like the photo number).
+    const classSection = student.class_section;
 
-    const parentName =
+    let parentName =
       req.body.parent_name !== undefined || req.body.parentName !== undefined
         ? nullableText(req.body.parent_name ?? req.body.parentName)
         : student.parent_name;
 
-    const parentPhone =
+    let parentPhone =
       req.body.parent_phone !== undefined ||
       req.body.parentPhone !== undefined ||
       req.body.phone_number !== undefined ||
@@ -848,23 +823,23 @@ export async function updateTeacherStudent(
           )
         : student.parent_phone;
 
-    const address =
+    let address =
       req.body.address !== undefined ? nullableText(req.body.address) : student.address;
 
     const body = req.body as Record<string, unknown>;
-    const rollNo =
+    let rollNo =
       body.roll_no !== undefined || body.rollNo !== undefined
         ? String(body.roll_no ?? body.rollNo).trim() || null
         : student.roll_no;
-    const dob =
+    let dob =
       optionalBodyString(body, ["dob"]) !== undefined
         ? optionalBodyString(body, ["dob"]) ?? null
         : student.dob;
-    const gender =
+    let gender =
       optionalBodyString(body, ["gender"]) !== undefined
         ? optionalBodyString(body, ["gender"]) ?? null
         : student.gender;
-    const bloodGroup =
+    let bloodGroup =
       optionalBodyString(body, ["blood_group", "bloodGroup"]) !== undefined
         ? optionalBodyString(body, ["blood_group", "bloodGroup"]) ?? null
         : student.blood_group;
@@ -902,6 +877,25 @@ export async function updateTeacherStudent(
     delete mergedExtra.photoId;
     delete mergedExtra.student_name;
     delete mergedExtra.studentName;
+
+    {
+      // Class fields are locked; fixed columns follow edited (or emptied) Excel fields.
+      const fields = await loadFormConfigForOrg({
+        schoolId: student.school_id ?? null,
+        instituteId: student.institute_id ?? null,
+      });
+      for (const key of classFieldKeys(fields)) {
+        if (key !== "class_section" && key in mergedExtra) mergedExtra[key] = existingExtra[key] ?? null;
+      }
+      const sync = canonicalSyncFromExtra(fields, incomingExtra);
+      if ("roll_no" in sync) rollNo = sync.roll_no ?? null;
+      if ("parent_name" in sync) parentName = sync.parent_name ?? null;
+      if ("parent_phone" in sync) parentPhone = sync.parent_phone ?? null;
+      if ("address" in sync) address = sync.address ?? null;
+      if ("dob" in sync) dob = sync.dob ?? null;
+      if ("gender" in sync) gender = sync.gender ?? null;
+      if ("blood_group" in sync) bloodGroup = sync.blood_group ?? null;
+    }
 
     const updated = await pool.query<TeacherStudentRow>(
       `UPDATE students

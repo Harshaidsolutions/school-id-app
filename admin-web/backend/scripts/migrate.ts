@@ -712,6 +712,7 @@ async function migrate() {
     ALTER TABLE institutes ALTER COLUMN show_captured_section SET DEFAULT false;
 
     ALTER TABLE students ADD COLUMN IF NOT EXISTS signature_url TEXT;
+    ALTER TABLE students ADD COLUMN IF NOT EXISTS signature_cropped BOOLEAN NOT NULL DEFAULT false;
     ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS video_url TEXT;
     ALTER TABLE notifications ADD COLUMN IF NOT EXISTS audience TEXT NOT NULL DEFAULT 'org';
     ALTER TABLE notifications ADD COLUMN IF NOT EXISTS image_url TEXT;

@@ -153,7 +153,7 @@ export function RecordFormSheet({
     }
     if (!isNew) {
       const cleared = fields
-        .filter((fl) => fl.key !== "signature_upload" && !isIdentity(fl))
+        .filter((fl) => fl.key !== "signature_upload" && !isIdentity(fl) && !isClassCategoryField(fl) && fl.key !== "class_section")
         .filter((fl) => (original.current[fl.key] ?? "").trim() && !val(fl.key).trim())
         .map((fl) => fl.label.trim());
       if (cleared.length) {
@@ -209,7 +209,9 @@ export function RecordFormSheet({
           extra_fields: extra,
         };
         for (const f of fields) if (f.key !== "signature_upload" && !isIdentity(f)) body[f.key] = val(f.key).trim() || null;
-        for (const f of fields) if (isIdentity(f)) delete extra[f.key];
+        for (const f of fields) if (isIdentity(f) || isClassCategoryField(f)) delete extra[f.key];
+        for (const f of fields) if (isClassCategoryField(f)) delete body[f.key];
+        delete body.class_section;
         body.photo_id = record!.photo_id ?? null;
         const { data } = await api.put<{ student: Student }>(`/admin/students/${record!.id}`, body);
         saved = data.student ?? { ...record!, ...(body as Partial<Student>) };
@@ -267,6 +269,9 @@ export function RecordFormSheet({
           {fields
             .filter((f) => !isPlainPhotoPrompt(f) && f.key !== "signature_upload" && (isNew || !isIdentity(f)))
             .map((f) => {
+              if (!isNew && (isClassCategoryField(f) || f.key === "class_section")) {
+                return <Field key={f.key} label={f.label} value={val(f.key)} editable={false} icon="lock-closed-outline" hint="Class cannot be changed." style={{ color: C.muted }} />;
+              }
               if (isClassCategoryField(f) || f.key === "class_section") {
                 return f.key === "class_section" && classes.length ? (
                   <Select key={f.key} label={f.label} required value={val(f.key)} onChange={(v) => set(f.key, v)} options={classes.map((c) => ({ value: c, label: c }))} placeholder={`Select ${f.label}`} />

@@ -27,6 +27,8 @@ export function CropToolModal({
   layout = "page",
   storageKey = "crop",
   schoolName = "",
+  asset = "photo",
+  onAssetChange,
 }: {
   students: Student[];
   categories: ConfiguredCategoryField[];
@@ -36,7 +38,11 @@ export function CropToolModal({
   storageKey?: string;
   schoolName?:string;
   backLabel?: string;
+  /** What is being cropped. The page shows a Photos / Signatures switch when onAssetChange is given. */
+  asset?: "photo" | "signature";
+  onAssetChange?: (asset: "photo" | "signature") => void;
 }) {
+  const noun = asset === "signature" ? "signature" : "photo";
   const field = useMemo(() => primaryCategory(categories), [categories]);
   const [cropView, setCropView] = useState<"uncropped" | "cropped">("uncropped");
   const photos = useMemo(
@@ -617,15 +623,16 @@ export function CropToolModal({
       let blob = await renderCrop(snapshot.image,snapshot.crop,{...toneRef.current},snapshot.size);
       if(outputRotationRef.current)blob=await rotateImageBlob(blob,outputRotationRef.current);
       const body = new FormData();
-      body.append("photo", blob, `${student.photo_id || student.id}.jpg`);
+      const signatureCrop = isStudentSignatureCrop(student);
+      body.append(signatureCrop ? "signature" : "photo", blob, `${student.photo_id || student.id}${signatureCrop ? "-signature" : ""}.jpg`);
       body.append("markCropped", "1");
       const savedIndex = gallery.findIndex((item) => item.id === student.id);
       const hasNext = savedIndex >= 0 && savedIndex + 1 < gallery.length;
       const { data } = await api.post<{ student: Student }>(
-        isOrganizationCropPhoto(student) ? student.photo_url! : `/admin/students/${student.id}/photo`,
+        isOrganizationCropPhoto(student) || signatureCrop ? student.photo_url!.split("?")[0] : `/admin/students/${student.id}/photo`,
         body
       );
-      if (!data.student?.photo_cropped) {
+      if (!(signatureCrop ? data.student?.signature_cropped : data.student?.photo_cropped)) {
         throw new Error("Crop status was not saved");
       }
       invalidateStudentPhotoCache(student.id);
@@ -704,14 +711,31 @@ export function CropToolModal({
     <div className={shell} role={layout === "page" ? undefined : "dialog"} aria-modal={layout === "page" ? undefined : true} aria-label="Cropping Tool">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-white px-4 py-2 text-sm font-semibold text-text-navy">
         {layout === "page" && <HeaderBack disabled={saving || applying || rotating} onClick={() => { if (canLeaveEditor()) onClose(); }}>← Back</HeaderBack>}
-        <span>{schoolName || "Cropping Tool"}</span><span>{!browsing && student ? `Photo ${student.photo_id || "—"} · ${student.student_name || ""}` : "Photos"}</span>
+        <span>{schoolName || "Cropping Tool"}</span><span>{!browsing && student ? `Photo ${student.photo_id || "—"} · ${student.student_name || ""}` : asset === "signature" ? "Signatures" : "Photos"}</span>
         {layout==="modal" && <button aria-label="Close cropping tool" onClick={()=>{if(canLeaveEditor())onClose();}}>×</button>}
       </div>
       <div className={`crop-tool-layout ${layout === "page" ? "flex min-h-0 flex-1 overflow-hidden" : "flex h-[min(92vh,860px)] w-full max-w-6xl overflow-hidden rounded-2xl border border-[#E6E4F5] bg-white"}`}>
         <aside className="crop-settings flex w-[17.5rem] shrink-0 flex-col gap-3 overflow-y-auto border-r border-[#E6E4F5] bg-white p-4">
+          {onAssetChange ? (
+            <div role="tablist" aria-label="What to crop" className="grid grid-cols-2 gap-1 rounded-xl bg-[#EEF0FF] p-1">
+              {(["photo", "signature"] as const).map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  role="tab"
+                  aria-selected={asset === item}
+                  disabled={saving || applying || rotating}
+                  onClick={() => { if (item !== asset && canLeaveEditor()) onAssetChange(item); }}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${asset === item ? "bg-white text-[#4F46E5] shadow-sm" : "text-[#77759A] hover:text-[#4F46E5]"}`}
+                >
+                  {item === "photo" ? "Photos" : "Signatures"}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className="flex items-center justify-between gap-2">
             <p className="min-w-0 truncate text-xs font-semibold text-[#77759A]">
-              {student && !browsing ? student.student_name ?? "Student" : `${gallery.length} photo${gallery.length === 1 ? "" : "s"}`}
+              {student && !browsing ? student.student_name ?? "Student" : `${gallery.length} ${noun}${gallery.length === 1 ? "" : "s"}`}
               {student && !browsing && student.photo_id ? ` · Photo ${student.photo_id}` : ""}
             </p>
 
@@ -844,9 +868,9 @@ export function CropToolModal({
               <p className="col-span-full px-2 py-16 text-center text-sm font-medium text-[#77759A]">
                 {photos.length === 0
                   ? cropView === "cropped"
-                    ? "No cropped photos."
-                    : "All photos are cropped."
-                  : "No photos match these filters."}
+                    ? `No cropped ${noun}s.`
+                    : `All ${noun}s are cropped.`
+                  : `No ${noun}s match these filters.`}
               </p>
             ) : null}
           </div>
@@ -1085,8 +1109,13 @@ function isOrganizationCropPhoto(student: Student): boolean {
   return (student.photo_url ?? "").includes("/admin/organizations/");
 }
 
+/** School / institute signature being cropped (photo_url points at /admin/students/:id/signature). */
+function isStudentSignatureCrop(student: Student): boolean {
+  return /^\/admin\/students\/[^/]+\/signature/.test(student.photo_url ?? "");
+}
+
 async function loadCropPhoto(student: Student, signal?: AbortSignal, thumb = false): Promise<string> {
-  if (!isOrganizationCropPhoto(student)) {
+  if (!isOrganizationCropPhoto(student) && !isStudentSignatureCrop(student)) {
     return (await authenticatedStudentPhotoUrl(student.id, { signal, thumb, version: student.updated_at })) ?? "";
   }
   const { data } = await api.get(student.photo_url!, { responseType: "blob", signal });

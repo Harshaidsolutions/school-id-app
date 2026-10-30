@@ -338,7 +338,7 @@ export async function submitSchoolParentForm(
       );
     }
     await client.query(
-      `UPDATE students SET photo_url=$2,signature_url=$3,status='captured',photo_captured_at=NOW(),photo_cropped=false,updated_at=NOW() WHERE id=$1`,
+      `UPDATE students SET photo_url=$2,signature_url=$3,status='captured',photo_captured_at=NOW(),photo_cropped=false,signature_cropped=false,updated_at=NOW() WHERE id=$1`,
       [id, url, signatureUrl],
     );
     await client.query("COMMIT");
