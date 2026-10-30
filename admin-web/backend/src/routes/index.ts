@@ -1,4 +1,4 @@
-import { activateDesktopLicense } from "../controllers/desktopLicenseController";
+import { activateDesktopLicense, getDesktopLicensePublicKey } from "../controllers/desktopLicenseController";
 import {registerServiceInterest,getAppInstructions} from "../controllers/workspaceToolsController";
 import {getSchoolParentForm,submitSchoolParentForm,limitParentSubmission} from "../controllers/schoolParentFormController";
 import {uploadParentForm} from "../middleware/upload";
@@ -29,6 +29,7 @@ router.get("/public/school-forms/:token", getSchoolParentForm);
 router.post("/public/school-forms/:token", limitParentSubmission, uploadParentForm.fields([{name:"student_photo",maxCount:1},{name:"signature_upload",maxCount:1}]), submitSchoolParentForm);
 router.get("/health", healthCheck);
 router.post("/public/desktop-license/activate", activateDesktopLicense);
+router.get("/public/desktop-license/public-key", getDesktopLicensePublicKey);
 router.post('/public/service-registration',registerServiceInterest);
 router.get('/app-instructions',authMiddleware,requireRole('teacher','institute_staff'),getAppInstructions);
 router.get("/public/showcase", getPublicShowcase);

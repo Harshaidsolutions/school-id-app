@@ -169,3 +169,10 @@ export async function activateDesktopLicense(req: Request, res: Response, next: 
     }
   } catch (e) { next(e); }
 }
+
+/** Public key (safe to share) — fetched by the installer build so the app can verify licences offline. */
+export async function getDesktopLicensePublicKey(_req: Request, res: Response, next: NextFunction) {
+  try {
+    res.type("text/plain").send(desktopLicensePublicKeyPem());
+  } catch (e) { next(e); }
+}

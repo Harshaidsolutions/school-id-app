@@ -1,0 +1,40 @@
+name: Build Windows ID Card Generator
+
+# Builds the .exe and .msi on GitHub's Windows computers — no Windows PC needed.
+# Run it: GitHub → Actions → "Build Windows ID Card Generator" → Run workflow.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["desktop-generator/**", "admin-web/src/generator/**"]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop-generator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Get licence public key from the server
+        shell: pwsh
+        run: |
+          $pem = (Invoke-WebRequest -UseBasicParsing "https://myschoolidcard.in/api/public/desktop-license/public-key").Content
+          if ($pem -is [byte[]]) { $pem = [System.Text.Encoding]::UTF8.GetString($pem) }
+          if ($pem -notmatch "BEGIN PUBLIC KEY") { throw "Server did not return a public key. Is DESKTOP_LICENSE_PRIVATE_KEY set in backend/.env and the backend restarted?" }
+          Set-Content -Path electron/publicKey.cjs -Value ("module.exports = ``" + $pem.Trim() + "`n``;") -Encoding utf8
+          Get-Content electron/publicKey.cjs
+      - run: npm install
+      - run: npm run dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MySchoolIDCard-Generator-Windows
+          path: |
+            desktop-generator/release/*.exe
+            desktop-generator/release/*.msi
+          if-no-files-found: error
