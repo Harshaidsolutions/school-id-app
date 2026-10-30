@@ -29,15 +29,18 @@ const Tab = createBottomTabNavigator<Tabs>();
 
 const SchoolsTab = () => <OrgListScreen kind="school" />;
 const InstitutesTab = () => <OrgListScreen kind="institute" />;
-const OrgsTab = () => <OrgListScreen kind="organization" />;
+const OrgsScreen = () => <OrgListScreen kind="organization" back />;
+const NotifyTab = () => <NotificationsScreen inTab />;
 
 const ICONS: Record<keyof Tabs, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
-  Home: ["home", "home-outline"],
+  Home: ["grid", "grid-outline"],
   Schools: ["school", "school-outline"],
   Institutes: ["business", "business-outline"],
-  Organisations: ["briefcase", "briefcase-outline"],
-  More: ["grid", "grid-outline"],
+  Notify: ["notifications", "notifications-outline"],
+  More: ["menu", "menu-outline"],
 };
+
+const TAB_LABELS: Record<keyof Tabs, string> = { Home: "Dashboard", Schools: "Schools", Institutes: "Institutes", Notify: "Notifications", More: "Menu" };
 
 function MainTabs() {
   const insets = useSafeAreaInsets();
@@ -51,7 +54,7 @@ function MainTabs() {
         tabBarStyle: [st.bar, { height: 62 + insets.bottom, paddingBottom: insets.bottom + 6 }],
         tabBarLabel: ({ focused, color }) => (
           <Text style={[st.label, { color }, focused && { fontFamily: F.bodySemi }]} numberOfLines={1}>
-            {route.name === "Organisations" ? "Orgs" : route.name}
+            {TAB_LABELS[route.name]}
           </Text>
         ),
         tabBarIcon: ({ focused, color }) => (
@@ -64,7 +67,7 @@ function MainTabs() {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Schools" component={SchoolsTab} />
       <Tab.Screen name="Institutes" component={InstitutesTab} />
-      <Tab.Screen name="Organisations" component={OrgsTab} />
+      <Tab.Screen name="Notify" component={NotifyTab} />
       <Tab.Screen name="More" component={MoreScreen} />
     </Tab.Navigator>
   );
@@ -99,6 +102,7 @@ export function RootNavigator() {
             <Stack.Screen name="Help" component={HelpScreen} />
             <Stack.Screen name="WebTool" component={WebToolScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen name="Orgs" component={OrgsScreen} />
           </>
         )}
       </Stack.Navigator>
@@ -107,7 +111,7 @@ export function RootNavigator() {
 }
 
 const st = StyleSheet.create({
-  bar: { backgroundColor: "rgba(255,255,255,0.98)", borderTopWidth: 0, paddingTop: 6, elevation: 16, shadowColor: "#B4692A", shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: -4 } },
+  bar: { backgroundColor: "rgba(255,255,255,0.98)", borderTopWidth: 0, paddingTop: 6, elevation: 16, shadowColor: "#312E81", shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: -4 } },
   label: { fontFamily: F.bodyMed, fontSize: 11 },
   icon: { width: 46, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   iconOn: { backgroundColor: C.primarySoft },

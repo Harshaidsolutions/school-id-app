@@ -9,8 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@expo-google-fonts/inter": "^0.4.2",
-    "@expo-google-fonts/poppins": "^0.4.1",
+    "@expo-google-fonts/plus-jakarta-sans": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-navigation/bottom-tabs": "^7.3.10",
@@ -41,6 +40,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "babel-preset-expo": "~54.0.12"
   }
 }

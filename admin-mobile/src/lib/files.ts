@@ -130,41 +130,75 @@ export async function downloadFile(apiPath: string, fallbackName: string, params
 }
 
 /** Saves a local file into the phone's storage (Android) and offers Open/Share. */
+function ask(title: string, message: string, buttons: { text: string; value: string }[]): Promise<string> {
+  return new Promise((resolve) =>
+    Alert.alert(title, message, buttons.map((b) => ({ text: b.text, onPress: () => resolve(b.value) })), {
+      cancelable: true,
+      onDismiss: () => resolve("cancel"),
+    })
+  );
+}
+
+/**
+ * Saves a downloaded file. Android: into a folder the admin picks once (Android does not
+ * allow apps to use the Downloads root directly, so we suggest a "My School ID" folder
+ * inside it) — or share/open it straight away (WhatsApp, Drive, Files…).
+ */
 export async function saveToPhone(localUri: string, name: string, mime: string): Promise<string> {
-  if (Platform.OS === "android") {
-    const SAF = FileSystem.StorageAccessFramework;
-    let dir = await SecureStore.getItemAsync(DIR_KEY).catch(() => null);
-    const write = async (folder: string) => {
-      try {
-        // Streams the file natively (safe for large ZIPs), keeping its name.
-        await SAF.copyAsync({ from: localUri, to: folder });
-      } catch {
-        const target = await SAF.createFileAsync(folder, name.replace(/\.[^.]+$/, ""), mime);
-        const data = await FileSystem.readAsStringAsync(localUri, { encoding: FileSystem.EncodingType.Base64 });
-        await FileSystem.writeAsStringAsync(target, data, { encoding: FileSystem.EncodingType.Base64 });
-      }
-    };
-    try {
-      if (!dir) throw new Error("no folder");
-      await write(dir);
-    } catch {
-      const perm = await SAF.requestDirectoryPermissionsAsync(SAF.getUriForDirectoryInRoot("Download"));
-      if (!perm.granted) {
-        await shareFile(localUri, mime);
-        return "shared";
-      }
-      dir = perm.directoryUri;
-      await SecureStore.setItemAsync(DIR_KEY, dir).catch(() => undefined);
-      await write(dir);
-    }
-    Alert.alert("Downloaded", `${name}\nSaved to your chosen folder (Downloads).`, [
-      { text: "Share / Open", onPress: () => void shareFile(localUri, mime) },
-      { text: "OK" },
-    ]);
-    return "saved";
+  if (Platform.OS !== "android") {
+    await shareFile(localUri, mime);
+    return "shared";
   }
-  await shareFile(localUri, mime);
-  return "shared";
+  const SAF = FileSystem.StorageAccessFramework;
+  const write = async (folder: string) => {
+    const target = await SAF.createFileAsync(folder, name.replace(/\.[^.]+$/, ""), mime);
+    const data = await FileSystem.readAsStringAsync(localUri, { encoding: FileSystem.EncodingType.Base64 });
+    await FileSystem.writeAsStringAsync(target, data, { encoding: FileSystem.EncodingType.Base64 });
+  };
+  let dir = await SecureStore.getItemAsync(DIR_KEY).catch(() => null);
+  if (dir) {
+    try {
+      await write(dir);
+      const next = await ask("Downloaded ✓", `${name}\nSaved in your “My School ID” folder.`, [
+        { text: "Share / Open", value: "share" },
+        { text: "OK", value: "ok" },
+      ]);
+      if (next === "share") await shareFile(localUri, mime);
+      return "saved";
+    } catch {
+      dir = null;
+      await SecureStore.deleteItemAsync(DIR_KEY).catch(() => undefined);
+    }
+  }
+  const choice = await ask("File ready", `${name}\n\nSave it on this phone, or share / open it?`, [
+    { text: "Share / Open", value: "share" },
+    { text: "Save to phone", value: "save" },
+  ]);
+  if (choice === "share") {
+    await shareFile(localUri, mime);
+    return "shared";
+  }
+  if (choice !== "save") return "cancel";
+  await ask(
+    "Choose a folder",
+    "Next, Android asks for a folder.\n\n1. Open “Download”.\n2. Tap ⋮ (or the folder icon) → New folder → name it “My School ID”.\n3. Open it and tap “Use this folder” → Allow.\n\nYou only do this once.",
+    [{ text: "Continue", value: "ok" }]
+  );
+  const perm = await SAF.requestDirectoryPermissionsAsync(SAF.getUriForDirectoryInRoot("Download"));
+  if (!perm.granted) {
+    await shareFile(localUri, mime);
+    return "shared";
+  }
+  try {
+    await write(perm.directoryUri);
+    await SecureStore.setItemAsync(DIR_KEY, perm.directoryUri).catch(() => undefined);
+    Alert.alert("Downloaded ✓", `${name}\nSaved. Next downloads go to the same folder automatically.`);
+    return "saved";
+  } catch {
+    Alert.alert("Could not save there", "Please choose a folder inside Download (not Download itself). Opening share instead.");
+    await shareFile(localUri, mime);
+    return "shared";
+  }
 }
 
 export async function shareFile(localUri: string, mime?: string) {

@@ -116,7 +116,7 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
   if (org?.organization_photo_url) images.push({ label: "Building / organisation photo", url: org.organization_photo_url, key: "detail_organization_photo" });
 
   return (
-    <Screen title={kind === "school" ? "School info" : kind === "institute" ? "Institute info" : "Organisation info"} subtitle={name} refreshing={false} onRefresh={() => void load()}>
+    <Screen title={kind === "school" ? "School Info" : kind === "institute" ? "Institution Info" : "Organization Info"} subtitle={name} refreshing={false} onRefresh={() => void load()}>
       <Banner text={error} onClose={() => setError(null)} />
       <Banner text={saved} tone="green" onClose={() => setSaved(null)} />
       {loading ? (

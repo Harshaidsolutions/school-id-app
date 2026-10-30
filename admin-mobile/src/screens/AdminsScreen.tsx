@@ -84,14 +84,14 @@ export function AdminsScreen() {
 
   if (!isSuperAdmin) {
     return (
-      <Screen title="Admin management">
+      <Screen title="Admin Management">
         <Empty icon="lock-closed-outline" title="Super admin only" text="Only the super admin can manage admins." />
       </Screen>
     );
   }
 
   return (
-    <Screen title="Admin management" subtitle={`${admins.length} admins`} headerExtra={<SearchBar value={search} onChange={setSearch} placeholder="Search admins…" />} footer={<Button title="Create admin" icon="person-add-outline" onPress={() => setEditor({ admin: null })} />}>
+    <Screen title="Admin Management" subtitle={`${admins.length} admins`} headerExtra={<SearchBar value={search} onChange={setSearch} placeholder="Search admins…" />} footer={<Button title="Create admin" icon="person-add-outline" onPress={() => setEditor({ admin: null })} />}>
       <Banner text={error} onClose={() => setError(null)} />
       <Banner text={notice} tone="green" onClose={() => setNotice(null)} />
       {loading ? (
@@ -148,7 +148,7 @@ export function AdminsScreen() {
           setEditor(null);
           setNotice(msg);
           void load();
-          if (pw) setTimeout(() => setPwTarget(pw), 300);
+          if (pw) setTimeout(() => setPwTarget(pw), 450);
         }}
       />
       <OtpSheet

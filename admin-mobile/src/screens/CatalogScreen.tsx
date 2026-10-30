@@ -34,7 +34,7 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
   const [editor, setEditor] = useState<{ item: CatalogItem | null } | null>(null);
   const [viewer, setViewer] = useState<{ item: CatalogItem; index: number } | null>(null);
   const isBrochure = kind === "brochure";
-  const title = isBrochure ? "Brochures" : "Models & tags";
+  const title = isBrochure ? "Brochures" : "Models";
 
   const load = useCallback(async () => {
     try {
@@ -87,8 +87,8 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
               navigation.setParams({ kind: k });
             }}
             items={[
-              { key: "model", label: "ID card models" },
-              { key: "tag", label: "ID card tags" },
+              { key: "model", label: "ID Card Models" },
+              { key: "tag", label: "ID Card Tags" },
             ]}
           />
         </View>

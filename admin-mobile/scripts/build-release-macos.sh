@@ -20,8 +20,7 @@ read -r -s -p 'Admin signing password: ' ADMIN_KEYSTORE_PASSWORD; printf '\n'
 export ADMIN_KEYSTORE_PASSWORD ADMIN_KEYSTORE="$KEYSTORE"
 keytool -list -keystore "$KEYSTORE" -storepass:env ADMIN_KEYSTORE_PASSWORD -alias school-id-admin >/dev/null || { echo 'Wrong password. Use the same password as the first admin build.'; exit 1; }
 
-SIGNING_DIR="$(mktemp -d -t admin-signing)"
-trap 'unset ADMIN_KEYSTORE_PASSWORD; rm -rf "$SIGNING_DIR"' EXIT
+trap 'unset ADMIN_KEYSTORE_PASSWORD' EXIT
 
 echo ""
 echo "Step 1/4: Installing packages…"
@@ -35,26 +34,13 @@ PROPS=android/gradle.properties
 grep -q '^org.gradle.jvmargs=' "$PROPS" && sed -i '' 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8/' "$PROPS" || echo 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8' >> "$PROPS"
 grep -q '^reactNativeArchitectures=' "$PROPS" && sed -i '' 's/^reactNativeArchitectures=.*/reactNativeArchitectures=arm64-v8a,armeabi-v7a/' "$PROPS" || echo 'reactNativeArchitectures=arm64-v8a,armeabi-v7a' >> "$PROPS"
 
-cat > "$SIGNING_DIR/signing.gradle" <<'GRADLE'
-gradle.projectsEvaluated {
-    rootProject.allprojects { p ->
-        if (p.plugins.hasPlugin('com.android.application')) {
-            def signing = p.android.signingConfigs.findByName('adminRelease') ?: p.android.signingConfigs.create('adminRelease')
-            signing.storeFile = new File(System.getenv('ADMIN_KEYSTORE'))
-            signing.storePassword = System.getenv('ADMIN_KEYSTORE_PASSWORD')
-            signing.keyAlias = 'school-id-admin'
-            signing.keyPassword = System.getenv('ADMIN_KEYSTORE_PASSWORD')
-            p.android.buildTypes.release.signingConfig = signing
-        }
-    }
-}
-GRADLE
+node scripts/patch-signing.js
 
 echo ""
 echo "Step 3/4: Building the APK and Play Store bundle (5–15 minutes)…"
 cd android
 chmod +x gradlew
-./gradlew --init-script "$SIGNING_DIR/signing.gradle" assembleRelease bundleRelease
+./gradlew assembleRelease bundleRelease
 
 echo ""
 echo "Step 4/4: Copying to your Desktop…"

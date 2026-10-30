@@ -314,11 +314,11 @@ export function OrgDetailScreen({ route, navigation }: ScreenProps<"OrgDetail">)
           { label: "Share form link", icon: "share-social-outline", hidden: !link, onPress: () => void Share.share({ message: shareText }) },
           { label: "Upload Excel", icon: "document-attach-outline", onPress: () => setSheet("excel-up") },
           { label: "Download Excel", icon: "download-outline", onPress: () => setSheet("excel-down") },
-          { label: "Download photos", icon: "cloud-download-outline", onPress: () => setSheet("photos-down") },
-          { label: "Form fields", icon: "list-outline", sub: "Names, required, visibility", onPress: () => navigation.navigate("FormSetup", { kind: "organization", id, name }) },
-          { label: "Organisation info", icon: "information-circle-outline", onPress: () => navigation.navigate("OrgInfo", { kind: "organization", id, name }) },
-          { label: "Cropping tool", icon: "crop-outline", onPress: () => navigation.navigate("WebTool", { title: "Cropping tool", path: `/crop-tool?organizationId=${id}&organizationName=${encodeURIComponent(name)}` }) },
-          { label: "Delete options", icon: "trash-bin-outline", danger: true, onPress: () => setSheet("delete") },
+          { label: "Download Photos", icon: "cloud-download-outline", onPress: () => setSheet("photos-down") },
+          { label: "Form Setup", icon: "list-outline", sub: "Names, required, visibility", onPress: () => navigation.navigate("FormSetup", { kind: "organization", id, name }) },
+          { label: "Organization Info", icon: "information-circle-outline", onPress: () => navigation.navigate("OrgInfo", { kind: "organization", id, name }) },
+          { label: "Cropping Tool", icon: "crop-outline", onPress: () => navigation.navigate("WebTool", { title: "Cropping Tool", path: `/crop-tool?organizationId=${id}&organizationName=${encodeURIComponent(name)}` }) },
+          { label: "Delete Options", icon: "trash-bin-outline", danger: true, onPress: () => setSheet("delete") },
         ]}
       />
 
@@ -361,7 +361,7 @@ export function OrgDetailScreen({ route, navigation }: ScreenProps<"OrgDetail">)
         onChoose={(job) => {
           setSheet(null);
           setDeleteJob(job);
-          setTimeout(() => setOtpOpen(true), 250);
+          setTimeout(() => setOtpOpen(true), 450);
         }}
       />
       <OtpSheet
@@ -509,7 +509,7 @@ const st = StyleSheet.create({
   selectBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: S.lg, paddingVertical: S.sm, marginTop: S.sm, backgroundColor: C.white, borderTopWidth: 1, borderBottomWidth: 1, borderColor: C.line },
   linkCard: { flexDirection: "row", alignItems: "center", gap: S.md, backgroundColor: C.accentSoft, borderRadius: R.lg, padding: S.md, marginBottom: S.md },
   linkTitle: { fontFamily: F.hSemi, fontSize: 14, color: C.accentDeep },
-  rec: { flexDirection: "row", alignItems: "center", gap: S.md, backgroundColor: C.surface, borderRadius: R.lg, padding: S.md, marginBottom: S.sm, borderWidth: 1, borderColor: "rgba(240,228,214,0.9)" },
+  rec: { flexDirection: "row", alignItems: "center", gap: S.md, backgroundColor: C.surface, borderRadius: R.lg, padding: S.md, marginBottom: S.sm, borderWidth: 1, borderColor: "rgba(230,228,245,0.95)" },
   recOn: { borderColor: C.primary, backgroundColor: C.primarySoft },
   thumb: { width: 56, height: 68, borderRadius: 14, backgroundColor: C.accentSoft, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   serial: { fontFamily: F.h, fontSize: 18, color: C.accentDeep },

@@ -49,7 +49,7 @@ export function Sheet({
   const maxH = Dimensions.get("window").height * 0.9;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <Pressable style={st.backdrop} onPress={onClose} accessibilityLabel="Close" />
         <Animated.View
           style={[st.sheet, { maxHeight: maxH, paddingBottom: insets.bottom + 12, transform: [{ translateY: y.interpolate({ inputRange: [0, 1], outputRange: [0, 500] }) }] }]}
@@ -67,7 +67,7 @@ export function Sheet({
             </View>
           ) : null}
           {scroll ? (
-            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: S.lg, paddingBottom: S.md }}>
+            <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: S.lg, paddingBottom: S.md }}>
               {children}
             </ScrollView>
           ) : (
@@ -178,7 +178,8 @@ export function ActionSheet({
             scaleTo={0.985}
             onPress={() => {
               onClose();
-              setTimeout(a.onPress, 220);
+              // Wait for this sheet to finish closing before opening the next one (Android).
+              setTimeout(a.onPress, 450);
             }}
             style={st.action}
           >

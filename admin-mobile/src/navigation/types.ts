@@ -23,13 +23,14 @@ export type RootStack = {
   Help: undefined;
   WebTool: { path: string; title: string };
   Profile: undefined;
+  Orgs: undefined;
 };
 
 export type Tabs = {
   Home: undefined;
   Schools: undefined;
   Institutes: undefined;
-  Organisations: undefined;
+  Notify: undefined;
   More: undefined;
 };
 

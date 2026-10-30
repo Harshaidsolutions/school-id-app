@@ -175,5 +175,5 @@ const st = StyleSheet.create({
   subtitle: { fontFamily: F.bodyMed, fontSize: 13, color: "rgba(255,255,255,0.9)", marginTop: 1 },
   content: { padding: S.lg },
   max: { width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" },
-  footer: { paddingHorizontal: S.lg, paddingTop: 12, backgroundColor: "rgba(255,249,242,0.97)", borderTopWidth: 1, borderTopColor: C.line },
+  footer: { paddingHorizontal: S.lg, paddingTop: 12, backgroundColor: "rgba(246,245,253,0.97)", borderTopWidth: 1, borderTopColor: C.line },
 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, FlatList, Linking, RefreshControl, Share, StyleSheet, Text, View } from "react-native";
+import { Alert, FlatList, Linking, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -11,7 +11,7 @@ import { isPhotoExcelField, sortFormFields, studentFieldDisplay, type FormFieldC
 import { configuredCategoryFields } from "../shared/formFieldHelpers";
 import { C, CONTENT_MAX, F, R, S } from "../theme";
 import { Backdrop, Header } from "../ui/Screen";
-import { Banner, Button, Check, Chips, Empty, Fab, IconButton, Loading, Muted, Pill, Rise, SearchBar } from "../ui/kit";
+import { Banner, Button, Check, Chips, Empty, Fab, IconButton, Loading, Muted, Pill, Rise, SearchBar, type IconName } from "../ui/kit";
 import { ActionSheet, ImageViewer, OtpSheet, Select, Sheet } from "../ui/Sheet";
 import { Tap } from "../ui/Pressable";
 import { dayLabel, fmtDateTime, initials, num } from "../lib/format";
@@ -71,7 +71,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [form, setForm] = useState<{ record: Student | null } | null>(null);
   const [menu, setMenu] = useState<Student | null>(null);
-  const [viewer, setViewer] = useState<{ index: number; signature?: boolean } | null>(null);
+  const [viewer, setViewer] = useState<{ index: number; signatureOf?: Student } | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [sheet, setSheet] = useState<"excel-up" | "photos-up" | "excel-down" | "photos-down" | "delete" | "link" | null>(null);
   const [deleteJob, setDeleteJob] = useState<DeleteJob | null>(null);
@@ -291,103 +291,134 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
   const base = institute ? `/admin/institutes/${orgId}` : `/admin/schools/${orgId}`;
   const shareText = (link: string) => `My School ID Card – Student details collection link for ${name}\n\nPlease fill in your child's details using this link:\n${link}`;
 
-  const tools = [
-    { label: "Upload Excel", icon: "document-attach-outline" as const, sub: "Import or replace the list", onPress: () => setSheet("excel-up") },
-    { label: "Upload photos (ZIP)", icon: "images-outline" as const, sub: "Photos named by photo number", onPress: () => setSheet("photos-up") },
-    { label: "Download Excel", icon: "download-outline" as const, sub: "All, captured, pending, date-wise…", onPress: () => setSheet("excel-down") },
+  const orgQuery = `${institute ? "instituteId" : "schoolId"}=${orgId}&${institute ? "instituteName" : "schoolName"}=${encodeURIComponent(name)}`;
+  type Tool = { label: string; icon: IconName; sub?: string; onPress: () => void; hidden?: boolean; danger?: boolean; feature?: boolean };
+  /** Same buttons, order and names as the website's records toolbar. */
+  const tools: Tool[] = [
+    { label: "Form Setup", icon: "list-outline", sub: batchCount ? "Fields, order and visibility" : "Upload Excel first", onPress: () => (batchCount ? navigation.navigate("FormSetup", { kind, id: orgId, name }) : setError("Upload an Excel file first, then use Form Setup.")) },
+    { label: "Upload Excel", icon: "document-attach-outline", sub: "Import or replace the list", onPress: () => setSheet("excel-up") },
+    { label: "Upload Photos", icon: "images-outline", sub: "ZIP named by photo number", onPress: () => setSheet("photos-up") },
+    { label: "Download Excel", icon: "download-outline", sub: "All, captured, pending, date-wise…", onPress: () => setSheet("excel-down") },
     {
-      label: "Download photos",
-      icon: "cloud-download-outline" as const,
+      label: "Download Photos",
+      icon: "cloud-download-outline",
       sub: "ZIP of photos or signatures",
       onPress: () => {
         loadCaptureCounts();
         setSheet("photos-down");
       },
     },
-    { label: "Form setup", icon: "list-outline" as const, sub: batchCount ? "Fields, order and visibility" : "Upload Excel first", onPress: () => (batchCount ? navigation.navigate("FormSetup", { kind, id: orgId, name }) : setError("Upload an Excel file first.")) },
-    { label: institute ? "Institution info" : "School info", icon: "information-circle-outline" as const, sub: "Logo, signature, model, template", onPress: () => navigation.navigate("OrgInfo", { kind, id: orgId, name }) },
-    { label: "Cropping tool", icon: "crop-outline" as const, sub: "Crop and straighten photos", onPress: () => navigation.navigate("WebTool", { title: "Cropping tool", path: `/crop-tool?${institute ? "instituteId" : "schoolId"}=${orgId}&${institute ? "instituteName" : "schoolName"}=${encodeURIComponent(name)}` }) },
-    { label: "ID card generator", icon: "card-outline" as const, sub: "Generate and print ID cards", onPress: () => navigation.navigate("WebTool", { title: "ID card generator", path: `/id-card-generator?${institute ? "instituteId" : "schoolId"}=${orgId}&${institute ? "instituteName" : "schoolName"}=${encodeURIComponent(name)}` }) },
-    { label: "Parent form link", icon: "link-outline" as const, sub: "Share a link for parents to fill details", hidden: institute, onPress: () => setSheet("link") },
+    { label: institute ? "Institution Info" : "School Info", icon: "information-circle-outline", sub: "Logo, signature, model, template", onPress: () => navigation.navigate("OrgInfo", { kind, id: orgId, name }) },
     {
-      label: "Delete options",
-      icon: "trash-bin-outline" as const,
+      label: "Delete Options",
+      icon: "trash-bin-outline",
       danger: true,
       onPress: () => {
         loadCaptureCounts();
         setSheet("delete");
       },
     },
+    { label: "Cropping Tool", icon: "crop-outline", feature: true, sub: "Crop and straighten photos", onPress: () => navigation.navigate("WebTool", { title: "Cropping Tool", path: `/crop-tool?${orgQuery}` }) },
+    { label: "ID Card Generator", icon: "card-outline", feature: true, sub: "Generate and print ID cards", onPress: () => navigation.navigate("WebTool", { title: "ID Card Generator", path: `/id-card-generator?${orgQuery}` }) },
+    { label: "Link", icon: "link-outline", sub: "Parent form link", hidden: institute, onPress: () => setSheet("link") },
   ];
 
+  function toggleSelect(id: string) {
+    setSelected((p) => {
+      const n = new Set(p);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }
+
+  function askDelete(item: Student) {
+    const buttons: { text: string; style?: "cancel" | "destructive"; onPress?: () => void }[] = [{ text: "Cancel", style: "cancel" }];
+    if (item.photo_url) buttons.push({ text: "Delete photo", style: "destructive", onPress: () => void deletePhoto(item) });
+    buttons.push({ text: "Delete data", style: "destructive", onPress: () => void deleteRecord(item) });
+    Alert.alert(`Delete ${noun}`, `${item.student_name ?? ""}\nDelete only the photo, or the full record (details and photo)?`, buttons);
+  }
+
+  /** One record = one card. Every column the website table shows is listed as “label: value”. */
   const renderItem = ({ item, index }: { item: Student; index: number }) => {
     const f = flags(item, institute);
     const on = selected.has(item.id);
     const idText = idField ? studentFieldDisplay(item, idField.key, idField.label) : item.photo_id ?? "";
     const title = nameField ? studentFieldDisplay(item, nameField.key, nameField.label) : item.student_name ?? "—";
     const hidden = item.app_visible === false;
+    const created = item.photo_url?.trim() ? item.photo_captured_at : null;
     return (
-      <Rise delay={Math.min(index, 10) * 30}>
+      <Rise delay={Math.min(index, 10) * 25}>
         <Tap
-          scaleTo={0.985}
-          onPress={() => {
-            if (selecting) {
-              setSelected((p) => {
-                const n = new Set(p);
-                if (n.has(item.id)) n.delete(item.id);
-                else n.add(item.id);
-                return n;
-              });
-            } else setMenu(item);
-          }}
+          scaleTo={0.99}
+          onPress={() => (selecting ? toggleSelect(item.id) : setForm({ record: item }))}
           onLongPress={() => {
             setSelecting(true);
             setSelected(new Set([item.id]));
           }}
-          style={[st.rec, on && st.recOn, hidden && { opacity: 0.7 }]}
+          style={[st.rec, on && st.recOn, hidden && { opacity: 0.75 }]}
         >
-          {selecting ? <Check checked={on} onPress={() => setSelected((p) => {
-            const n = new Set(p);
-            if (n.has(item.id)) n.delete(item.id);
-            else n.add(item.id);
-            return n;
-          })} /> : null}
-          <Tap
-            onPress={() => {
-              if (!item.photo_url) return setMenu(item);
-              setViewer({ index: Math.max(0, photoList.findIndex((p) => p.id === item.id)) });
-            }}
-            style={st.thumb}
-            accessibilityLabel="View photo"
-          >
-            {item.photo_url ? (
-              <Image source={apiImage(`/admin/students/${item.id}/photo?thumb=1&v=${encodeURIComponent(item.updated_at ?? "")}`)} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} recyclingKey={item.id} />
-            ) : (
-              <Text style={st.thumbText}>{initials(title)}</Text>
-            )}
-          </Tap>
-          <View style={{ flex: 1 }}>
-            <Text style={st.recName} numberOfLines={1}>
-              {title || "—"}
-            </Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
-              {idText && idText !== "—" ? <Pill text={idText} tone="blue" /> : null}
-              {item.class_section ? <Pill text={item.class_section} tone="purple" /> : null}
-              <Pill text={f.photo ? "Captured" : "Pending"} tone={f.photo ? "green" : "amber"} icon={f.photo ? "checkmark-circle" : "time"} />
-              {f.dataMissing ? <Pill text="Data missing" tone="red" /> : null}
-              {hidden ? <Pill text="Hidden" tone="grey" icon="eye-off" /> : null}
+          <View style={st.recTop}>
+            {selecting ? <Check checked={on} onPress={() => toggleSelect(item.id)} /> : <Text style={st.sno}>{index + 1}</Text>}
+            <Tap
+              onPress={() => (item.photo_url ? setViewer({ index: Math.max(0, photoList.findIndex((p) => p.id === item.id)) }) : setForm({ record: item }))}
+              style={st.thumb}
+              accessibilityLabel={item.photo_url ? "View photo" : "No photo captured"}
+            >
+              {item.photo_url ? (
+                <Image source={apiImage(`/admin/students/${item.id}/photo?thumb=1&v=${encodeURIComponent(item.updated_at ?? "")}`)} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} recyclingKey={item.id} />
+              ) : (
+                <Text style={st.thumbText}>{initials(title)}</Text>
+              )}
+            </Tap>
+            <View style={{ flex: 1 }}>
+              <Text style={st.recName} numberOfLines={2}>
+                {title || "—"}
+              </Text>
+              {idText && idText !== "—" ? <Text style={st.recId}>{idField?.label ?? "Photo No"}: {idText}</Text> : null}
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                <Pill text={f.photo ? "Captured" : "Pending"} tone={f.photo ? "green" : "amber"} icon={f.photo ? "checkmark-circle" : "time"} />
+                {f.dataMissing ? <Pill text="Pending data" tone="red" /> : null}
+                {hidden ? <Pill text="Hidden" tone="grey" icon="eye-off" /> : null}
+              </View>
             </View>
-            {otherFields.slice(0, 2).map((fl) => {
-              const v = studentFieldDisplay(item, fl.key, fl.label);
-              return v && v !== "—" ? (
-                <Muted key={fl.key} numberOfLines={1} style={{ marginTop: 4 }}>
-                  {fl.label}: {v}
-                </Muted>
-              ) : null;
-            })}
-            {item.photo_url && item.photo_captured_at ? <Muted style={{ marginTop: 2, fontSize: 11 }}>📷 {fmtDateTime(item.photo_captured_at)}</Muted> : null}
           </View>
-          {!selecting ? <Ionicons name="ellipsis-vertical" size={18} color={C.faint} /> : null}
+          <View style={st.fields}>
+            {otherFields.map((fl) => (
+              <View key={fl.key} style={st.fieldRow}>
+                <Text style={st.fieldLabel} numberOfLines={1}>
+                  {fl.label}
+                </Text>
+                <Text style={st.fieldValue} numberOfLines={2}>
+                  {studentFieldDisplay(item, fl.key, fl.label) || "—"}
+                </Text>
+              </View>
+            ))}
+            <View style={st.fieldRow}>
+              <Text style={st.fieldLabel}>Created</Text>
+              <Text style={st.fieldValue}>{created ? fmtDateTime(created) : "—"}</Text>
+            </View>
+          </View>
+          {!selecting ? (
+            <View style={st.recActions}>
+              <IconButton icon={hidden ? "eye-off-outline" : "eye-outline"} label={hidden ? "Show in school app" : "Hide in school app"} size={38} bg={C.primarySoft} color={C.primary} disabled={busy} onPress={() => void changeVisibility([item.id], hidden)} />
+              <IconButton
+                icon="download-outline"
+                label="Download photo"
+                size={38}
+                bg={C.primarySoft}
+                color={C.primary}
+                disabled={!item.photo_url || busy}
+                onPress={() => void run("Failed to download photo.", () => downloadFile(`/admin/students/${item.id}/photo`, `${item.photo_id ?? item.student_name ?? "photo"}.jpg`))}
+              />
+              {item.signature_url ? (
+                <IconButton icon="create-outline" label="View signature" size={38} bg={C.primarySoft} color={C.primary} onPress={() => setViewer({ index: 0, signatureOf: item })} />
+              ) : null}
+              <View style={{ flex: 1 }} />
+              <Button small variant="secondary" icon="pencil-outline" title="Edit" onPress={() => setForm({ record: item })} />
+              <IconButton icon="trash-outline" label={`Delete ${noun}`} size={38} bg={C.dangerSoft} color={C.danger} onPress={() => askDelete(item)} />
+            </View>
+          ) : null}
         </Tap>
       </Rise>
     );
@@ -397,8 +428,8 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Backdrop />
       <Header
-        title={name}
-        subtitle={`${num(tabCounts.all)} ${noun}s · ${num(tabCounts.captured)} captured`}
+        title={institute ? "Members" : "Students"}
+        subtitle={name}
         right={
           <>
             <IconButton icon="construct-outline" label="Tools" color={C.white} bg="rgba(255,255,255,0.22)" onPress={() => setToolsOpen(true)} />
@@ -423,6 +454,18 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
         </View>
       </Header>
 
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={st.toolbar}>
+        {tools
+          .filter((t) => !t.hidden)
+          .map((t) => (
+            <Tap key={t.label} onPress={t.onPress} scaleTo={0.95} style={[st.tool, t.feature && st.toolFeature, t.danger && st.toolDanger]}>
+              <Ionicons name={t.icon} size={18} color={t.feature ? C.white : t.danger ? C.danger : C.primary} />
+              <Text style={[st.toolText, t.feature && { color: C.white }, t.danger && { color: C.danger }]} numberOfLines={1}>
+                {t.label}
+              </Text>
+            </Tap>
+          ))}
+      </ScrollView>
       <View style={st.tabs}>
         <Chips<Tab>
           value={tab}
@@ -495,7 +538,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
             ? [
                 { label: "Edit details", icon: "create-outline", onPress: () => setForm({ record: menu }) },
                 { label: "View photo", icon: "image-outline", hidden: !menu.photo_url, onPress: () => setViewer({ index: Math.max(0, photoList.findIndex((p) => p.id === menu.id)) }) },
-                { label: "View signature", icon: "create-outline", hidden: !menu.signature_url, onPress: () => setViewer({ index: 0, signature: true }) },
+                { label: "View signature", icon: "create-outline", hidden: !menu.signature_url, onPress: () => setViewer({ index: 0, signatureOf: menu }) },
                 {
                   label: "Download photo",
                   icon: "download-outline",
@@ -559,8 +602,8 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
         index={viewer?.index ?? 0}
         onIndex={(i) => setViewer((v) => (v ? { ...v, index: i } : v))}
         items={
-          viewer?.signature && menu
-            ? [{ title: `${menu.student_name ?? ""} · Signature`, source: apiImage(`/admin/students/${menu.id}/signature`) }]
+          viewer?.signatureOf
+            ? [{ title: `${viewer.signatureOf.student_name ?? ""} · Signature`, source: apiImage(`/admin/students/${viewer.signatureOf.id}/signature`) }]
             : photoList.map((s) => ({
                 title: s.student_name ?? "Photo",
                 sub: [s.photo_id, s.class_section].filter(Boolean).join(" · "),
@@ -656,7 +699,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
         }}
         onChoose={(job) => {
           setSheet(null);
-          setTimeout(() => setDeleteJob(job), 250);
+          setTimeout(() => setDeleteJob(job), 450);
         }}
       />
       <OtpSheet
@@ -734,7 +777,20 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
 const st = StyleSheet.create({
   tabs: { paddingHorizontal: S.lg, paddingTop: S.md, width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" },
   selectBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: S.lg, paddingVertical: S.sm, marginTop: S.sm, backgroundColor: C.white, borderTopWidth: 1, borderBottomWidth: 1, borderColor: C.line },
-  rec: { flexDirection: "row", alignItems: "center", gap: S.md, backgroundColor: C.surface, borderRadius: R.lg, padding: S.md, marginBottom: S.sm, borderWidth: 1, borderColor: "rgba(240,228,214,0.9)" },
+  toolbar: { gap: S.sm, paddingHorizontal: S.lg, paddingTop: S.md },
+  tool: { flexDirection: "row", alignItems: "center", gap: 6, height: 40, paddingHorizontal: 14, borderRadius: 12, backgroundColor: C.white, borderWidth: 1, borderColor: C.line },
+  toolFeature: { backgroundColor: C.primary, borderColor: C.primary },
+  toolDanger: { borderColor: "#FECDD6", backgroundColor: C.dangerSoft },
+  toolText: { fontFamily: F.bodySemi, fontSize: 13, color: C.ink },
+  recTop: { flexDirection: "row", alignItems: "center", gap: S.md },
+  sno: { width: 24, textAlign: "center", fontFamily: F.bodySemi, fontSize: 12, color: C.muted },
+  recId: { fontFamily: F.bodyMed, fontSize: 12, color: C.primary, marginTop: 2 },
+  fields: { marginTop: S.md, backgroundColor: "#FAFAFF", borderRadius: 12, paddingHorizontal: S.md, paddingVertical: 4, borderWidth: 1, borderColor: C.line },
+  fieldRow: { flexDirection: "row", gap: S.sm, paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
+  fieldLabel: { width: "40%", fontFamily: F.bodySemi, fontSize: 12, color: C.muted },
+  fieldValue: { flex: 1, fontFamily: F.bodyMed, fontSize: 13, color: C.ink },
+  recActions: { flexDirection: "row", alignItems: "center", gap: S.sm, marginTop: S.md },
+  rec: { backgroundColor: C.surface, borderRadius: R.lg, padding: S.md, marginBottom: S.sm, borderWidth: 1, borderColor: "rgba(230,228,245,0.95)" },
   recOn: { borderColor: C.primary, backgroundColor: C.primarySoft },
   thumb: { width: 58, height: 70, borderRadius: 14, backgroundColor: C.primarySoft, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   thumbText: { fontFamily: F.h, fontSize: 18, color: C.primaryDeep },

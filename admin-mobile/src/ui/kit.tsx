@@ -288,7 +288,7 @@ export function Toggle({ value, onChange, disabled, label, sub }: { value: boole
       value={value}
       onValueChange={onChange}
       disabled={disabled}
-      trackColor={{ false: "#E7DCCF", true: C.primaryLight }}
+      trackColor={{ false: C.line, true: C.primaryLight }}
       thumbColor={value ? C.primary : "#FFFFFF"}
       accessibilityLabel={label}
     />
@@ -433,7 +433,7 @@ export function Avatar({ name, uri, size = 44, headers }: { name?: string | null
     return <Image source={{ uri, headers }} style={{ width: size, height: size, borderRadius: size / 3, backgroundColor: C.primarySoft }} contentFit="cover" transition={150} />;
   }
   return (
-    <LinearGradient colors={["#FFD29C", "#FFB0A0"]} style={{ width: size, height: size, borderRadius: size / 3, alignItems: "center", justifyContent: "center" }}>
+    <LinearGradient colors={["#E0E7FF", "#EDE9FE"]} style={{ width: size, height: size, borderRadius: size / 3, alignItems: "center", justifyContent: "center" }}>
       <Text style={{ fontFamily: F.h, color: C.primaryDeep, fontSize: size * 0.36 }}>{initials(name)}</Text>
     </LinearGradient>
   );
@@ -482,7 +482,7 @@ const st = StyleSheet.create({
   body: { fontFamily: F.body, fontSize: 15, color: C.text, lineHeight: 21 },
   muted: { fontFamily: F.body, fontSize: 13, color: C.muted, lineHeight: 18 },
   label: { fontFamily: F.bodySemi, fontSize: 12, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6 },
-  card: { backgroundColor: C.surface, borderRadius: R.lg, borderWidth: 1, borderColor: "rgba(240,228,214,0.9)", ...softShadow },
+  card: { backgroundColor: C.surface, borderRadius: R.lg, borderWidth: 1, borderColor: "rgba(230,228,245,0.95)", ...softShadow },
   cardPad: { padding: S.lg },
   sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: S.md },
   sectionTitle: { fontFamily: F.h, fontSize: 17, color: C.ink },
@@ -497,7 +497,7 @@ const st = StyleSheet.create({
   fabText: { color: C.white, fontFamily: F.hSemi, fontSize: 15 },
   fieldLabel: { fontFamily: F.bodySemi, fontSize: 13, color: C.text, marginBottom: 6 },
   inputWrap: { flexDirection: "row", alignItems: "center", backgroundColor: C.white, borderWidth: 1.5, borderColor: C.line, borderRadius: R.md, paddingHorizontal: S.md, minHeight: 50 },
-  inputFocus: { borderColor: C.primary, backgroundColor: "#FFFDFB" },
+  inputFocus: { borderColor: C.primary, backgroundColor: "#FBFBFF" },
   input: { flex: 1, fontFamily: F.body, fontSize: 15, color: C.ink, paddingVertical: 10 },
   fieldError: { color: C.danger, fontFamily: F.bodyMed, fontSize: 12, marginTop: 4 },
   fieldHint: { color: C.muted, fontFamily: F.body, fontSize: 12, marginTop: 4 },
@@ -525,7 +525,7 @@ const st = StyleSheet.create({
   infoRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line, gap: S.md },
   infoLabel: { fontFamily: F.bodySemi, fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5 },
   infoValue: { fontFamily: F.bodyMed, fontSize: 15, color: C.ink, marginTop: 2 },
-  listItem: { flexDirection: "row", alignItems: "center", gap: S.md, paddingVertical: 12, paddingHorizontal: S.md, backgroundColor: C.surface, borderRadius: R.md, marginBottom: S.sm, borderWidth: 1, borderColor: "rgba(240,228,214,0.9)" },
+  listItem: { flexDirection: "row", alignItems: "center", gap: S.md, paddingVertical: 12, paddingHorizontal: S.md, backgroundColor: C.surface, borderRadius: R.md, marginBottom: S.sm, borderWidth: 1, borderColor: "rgba(230,228,245,0.95)" },
   listIcon: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   listTitle: { fontFamily: F.hSemi, fontSize: 15, color: C.ink },
 });

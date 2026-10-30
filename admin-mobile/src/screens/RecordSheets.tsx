@@ -727,6 +727,6 @@ const st = StyleSheet.create({
   choice: { flexDirection: "row", alignItems: "center", gap: S.sm, backgroundColor: C.white, borderRadius: R.md, paddingVertical: 14, paddingHorizontal: S.md, marginBottom: 8, borderWidth: 1, borderColor: C.line },
   choiceOn: { borderColor: C.primary, backgroundColor: C.primarySoft },
   choiceText: { flex: 1, fontFamily: F.bodySemi, fontSize: 14, color: C.ink },
-  count: { fontFamily: F.bodySemi, fontSize: 12, color: C.muted, backgroundColor: "#F6EFE7", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, overflow: "hidden" },
+  count: { fontFamily: F.bodySemi, fontSize: 12, color: C.muted, backgroundColor: C.primarySoft, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, overflow: "hidden" },
   group: { fontFamily: F.bodySemi, fontSize: 12, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 },
 });

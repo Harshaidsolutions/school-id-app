@@ -7,16 +7,51 @@ import { useFocusEffect } from "@react-navigation/native";
 import api, { authedSource, errMsg } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import type { DashboardSummary } from "../shared/types";
-import { C, CONTENT_MAX, F, S, headerGradient, shadow } from "../theme";
+import { C, CONTENT_MAX, F, R, S, headerGradient, softShadow } from "../theme";
 import { Backdrop } from "../ui/Screen";
-import { Avatar, Banner, Card, IconButton, Muted, Rise, Section, Stat, type IconName } from "../ui/kit";
+import { Avatar, Banner, IconButton, Loading, Muted, Rise } from "../ui/kit";
 import { Tap } from "../ui/Pressable";
 import { academicYear, num, pct, waLink } from "../lib/format";
 import { useNav } from "../navigation/hooks";
 
-function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+/** Same card colours as the website dashboard. */
+const CARD_STYLES = [
+  { bg: "#EEF0FF", icon: "#4F46E5" },
+  { bg: "#EEF0FF", icon: "#0D9488" },
+  { bg: "#FFF1F3", icon: "#F43F5E" },
+  { bg: "#F4F3FF", icon: "#7C3AED" },
+  { bg: "#F7F7FC", icon: "#4338CA" },
+  { bg: "#FFF1F3", icon: "#F43F5E" },
+];
+
+function MetricCard({ label, value, index, onPress }: { label: string; value: string; index: number; onPress?: () => void }) {
+  const style = CARD_STYLES[index % CARD_STYLES.length];
+  const wide = index >= 4;
+  return (
+    <Tap onPress={onPress} disabled={!onPress} scaleTo={onPress ? 0.97 : 1} style={[st.metric, { backgroundColor: style.bg }, wide && st.metricWide]}>
+      <View style={st.metricIcon}>
+        <View style={[st.metricSquare, { borderColor: style.icon }]} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={st.metricLabel} numberOfLines={2}>
+          {label}
+        </Text>
+        <Text style={st.metricValue} numberOfLines={1} adjustsFontSizeToFit>
+          {value}
+        </Text>
+        {onPress ? <Text style={st.viewAll}>View all</Text> : null}
+      </View>
+    </Tap>
+  );
+}
+
+function StatusPill({ label, value, active }: { label: string; value: number; active: boolean }) {
+  return (
+    <View style={[st.pill, { borderColor: active ? "#C7D2FE" : "#E6E4F5" }]}>
+      <Text style={[st.pillValue, { color: active ? "#0D9488" : "#77759A" }]}>{num(value)}</Text>
+      <Text style={[st.pillLabel, { color: active ? "#0D9488" : "#77759A" }]}>{label}</Text>
+    </View>
+  );
 }
 
 export function HomeScreen() {
@@ -25,6 +60,7 @@ export function HomeScreen() {
   const { user, isSuperAdmin } = useAuth();
   const year = academicYear();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -37,6 +73,8 @@ export function HomeScreen() {
       setError(null);
     } catch (e) {
       setError(errMsg(e, "Failed to load dashboard."));
+    } finally {
+      setLoading(false);
     }
     api
       .get<{ unreadCount?: number }>("/admin/notifications/unread-count")
@@ -67,20 +105,61 @@ export function HomeScreen() {
   const instTotal = s?.institutePhotos ?? 0;
   const instCaptured = s?.instituteCaptured ?? 0;
   const instPending = s?.institutePending ?? 0;
-  const captureRate = schoolTotal + instTotal > 0 ? (schoolCaptured + instCaptured) / (schoolTotal + instTotal) : 0;
+  const goSchools = () => nav.navigate("Tabs", { screen: "Schools" } as never);
+  const goInstitutes = () => nav.navigate("Tabs", { screen: "Institutes" } as never);
 
-  const quick: { label: string; icon: IconName; onPress: () => void; color: string }[] = [
-    { label: "Schools", icon: "school", onPress: () => nav.navigate("Tabs", { screen: "Schools" } as never), color: C.primary },
-    { label: "Institutes", icon: "business", onPress: () => nav.navigate("Tabs", { screen: "Institutes" } as never), color: C.accent },
-    { label: "Templates", icon: "albums", onPress: () => nav.navigate("Templates"), color: C.purple },
-    { label: "Notify", icon: "megaphone", onPress: () => nav.navigate("Notifications"), color: C.teal },
+  const schoolCards = [
+    { label: "Total Schools", value: num(s?.totalSchools), onPress: goSchools },
+    { label: "Total Students", value: num(schoolTotal) },
+    { label: "Students Captured", value: num(schoolCaptured) },
+    { label: "Students Uncaptured", value: num(schoolPending) },
+    { label: "Capture Percentage", value: pct(schoolCaptured, schoolTotal) },
+    { label: "Uncapture Percentage", value: pct(schoolPending, schoolTotal) },
   ];
+  const instituteCards = [
+    { label: "Total Institutes", value: num(s?.totalInstitutes), onPress: goInstitutes },
+    { label: "Total Members", value: num(instTotal) },
+    { label: "Members Captured", value: num(instCaptured) },
+    { label: "Members Uncaptured", value: num(instPending) },
+    { label: "Capture Percentage", value: pct(instCaptured, instTotal) },
+    { label: "Uncapture Percentage", value: pct(instPending, instTotal) },
+  ];
+  const name = user?.displayName || user?.username || "Admin";
+  const photo = authedSource(user?.photoUrl);
+  const contactRows = contacts
+    ? (["phone", "whatsapp", "facebook", "instagram", "youtube"] as const).filter((k) => contacts[k])
+    : [];
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Backdrop />
+      <LinearGradient colors={headerGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.header, { paddingTop: insets.top + 10 }]}>
+        <View style={st.max}>
+          <View style={st.headRow}>
+            <Tap onPress={() => nav.navigate("Profile")} style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+              <Avatar name={name} uri={photo?.uri} headers={photo?.headers} size={44} />
+              <View style={{ flex: 1 }}>
+                <Text style={st.hi}>Hi,</Text>
+                <Text style={st.name} numberOfLines={1}>
+                  {name}
+                </Text>
+              </View>
+            </Tap>
+            <IconButton icon="notifications-outline" label="Notifications" color={C.white} bg="rgba(255,255,255,0.2)" badge={unread} onPress={() => nav.navigate("Inbox")} />
+          </View>
+          <View style={st.titleRow}>
+            <Text style={st.title}>Dashboard</Text>
+            <View style={st.year}>
+              <Ionicons name="calendar-outline" size={14} color={C.white} />
+              <Text style={st.yearText}>{year.label}</Text>
+            </View>
+          </View>
+          <Text style={st.role}>{isSuperAdmin ? "Super Admin" : "Admin"}</Text>
+        </View>
+      </LinearGradient>
+
       <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
+        contentContainerStyle={{ padding: S.lg, paddingBottom: insets.bottom + 110 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -93,121 +172,62 @@ export function HomeScreen() {
           />
         }
       >
-        <LinearGradient colors={headerGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.hero, { paddingTop: insets.top + 14 }]}>
-          <View style={st.bubbleA} />
-          <View style={st.bubbleB} />
-          <View style={st.max}>
-            <View style={st.topRow}>
-              <Tap onPress={() => nav.navigate("Profile")} style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }} accessibilityLabel="Profile">
-                <Avatar name={user?.displayName || user?.username || user?.email} uri={authedSource(user?.photoUrl)?.uri} headers={authedSource(user?.photoUrl)?.headers} size={50} />
-                <View style={{ flex: 1 }}>
-                  <Text style={st.hello}>{greeting()},</Text>
-                  <Text style={st.name} numberOfLines={1}>
-                    {user?.displayName || user?.username || "Admin"}
-                  </Text>
-                </View>
-              </Tap>
-              <IconButton icon="notifications-outline" label="Inbox" color={C.white} bg="rgba(255,255,255,0.22)" badge={unread} onPress={() => nav.navigate("Inbox")} />
-            </View>
-            <Rise delay={60}>
-              <View style={[st.heroCard, shadow]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={st.heroLabel}>Academic year {year.label}</Text>
-                  <Text style={st.heroBig}>{num(schoolCaptured + instCaptured)}</Text>
-                  <Muted>photos captured of {num(schoolTotal + instTotal)}</Muted>
-                </View>
-                <View style={st.ring}>
-                  <Text style={st.ringText}>{Math.round(captureRate * 100)}%</Text>
-                  <Text style={st.ringSub}>done</Text>
-                </View>
+        <View style={st.max}>
+          <Banner text={error} />
+          {!isSuperAdmin && contactRows.length ? (
+            <Rise>
+              <Text style={st.section}>Super Admin contact</Text>
+              <View style={st.contactCard}>
+                {contactRows.map((k, i) => (
+                  <Tap
+                    key={k}
+                    style={[st.contact, i > 0 && { borderTopWidth: 1, borderTopColor: C.line }]}
+                    onPress={() => void Linking.openURL(k === "phone" ? `tel:${contacts![k]}` : k === "whatsapp" ? waLink(contacts![k]) : String(contacts![k]))}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={st.contactLabel}>{k === "whatsapp" ? "WhatsApp" : k === "youtube" ? "YouTube" : k[0].toUpperCase() + k.slice(1)}</Text>
+                      <Text style={st.contactValue} numberOfLines={1}>
+                        {contacts![k]}
+                      </Text>
+                    </View>
+                    <Ionicons name="open-outline" size={16} color={C.faint} />
+                  </Tap>
+                ))}
               </View>
             </Rise>
-            <View style={st.bar}>
-              <View style={[st.barFill, { width: `${Math.min(100, captureRate * 100)}%` }]} />
-            </View>
-            <View style={st.roleRow}>
-              <Ionicons name={isSuperAdmin ? "shield-checkmark" : "person"} size={14} color={C.white} />
-              <Text style={st.role}>{isSuperAdmin ? "Super Admin" : "Admin"}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-
-        <View style={[st.max, { paddingHorizontal: S.lg }]}>
-          <Banner text={error} />
-          <Rise delay={120}>
-            <View style={st.quick}>
-              {quick.map((q) => (
-                <Tap key={q.label} onPress={q.onPress} style={st.quickItem} accessibilityLabel={q.label}>
-                  <View style={[st.quickIcon, { backgroundColor: q.color }]}>
-                    <Ionicons name={q.icon} size={22} color={C.white} />
-                  </View>
-                  <Text style={st.quickText}>{q.label}</Text>
-                </Tap>
-              ))}
-            </View>
-          </Rise>
-
-          <Section title="Schools">
-            <View style={st.grid}>
-              <Stat label="Total schools" value={num(s?.totalSchools)} icon="school-outline" tone="orange" onPress={() => nav.navigate("Tabs", { screen: "Schools" } as never)} />
-              <Stat label="Total students" value={num(schoolTotal)} icon="people-outline" tone="blue" />
-              <Stat label="Captured" value={num(schoolCaptured)} icon="camera-outline" tone="green" />
-              <Stat label="Pending" value={num(schoolPending)} icon="time-outline" tone="amber" />
-              <Stat label="Capture %" value={pct(schoolCaptured, schoolTotal)} icon="trending-up-outline" tone="teal" />
-              <Stat label="Pending %" value={pct(schoolPending, schoolTotal)} icon="hourglass-outline" tone="red" />
-            </View>
-          </Section>
-
-          <Section title="Institutes">
-            <View style={st.grid}>
-              <Stat label="Total institutes" value={num(s?.totalInstitutes)} icon="business-outline" tone="blue" onPress={() => nav.navigate("Tabs", { screen: "Institutes" } as never)} />
-              <Stat label="Total members" value={num(instTotal)} icon="people-outline" tone="purple" />
-              <Stat label="Captured" value={num(instCaptured)} icon="camera-outline" tone="green" />
-              <Stat label="Pending" value={num(instPending)} icon="time-outline" tone="amber" />
-              <Stat label="Capture %" value={pct(instCaptured, instTotal)} icon="trending-up-outline" tone="teal" />
-              <Stat label="Pending %" value={pct(instPending, instTotal)} icon="hourglass-outline" tone="red" />
-            </View>
-          </Section>
-
-          <Section title="Status">
-            <View style={st.grid}>
-              <Stat label="Active schools" value={num(s?.activeSchools)} icon="checkmark-circle-outline" tone="green" />
-              <Stat label="Inactive schools" value={num(s?.inactiveSchools)} icon="pause-circle-outline" tone="grey" />
-              <Stat label="Active institutes" value={num(s?.activeInstitutes)} icon="checkmark-circle-outline" tone="green" />
-              <Stat label="Inactive institutes" value={num(s?.inactiveInstitutes)} icon="pause-circle-outline" tone="grey" />
-            </View>
-          </Section>
-
-          {!isSuperAdmin && contacts ? (
-            <Section title="Super Admin contact">
-              <Card>
-                {(["phone", "whatsapp", "facebook", "instagram", "youtube"] as const)
-                  .filter((k) => contacts[k])
-                  .map((k) => (
-                    <Tap
-                      key={k}
-                      style={st.contact}
-                      onPress={() =>
-                        void Linking.openURL(
-                          k === "phone" ? `tel:${contacts[k]}` : k === "whatsapp" ? waLink(contacts[k]) : String(contacts[k])
-                        )
-                      }
-                    >
-                      <Ionicons
-                        name={k === "phone" ? "call" : k === "whatsapp" ? "logo-whatsapp" : k === "facebook" ? "logo-facebook" : k === "instagram" ? "logo-instagram" : "logo-youtube"}
-                        size={20}
-                        color={C.primary}
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text style={st.contactLabel}>{k[0].toUpperCase() + k.slice(1)}</Text>
-                        <Muted numberOfLines={1}>{contacts[k]}</Muted>
-                      </View>
-                      <Ionicons name="open-outline" size={16} color={C.faint} />
-                    </Tap>
-                  ))}
-              </Card>
-            </Section>
           ) : null}
+
+          {loading ? (
+            <Loading text="Loading summary…" />
+          ) : (
+            <>
+              <Rise delay={40}>
+                <Text style={st.section}>Schools</Text>
+                <View style={st.grid}>
+                  {schoolCards.map((c, i) => (
+                    <MetricCard key={c.label} index={i} {...c} />
+                  ))}
+                </View>
+              </Rise>
+              <Rise delay={100}>
+                <Text style={st.section}>Institutes</Text>
+                <View style={st.grid}>
+                  {instituteCards.map((c, i) => (
+                    <MetricCard key={c.label} index={i} {...c} />
+                  ))}
+                </View>
+              </Rise>
+              <Rise delay={160}>
+                <View style={[st.grid, { marginTop: S.xl }]}>
+                  <StatusPill label="Active Schools" value={s?.activeSchools ?? 0} active />
+                  <StatusPill label="Inactive Schools" value={s?.inactiveSchools ?? 0} active={false} />
+                  <StatusPill label="Active Institutes" value={s?.activeInstitutes ?? 0} active />
+                  <StatusPill label="Inactive Institutes" value={s?.inactiveInstitutes ?? 0} active={false} />
+                </View>
+              </Rise>
+              <Muted style={{ textAlign: "center", marginTop: S.lg, fontSize: 11 }}>Updates every 30 seconds · pull down to refresh</Muted>
+            </>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -215,28 +235,30 @@ export function HomeScreen() {
 }
 
 const st = StyleSheet.create({
-  hero: { paddingHorizontal: S.lg, paddingBottom: S.xl, borderBottomLeftRadius: 34, borderBottomRightRadius: 34, overflow: "hidden" },
-  bubbleA: { position: "absolute", width: 240, height: 240, borderRadius: 120, backgroundColor: "rgba(255,255,255,0.12)", top: -80, right: -70 },
-  bubbleB: { position: "absolute", width: 160, height: 160, borderRadius: 80, backgroundColor: "rgba(255,255,255,0.08)", bottom: -60, left: -20 },
+  header: { paddingHorizontal: S.lg, paddingBottom: S.lg, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
   max: { width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" },
-  topRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: S.lg },
-  hello: { fontFamily: F.bodyMed, fontSize: 13, color: "rgba(255,255,255,0.9)" },
-  name: { fontFamily: F.h, fontSize: 21, color: C.white },
-  heroCard: { flexDirection: "row", alignItems: "center", backgroundColor: C.white, borderRadius: 22, padding: S.lg },
-  heroLabel: { fontFamily: F.bodySemi, fontSize: 12, color: C.primaryDeep, textTransform: "uppercase", letterSpacing: 0.5 },
-  heroBig: { fontFamily: F.hX, fontSize: 30, color: C.ink, marginTop: 2 },
-  ring: { width: 78, height: 78, borderRadius: 39, borderWidth: 7, borderColor: C.primarySoft, borderTopColor: C.primary, borderRightColor: C.primary, alignItems: "center", justifyContent: "center" },
-  ringText: { fontFamily: F.h, fontSize: 18, color: C.ink },
-  ringSub: { fontFamily: F.body, fontSize: 10, color: C.muted, marginTop: -2 },
-  bar: { height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.35)", marginTop: S.md, overflow: "hidden" },
-  barFill: { height: 6, backgroundColor: C.white, borderRadius: 3 },
-  roleRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: S.md },
-  role: { fontFamily: F.bodySemi, fontSize: 12, color: C.white },
-  quick: { flexDirection: "row", justifyContent: "space-between", marginTop: S.lg },
-  quickItem: { alignItems: "center", width: "23%" },
-  quickIcon: { width: 56, height: 56, borderRadius: 20, alignItems: "center", justifyContent: "center", ...shadow },
-  quickText: { fontFamily: F.bodySemi, fontSize: 12, color: C.text, marginTop: 6 },
+  headRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  hi: { fontFamily: F.bodyMed, fontSize: 12, color: "rgba(255,255,255,0.85)" },
+  name: { fontFamily: F.h, fontSize: 18, color: C.white },
+  titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: S.lg },
+  title: { fontFamily: F.hX, fontSize: 24, color: C.white },
+  year: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  yearText: { fontFamily: F.bodySemi, fontSize: 13, color: C.white },
+  role: { fontFamily: F.bodySemi, fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 2 },
+  section: { fontFamily: F.h, fontSize: 17, color: C.ink, marginTop: S.lg, marginBottom: S.md },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: S.md },
-  contact: { flexDirection: "row", alignItems: "center", gap: S.md, paddingVertical: 10 },
-  contactLabel: { fontFamily: F.bodySemi, fontSize: 14, color: C.ink },
+  metric: { flexBasis: "47%", flexGrow: 1, flexDirection: "row", gap: 10, padding: S.md, borderRadius: R.lg, minHeight: 92, ...softShadow },
+  metricWide: { flexBasis: "100%" },
+  metricIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.8)", alignItems: "center", justifyContent: "center" },
+  metricSquare: { width: 15, height: 15, borderRadius: 3, borderWidth: 1.8 },
+  metricLabel: { fontFamily: F.bodyMed, fontSize: 12, color: C.muted },
+  metricValue: { fontFamily: F.h, fontSize: 22, color: C.ink, marginTop: 2 },
+  viewAll: { fontFamily: F.bodySemi, fontSize: 11, color: C.primary, marginTop: 4 },
+  pill: { flexBasis: "47%", flexGrow: 1, alignItems: "center", paddingVertical: S.lg, borderRadius: R.lg, borderWidth: 1, backgroundColor: "#EEF0FF" },
+  pillValue: { fontFamily: F.h, fontSize: 24 },
+  pillLabel: { fontFamily: F.bodySemi, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, marginTop: 4 },
+  contactCard: { backgroundColor: C.white, borderRadius: R.lg, borderWidth: 1, borderColor: C.line, overflow: "hidden" },
+  contact: { flexDirection: "row", alignItems: "center", paddingHorizontal: S.lg, paddingVertical: 12 },
+  contactLabel: { fontFamily: F.bodySemi, fontSize: 11, color: C.muted, textTransform: "uppercase" },
+  contactValue: { fontFamily: F.bodyMed, fontSize: 14, color: C.ink, marginTop: 2 },
 });

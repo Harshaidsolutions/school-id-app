@@ -112,7 +112,6 @@ export function WebToolScreen({ route, navigation }: ScreenProps<"WebTool">) {
         domStorageEnabled
         allowFileAccess={false}
         setSupportMultipleWindows={false}
-        mediaPlaybackRequiresUserGesture={false}
         originWhitelist={["https://*"]}
         style={{ flex: 1 }}
       />

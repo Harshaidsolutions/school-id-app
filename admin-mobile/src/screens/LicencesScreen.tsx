@@ -96,14 +96,14 @@ export function LicencesScreen() {
 
   if (!isSuperAdmin) {
     return (
-      <Screen title="Desktop licences">
+      <Screen title="Desktop Licences">
         <Empty icon="lock-closed-outline" title="Super admin only" text="Only the super admin can manage desktop licences." />
       </Screen>
     );
   }
 
   return (
-    <Screen title="Desktop licences" subtitle="Offline ID Card Generator for Windows" onRefresh={() => void load()} refreshing={false} footer={<Button title="Create licence key" icon="key-outline" onPress={() => setCreate(true)} />}>
+    <Screen title="Desktop Licences" subtitle="Offline ID Card Generator for Windows" onRefresh={() => void load()} refreshing={false} footer={<Button title="Create licence key" icon="key-outline" onPress={() => setCreate(true)} />}>
       <Banner text={error} onClose={() => setError(null)} />
       <Banner text={notice} tone="green" onClose={() => setNotice(null)} />
       <Muted style={{ marginBottom: S.md }}>One key per customer computer. After one online activation the app works offline, and only on that computer.</Muted>

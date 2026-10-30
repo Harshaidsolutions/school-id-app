@@ -29,7 +29,7 @@ type Org = {
 const CFG = {
   school: { title: "Schools", one: "School", base: "/admin/schools", listKey: "schools", icon: "school" as const },
   institute: { title: "Institutes", one: "Institute", base: "/admin/institutes", listKey: "institutes", icon: "business" as const },
-  organization: { title: "Organisations", one: "Organisation", base: "/admin/organizations", listKey: "organizations", icon: "briefcase" as const },
+  organization: { title: "Organization", one: "Organization", base: "/admin/organizations", listKey: "organizations", icon: "briefcase" as const },
 };
 
 function normalize(kind: ListKind, raw: Record<string, unknown>): Org {
@@ -46,7 +46,7 @@ function normalize(kind: ListKind, raw: Record<string, unknown>): Org {
   };
 }
 
-export function OrgListScreen({ kind }: { kind: ListKind }) {
+export function OrgListScreen({ kind, back = false }: { kind: ListKind; back?: boolean }) {
   const cfg = CFG[kind];
   const nav = useNav();
   const insets = useSafeAreaInsets();
@@ -62,7 +62,6 @@ export function OrgListScreen({ kind }: { kind: ListKind }) {
   const [menu, setMenu] = useState<Org | null>(null);
   const [form, setForm] = useState<{ mode: "add" | "edit"; org?: Org } | null>(null);
   const [deleting, setDeleting] = useState<Org | null>(null);
-  const [shown, setShown] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     try {
@@ -142,7 +141,7 @@ export function OrgListScreen({ kind }: { kind: ListKind }) {
       <Header
         title={cfg.title}
         subtitle={`${rows.length} total · ${rows.filter((r) => r.is_active).length} active`}
-        back={false}
+        back={back}
         right={
           rows.length ? (
             <IconButton
@@ -198,12 +197,11 @@ export function OrgListScreen({ kind }: { kind: ListKind }) {
           }
           renderItem={({ item, index }) => {
             const on = selected.has(item.id);
-            const reveal = shown.has(item.id);
             return (
               <Rise delay={Math.min(index, 8) * 40}>
                 <Tap onPress={() => open(item)} onLongPress={() => setMenu(item)} scaleTo={0.985} style={[st.card, on && st.cardOn]}>
                   <View style={st.cardTop}>
-                    {selecting ? <Check checked={on} onPress={() => open(item)} /> : <Avatar name={item.name} size={46} />}
+                    {selecting ? <Check checked={on} onPress={() => open(item)} /> : <View style={st.sno}><Text style={st.snoText}>{index + 1}</Text></View>}
                     <View style={{ flex: 1 }}>
                       <Text style={st.name} numberOfLines={2}>
                         {item.name}
@@ -224,27 +222,9 @@ export function OrgListScreen({ kind }: { kind: ListKind }) {
                     </View>
                     <View style={st.cred}>
                       <Text style={st.credLabel}>Password</Text>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        <Text style={[st.credValue, { flex: 1 }]} numberOfLines={1} selectable>
-                          {item.password ? (reveal ? item.password : "••••••••") : "—"}
-                        </Text>
-                        {item.password ? (
-                          <Tap
-                            hitSlop={8}
-                            accessibilityLabel={reveal ? "Hide password" : "Show password"}
-                            onPress={() =>
-                              setShown((p) => {
-                                const n = new Set(p);
-                                if (n.has(item.id)) n.delete(item.id);
-                                else n.add(item.id);
-                                return n;
-                              })
-                            }
-                          >
-                            <Ionicons name={reveal ? "eye-off-outline" : "eye-outline"} size={18} color={C.muted} />
-                          </Tap>
-                        ) : null}
-                      </View>
+                      <Text style={st.credValue} numberOfLines={1} selectable>
+                        {item.password ?? "—"}
+                      </Text>
                     </View>
                   </View>
                   <View style={st.metaRow}>
@@ -262,13 +242,20 @@ export function OrgListScreen({ kind }: { kind: ListKind }) {
                   {!selecting ? (
                     <View style={st.toggles}>
                       <View style={st.toggleBox}>
-                        <Text style={st.toggleText}>Active</Text>
+                        <Text style={st.toggleText}>Status</Text>
                         <Toggle value={item.is_active} disabled={busyId === item.id} onChange={() => void toggleActive(item)} />
                       </View>
                       <View style={st.toggleBox}>
-                        <Text style={st.toggleText}>Capture lock</Text>
+                        <Text style={st.toggleText} numberOfLines={2}>Screen capture{"\n"}protection</Text>
                         <Toggle value={item.protectedCapture} disabled={busyId === item.id} onChange={() => void toggleCapture(item)} />
                       </View>
+                    </View>
+                  ) : null}
+                  {!selecting ? (
+                    <View style={st.actions}>
+                      <Button small variant="soft" icon="people-outline" title={kind === "school" ? "Students" : kind === "institute" ? "Members" : "Records"} onPress={() => open(item)} style={{ flex: 1.3 }} />
+                      <Button small variant="secondary" icon="create-outline" title="Edit" onPress={() => setForm({ mode: "edit", org: item })} style={{ flex: 1 }} />
+                      <IconButton icon="trash-outline" label="Delete" size={38} bg={C.dangerSoft} color={C.danger} onPress={() => setDeleting(item)} />
                     </View>
                   ) : null}
                 </Tap>
@@ -287,7 +274,7 @@ export function OrgListScreen({ kind }: { kind: ListKind }) {
           menu
             ? [
                 { label: kind === "organization" ? "Open records" : kind === "school" ? "Open students" : "Open members", icon: "people-outline", onPress: () => open(menu) },
-                { label: kind === "school" ? "School info" : kind === "institute" ? "Institute info" : "Organisation info", icon: "information-circle-outline", onPress: () => nav.navigate("OrgInfo", { kind, id: menu.id, name: menu.name }) },
+                { label: kind === "school" ? "School Info" : kind === "institute" ? "Institution Info" : "Organization Info", icon: "information-circle-outline", onPress: () => nav.navigate("OrgInfo", { kind, id: menu.id, name: menu.name }) },
                 { label: "Edit details & login", icon: "create-outline", onPress: () => setForm({ mode: "edit", org: menu }) },
                 {
                   label: "Copy login details",
@@ -419,7 +406,7 @@ function OrgFormSheet({
 
 const st = StyleSheet.create({
   selectBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: S.lg, paddingVertical: S.sm, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.line },
-  card: { backgroundColor: C.surface, borderRadius: R.lg, padding: S.lg, marginBottom: S.md, borderWidth: 1, borderColor: "rgba(240,228,214,0.9)" },
+  card: { backgroundColor: C.surface, borderRadius: R.lg, padding: S.lg, marginBottom: S.md, borderWidth: 1, borderColor: "rgba(230,228,245,0.95)" },
   cardOn: { borderColor: C.primary, backgroundColor: C.primarySoft },
   cardTop: { flexDirection: "row", alignItems: "center", gap: S.md },
   name: { fontFamily: F.hSemi, fontSize: 16, color: C.ink },
@@ -431,5 +418,8 @@ const st = StyleSheet.create({
   phone: { fontFamily: F.bodySemi, fontSize: 13, color: C.accentDeep },
   toggles: { flexDirection: "row", gap: S.sm, marginTop: S.md },
   toggleBox: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: C.white, borderRadius: R.sm, paddingLeft: 12, paddingRight: 4, borderWidth: 1, borderColor: C.line },
-  toggleText: { fontFamily: F.bodySemi, fontSize: 13, color: C.text },
+  toggleText: { fontFamily: F.bodySemi, fontSize: 12, color: C.text, flexShrink: 1 },
+  sno: { width: 40, height: 40, borderRadius: 13, backgroundColor: C.primarySoft, alignItems: "center", justifyContent: "center" },
+  snoText: { fontFamily: F.h, fontSize: 15, color: C.primary },
+  actions: { flexDirection: "row", alignItems: "center", gap: S.sm, marginTop: S.md },
 });

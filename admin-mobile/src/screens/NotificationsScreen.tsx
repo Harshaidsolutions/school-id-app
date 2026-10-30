@@ -17,7 +17,7 @@ import { fmtDateTime } from "../lib/format";
 type Row = NotificationItem & { organization_name?: string | null; admin_name?: string | null };
 type Target = { kind: "schoolId" | "instituteId" | "adminId"; id: string; name: string };
 
-export function NotificationsScreen() {
+export function NotificationsScreen({ inTab = false }: { inTab?: boolean }) {
   const { isSuperAdmin } = useAuth();
   const [view, setView] = useState<"compose" | "sent">("compose");
   const [schools, setSchools] = useState<{ id: string; name: string }[]>([]);
@@ -157,6 +157,7 @@ export function NotificationsScreen() {
   return (
     <Screen
       title="Notifications"
+      back={!inTab}
       subtitle="Send messages to the school app"
       headerExtra={
         <Chips<"compose" | "sent">

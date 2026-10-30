@@ -75,7 +75,7 @@ export function TemplatesScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Backdrop />
-      <Header title="ID card templates" subtitle={`${items.length} templates`}>
+      <Header title="Templates" subtitle={`${items.length} templates`}>
         <SearchBar value={search} onChange={setSearch} placeholder="Search templates…" />
       </Header>
       <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" }}>

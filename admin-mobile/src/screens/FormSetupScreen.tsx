@@ -118,7 +118,7 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
   }
 
   return (
-    <Screen title={isOrg ? "Form fields" : "Form setup"} subtitle={name} footer={fields.length ? <Button title="Save form setup" icon="save-outline" onPress={() => void save()} loading={saving} /> : undefined}>
+    <Screen title="Form Setup" subtitle={name} footer={fields.length ? <Button title="Save" icon="save-outline" onPress={() => void save()} loading={saving} /> : undefined}>
       <Banner text={error} onClose={() => setError(null)} />
       {kind === "school" && parentForm !== null ? (
         <Card style={{ marginBottom: S.lg, backgroundColor: C.primarySoft }}>

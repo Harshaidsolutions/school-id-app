@@ -87,7 +87,7 @@ export function LoginScreen({ navigation }: ScreenProps<"Login">) {
   }
 
   return (
-    <AuthShell title="Welcome back 👋" subtitle="Log in to manage schools, students and ID cards.">
+    <AuthShell title="Welcome Admin" subtitle="Log in to manage schools, students and ID cards.">
       <Banner text={error} />
       <Field label="Username or email" icon="person-outline" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" placeholder="admin@school.com" returnKeyType="next" />
       <Field label="Password" icon="lock-closed-outline" value={password} onChangeText={setPassword} secure placeholder="Your password" returnKeyType="go" onSubmitEditing={() => void submit()} />
