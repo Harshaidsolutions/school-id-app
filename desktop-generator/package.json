@@ -9,9 +9,10 @@
   "scripts": {
     "sync-css": "node scripts/sync-admin-css.mjs",
     "dev": "npm run sync-css && concurrently -k \"vite --port 5174 --strictPort\" \"wait-on http://localhost:5174 && cross-env MSIDC_DEV=1 electron .\"",
-    "build:renderer": "npm run sync-css && tsc --noEmit -p tsconfig.json && vite build",
+    "build:renderer": "npm run sync-css && vite build",
     "dist": "npm run build:renderer && electron-builder --win nsis msi --x64 --publish never",
-    "dist:exe": "npm run build:renderer && electron-builder --win nsis --x64 --publish never"
+    "dist:exe": "npm run build:renderer && electron-builder --win nsis --x64 --publish never",
+    "typecheck": "npm run sync-css && tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "pdfjs-dist": "^5.4.296",
