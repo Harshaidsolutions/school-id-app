@@ -700,7 +700,7 @@ body.student-photo-viewer-open .students-table-scroll, body.student-photo-viewer
 .login-logo-action { display: block; margin: 0 auto 14px; padding: 0; border: 0; background: transparent; cursor: default; }
 .login-main-logo { display: block; width: 240px; height: auto; max-width: 100%; margin: 0 auto 14px; object-fit: contain; }
 .login-logo-action .login-main-logo { margin: 0 auto; }
-.login-heading { text-align: center; color: #111111; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+.login-heading { text-align: center; color: #4f46e5; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
 .login-heading-action { cursor: default; font: inherit; color: inherit; border: 0; padding: 0; background: transparent; }
 .login-caption { text-align: center; color: var(--muted); margin: 6px 0 22px; }
 .login-tagline { text-align: center; font-weight: 600; color: var(--ink); font-size: clamp(1rem, 1.55vw, 1.1875rem); line-height: 1.45; }
