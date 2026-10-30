@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import api, { errMsg } from "../api/client";
+import { useGrid } from "../ui/grid";
 import { C, CONTENT_MAX, F, R, S } from "../theme";
 import { Backdrop, Header } from "../ui/Screen";
 import { Banner, Button, Check, Empty, Fab, Field, IconButton, Loading, Muted, Pill, Rise, SearchBar, Secret, Toggle } from "../ui/kit";
@@ -48,6 +49,7 @@ function normalize(kind: ListKind, raw: Record<string, unknown>): Org {
 }
 
 export function OrgListScreen({ kind, back = false }: { kind: ListKind; back?: boolean }) {
+  const grid = useGrid();
   const cfg = CFG[kind];
   const nav = useNav();
   const insets = useSafeAreaInsets();
@@ -176,6 +178,9 @@ export function OrgListScreen({ kind, back = false }: { kind: ListKind; back?: b
         <FlatList
           data={filtered}
           keyExtractor={(r) => r.id}
+          numColumns={grid.cols}
+          key={`grid${grid.cols}`}
+          columnWrapperStyle={grid.wrap}
           contentContainerStyle={{ padding: S.lg, paddingBottom: insets.bottom + 120, width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" }}
           refreshControl={
             <RefreshControl
@@ -199,7 +204,7 @@ export function OrgListScreen({ kind, back = false }: { kind: ListKind; back?: b
           renderItem={({ item, index }) => {
             const on = selected.has(item.id);
             return (
-              <Rise delay={Math.min(index, 8) * 40}>
+              <Rise delay={Math.min(index, 8) * 40} style={grid.item}>
                 <Tap onPress={() => open(item)} onLongPress={() => setMenu(item)} scaleTo={0.985} style={[st.card, on && st.cardOn]}>
                   <View style={st.cardTop}>
                     {selecting ? <Check checked={on} onPress={() => open(item)} /> : <View style={st.sno}><Text style={st.snoText}>{index + 1}</Text></View>}

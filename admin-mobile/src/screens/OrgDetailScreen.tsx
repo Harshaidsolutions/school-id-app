@@ -6,6 +6,7 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import api, { apiImage, errMsg } from "../api/client";
 import { configuredCategoryFields } from "../shared/formFieldHelpers";
+import { useGrid } from "../ui/grid";
 import { C, CONTENT_MAX, F, R, S } from "../theme";
 import { Backdrop, Header } from "../ui/Screen";
 import { Banner, Button, Check, Chips, Empty, Field, IconButton, Loading, Muted, Pill, Rise, SearchBar } from "../ui/kit";
@@ -32,6 +33,7 @@ const isSignature = (l: string) => /signature/i.test(l);
 const isPhotoNumber = (l: string) => /photo\s*(number|no\.?|id)\b/i.test(l);
 
 export function OrgDetailScreen({ route, navigation }: ScreenProps<"OrgDetail">) {
+  const grid = useGrid();
   const { id } = route.params;
   const insets = useSafeAreaInsets();
   const [name, setName] = useState(route.params.name);
@@ -223,6 +225,9 @@ export function OrgDetailScreen({ route, navigation }: ScreenProps<"OrgDetail">)
         <FlatList
           data={visible}
           keyExtractor={(r) => r.id}
+          numColumns={grid.cols}
+          key={`grid${grid.cols}`}
+          columnWrapperStyle={grid.wrap}
           contentContainerStyle={{ padding: S.lg, paddingBottom: insets.bottom + 40, width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" }}
           refreshControl={<RefreshControl refreshing={refreshing} colors={[C.primary]} onRefresh={async () => {
             setRefreshing(true);
@@ -250,7 +255,7 @@ export function OrgDetailScreen({ route, navigation }: ScreenProps<"OrgDetail">)
             const c = captured(item);
             const on = selected.has(item.id);
             return (
-              <Rise delay={Math.min(index, 10) * 30}>
+              <Rise delay={Math.min(index, 10) * 30} style={grid.item}>
                 <Tap
                   scaleTo={0.985}
                   style={[st.rec, on && st.recOn]}
@@ -467,7 +472,7 @@ function SubmissionEditSheet({
     setBusy(true);
     setError(null);
     try {
-      await api.patch(`/admin/organizations/${orgId}/submissions/${row.id}`, { values: draft, photoNumber: number });
+      await api.patch(`/admin/organizations/${orgId}/submissions/${row.id}`, { values: draft });
       for (const [fid, p] of Object.entries(photos)) {
         const body = new FormData();
         body.append("photo", asFormFile(p));
@@ -484,7 +489,7 @@ function SubmissionEditSheet({
   return (
     <Sheet visible={Boolean(row)} onClose={onClose} title={`Edit record ${row?.serial ?? ""}`} footer={<Button title="Save changes" icon="checkmark" onPress={() => void save()} loading={busy} />}>
       <Banner text={error} />
-      <Field label={numberLabel} value={number} onChangeText={setNumber} maxLength={100} />
+      <Field label={numberLabel} value={number} editable={false} icon="lock-closed-outline" hint="The photo number cannot be changed." style={{ color: C.muted }} />
       {fields
         .filter((f) => !isPhotoNumber(f.field_name))
         .map((f) =>

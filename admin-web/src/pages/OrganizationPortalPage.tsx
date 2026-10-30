@@ -851,7 +851,7 @@ export function OrganizationDetailPage() {
             if (editBusy) return;
             setEditBusy(true); setEditError(null);
             try {
-              await api.patch(`/admin/organizations/${id}/submissions/${editingRow.id}`, { values: editDraft, photoNumber: editNumber });
+              await api.patch(`/admin/organizations/${id}/submissions/${editingRow.id}`, { values: editDraft });
               for (const [fieldId, photo] of Object.entries(editPhotos)) {
                 const body = new FormData(); body.append("photo", photo); body.append("replacePhoto", "1");
                 await api.post(`/admin/organizations/${id}/submissions/${editingRow.id}/fields/${fieldId}/photo`, body);
@@ -866,7 +866,7 @@ export function OrganizationDetailPage() {
             {editError && <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">{editError}</p>}
             <label className="block text-sm">
               <span className="mb-1.5 block font-medium">{numberLabel}</span>
-              <input required maxLength={100} className="input-field" value={editNumber} onChange={event => setEditNumber(event.target.value)} />
+              <input readOnly disabled title="The photo number cannot be changed" className="input-field cursor-not-allowed bg-content-bg text-text-muted" value={editNumber} />
             </label>
             {activeFields.filter((field) => !isPhotoNumberLabel(field.field_name)).map((field) => (
               <label key={field.id} className="block text-sm">

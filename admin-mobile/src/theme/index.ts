@@ -86,4 +86,5 @@ export const tones = {
 } as const;
 export type Tone = keyof typeof tones;
 
-export const CONTENT_MAX = 760;
+/** Content uses the full screen width (no centred column with empty sides). */
+export const CONTENT_MAX = 4000;

@@ -7,7 +7,7 @@
   --grad-cool:linear-gradient(135deg,#1ea0e1 0%,#6a2c9e 100%);
   --grad-text:linear-gradient(100deg,#1ea0e1 0%,#6a2c9e 45%,#e8243c 80%,#f26a1b 100%);
   --shadow-sm:0 4px 14px rgba(27,31,59,.06);--shadow:0 14px 34px rgba(27,31,59,.09);--shadow-lg:0 26px 60px rgba(27,31,59,.14);
-  --max:1180px;--font:'Poppins',system-ui,sans-serif;--body:'DM Sans',system-ui,sans-serif;
+  --max:1240px;--font:'Poppins',system-ui,sans-serif;--body:'DM Sans',system-ui,sans-serif;
   --ease:cubic-bezier(.2,.8,.2,1);
 }
 *{box-sizing:border-box}
@@ -359,3 +359,4 @@ h3{font-size:16px;font-weight:600}
 .product-card:nth-child(6n+3) .button,.product-card:nth-child(6n+6) .button,.contact-card:nth-child(6n+5) a.btn,.contact-card:nth-child(6n+6) a.btn{color:var(--ink)}
 .product-card:nth-child(6n+3) .button:hover,.product-card:nth-child(6n+6) .button:hover{color:#fff}
 @media(max-width:640px){.hero-blob{display:none}}
+@media(min-width:1500px){:root{--max:min(1440px,90vw)}}

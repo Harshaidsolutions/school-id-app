@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Linking, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,10 +25,11 @@ const CARD_STYLES = [
 ];
 
 function MetricCard({ label, value, index, onPress }: { label: string; value: string; index: number; onPress?: () => void }) {
+  const { width: screenW } = useWindowDimensions();
   const style = CARD_STYLES[index % CARD_STYLES.length];
   const wide = index >= 4;
   return (
-    <Tap onPress={onPress} disabled={!onPress} scaleTo={onPress ? 0.97 : 1} style={[st.metric, { backgroundColor: style.bg }, wide && st.metricWide]}>
+    <Tap onPress={onPress} disabled={!onPress} scaleTo={onPress ? 0.97 : 1} style={[st.metric, screenW >= 900 && { flexBasis: "30%" }, { backgroundColor: style.bg }, wide && screenW < 900 && st.metricWide]}>
       <View style={st.metricIcon}>
         <View style={[st.metricSquare, { borderColor: style.icon }]} />
       </View>
@@ -46,8 +47,9 @@ function MetricCard({ label, value, index, onPress }: { label: string; value: st
 }
 
 function StatusPill({ label, value, active }: { label: string; value: number; active: boolean }) {
+  const { width: screenW } = useWindowDimensions();
   return (
-    <View style={[st.pill, { borderColor: active ? "#C7D2FE" : "#E6E4F5" }]}>
+    <View style={[st.pill, screenW >= 700 && { flexBasis: "22%" }, { borderColor: active ? "#C7D2FE" : "#E6E4F5" }]}>
       <Text style={[st.pillValue, { color: active ? "#0D9488" : "#77759A" }]}>{num(value)}</Text>
       <Text style={[st.pillLabel, { color: active ? "#0D9488" : "#77759A" }]}>{label}</Text>
     </View>

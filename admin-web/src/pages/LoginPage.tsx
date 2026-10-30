@@ -179,11 +179,6 @@ export function LoginPage() {
         <button type="submit" disabled={loading} className="btn-primary h-10 w-full text-[15px]">
           {loading ? "Logging in…" : "Login"}
         </button>
-        <p className="text-center text-[11px] text-[#77759A]">
-          <a className="hover:underline" href="https://harshaidsolutions.in/privacy-policy" target="_blank" rel="noreferrer">Privacy Policy</a>
-          {" · "}
-          <a className="hover:underline" href="https://harshaidsolutions.in/delete-account" target="_blank" rel="noreferrer">Delete account</a>
-        </p>
       </form>
     </LoginPageLayout>
   );

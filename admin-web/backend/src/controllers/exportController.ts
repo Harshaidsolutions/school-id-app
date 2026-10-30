@@ -229,6 +229,9 @@ async function downloadOrgPhotosZip(
       throw new AppError("Pending records do not have photos to download", 404);
     }
 
+    // Data integrity: download exactly what the app shows as captured — hidden records are
+    // left out unless explicitly asked for, and one stored image is never written twice.
+    const includeHidden = req.query.includeHidden === "1" || req.query.includeHidden === "true";
     const whereOrg = schoolId ? "school_id = $1" : "institute_id = $1";
     const values: unknown[] = [orgId];
     const extra: string[] = [];
@@ -265,6 +268,7 @@ async function downloadOrgPhotosZip(
        WHERE ${whereOrg}
          AND ${urlColumn} IS NOT NULL
          AND btrim(${urlColumn}) <> ''
+         ${includeHidden ? "" : "AND app_visible = true"}
          ${extra.join("\n         ")}
        ORDER BY photo_id ASC NULLS LAST, student_name ASC`,
       values
@@ -284,8 +288,12 @@ async function downloadOrgPhotosZip(
     const usedNames = new Set<string>();
     const missing: string[] = [];
 
+    const seenUrls = new Set<string>();
     for (const row of students.rows) {
       if (!row.photo_url) continue;
+      const urlKey = row.photo_url.trim();
+      if (seenUrls.has(urlKey)) continue;
+      seenUrls.add(urlKey);
       const recordOrgId = studentPhotoOrgId(row.school_id, row.institute_id);
       const fetched = await loadOrgImageBytes({
         url: row.photo_url,
@@ -411,6 +419,7 @@ async function listPhotoCaptureCounts(
          AND photo_url IS NOT NULL
          AND btrim(photo_url) <> ''
          AND photo_captured_at IS NOT NULL
+         AND app_visible = true
        GROUP BY 1
        ORDER BY 1`,
       [orgId]
@@ -441,6 +450,7 @@ async function listPhotoCaptureCounts(
        WHERE ${whereOrg}
          AND signature_url IS NOT NULL
          AND btrim(signature_url) <> ''
+         AND app_visible = true
        GROUP BY 1
        ORDER BY 1`,
       [orgId]

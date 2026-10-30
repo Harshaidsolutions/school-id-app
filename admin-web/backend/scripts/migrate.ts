@@ -919,6 +919,14 @@ async function migrate() {
       ADD COLUMN IF NOT EXISTS allow_record_edit BOOLEAN NOT NULL DEFAULT true,
       ADD COLUMN IF NOT EXISTS show_captured_section BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE organizations ALTER COLUMN show_captured_section SET DEFAULT false;
+    -- Screen capture protection is ON by default for every new school / institute /
+    -- organization (no screenshots or screen recording in the app until an admin turns it off).
+    ALTER TABLE schools ALTER COLUMN allow_screenshot SET DEFAULT false;
+    ALTER TABLE schools ALTER COLUMN allow_screen_recording SET DEFAULT false;
+    ALTER TABLE institutes ALTER COLUMN allow_screenshot SET DEFAULT false;
+    ALTER TABLE institutes ALTER COLUMN allow_screen_recording SET DEFAULT false;
+    ALTER TABLE organizations ALTER COLUMN allow_screenshot SET DEFAULT false;
+    ALTER TABLE organizations ALTER COLUMN allow_screen_recording SET DEFAULT false;
     UPDATE organizations SET detail_phone = phone, detail_address = address,
       detail_instructions = instructions, details_separated = true
       WHERE details_separated = false;

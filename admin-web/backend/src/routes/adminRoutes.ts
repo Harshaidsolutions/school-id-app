@@ -1,5 +1,6 @@
 import { createDesktopLicense, deleteDesktopLicense, listDesktopLicenses, updateDesktopLicenseStatus } from "../controllers/desktopLicenseController";
 import {photoArchiveUpload,importPhotos} from "../controllers/photoImportController";
+import {photoChunkBody,receivePhotoChunk,finishPhotoUpload,photoImportJobStatus} from "../controllers/photoImportJobs";
 import {uploadInstructionMedia,messageTemplates,instructionContent,registrations,setCandidateVisibility} from "../controllers/workspaceToolsController";
 import {getSchoolParentLink, setSchoolParentFormEnabled,createSchoolParentLink} from "../controllers/schoolParentFormController";
 import {
@@ -162,6 +163,9 @@ const router = Router();
 router.use(authMiddleware, requireRole("admin"));
 
 router.post("/photo-import",photoArchiveUpload,importPhotos);
+router.post("/photo-import/chunk",photoChunkBody,receivePhotoChunk);
+router.post("/photo-import/finish",finishPhotoUpload);
+router.get("/photo-import/jobs/:id",photoImportJobStatus);
 router.get("/profile", getAdminProfile);
 router.get('/message-templates',messageTemplates);
 router.post('/message-templates',messageTemplates);

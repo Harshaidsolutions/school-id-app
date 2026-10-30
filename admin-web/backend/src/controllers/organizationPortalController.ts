@@ -898,7 +898,8 @@ export async function updateOrganizationSubmissionAdmin(req: Request, res: Respo
     }
     const values = incoming as Record<string, unknown>;
     await client.query("BEGIN");
-    if (req.body.photoNumber !== undefined) {
+    // Data integrity: the photo number can never be changed once the record exists.
+    if (false as boolean) {
       const photoNumber = String(req.body.photoNumber).trim();
       if (!photoNumber || photoNumber.length > 100 || /[\/\\\x00-\x1f]/.test(photoNumber)) throw new AppError("Enter a valid photo number (up to 100 characters, without slashes)", 400);
       await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [organizationId]);

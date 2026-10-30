@@ -170,7 +170,7 @@ export function EditStudentModal({
     setLoading(true);
 
     const payload: Record<string, string | null> = {
-      photo_id: fieldValue(numberField?.key ?? "photo_id").trim() || null,
+      photo_id: student.photo_id ?? null,
       student_name: fieldValue("student_name").trim(),
       class_section: fieldValue("class_section").trim(),
       roll_no: fieldValue("roll_no").trim() || null,
@@ -198,6 +198,7 @@ export function EditStudentModal({
       if (field.key === "signature_upload") continue;
       requestBody[field.key] = fieldValue(field.key).trim() || null;
     }
+    requestBody.photo_id = student.photo_id ?? null;
 
     try {
       const { data } = await api.put<{ student: Student }>(
@@ -327,11 +328,12 @@ export function EditStudentModal({
       );
     }
 
-    if (key === "photo_id") {
+    if (key === "photo_id" || key === numberField?.key) {
+      // The photo number links the record to its photo files — nobody can change it.
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1 block font-medium text-text-navy">{label}</span>
-          <input value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field" />
+          <span className="mb-1 block font-medium text-text-navy">{label} <span className="text-xs font-normal text-text-muted">(cannot be changed)</span></span>
+          <input value={fieldValue(key)} readOnly disabled className="input-field cursor-not-allowed bg-content-bg text-text-muted" />
         </label>
       );
     }
@@ -381,7 +383,7 @@ export function EditStudentModal({
               </label>
             </div>
 
-            {!numberField && <label className="block text-sm"><span className="mb-1 block font-medium">Photo Number</span><input className="input-field" value={fieldValue("photo_id")} onChange={event => setField("photo_id", event.target.value)} /></label>}
+            {!numberField && student.photo_id ? <label className="block text-sm"><span className="mb-1 block font-medium">Photo Number <span className="text-xs font-normal text-text-muted">(cannot be changed)</span></span><input className="input-field cursor-not-allowed bg-content-bg text-text-muted" value={student.photo_id} readOnly disabled /></label> : null}
             {fields.length === 0 ? (
               <p className="text-sm text-text-muted">No Excel fields configured.</p>
             ) : (

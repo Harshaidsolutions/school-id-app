@@ -1,3 +1,4 @@
+import { assertPhotoNumberFree } from "../utils/photoNumber";
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
@@ -69,8 +70,14 @@ async function manualPhotoId(
     instituteId: scope.instituteId ?? null,
   });
   const fromField = firstIdentityValue(fields, extraFields);
-  if (fromField) return { photoId: fromField, allocate: false };
-  if (requested) return { photoId: requested, allocate: false };
+  if (fromField) {
+    await assertPhotoNumberFree(scope, fromField);
+    return { photoId: fromField, allocate: false };
+  }
+  if (requested) {
+    await assertPhotoNumberFree(scope, requested);
+    return { photoId: requested, allocate: false };
+  }
   if (identityFields(fields).length > 0) return { photoId: null, allocate: false };
   return { photoId: null, allocate: true };
 }

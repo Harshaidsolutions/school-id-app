@@ -105,11 +105,6 @@ export function LoginScreen({ navigation }: ScreenProps<"Login">) {
           </View>
         </View>
       ) : null}
-      <View style={{ flexDirection: "row", justifyContent: "center", gap: S.md, marginTop: S.lg }}>
-        <Tap onPress={() => void Linking.openURL("https://harshaidsolutions.in/privacy-policy")}>
-          <Text style={st.small}>Privacy Policy</Text>
-        </Tap>
-      </View>
     </AuthShell>
   );
 }

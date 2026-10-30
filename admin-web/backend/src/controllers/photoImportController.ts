@@ -22,7 +22,7 @@ export async function importPhotos(req:Request,res:Response,next:NextFunction){t
   if(entries.length>1000)throw new AppError('ZIP has too many entries. Use smaller batches.',400);
   files=entries.filter(e=>!e.isDirectory&&!e.entryName.startsWith('__MACOSX/')).map(e=>({name:e.entryName,size:e.header.size,read:()=>e.getData()}));
  }else files=[{name:req.file.originalname,size:req.file.size,read:()=>req.file!.buffer}];
- if(files.length>250||files.some(f=>f.size>10*1024*1024)||files.reduce((n,f)=>n+f.size,0)>150*1024*1024)throw new AppError('Use up to 250 images, 10 MB each, and 150 MB total uncompressed.',400);
+ if(files.length>250||files.some(f=>f.size>20*1024*1024)||files.reduce((n,f)=>n+f.size,0)>150*1024*1024)throw new AppError('Use up to 250 images, 20 MB each, and 150 MB total uncompressed (use a ZIP for more).',400);
  const names=new Map<string,number>();for(const f of files){const key=path.parse(path.basename(f.name)).name.trim().toLowerCase();names.set(key,(names.get(key)??0)+1);}
  const results:Array<{file:string;status:string;reason?:string}>=[];
  for(const f of files){const key=path.parse(path.basename(f.name)).name.trim().toLowerCase(),matches=byNumber.get(key)??[];

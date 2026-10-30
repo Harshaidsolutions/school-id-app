@@ -6,6 +6,7 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import api, { authedSource, errMsg, mediaUrl } from "../api/client";
 import type { CatalogItem } from "../shared/types";
+import { tileCols } from "../ui/grid";
 import { C, CONTENT_MAX, F, R, S } from "../theme";
 import { Backdrop, Header } from "../ui/Screen";
 import { Banner, Button, Chips, Empty, Fab, Field, Loading, Muted, Pill, SearchBar } from "../ui/kit";
@@ -23,7 +24,7 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
   const [kind, setKind] = useState<Kind>(route.params.kind);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const cols = width >= 700 ? 3 : 2;
+  const cols = tileCols(width);
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

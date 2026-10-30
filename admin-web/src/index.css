@@ -142,7 +142,7 @@ button, input, textarea, select { font: inherit; }
 }
 .app-page { min-width: 0; width: 100%; max-width: 100%; }
 .app-page, .detail-page-content, .detail-page-shell { animation: fade-up 0.45s var(--ease) backwards; }
-.app-page-content { width: 100%; max-width: 1600px; margin-inline: auto; }
+.app-page-content { width: 100%; max-width: 100%; margin-inline: auto; }
 
 /* Sidebar: deep indigo with glass active pill and coral marker */
 .app-sidebar {
@@ -301,7 +301,7 @@ button[role=switch].w-12[aria-checked=true] { background: var(--brand-grad) !imp
 .panel-right { height: fit-content; padding: 18px; }
 .panel-right h3 { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 12px; }
 }
-.centered-page-shell { margin-inline: auto; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: min(100%, 56rem); padding-inline: clamp(0.5rem, 2vw, 1rem); }
+.centered-page-shell { margin-inline: auto; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: min(100%, 72rem); padding-inline: clamp(0.5rem, 2vw, 1rem); }
 .centered-page-card { margin-top: 18px; width: 100%; }
 .stat-card { display: flex; align-items: flex-start; gap: 16px; padding: 20px; }
 .page-heading { font-size: clamp(1.15rem, 1.5vw, 1.35rem); font-weight: 800; color: var(--ink); text-align: center; }
@@ -796,7 +796,7 @@ body.student-photo-viewer-open .students-table-scroll, body.student-photo-viewer
 
   .list-data-table, .models-table { min-width: 720px; }
 }
-@media (min-width: 1700px) { .app-page-content { max-width: 1680px; } }
+@media (min-width: 1700px) { .app-page-content { max-width: 100%; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }

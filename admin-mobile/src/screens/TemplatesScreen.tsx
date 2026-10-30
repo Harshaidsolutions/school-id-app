@@ -6,6 +6,7 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import api, { apiImage, authedSource, errMsg } from "../api/client";
 import { TEMPLATE_TABS, type Template, type TemplateOrientation } from "../shared/types";
+import { tileCols } from "../ui/grid";
 import { C, CONTENT_MAX, F, R, S } from "../theme";
 import { Backdrop, Header } from "../ui/Screen";
 import { Banner, Button, Chips, Empty, Fab, Field, Loading, Muted, SearchBar } from "../ui/kit";
@@ -25,7 +26,7 @@ function thumbSource(t: Template, page = 1) {
 export function TemplatesScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const cols = width >= 700 ? 3 : 2;
+  const cols = tileCols(width);
   const [items, setItems] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

@@ -1,3 +1,4 @@
+import { assertPhotoNumberFree } from "../utils/photoNumber";
 import { isPhotoIdentityLabel } from "../utils/photoIdentity";
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
@@ -545,6 +546,7 @@ export async function createStudentAdmin(
     if (fromIdentity) photoId = fromIdentity;
     const allocateAddSerial = !photoId && !hasIdentityColumn;
     rowInput.photoId = photoId;
+    await assertPhotoNumberFree({ schoolId, instituteId }, photoId);
 
     const params = rowToInsertParams(rowInput, { bulkImport: true });
     params.classSection = classSection;
@@ -681,8 +683,11 @@ export async function updateStudentAdmin(
     const custom1 = nextText("custom_1", student.custom_1, "custom1");
     const custom2 = nextText("custom_2", student.custom_2, "custom2");
     const custom3 = nextText("custom_3", student.custom_3, "custom3");
-    const photoIdProvided = req.body.photo_id !== undefined || req.body.photoId !== undefined;
-    const photoId = photoIdProvided ? textValue(req.body.photo_id ?? req.body.photoId) ?? null : null;
+    // Data integrity: the photo number links a record to its photo files, so it can never
+    // be changed after the record exists — whatever the request sends is ignored.
+    const photoIdProvided = false;
+    const photoId = student.photo_id ?? null;
+    const previousExtra = parseExtraFields(student.extra_fields);
 
     const extraFields = mergeExtraFieldsForSave(
       formFields,
@@ -709,10 +714,12 @@ export async function updateStudentAdmin(
       }
     );
 
-    if (photoIdProvided) {
+    {
       const labels = student.field_labels as Record<string, string> | null;
       for (const key of Object.keys(extraFields)) {
-        if (key === "photo_id" || isPhotoIdentityLabel(labels?.[key] ?? "") || identityFields(formFields).some(field => field.key === key)) extraFields[key] = photoId;
+        if (key === "photo_id" || isPhotoIdentityLabel(labels?.[key] ?? "") || identityFields(formFields).some(field => field.key === key)) {
+          extraFields[key] = photoId ?? (previousExtra[key] as string | null | undefined) ?? null;
+        }
       }
     }
 

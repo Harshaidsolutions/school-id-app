@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { MAX_ZIP_MB, uploadPhotoZip, type ImportResult } from "../lib/zipUpload";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
@@ -166,7 +167,7 @@ export function RecordFormSheet({
         saved = (await api.post<{ student: Student }>("/admin/students", payload)).data.student;
       } else {
         const body: Record<string, unknown> = {
-          photo_id: val(numberField?.key ?? "photo_id").trim() || null,
+          photo_id: record!.photo_id ?? null,
           student_name: val("student_name").trim(),
           class_section: val("class_section").trim(),
           roll_no: val("roll_no").trim() || null,
@@ -182,6 +183,7 @@ export function RecordFormSheet({
           extra_fields: extra,
         };
         for (const f of fields) if (f.key !== "signature_upload") body[f.key] = val(f.key).trim() || null;
+        body.photo_id = record!.photo_id ?? null;
         const { data } = await api.put<{ student: Student }>(`/admin/students/${record!.id}`, body);
         saved = data.student ?? { ...record!, ...(body as Partial<Student>) };
       }
@@ -239,6 +241,10 @@ export function RecordFormSheet({
               if (f.key === "blood_group") return <Select key={f.key} label={f.label} value={val(f.key)} onChange={(v) => set(f.key, v)} options={BLOOD.map((g) => ({ value: g, label: g }))} placeholder="Select blood group" />;
               if (f.key === "dob") return <DateField key={f.key} label={f.label} value={val(f.key)} onChange={(v) => set(f.key, v)} />;
               if (f.key === "address") return <Field key={f.key} label={f.label} value={val(f.key)} onChangeText={(t) => set(f.key, t)} multiline />;
+              if (!isNew && (f.key === "photo_id" || f.key === numberField?.key)) {
+                // The photo number links the record to its photo files — it can never be changed.
+                return <Field key={f.key} label={f.label} value={val(f.key)} editable={false} icon="lock-closed-outline" hint="The photo number cannot be changed." style={{ color: C.muted }} />;
+              }
               const phone = isPhoneField(f.key, f.label);
               return (
                 <Field
@@ -375,9 +381,13 @@ export function PhotoImportSheet({ visible, onClose, orgId, kind, onDone }: { vi
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<{ file: string; status: string; reason?: string }[]>([]);
+  const [results, setResults] = useState<ImportResult[]>([]);
+  const [totals, setTotals] = useState<{ uploaded: number; skipped: number; failed: number } | null>(null);
+  const [fraction, setFraction] = useState(0);
+  const stop = useRef(false);
   useEffect(() => {
     if (visible) {
+      setTotals(null);
       setFiles([]);
       setReplace(false);
       setError(null);
@@ -393,88 +403,148 @@ export function PhotoImportSheet({ visible, onClose, orgId, kind, onDone }: { vi
       setError(`Only JPG, PNG or ZIP files can be uploaded (${bad[0].name}).`);
       return;
     }
-    if (picked.some((f) => /\.zip$/i.test(f.name)) && picked.length > 1) {
-      setError("Choose one ZIP file, or choose photos (not both).");
+    const zips = picked.filter((f) => /\.zip$/i.test(f.name));
+    if (zips.length && zips.length !== picked.length) {
+      setError("Choose ZIP files, or choose photos (not both together).");
       return;
     }
     setError(null);
     setResults([]);
+    setTotals(null);
     setFiles(picked);
   }
 
   async function upload() {
     if (!files.length) return;
     const isZip = /\.zip$/i.test(files[0].name);
-    if (isZip && !sizeOk(files[0], 50)) return setError("ZIP must be under 50 MB.");
-    if (!isZip && files.some((f) => !sizeOk(f, 10))) return setError("Each photo must be under 10 MB.");
+    if (isZip && files.some((f) => !sizeOk(f, MAX_ZIP_MB))) return setError(`Each ZIP must be under ${MAX_ZIP_MB} MB. Split bigger ZIPs.`);
+    if (!isZip && files.some((f) => !sizeOk(f, 20))) return setError("Each photo must be under 20 MB.");
     setBusy(true);
     setError(null);
     setResults([]);
-    const all: { file: string; status: string; reason?: string }[] = [];
+    setTotals(null);
+    stop.current = false;
+    const all: ImportResult[] = [];
+    const sum = { uploaded: 0, skipped: 0, failed: 0 };
+    const count = (r: ImportResult) => {
+      if (r.status === "uploaded") sum.uploaded += 1;
+      else if (r.status === "skipped") sum.skipped += 1;
+      else sum.failed += 1;
+    };
     try {
       for (let i = 0; i < files.length; i++) {
+        if (stop.current) break;
         const f = files[i];
-        setProgress(isZip ? "Uploading ZIP… this can take a minute" : `Uploading ${i + 1} of ${files.length}: ${f.name}`);
-        const form = new FormData();
-        form.append("orgId", orgId);
-        form.append("kind", kind);
-        form.append("replace", String(replace));
-        form.append("file", asFormFile({ ...f, type: isZip ? "application/zip" : f.type || "image/jpeg" }));
-        try {
-          const { data } = await api.post("/admin/photo-import", form, { timeout: 600000 });
-          all.push(...((data?.results ?? []) as typeof all));
-        } catch (e) {
-          if (isZip) throw e;
-          all.push({ file: f.name, status: "failed", reason: errMsg(e, "Upload failed") });
+        const label = files.length > 1 ? `${isZip ? "ZIP" : "Photo"} ${i + 1} of ${files.length}` : f.name;
+        if (isZip) {
+          try {
+            const job = await uploadPhotoZip(f, {
+              orgId,
+              kind,
+              replace,
+              isCancelled: () => stop.current,
+              onProgress: (text, fraction) => {
+                setProgress(`${label} · ${text}`);
+                setFraction(fraction);
+              },
+            });
+            if (job.status === "failed") {
+              const r = { file: f.name, status: "failed", reason: job.error ?? "ZIP could not be processed" };
+              all.push(r);
+              count(r);
+            } else {
+              sum.uploaded += job.uploaded;
+              sum.skipped += job.skipped;
+              sum.failed += job.failed;
+              all.push(...job.results.filter((r) => r.status !== "uploaded"));
+            }
+          } catch (e) {
+            const r = { file: f.name, status: "failed", reason: errMsg(e, "Upload failed. Check the internet and upload this ZIP again.") };
+            all.push(r);
+            count(r);
+          }
+        } else {
+          setProgress(`Uploading ${label}`);
+          setFraction((i + 1) / files.length);
+          const form = new FormData();
+          form.append("orgId", orgId);
+          form.append("kind", kind);
+          form.append("replace", String(replace));
+          form.append("file", asFormFile({ ...f, type: f.type || "image/jpeg" }));
+          try {
+            const { data } = await api.post("/admin/photo-import", form, { timeout: 300000 });
+            for (const r of (data?.results ?? []) as ImportResult[]) {
+              count(r);
+              if (r.status !== "uploaded") all.push(r);
+            }
+          } catch (e) {
+            const r = { file: f.name, status: "failed", reason: errMsg(e, "Upload failed") };
+            all.push(r);
+            count(r);
+          }
         }
         setResults([...all]);
+        setTotals({ ...sum });
       }
       onDone();
-    } catch (e) {
-      setError(errMsg(e, "Upload failed. Check the internet connection or try a smaller ZIP."));
     } finally {
+      setResults([...all]);
+      setTotals({ ...sum });
       setBusy(false);
       setProgress(null);
+      setFraction(0);
     }
   }
 
-  const ok = results.filter((r) => r.status === "uploaded").length;
-  const isZip = files.length === 1 && /\.zip$/i.test(files[0].name);
+  const isZip = files.length > 0 && /\.zip$/i.test(files[0].name);
   return (
     <Sheet
       visible={visible}
       onClose={() => !busy && onClose()}
       title="Upload Photos"
       subtitle="Each photo's file name must be its Excel Photo Number, e.g. ADD_001.jpg"
-      footer={<Button title={files.length ? `Upload ${isZip ? "ZIP" : `${files.length} photo${files.length > 1 ? "s" : ""}`}` : "Upload"} icon="cloud-upload-outline" onPress={() => void upload()} loading={busy} disabled={!files.length} />}
+      footer={
+        busy ? (
+          <Button title="Stop after this file" variant="secondary" icon="stop-circle-outline" onPress={() => (stop.current = true)} />
+        ) : (
+          <Button title={files.length ? `Upload ${files.length} ${isZip ? "ZIP" : "photo"}${files.length > 1 ? "s" : ""}` : "Upload"} icon="cloud-upload-outline" onPress={() => void upload()} disabled={!files.length} />
+        )
+      }
     >
       <Banner text={error} onClose={() => setError(null)} />
-      {progress ? <Banner text={progress} tone="blue" /> : null}
+      {progress ? (
+        <View style={{ marginBottom: S.md }}>
+          <Banner text={progress} tone="blue" />
+          <View style={st.bar}>
+            <View style={[st.barFill, { width: `${Math.max(3, Math.round(fraction * 100))}%` }]} />
+          </View>
+        </View>
+      ) : null}
       <View style={{ gap: S.sm, marginBottom: S.md }}>
         <Button title="Choose photos from Files" variant="soft" icon="folder-open-outline" disabled={busy} onPress={async () => choose(await pickDocuments(["image/jpeg", "image/png"], true))} />
         <Button title="Choose photos from Gallery" variant="soft" icon="images-outline" disabled={busy} onPress={async () => choose(await pickImages(true))} />
-        <Button title="Choose a ZIP file" variant="soft" icon="file-tray-full-outline" disabled={busy} onPress={async () => choose(await pickDocuments(DOC_TYPES.zip))} />
+        <Button title="Choose ZIP files (up to 500 MB each)" variant="soft" icon="file-tray-full-outline" disabled={busy} onPress={async () => choose(await pickDocuments(DOC_TYPES.zip, true))} />
       </View>
       {files.length ? (
         <View style={st.errBox}>
-          <Text style={st.errTitle}>{isZip ? "ZIP selected" : `${files.length} photo(s) selected`}</Text>
+          <Text style={st.errTitle}>{isZip ? `${files.length} ZIP file(s) selected` : `${files.length} photo(s) selected`}</Text>
           {files.slice(0, 8).map((f) => (
             <Muted key={f.uri}>• {f.name}</Muted>
           ))}
           {files.length > 8 ? <Muted>…and {files.length - 8} more</Muted> : null}
         </View>
       ) : (
-        <Muted style={{ marginBottom: S.md }}>Tip: “Files” keeps the original photo names. Gallery names may change on some phones. ZIP up to 50 MB · 250 photos · JPG/PNG up to 10 MB each.</Muted>
+        <Muted style={{ marginBottom: S.md }}>Tip: “Files” keeps the original photo names. Gallery names may change on some phones. ZIP files up to 500 MB each (choose several, or upload more ZIPs later) · JPG/PNG up to 20 MB each. Photos are matched by Photo Number.</Muted>
       )}
       <Check checked={replace} onPress={() => setReplace((r) => !r)} label="Replace photos that already exist (they become uncropped)" />
-      {results.length ? (
+      {totals ? (
         <View style={[st.errBox, { marginTop: S.md }]}>
           <Text style={st.errTitle}>
-            ✓ {ok} uploaded · {results.length - ok} not uploaded
+            ✓ {totals.uploaded} uploaded · {totals.skipped} skipped · {totals.failed} failed
           </Text>
           {results
             .filter((r) => r.status !== "uploaded")
-            .slice(0, 40)
+            .slice(0, 60)
             .map((r, i) => (
               <Muted key={i}>
                 {r.file}: {r.reason ?? r.status}
@@ -784,6 +854,8 @@ const st = StyleSheet.create({
   dropTitle: { fontFamily: F.hSemi, fontSize: 15, color: C.ink, textAlign: "center" },
   errBox: { backgroundColor: C.white, borderRadius: R.md, padding: S.md, marginBottom: S.md, borderWidth: 1, borderColor: C.line, gap: 2 },
   errTitle: { fontFamily: F.hSemi, fontSize: 14, color: C.ink, marginBottom: 4 },
+  bar: { height: 8, borderRadius: 4, backgroundColor: C.line, overflow: "hidden", marginTop: -4 },
+  barFill: { height: 8, borderRadius: 4, backgroundColor: C.primary },
   choice: { flexDirection: "row", alignItems: "center", gap: S.sm, backgroundColor: C.white, borderRadius: R.md, paddingVertical: 14, paddingHorizontal: S.md, marginBottom: 8, borderWidth: 1, borderColor: C.line },
   choiceOn: { borderColor: C.primary, backgroundColor: C.primarySoft },
   choiceText: { flex: 1, fontFamily: F.bodySemi, fontSize: 14, color: C.ink },

@@ -9,6 +9,7 @@ import api, { apiImage, errMsg } from "../api/client";
 import type { NamedCount, RecordFacets, Student, StudentsResponse } from "../shared/types";
 import { isPhotoExcelField, sortFormFields, studentFieldDisplay, type FormFieldConfig } from "../shared/formFields";
 import { configuredCategoryFields } from "../shared/formFieldHelpers";
+import { useGrid } from "../ui/grid";
 import { C, CONTENT_MAX, F, R, S } from "../theme";
 import { Backdrop, Header } from "../ui/Screen";
 import { Banner, Button, Check, Chips, Empty, Fab, IconButton, Loading, Muted, Pill, Rise, SearchBar, type IconName } from "../ui/kit";
@@ -49,6 +50,7 @@ function flags(s: Student, institute: boolean) {
 }
 
 export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
+  const grid = useGrid();
   const { kind, id: orgId, name } = route.params;
   const institute = kind === "institute";
   const noun = institute ? "member" : "student";
@@ -360,7 +362,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
     const hidden = item.app_visible === false;
     const created = item.photo_url?.trim() ? item.photo_captured_at : null;
     return (
-      <Rise delay={Math.min(index, 10) * 25}>
+      <Rise delay={Math.min(index, 10) * 25} style={grid.item}>
         <Tap
           scaleTo={0.99}
           onPress={() => (selecting ? toggleSelect(item.id) : setForm({ record: item }))}
@@ -519,6 +521,9 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
         <FlatList
           data={filtered}
           keyExtractor={(s) => s.id}
+          numColumns={grid.cols}
+          key={`grid${grid.cols}`}
+          columnWrapperStyle={grid.wrap}
           renderItem={renderItem}
           initialNumToRender={14}
           windowSize={9}
