@@ -8,6 +8,7 @@ import { Screen } from "../ui/Screen";
 import { Banner, Button, Card, Empty, Field, Loading, Muted, Pill, Rise, SearchBar, Stat } from "../ui/kit";
 import { ActionSheet, Sheet } from "../ui/Sheet";
 import { fmtDate, fmtDateTime, waLink } from "../lib/format";
+import { phoneError } from "../lib/validate";
 
 type License = {
   id: string;
@@ -186,6 +187,8 @@ function CreateSheet({ visible, onClose, onCreated }: { visible: boolean; onClos
   const [error, setError] = useState<string | null>(null);
   async function save() {
     if (!form.customerName.trim()) return setError("Customer name is required.");
+    const pe = phoneError(form.phone);
+    if (pe) return setError(pe);
     if (form.expiresAt && !/^\d{4}-\d{2}-\d{2}$/.test(form.expiresAt)) return setError("Expiry date must look like 2027-03-31.");
     setBusy(true);
     setError(null);
@@ -203,7 +206,7 @@ function CreateSheet({ visible, onClose, onCreated }: { visible: boolean; onClos
     <Sheet visible={visible} onClose={onClose} title="Create licence key" footer={<Button title="Create key" icon="key" onPress={() => void save()} loading={busy} />}>
       <Banner text={error} />
       <Field label="Customer / school name" required value={form.customerName} onChangeText={(t) => setForm((f) => ({ ...f, customerName: t }))} maxLength={160} />
-      <Field label="Phone" value={form.phone} onChangeText={(t) => setForm((f) => ({ ...f, phone: t }))} keyboardType="phone-pad" maxLength={30} />
+      <Field label="Phone" value={form.phone} onChangeText={(t) => setForm((f) => ({ ...f, phone: t }))} keyboardType="phone-pad" maxLength={13} error={phoneError(form.phone)} />
       <Field label="Expiry date (optional)" placeholder="YYYY-MM-DD" value={form.expiresAt} onChangeText={(t) => setForm((f) => ({ ...f, expiresAt: t }))} hint="Recommended, e.g. one year from today." />
       <Field label="Notes" value={form.notes} onChangeText={(t) => setForm((f) => ({ ...f, notes: t }))} multiline maxLength={1000} />
     </Sheet>

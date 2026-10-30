@@ -1,3 +1,4 @@
+import { fieldProblem } from "../utils/validate";
 import {PhotoImportModal} from "../components/PhotoImportModal";
 import { HeaderBack } from "../components/HeaderBack";
 import { IdCardGeneratorButton } from "../components/IdCardGeneratorButton";
@@ -88,6 +89,16 @@ function dedupeDisplayFields(fields: FormFieldConfig[]): FormFieldConfig[] {
   return out;
 }
 
+/** Wrong phone numbers / emails count as pending data (same rule as the admin app). */
+function dataProblems(student: Student, fields: FormFieldConfig[]): string[] {
+  return fields
+    .map((field) => fieldProblem(field.key, field.label, studentFieldDisplay(student, field.key, field.label)))
+    .filter((x): x is string => Boolean(x));
+}
+function checkedFlags(student: Student, isInstitute: boolean, fields: FormFieldConfig[]) {
+  const base = recordFlags(student, isInstitute);
+  return { ...base, dataMissing: base.dataMissing || dataProblems(student, fields).length > 0 };
+}
 function recordFlags(student: Student, isInstitute: boolean) {
   const photo =
     typeof student.pending_photo === "boolean"
@@ -556,7 +567,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     return students.filter((s) => {
       if(visibilityView==='visible' && s.app_visible===false)return false;
       if(visibilityView==='hidden' && s.app_visible!==false)return false;
-      const { photo, dataMissing } = recordFlags(s, isInstitute);
+      const { photo, dataMissing } = checkedFlags(s, isInstitute, enabledFields);
       if (!photoFilter && tab === "pending" && photo) return false;
       if (tab === "pending-data" && !dataMissing) return false;
       if (!photoFilter && tab === "captured" && !photo) return false;
@@ -577,7 +588,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       }
       return true;
     });
-  }, [students, tab, classFilter, photoFilter, search, isInstitute, visibilityView]);
+  }, [students, tab, classFilter, photoFilter, search, isInstitute, visibilityView, enabledFields]);
 
   const counts = useMemo(() => {
     let pending = 0;
@@ -588,7 +599,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       if(visibilityView==='visible' && s.app_visible===false)continue;
       if(visibilityView==='hidden' && s.app_visible!==false)continue;
       visibleCount++;
-      const { photo, dataMissing } = recordFlags(s, isInstitute);
+      const { photo, dataMissing } = checkedFlags(s, isInstitute, enabledFields);
       if (!photo) pending += 1;
       if (dataMissing) pendingData += 1;
       if (photo) captured += 1;
@@ -599,7 +610,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       "pending-data": pendingData,
       captured,
     };
-  }, [students, isInstitute, visibilityView]);
+  }, [students, isInstitute, visibilityView, enabledFields]);
 
   async function handleDeleteImage(student: Student) {
     setConfirmDeletePhotoStudent(null);

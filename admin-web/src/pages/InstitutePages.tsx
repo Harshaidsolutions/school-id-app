@@ -1,3 +1,5 @@
+import { phoneError } from "../utils/validate";
+import { PasswordCell, PasswordInput } from "../components/PasswordCell";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -262,7 +264,7 @@ export function InstituteListPage() {
                     {institute.owner_username ?? "—"}
                   </td>
                   <td className="px-2 py-3 font-mono text-xs text-text sm:px-3 sm:text-sm">
-                    <span className="break-all">{institute.owner_password ?? "—"}</span>
+                    <PasswordCell value={institute.owner_password} />
                   </td>
                   <td className="hidden truncate px-2 py-3 text-text lg:table-cell sm:px-3">
                     {institute.phone ?? "—"}
@@ -418,6 +420,11 @@ function EditInstituteModal({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    const phoneProblem = phoneError(phone);
+    if (phoneProblem) {
+      setError(phoneProblem);
+      return;
+    }
     setLoading(true);
     try {
       await api.put(`/admin/institutes/${institute.id}`, {
@@ -463,7 +470,7 @@ function EditInstituteModal({
           </label>
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium">Password *</span>
-            <input required type="text" value={password} onChange={(e) => setPassword(e.target.value)} className="input-field" />
+            <PasswordInput required value={password} onChange={(e) => setPassword(e.target.value)} className="input-field" />
           </label>
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium">Phone Number</span>
@@ -623,6 +630,11 @@ function AddInstituteModal({
       setError("Passwords do not match.");
       return;
     }
+    const phoneProblem = phoneError(phoneNumber, true);
+    if (phoneProblem) {
+      setError(phoneProblem);
+      return;
+    }
     setLoading(true);
     try {
       await api.post("/admin/institutes-with-owner", {
@@ -668,11 +680,11 @@ function AddInstituteModal({
             </label>
             <label className="block text-sm">
               <span className="mb-1.5 block font-medium">Password *</span>
-              <input required type="text" value={password} onChange={(e) => setPassword(e.target.value)} className="input-field" />
+              <PasswordInput required value={password} onChange={(e) => setPassword(e.target.value)} className="input-field" />
             </label>
             <label className="block text-sm">
               <span className="mb-1.5 block font-medium">Confirm Password *</span>
-              <input required type="text" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="input-field" />
+              <PasswordInput required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="input-field" />
             </label>
           </div>
           {error && <div className="alert-error">{error}</div>}

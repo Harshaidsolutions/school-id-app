@@ -4,7 +4,8 @@ import { Image } from "expo-image";
 import api, { authedSource, errMsg } from "../api/client";
 import { C, F, R, S } from "../theme";
 import { Screen } from "../ui/Screen";
-import { Banner, Card, InfoRow, Loading, Muted, Rise, Section, Toggle } from "../ui/kit";
+import { Banner, Card, InfoRow, Loading, Muted, Pill, Rise, Section, Toggle } from "../ui/kit";
+import { Ionicons } from "@expo/vector-icons";
 import { ImageViewer } from "../ui/Sheet";
 import { Tap } from "../ui/Pressable";
 import type { ScreenProps } from "../navigation/types";
@@ -162,12 +163,45 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
             )}
           </Section>
 
-          <Section title="School app settings">
-            <Card>
-              {!isOrg ? <Toggle label="Allow photo number editing" sub="Teachers can change the photo number." value={org.allow_number_edit !== false} disabled={saving} onChange={(v) => void saveSetting({ allowNumberEdit: v })} /> : null}
-              <Toggle label="Edit form" sub="Teachers can edit saved records." value={org.allow_record_edit !== false} disabled={saving} onChange={(v) => void saveSetting({ allowRecordEdit: v })} />
-              <Toggle label="Captured section" sub="Show the captured list in the app." value={org.show_captured_section !== false} disabled={saving} onChange={(v) => void saveSetting({ showCaptured: v })} />
-            </Card>
+          <Section
+            title="School app settings"
+            right={<Pill text={saving ? "Saving…" : saved ? "Saved ✓" : "Saves instantly"} tone={saving ? "grey" : saved ? "green" : "blue"} />}
+          >
+            <Muted style={{ marginBottom: S.md }}>
+              Controls what teachers can do in the My School ID Card app for this {kind === "school" ? "school" : kind === "institute" ? "institute" : "organization"}.
+            </Muted>
+            {[
+              {
+                key: "edit",
+                title: "Edit Form",
+                text: "Teachers can open saved records in the school app and correct details or retake photos.",
+                icon: "create-outline" as const,
+                on: org.allow_record_edit !== false,
+                set: (v: boolean) => void saveSetting({ allowRecordEdit: v }),
+              },
+              {
+                key: "captured",
+                title: "Captured Section",
+                text: "Shows the list of already captured students / members in the school app.",
+                icon: "camera-outline" as const,
+                on: org.show_captured_section !== false,
+                set: (v: boolean) => void saveSetting({ showCaptured: v }),
+              },
+            ].map((o) => (
+              <Tap key={o.key} onPress={() => !saving && o.set(!o.on)} scaleTo={0.985} style={[st.opt, o.on && st.optOn]}>
+                <View style={[st.optIcon, o.on && { backgroundColor: C.primary }]}>
+                  <Ionicons name={o.icon} size={22} color={o.on ? C.white : C.muted} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <Text style={st.optTitle}>{o.title}</Text>
+                    <Pill text={o.on ? "ON" : "OFF"} tone={o.on ? "green" : "grey"} />
+                  </View>
+                  <Muted style={{ marginTop: 4 }}>{o.text}</Muted>
+                </View>
+                <Toggle value={o.on} disabled={saving} onChange={o.set} />
+              </Tap>
+            ))}
           </Section>
         </>
       ) : null}
@@ -188,5 +222,9 @@ const st = StyleSheet.create({
   tile: { flexBasis: "47%", flexGrow: 1, backgroundColor: C.surface, borderRadius: R.lg, overflow: "hidden", borderWidth: 1, borderColor: C.line },
   tileImg: { height: 130, backgroundColor: C.white },
   tileFoot: { flexDirection: "row", alignItems: "center", padding: S.sm, gap: 4 },
+  opt: { flexDirection: "row", alignItems: "center", gap: S.md, backgroundColor: C.white, borderRadius: R.lg, padding: S.md, marginBottom: S.sm, borderWidth: 1, borderColor: C.line },
+  optOn: { borderColor: "#C7D2FE", backgroundColor: "#F7F7FF" },
+  optIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#F4F3FF", alignItems: "center", justifyContent: "center" },
+  optTitle: { fontFamily: F.h, fontSize: 15, color: C.ink },
   tileLabel: { flex: 1, fontFamily: F.bodySemi, fontSize: 12, color: C.text },
 });

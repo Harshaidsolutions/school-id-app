@@ -17,6 +17,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { C, F, R, S, accentGradient, primaryGradient, shadow, softShadow, tones, type Tone } from "../theme";
 import { Tap } from "./Pressable";
 import { initials } from "../lib/format";
@@ -148,16 +149,14 @@ export function Button({
     <Tap onPress={onPress} disabled={disabled || loading} style={base} accessibilityRole="button" accessibilityLabel={title}>
       {variant === "primary" || variant === "accent" ? (
         <LinearGradient
+          pointerEvents="none"
           colors={variant === "primary" ? primaryGradient : accentGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={{ borderRadius: R.md }}
-        >
-          {inner}
-        </LinearGradient>
-      ) : (
-        inner
-      )}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : null}
+      {inner}
     </Tap>
   );
 }
@@ -200,8 +199,9 @@ export function IconButton({
 }
 
 export function Fab({ icon = "add", label, onPress }: { icon?: IconName; label: string; onPress: () => void }) {
+  const insets = useSafeAreaInsets();
   return (
-    <Tap onPress={onPress} accessibilityLabel={label} style={[st.fab, shadow]}>
+    <Tap onPress={onPress} accessibilityLabel={label} style={[st.fab, shadow, { bottom: S.lg + Math.max(insets.bottom, 8) }]}>
       <LinearGradient colors={primaryGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.fabInner}>
         <Ionicons name={icon} size={22} color={C.white} />
         <Text style={st.fabText}>{label}</Text>
@@ -311,6 +311,40 @@ export function Check({ checked, onPress, label }: { checked: boolean; onPress: 
       <View style={[st.check, checked && st.checkOn]}>{checked ? <Ionicons name="checkmark" size={15} color={C.white} /> : null}</View>
       {label ? <Text style={st.checkLabel}>{label}</Text> : null}
     </Tap>
+  );
+}
+
+/** Two or three options side by side (like a switch between Photos / Signatures). */
+export function Segmented<T extends string>({ items, value, onChange }: { items: { key: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <View style={st.seg}>
+      {items.map((it) => {
+        const on = it.key === value;
+        return (
+          <Tap key={it.key} onPress={() => onChange(it.key)} scaleTo={0.97} style={[st.segItem, on && st.segOn]} accessibilityState={{ selected: on }}>
+            <Text style={[st.segText, on && { color: C.white }]} numberOfLines={1}>
+              {it.label}
+            </Text>
+          </Tap>
+        );
+      })}
+    </View>
+  );
+}
+
+/** A password that stays hidden (••••) until the eye is tapped. */
+export function Secret({ value, style }: { value?: string | null; style?: StyleProp<TextStyle> }) {
+  const [show, setShow] = useState(false);
+  if (!value) return <Text style={style}>—</Text>;
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+      <Text style={[style, { flexShrink: 1 }]} numberOfLines={1} selectable={show}>
+        {show ? value : "••••••••"}
+      </Text>
+      <Tap onPress={() => setShow((v) => !v)} hitSlop={10} accessibilityLabel={show ? "Hide password" : "Show password"}>
+        <Ionicons name={show ? "eye-off-outline" : "eye-outline"} size={18} color={C.muted} />
+      </Tap>
+    </View>
   );
 }
 
@@ -509,6 +543,10 @@ const st = StyleSheet.create({
   check: { width: 24, height: 24, borderRadius: 8, borderWidth: 2, borderColor: C.lineStrong, alignItems: "center", justifyContent: "center", backgroundColor: C.white },
   checkOn: { backgroundColor: C.primary, borderColor: C.primary },
   checkLabel: { fontFamily: F.bodyMed, fontSize: 15, color: C.ink, flexShrink: 1 },
+  seg: { flexDirection: "row", backgroundColor: C.white, borderRadius: R.md, borderWidth: 1, borderColor: C.line, padding: 4, gap: 4, marginBottom: S.md },
+  segItem: { flex: 1, minHeight: 40, borderRadius: R.sm, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
+  segOn: { backgroundColor: C.primary },
+  segText: { fontFamily: F.bodySemi, fontSize: 14, color: C.text },
   chip: { paddingHorizontal: 16, height: 38, borderRadius: R.pill, backgroundColor: C.white, borderWidth: 1, borderColor: C.line, justifyContent: "center" },
   chipOn: { backgroundColor: C.accent, borderColor: C.accent },
   chipText: { fontFamily: F.bodySemi, fontSize: 13, color: C.text },

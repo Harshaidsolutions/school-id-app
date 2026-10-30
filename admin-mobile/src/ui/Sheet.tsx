@@ -386,7 +386,7 @@ const st = StyleSheet.create({
   actionIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: C.primarySoft, alignItems: "center", justifyContent: "center" },
   actionText: { fontFamily: F.hSemi, fontSize: 15, color: C.ink },
   otpIcon: { alignSelf: "center", width: 64, height: 64, borderRadius: 22, alignItems: "center", justifyContent: "center", marginBottom: S.md },
-  viewer: { flex: 1, backgroundColor: "rgba(10,8,6,0.96)" },
+  viewer: { flex: 1, backgroundColor: "#0E0C1F" },
   viewerHead: { flexDirection: "row", alignItems: "center", paddingHorizontal: S.lg, gap: S.md },
   viewerTitle: { fontFamily: F.hSemi, fontSize: 16, color: C.white },
   viewerSub: { fontFamily: F.body, fontSize: 13, color: "rgba(255,255,255,0.75)" },

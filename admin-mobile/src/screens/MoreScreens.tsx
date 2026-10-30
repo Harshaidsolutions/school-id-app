@@ -112,6 +112,8 @@ export function MoreScreen() {
           <Muted style={{ textAlign: "center", marginTop: S.xl }}>My School ID Admin v{Constants.expoConfig?.version ?? ""} · Harsha ID Solutions</Muted>
         </View>
       </ScrollView>
+      {/* Keeps scrolled content from showing under the phone's status bar. */}
+      <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top, backgroundColor: "#2B2770" }} />
     </View>
   );
 }

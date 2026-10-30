@@ -6,12 +6,13 @@ import api, { authedSource, errMsg } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { C, F, R, S } from "../theme";
 import { Screen } from "../ui/Screen";
-import { Avatar, Banner, Button, Card, Empty, Field, InfoRow, Loading, Muted, Pill, Rise, SearchBar, Section, Toggle } from "../ui/kit";
+import { Avatar, Banner, Button, Card, Empty, Field, InfoRow, Loading, Muted, Pill, Rise, SearchBar, Secret, Section, Toggle } from "../ui/kit";
 import { ActionSheet, OtpSheet, Sheet } from "../ui/Sheet";
 import { PhotoPick } from "../ui/PhotoPick";
 import { Tap } from "../ui/Pressable";
 import { asFormFile, type PickedFile } from "../lib/files";
 import { fmtDate, num, waLink } from "../lib/format";
+import { emailError, phoneError } from "../lib/validate";
 import { useNav } from "../navigation/hooks";
 import type { ScreenProps } from "../navigation/types";
 
@@ -119,7 +120,14 @@ export function AdminsScreen() {
                 </Tap>
               </View>
               <View style={st.foot}>
-                <Muted>{a.password_plain ? `Password: ${a.password_plain}` : a.phone ?? ""}</Muted>
+                {a.password_plain ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+                    <Muted>Password:</Muted>
+                    <Secret value={a.password_plain} style={{ fontFamily: F.bodyMed, fontSize: 13, color: C.ink }} />
+                  </View>
+                ) : (
+                  <Muted>{a.phone ?? ""}</Muted>
+                )}
                 <Toggle value={a.is_active} disabled={busyId === a.id} onChange={() => void toggle(a)} />
               </View>
             </Card>
@@ -212,6 +220,8 @@ function AdminEditor({ state, onClose, onDone }: { state: { admin: Admin | null 
 
   async function save() {
     if (!form.displayName.trim() || !form.email.trim()) return setError("Name and email are required.");
+    const problem = emailError(form.email, true) ?? phoneError(form.phone) ?? (form.whatsapp.trim() ? phoneError(form.whatsapp) : null);
+    if (problem) return setError(problem);
     if (!admin && form.password.length < 8) return setError("Password must be at least 8 characters.");
     if (admin && form.password && form.password.length < 8) return setError("New password must be at least 8 characters.");
     setBusy(true);
@@ -248,14 +258,14 @@ function AdminEditor({ state, onClose, onDone }: { state: { admin: Admin | null 
       <PhotoPick label="Photo / logo" value={photo} onChange={setPhoto} current={authedSource(admin?.photo_url)} />
       <Field label="Admin / company name" required value={form.displayName} onChangeText={set("displayName")} />
       <Field label="Username" value={form.username} onChangeText={set("username")} autoCapitalize="none" />
-      <Field label="Email" required value={form.email} onChangeText={set("email")} autoCapitalize="none" keyboardType="email-address" />
-      <Field label="Phone" value={form.phone} onChangeText={set("phone")} keyboardType="phone-pad" />
-      <Field label="WhatsApp" value={form.whatsapp} onChangeText={set("whatsapp")} keyboardType="phone-pad" />
+      <Field label="Email" required value={form.email} onChangeText={set("email")} autoCapitalize="none" keyboardType="email-address" error={form.email.trim() ? emailError(form.email) : null} />
+      <Field label="Phone" value={form.phone} onChangeText={set("phone")} keyboardType="phone-pad" maxLength={13} error={phoneError(form.phone)} />
+      <Field label="WhatsApp" value={form.whatsapp} onChangeText={set("whatsapp")} keyboardType="phone-pad" maxLength={13} error={phoneError(form.whatsapp)} />
       <Field label="Facebook link" value={form.facebook} onChangeText={set("facebook")} autoCapitalize="none" />
       <Field label="Instagram link" value={form.instagram} onChangeText={set("instagram")} autoCapitalize="none" />
       <Field label="YouTube link" value={form.youtube} onChangeText={set("youtube")} autoCapitalize="none" />
       <Field label="About us" value={form.aboutUs} onChangeText={set("aboutUs")} multiline />
-      <Field label={admin ? "New password (optional)" : "Password"} required={!admin} value={form.password} onChangeText={set("password")} autoCapitalize="none" hint={admin ? "Changing the password needs a code from your email." : "At least 8 characters."} />
+      <Field label={admin ? "New password (optional)" : "Password"} required={!admin} value={form.password} onChangeText={set("password")} autoCapitalize="none" secure hint={admin ? "Changing the password needs a code from your email." : "At least 8 characters."} />
     </Sheet>
   );
 }
@@ -285,8 +295,12 @@ export function AdminDetailScreen({ route }: ScreenProps<"AdminDetail">) {
           <Card key={r.id} style={{ marginBottom: S.sm }}>
             <Text style={st.name}>{r.name}</Text>
             <Muted>
-              {r.username ?? "—"} · {r.password ?? "—"} · {fmtDate(r.created_at)}
+              Username: {r.username ?? "—"} · Created {fmtDate(r.created_at)}
             </Muted>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+              <Muted>Password:</Muted>
+              <Secret value={r.password} style={{ fontFamily: F.bodyMed, fontSize: 13, color: C.ink }} />
+            </View>
             <View style={{ flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
               <Pill text={`${num(r.people_count)} ${people}`} tone="blue" />
               <Pill text={`${num(r.captured_photos)} captured`} tone="green" />

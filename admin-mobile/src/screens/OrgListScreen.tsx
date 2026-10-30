@@ -7,10 +7,11 @@ import * as Clipboard from "expo-clipboard";
 import api, { errMsg } from "../api/client";
 import { C, CONTENT_MAX, F, R, S } from "../theme";
 import { Backdrop, Header } from "../ui/Screen";
-import { Avatar, Banner, Button, Check, Empty, Fab, Field, IconButton, Loading, Muted, Pill, Rise, SearchBar, Toggle } from "../ui/kit";
+import { Banner, Button, Check, Empty, Fab, Field, IconButton, Loading, Muted, Pill, Rise, SearchBar, Secret, Toggle } from "../ui/kit";
 import { ActionSheet, OtpSheet, Sheet } from "../ui/Sheet";
 import { Tap } from "../ui/Pressable";
 import { fmtDate } from "../lib/format";
+import { phoneError } from "../lib/validate";
 import { useNav } from "../navigation/hooks";
 
 export type ListKind = "school" | "institute" | "organization";
@@ -222,9 +223,7 @@ export function OrgListScreen({ kind, back = false }: { kind: ListKind; back?: b
                     </View>
                     <View style={st.cred}>
                       <Text style={st.credLabel}>Password</Text>
-                      <Text style={st.credValue} numberOfLines={1} selectable>
-                        {item.password ?? "—"}
-                      </Text>
+                      <Secret value={item.password} style={st.credValue} />
                     </View>
                   </View>
                   <View style={st.metaRow}>
@@ -364,7 +363,9 @@ function OrgFormSheet({
 
   async function save() {
     if (!name.trim() || !username.trim() || !password) return setError("Fill in all required fields.");
-    if (isAdd && !phone.trim()) return setError("Phone number is required.");
+    const phoneProblem = phoneError(phone, isAdd);
+    if (phoneProblem) return setError(phoneProblem);
+    if (password.length < 6) return setError("Password must be at least 6 characters.");
     if (isAdd && password !== confirm) return setError("Passwords do not match.");
     setBusy(true);
     setError(null);
@@ -395,11 +396,11 @@ function OrgFormSheet({
     >
       <Banner text={error} />
       <Field label={`${cfg.one} name`} required value={name} onChangeText={setName} placeholder={`Enter ${cfg.one.toLowerCase()} name`} icon={`${cfg.icon}-outline` as never} />
-      <Field label="Phone number" required={isAdd} value={phone} onChangeText={setPhone} keyboardType="phone-pad" icon="call-outline" placeholder="10-digit mobile" />
+      <Field label="Phone number" required={isAdd} value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={13} icon="call-outline" placeholder="10-digit mobile" error={phone.trim() ? phoneError(phone) : null} />
       <Field label="Username" required value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} icon="person-outline" />
-      <Field label="Password" required value={password} onChangeText={setPassword} autoCapitalize="none" autoCorrect={false} icon="key-outline" />
-      {isAdd ? <Field label="Confirm password" required value={confirm} onChangeText={setConfirm} autoCapitalize="none" autoCorrect={false} icon="key-outline" /> : null}
-      <Muted>Passwords are shown so you can share them with the {cfg.one.toLowerCase()}.</Muted>
+      <Field label="Password" required value={password} onChangeText={setPassword} autoCapitalize="none" autoCorrect={false} icon="key-outline" secure />
+      {isAdd ? <Field label="Confirm password" required value={confirm} onChangeText={setConfirm} autoCapitalize="none" autoCorrect={false} icon="key-outline" secure /> : null}
+      <Muted>Share these login details only with the {cfg.one.toLowerCase()}.</Muted>
     </Sheet>
   );
 }

@@ -1,3 +1,5 @@
+import { phoneError } from "../utils/validate";
+import { PasswordCell, PasswordInput } from "../components/PasswordCell";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -255,7 +257,7 @@ export function SchoolListPage() {
                     {school.owner_username ?? "—"}
                   </td>
                   <td className="px-2 py-3 font-mono text-xs text-text sm:px-3 sm:text-sm">
-                    <span className="break-all">{school.owner_password ?? "—"}</span>
+                    <PasswordCell value={school.owner_password} />
                   </td>
                   <td className="hidden truncate px-2 py-3 text-text lg:table-cell sm:px-3">
                     {school.phone ?? "—"}
@@ -410,6 +412,11 @@ function EditSchoolModal({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    const phoneProblem = phoneError(phone);
+    if (phoneProblem) {
+      setError(phoneProblem);
+      return;
+    }
     setLoading(true);
     try {
       await api.put(`/admin/schools/${school.id}`, {
@@ -455,7 +462,7 @@ function EditSchoolModal({
           </label>
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium">Password *</span>
-            <input required type="text" value={password} onChange={(e) => setPassword(e.target.value)} className="input-field" />
+            <PasswordInput required value={password} onChange={(e) => setPassword(e.target.value)} className="input-field" />
           </label>
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium">Phone Number</span>
@@ -494,6 +501,11 @@ function AddSchoolModal({
     setError(null);
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
+      return;
+    }
+    const phoneProblem = phoneError(phoneNumber, true);
+    if (phoneProblem) {
+      setError(phoneProblem);
       return;
     }
     setLoading(true);
@@ -541,11 +553,11 @@ function AddSchoolModal({
             </label>
             <label className="block text-sm">
               <span className="mb-1.5 block font-medium">Password *</span>
-              <input required type="text" value={password} onChange={(e) => setPassword(e.target.value)} className="input-field" placeholder="Enter password" />
+              <PasswordInput required value={password} onChange={(e) => setPassword(e.target.value)} className="input-field" placeholder="Enter password" />
             </label>
             <label className="block text-sm">
               <span className="mb-1.5 block font-medium">Confirm Password *</span>
-              <input required type="text" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="input-field" placeholder="Confirm password" />
+              <PasswordInput required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="input-field" placeholder="Confirm password" />
             </label>
           </div>
           {error && <div className="alert-error">{error}</div>}

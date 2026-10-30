@@ -14,6 +14,7 @@ import { PhotoPick } from "../ui/PhotoPick";
 import { Tap } from "../ui/Pressable";
 import { dayKey, dayLabel, num } from "../lib/format";
 import { asFormFile, downloadFile, type PickedFile } from "../lib/files";
+import { fieldProblem } from "../lib/validate";
 import type { ScreenProps } from "../navigation/types";
 import { DeleteOptionsSheet, ExcelDownloadSheet, ExcelUploadSheet, PhotoDownloadSheet, type CategoryField, type DeleteJob } from "./RecordSheets";
 
@@ -86,7 +87,8 @@ export function OrgDetailScreen({ route, navigation }: ScreenProps<"OrgDetail">)
   const nameField = textFields.find((f) => /name/i.test(f.field_name)) ?? textFields[0];
 
   const captured = (r: Row) => imageFields.length > 0 && imageFields.every((f) => r.values[f.id]?.hasPhoto);
-  const missing = (r: Row) => textFields.some((f) => f.required !== false && !(r.values[f.id]?.text ?? "").trim());
+  const missing = (r: Row) =>
+    textFields.some((f) => (f.required !== false && !(r.values[f.id]?.text ?? "").trim()) || Boolean(fieldProblem(f.id, f.field_name, r.values[f.id]?.text)));
 
   const categories = useMemo(
     () => configuredCategoryFields(active.filter((f) => f.field_type === "text").map((f) => ({ key: f.id, label: f.field_name, enabled: true }))),
@@ -457,6 +459,11 @@ function SubmissionEditSheet({
   }
   async function save() {
     if (!row) return;
+    for (const f of fields) {
+      if (f.field_type === "photo") continue;
+      const problem = fieldProblem(f.id, f.field_name, draft[f.id]);
+      if (problem) return setError(problem);
+    }
     setBusy(true);
     setError(null);
     try {
@@ -498,7 +505,7 @@ function SubmissionEditSheet({
               }
             />
           ) : (
-            <Field key={f.id} label={f.field_name} required={f.required !== false} value={draft[f.id] ?? ""} onChangeText={(t) => setDraft((d) => ({ ...d, [f.id]: t }))} />
+            <Field key={f.id} label={f.field_name} required={f.required !== false} value={draft[f.id] ?? ""} onChangeText={(t) => setDraft((d) => ({ ...d, [f.id]: t }))} error={fieldProblem(f.id, f.field_name, draft[f.id])} />
           )
         )}
     </Sheet>

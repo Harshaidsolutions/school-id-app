@@ -1,3 +1,4 @@
+import { PasswordCell, PasswordInput } from "../components/PasswordCell";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -362,10 +363,9 @@ export function AdminManagementPage() {
             />
           </FieldLabel>
           <FieldLabel label="Password">
-            <input
+            <PasswordInput
               className="input-field w-full"
-              type="text"
-              placeholder="Password"
+                            placeholder="Password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               required
@@ -510,7 +510,7 @@ export function AdminManagementPage() {
                   </td>
                   <td className="px-3 py-2">{a.username ?? "—"}</td>
                   <td className="px-3 py-2 font-mono text-xs break-all">
-                    {a.password_plain ?? "—"}
+                    <PasswordCell value={a.password_plain} />
                   </td>
                   <td className="px-3 py-2">{a.email}</td>
                   <td className="px-3 py-2">{a.phone ?? "—"}</td>
@@ -588,10 +588,9 @@ export function AdminManagementPage() {
                 />
               </FieldLabel>
               <FieldLabel label="Password">
-                <input
+                <PasswordInput
                   className="input-field w-full"
-                  type="text"
-                  value={editForm.password}
+                                    value={editForm.password}
                   onChange={(e) =>
                     setEditForm({ ...editForm, password: e.target.value })
                   }

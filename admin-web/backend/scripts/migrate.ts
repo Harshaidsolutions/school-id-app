@@ -707,6 +707,9 @@ async function migrate() {
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS allow_number_edit BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS allow_record_edit BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS field_visibility JSONB NOT NULL DEFAULT '{}'::jsonb;
+    -- New schools / institutes start with the "Captured section" switch OFF (admin can turn it on).
+    ALTER TABLE schools ALTER COLUMN show_captured_section SET DEFAULT false;
+    ALTER TABLE institutes ALTER COLUMN show_captured_section SET DEFAULT false;
 
     ALTER TABLE students ADD COLUMN IF NOT EXISTS signature_url TEXT;
     ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS video_url TEXT;
@@ -915,6 +918,7 @@ async function migrate() {
       ADD COLUMN IF NOT EXISTS allow_number_edit BOOLEAN NOT NULL DEFAULT false,
       ADD COLUMN IF NOT EXISTS allow_record_edit BOOLEAN NOT NULL DEFAULT true,
       ADD COLUMN IF NOT EXISTS show_captured_section BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE organizations ALTER COLUMN show_captured_section SET DEFAULT false;
     UPDATE organizations SET detail_phone = phone, detail_address = address,
       detail_instructions = instructions, details_separated = true
       WHERE details_separated = false;

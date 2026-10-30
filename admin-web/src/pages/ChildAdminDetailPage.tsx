@@ -1,3 +1,4 @@
+import { PasswordCell } from "../components/PasswordCell";
 import { HeaderBack } from "../components/HeaderBack";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -97,7 +98,7 @@ function OrgTable({
                   <td className="px-3 py-2">{row.name}</td>
                   <td className="px-3 py-2">{row.username?.trim() || "—"}</td>
                   <td className="px-3 py-2 font-mono text-xs break-all">
-                    {row.password?.trim() || "—"}
+                    <PasswordCell value={row.password} />
                   </td>
                   <td className="px-3 py-2">{row.people_count}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{formatCreated(row.created_at)}</td>

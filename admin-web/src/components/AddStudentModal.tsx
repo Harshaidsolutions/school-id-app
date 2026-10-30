@@ -1,3 +1,4 @@
+import { fieldProblem } from "../utils/validate";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import axios from "axios";
 import api from "../api/client";
@@ -99,6 +100,13 @@ export function AddStudentModal({
     if (classField && !fieldValue(classField.key).trim()) {
       setError(`${classField.label} is required.`);
       return;
+    }
+    for (const field of fields) {
+      const problem = fieldProblem(field.key, field.label, fieldValue(field.key));
+      if (problem) {
+        setError(problem);
+        return;
+      }
     }
 
     if (

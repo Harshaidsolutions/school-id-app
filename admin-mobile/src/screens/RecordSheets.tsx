@@ -7,12 +7,13 @@ import type { Student } from "../shared/types";
 import type { FormFieldConfig } from "../shared/formFields";
 import { activeFormFields, allValuesLabel, findClassField, findStudentNameField, isClassCategoryField, isPlainPhotoPrompt, wiseActionLabel } from "../shared/formFieldHelpers";
 import { C, F, R, S } from "../theme";
-import { Banner, Button, Check, Field, Muted } from "../ui/kit";
+import { Banner, Button, Check, Field, Muted, Segmented } from "../ui/kit";
 import { Select, Sheet } from "../ui/Sheet";
 import { PhotoPick } from "../ui/PhotoPick";
 import { Tap } from "../ui/Pressable";
-import { DOC_TYPES, asFormFile, pickDocuments, sizeOk, type PickedFile } from "../lib/files";
+import { DOC_TYPES, asFormFile, pickDocuments, pickImages, sizeOk, type PickedFile } from "../lib/files";
 import { dayLabel } from "../lib/format";
+import { fieldProblem, isPhoneField } from "../lib/validate";
 
 const GENDERS = ["Male", "Female", "Other"];
 const BLOOD = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -138,6 +139,11 @@ export function RecordFormSheet({
     if (nameField && !val(nameField.key).trim()) return setError(`${nameField.label} is required.`);
     if (classField && !val(classField.key).trim()) return setError(`${classField.label} is required.`);
     for (const f of [photo, signature]) if (f && !sizeOk(f, 10)) return setError("Photos must be under 10 MB.");
+    for (const fl of fields) {
+      if (fl.key === "signature_upload" || isPlainPhotoPrompt(fl)) continue;
+      const problem = fieldProblem(fl.key, fl.label, val(fl.key));
+      if (problem) return setError(problem);
+    }
     setBusy(true);
     setError(null);
     try {
@@ -233,7 +239,7 @@ export function RecordFormSheet({
               if (f.key === "blood_group") return <Select key={f.key} label={f.label} value={val(f.key)} onChange={(v) => set(f.key, v)} options={BLOOD.map((g) => ({ value: g, label: g }))} placeholder="Select blood group" />;
               if (f.key === "dob") return <DateField key={f.key} label={f.label} value={val(f.key)} onChange={(v) => set(f.key, v)} />;
               if (f.key === "address") return <Field key={f.key} label={f.label} value={val(f.key)} onChangeText={(t) => set(f.key, t)} multiline />;
-              const phone = f.key === "parent_phone" || /phone|mobile/i.test(f.label);
+              const phone = isPhoneField(f.key, f.label);
               return (
                 <Field
                   key={f.key}
@@ -241,7 +247,9 @@ export function RecordFormSheet({
                   required={f.key === "student_name"}
                   value={val(f.key)}
                   onChangeText={(t) => set(f.key, t)}
-                  keyboardType={phone ? "phone-pad" : "default"}
+                  keyboardType={phone ? "phone-pad" : /mail/i.test(f.label) ? "email-address" : "default"}
+                  maxLength={phone ? 13 : undefined}
+                  error={fieldProblem(f.key, f.label, val(f.key))}
                   autoCapitalize={f.key === "student_name" || /name/i.test(f.label) ? "words" : "sentences"}
                 />
               );
@@ -356,72 +364,120 @@ export function ExcelUploadSheet({ visible, onClose, target, onDone }: { visible
   );
 }
 
-/** Upload a ZIP (or single image) of photos named by photo number. */
+/**
+ * Upload photos named by their Excel photo number (e.g. ADD_001.jpg):
+ * pick several photos (Files keeps the real file names) or one ZIP.
+ * Each photo is sent separately so one bad file does not stop the rest.
+ */
 export function PhotoImportSheet({ visible, onClose, orgId, kind, onDone }: { visible: boolean; onClose: () => void; orgId: string; kind: "school" | "institute"; onDone: () => void }) {
-  const [file, setFile] = useState<PickedFile | null>(null);
+  const [files, setFiles] = useState<PickedFile[]>([]);
   const [replace, setReplace] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<{ file: string; status: string; reason?: string }[]>([]);
   useEffect(() => {
     if (visible) {
-      setFile(null);
+      setFiles([]);
       setReplace(false);
       setError(null);
       setResults([]);
+      setProgress(null);
     }
   }, [visible]);
+
+  function choose(picked: PickedFile[]) {
+    if (!picked.length) return;
+    const bad = picked.filter((f) => !/\.(zip|jpe?g|png)$/i.test(f.name));
+    if (bad.length) {
+      setError(`Only JPG, PNG or ZIP files can be uploaded (${bad[0].name}).`);
+      return;
+    }
+    if (picked.some((f) => /\.zip$/i.test(f.name)) && picked.length > 1) {
+      setError("Choose one ZIP file, or choose photos (not both).");
+      return;
+    }
+    setError(null);
+    setResults([]);
+    setFiles(picked);
+  }
+
   async function upload() {
-    if (!file) return;
-    if (!sizeOk(file, 50)) return setError("ZIP must be under 50 MB.");
+    if (!files.length) return;
+    const isZip = /\.zip$/i.test(files[0].name);
+    if (isZip && !sizeOk(files[0], 50)) return setError("ZIP must be under 50 MB.");
+    if (!isZip && files.some((f) => !sizeOk(f, 10))) return setError("Each photo must be under 10 MB.");
     setBusy(true);
     setError(null);
+    setResults([]);
+    const all: { file: string; status: string; reason?: string }[] = [];
     try {
-      const form = new FormData();
-      form.append("file", asFormFile(file));
-      form.append("orgId", orgId);
-      form.append("kind", kind);
-      form.append("replace", String(replace));
-      const { data } = await api.post("/admin/photo-import", form, { timeout: 600000 });
-      setResults(data.results ?? []);
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        setProgress(isZip ? "Uploading ZIP… this can take a minute" : `Uploading ${i + 1} of ${files.length}: ${f.name}`);
+        const form = new FormData();
+        form.append("orgId", orgId);
+        form.append("kind", kind);
+        form.append("replace", String(replace));
+        form.append("file", asFormFile({ ...f, type: isZip ? "application/zip" : f.type || "image/jpeg" }));
+        try {
+          const { data } = await api.post("/admin/photo-import", form, { timeout: 600000 });
+          all.push(...((data?.results ?? []) as typeof all));
+        } catch (e) {
+          if (isZip) throw e;
+          all.push({ file: f.name, status: "failed", reason: errMsg(e, "Upload failed") });
+        }
+        setResults([...all]);
+      }
       onDone();
     } catch (e) {
-      setError(errMsg(e, "Upload failed. Try a smaller batch."));
+      setError(errMsg(e, "Upload failed. Check the internet connection or try a smaller ZIP."));
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }
+
   const ok = results.filter((r) => r.status === "uploaded").length;
+  const isZip = files.length === 1 && /\.zip$/i.test(files[0].name);
   return (
-    <Sheet visible={visible} onClose={onClose} title="Upload photos" subtitle="Name each image with its Excel photo number, e.g. ADD_001.jpg" footer={<Button title="Upload" icon="cloud-upload-outline" onPress={() => void upload()} loading={busy} disabled={!file} />}>
-      <Banner text={error} />
-      <Tap
-        onPress={async () => {
-          const [f] = await pickDocuments(DOC_TYPES.zip);
-          if (f) {
-            setFile(f);
-            setResults([]);
-          }
-        }}
-        style={st.drop}
-      >
-        <Ionicons name={file ? "file-tray-full" : "images-outline"} size={34} color={C.primary} />
-        <Text style={st.dropTitle}>{file ? file.name : "Choose ZIP or image"}</Text>
-        <Muted>ZIP up to 50 MB · 250 images · JPG/PNG up to 10 MB each</Muted>
-      </Tap>
-      <Check checked={replace} onPress={() => setReplace((r) => !r)} label="Replace existing photos (returns them to uncropped)" />
-      {results.length ? (
+    <Sheet
+      visible={visible}
+      onClose={() => !busy && onClose()}
+      title="Upload Photos"
+      subtitle="Each photo's file name must be its Excel Photo Number, e.g. ADD_001.jpg"
+      footer={<Button title={files.length ? `Upload ${isZip ? "ZIP" : `${files.length} photo${files.length > 1 ? "s" : ""}`}` : "Upload"} icon="cloud-upload-outline" onPress={() => void upload()} loading={busy} disabled={!files.length} />}
+    >
+      <Banner text={error} onClose={() => setError(null)} />
+      {progress ? <Banner text={progress} tone="blue" /> : null}
+      <View style={{ gap: S.sm, marginBottom: S.md }}>
+        <Button title="Choose photos from Files" variant="soft" icon="folder-open-outline" disabled={busy} onPress={async () => choose(await pickDocuments(["image/jpeg", "image/png"], true))} />
+        <Button title="Choose photos from Gallery" variant="soft" icon="images-outline" disabled={busy} onPress={async () => choose(await pickImages(true))} />
+        <Button title="Choose a ZIP file" variant="soft" icon="file-tray-full-outline" disabled={busy} onPress={async () => choose(await pickDocuments(DOC_TYPES.zip))} />
+      </View>
+      {files.length ? (
         <View style={st.errBox}>
+          <Text style={st.errTitle}>{isZip ? "ZIP selected" : `${files.length} photo(s) selected`}</Text>
+          {files.slice(0, 8).map((f) => (
+            <Muted key={f.uri}>• {f.name}</Muted>
+          ))}
+          {files.length > 8 ? <Muted>…and {files.length - 8} more</Muted> : null}
+        </View>
+      ) : (
+        <Muted style={{ marginBottom: S.md }}>Tip: “Files” keeps the original photo names. Gallery names may change on some phones. ZIP up to 50 MB · 250 photos · JPG/PNG up to 10 MB each.</Muted>
+      )}
+      <Check checked={replace} onPress={() => setReplace((r) => !r)} label="Replace photos that already exist (they become uncropped)" />
+      {results.length ? (
+        <View style={[st.errBox, { marginTop: S.md }]}>
           <Text style={st.errTitle}>
-            {ok} uploaded · {results.length - ok} not uploaded
+            ✓ {ok} uploaded · {results.length - ok} not uploaded
           </Text>
           {results
             .filter((r) => r.status !== "uploaded")
             .slice(0, 40)
             .map((r, i) => (
               <Muted key={i}>
-                {r.file}: {r.status}
-                {r.reason ? ` — ${r.reason}` : ""}
+                {r.file}: {r.reason ?? r.status}
               </Muted>
             ))}
         </View>
@@ -562,10 +618,14 @@ export function PhotoDownloadSheet({
   return (
     <Sheet visible={visible} onClose={onClose} title="Download photos" subtitle="Photos are saved as a ZIP file." footer={<Button title="Download ZIP" icon="download-outline" onPress={go} loading={busy} disabled={!ready} />}>
       {showSignature ? (
-        <View style={{ flexDirection: "row", gap: S.sm, marginBottom: S.md }}>
-          <Button small title="Photos" variant={asset === "photo" ? "accent" : "secondary"} onPress={() => setAsset("photo")} style={{ flex: 1 }} />
-          <Button small title="Signatures" variant={asset === "signature" ? "accent" : "secondary"} onPress={() => setAsset("signature")} style={{ flex: 1 }} />
-        </View>
+        <Segmented
+          value={asset}
+          onChange={setAsset}
+          items={[
+            { key: "photo", label: "Photos" },
+            { key: "signature", label: "Signatures" },
+          ]}
+        />
       ) : null}
       <Choice on={mode === "all"} title="All photos" count={total} onPress={() => setMode("all")} />
       <Choice on={mode === "date"} title="Date-wise photos" count={total} onPress={() => setMode("date")} />

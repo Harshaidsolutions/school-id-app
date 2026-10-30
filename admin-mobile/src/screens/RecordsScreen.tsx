@@ -16,6 +16,7 @@ import { ActionSheet, ImageViewer, OtpSheet, Select, Sheet } from "../ui/Sheet";
 import { Tap } from "../ui/Pressable";
 import { dayLabel, fmtDateTime, initials, num } from "../lib/format";
 import { downloadFile } from "../lib/files";
+import { fieldProblem } from "../lib/validate";
 import type { ScreenProps } from "../navigation/types";
 import {
   DeleteOptionsSheet,
@@ -174,6 +175,17 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
   const nameField = displayFields.find(isName);
   const idField = displayFields.find(isIdentity);
   const otherFields = displayFields.filter((f) => f !== nameField && f !== idField && f.key !== "signature_upload");
+  /** Wrong phone numbers / emails count as pending data, like missing details. */
+  const check = useCallback(
+    (st0: Student) => {
+      const base = flags(st0, institute);
+      const problems = displayFields
+        .map((fl) => fieldProblem(fl.key, fl.label, studentFieldDisplay(st0, fl.key, fl.label)))
+        .filter((x): x is string => Boolean(x));
+      return { ...base, dataMissing: base.dataMissing || problems.length > 0, problems };
+    },
+    [displayFields, institute]
+  );
 
   const categoryFields: CategoryField[] = useMemo(
     () =>
@@ -207,18 +219,18 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
     let pendingData = 0;
     let captured = 0;
     for (const s of visibleStudents) {
-      const f = flags(s, institute);
+      const f = check(s);
       if (f.photo) captured++;
       else pending++;
       if (f.dataMissing) pendingData++;
     }
     return { all: visibleStudents.length, pending, captured, "pending-data": pendingData };
-  }, [visibleStudents, institute]);
+  }, [visibleStudents, check]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return visibleStudents.filter((s) => {
-      const f = flags(s, institute);
+      const f = check(s);
       if (!filters.photo && tab === "pending" && f.photo) return false;
       if (!filters.photo && tab === "captured" && !f.photo) return false;
       if (tab === "pending-data" && !f.dataMissing) return false;
@@ -228,7 +240,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
       }
       return true;
     });
-  }, [visibleStudents, tab, search, filters.photo, institute]);
+  }, [visibleStudents, tab, search, filters.photo, check]);
 
   const photoList = useMemo(() => filtered.filter((s) => s.photo_url), [filtered]);
   const activeFilterCount = Object.values(filters).filter(Boolean).length + (visibility !== "visible" ? 1 : 0);
@@ -341,7 +353,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
 
   /** One record = one card. Every column the website table shows is listed as “label: value”. */
   const renderItem = ({ item, index }: { item: Student; index: number }) => {
-    const f = flags(item, institute);
+    const f = check(item);
     const on = selected.has(item.id);
     const idText = idField ? studentFieldDisplay(item, idField.key, idField.label) : item.photo_id ?? "";
     const title = nameField ? studentFieldDisplay(item, nameField.key, nameField.label) : item.student_name ?? "—";
@@ -378,22 +390,27 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
               {idText && idText !== "—" ? <Text style={st.recId}>{idField?.label ?? "Photo No"}: {idText}</Text> : null}
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
                 <Pill text={f.photo ? "Captured" : "Pending"} tone={f.photo ? "green" : "amber"} icon={f.photo ? "checkmark-circle" : "time"} />
-                {f.dataMissing ? <Pill text="Pending data" tone="red" /> : null}
+                {f.problems.length ? <Pill text="Wrong data" tone="red" icon="alert-circle" /> : f.dataMissing ? <Pill text="Pending data" tone="red" /> : null}
                 {hidden ? <Pill text="Hidden" tone="grey" icon="eye-off" /> : null}
               </View>
             </View>
           </View>
           <View style={st.fields}>
-            {otherFields.map((fl) => (
-              <View key={fl.key} style={st.fieldRow}>
-                <Text style={st.fieldLabel} numberOfLines={1}>
-                  {fl.label}
-                </Text>
-                <Text style={st.fieldValue} numberOfLines={2}>
-                  {studentFieldDisplay(item, fl.key, fl.label) || "—"}
-                </Text>
-              </View>
-            ))}
+            {otherFields.map((fl) => {
+              const v = studentFieldDisplay(item, fl.key, fl.label) || "—";
+              const bad = fieldProblem(fl.key, fl.label, v);
+              return (
+                <View key={fl.key} style={st.fieldRow}>
+                  <Text style={st.fieldLabel} numberOfLines={1}>
+                    {fl.label}
+                  </Text>
+                  <Text style={[st.fieldValue, bad ? { color: C.danger } : null]} numberOfLines={2}>
+                    {v}
+                    {bad ? "  ⚠ wrong" : ""}
+                  </Text>
+                </View>
+              );
+            })}
             <View style={st.fieldRow}>
               <Text style={st.fieldLabel}>Created</Text>
               <Text style={st.fieldValue}>{created ? fmtDateTime(created) : "—"}</Text>
@@ -454,13 +471,15 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
         </View>
       </Header>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={st.toolbar}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={st.toolbarWrap} contentContainerStyle={st.toolbar}>
         {tools
           .filter((t) => !t.hidden)
           .map((t) => (
-            <Tap key={t.label} onPress={t.onPress} scaleTo={0.95} style={[st.tool, t.feature && st.toolFeature, t.danger && st.toolDanger]}>
-              <Ionicons name={t.icon} size={18} color={t.feature ? C.white : t.danger ? C.danger : C.primary} />
-              <Text style={[st.toolText, t.feature && { color: C.white }, t.danger && { color: C.danger }]} numberOfLines={1}>
+            <Tap key={t.label} onPress={t.onPress} scaleTo={0.95} style={[st.tool, t.feature && st.toolFeature, t.label === "ID Card Generator" && st.toolFeature2, t.danger && st.toolDanger]}>
+              <View style={[st.toolIcon, t.feature && { backgroundColor: "rgba(255,255,255,0.22)" }, t.danger && { backgroundColor: "#FFE4E9" }]}>
+                <Ionicons name={t.icon} size={18} color={t.feature ? C.white : t.danger ? C.danger : C.primary} />
+              </View>
+              <Text style={[st.toolText, t.feature && { color: C.white }, t.danger && { color: C.danger }]} numberOfLines={2}>
                 {t.label}
               </Text>
             </Tap>
@@ -777,11 +796,14 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
 const st = StyleSheet.create({
   tabs: { paddingHorizontal: S.lg, paddingTop: S.md, width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" },
   selectBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: S.lg, paddingVertical: S.sm, marginTop: S.sm, backgroundColor: C.white, borderTopWidth: 1, borderBottomWidth: 1, borderColor: C.line },
-  toolbar: { gap: S.sm, paddingHorizontal: S.lg, paddingTop: S.md },
-  tool: { flexDirection: "row", alignItems: "center", gap: 6, height: 40, paddingHorizontal: 14, borderRadius: 12, backgroundColor: C.white, borderWidth: 1, borderColor: C.line },
+  toolbarWrap: { flexGrow: 0, flexShrink: 0, height: 100 },
+  toolbar: { gap: S.sm, paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: 4, alignItems: "stretch" },
+  tool: { width: 92, height: 84, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 6, borderRadius: 14, backgroundColor: C.white, borderWidth: 1, borderColor: C.line },
+  toolIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: C.primarySoft, alignItems: "center", justifyContent: "center" },
   toolFeature: { backgroundColor: C.primary, borderColor: C.primary },
+  toolFeature2: { backgroundColor: C.danger, borderColor: C.danger },
   toolDanger: { borderColor: "#FECDD6", backgroundColor: C.dangerSoft },
-  toolText: { fontFamily: F.bodySemi, fontSize: 13, color: C.ink },
+  toolText: { fontFamily: F.bodySemi, fontSize: 11, lineHeight: 14, color: C.ink, textAlign: "center" },
   recTop: { flexDirection: "row", alignItems: "center", gap: S.md },
   sno: { width: 24, textAlign: "center", fontFamily: F.bodySemi, fontSize: 12, color: C.muted },
   recId: { fontFamily: F.bodyMed, fontSize: 12, color: C.primary, marginTop: 2 },

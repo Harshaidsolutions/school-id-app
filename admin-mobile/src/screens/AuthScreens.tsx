@@ -109,10 +109,6 @@ export function LoginScreen({ navigation }: ScreenProps<"Login">) {
         <Tap onPress={() => void Linking.openURL("https://harshaidsolutions.in/privacy-policy")}>
           <Text style={st.small}>Privacy Policy</Text>
         </Tap>
-        <Text style={st.small}>·</Text>
-        <Tap onPress={() => void Linking.openURL("https://harshaidsolutions.in/delete-account")}>
-          <Text style={st.small}>Delete account</Text>
-        </Tap>
       </View>
     </AuthShell>
   );
@@ -216,8 +212,8 @@ const st = StyleSheet.create({
   brandSub: { fontFamily: F.bodyMed, fontSize: 13, color: "rgba(255,255,255,0.9)" },
   cardWrap: { paddingHorizontal: S.lg, marginTop: -48, width: "100%", maxWidth: 520, alignSelf: "center" },
   card: { backgroundColor: C.white, borderRadius: 26, padding: S.xl },
-  title: { fontFamily: F.h, fontSize: 22, color: C.ink, marginBottom: 4 },
-  link: { fontFamily: F.bodySemi, color: C.accentDeep, fontSize: 14 },
+  title: { fontFamily: F.h, fontSize: 22, color: "#111111", marginBottom: 4 },
+  link: { fontFamily: F.bodySemi, color: "#111111", fontSize: 14 },
   help: { marginTop: S.xl, paddingTop: S.lg, borderTopWidth: 1, borderTopColor: C.line },
   small: { fontFamily: F.bodyMed, fontSize: 12, color: C.muted },
 });

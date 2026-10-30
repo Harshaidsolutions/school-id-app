@@ -1,3 +1,4 @@
+import { PasswordCell, PasswordInput } from "../components/PasswordCell";
 import { HeaderBack } from "../components/HeaderBack";
 import { RecordMediaViewer } from "../components/RecordMediaViewer";
 import { captureDayKey } from "../utils/captureDay";
@@ -227,7 +228,7 @@ export function OrganizationPortalPage() {
                 </td>
                 <td className="hidden truncate px-2 py-3 text-text md:table-cell sm:px-3">{row.username || "—"}</td>
                 <td className="px-2 py-3 font-mono text-xs text-text sm:px-3 sm:text-sm">
-                  <span className="break-all">{row.password || "—"}</span>
+                  <PasswordCell value={row.password} />
                 </td>
                 <td className="hidden truncate px-2 py-3 text-text lg:table-cell sm:px-3">{row.phone || "—"}</td>
                 <td className="hidden px-2 py-3 text-xs text-text-muted sm:table-cell sm:px-3">{formatCalendarDate(row.created_at)}</td>
@@ -935,7 +936,7 @@ function EditOrganizationModal({
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Organization Name *</span><input required className="input-field" value={name} onChange={(event) => setName(event.target.value)} /></label>
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Phone Number *</span><input required className="input-field" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Username *</span><input required className="input-field" value={username} onChange={(event) => setUsername(event.target.value)} /></label>
-        <label className="block text-sm"><span className="mb-1.5 block font-medium">Password *</span><input required type="text" className="input-field" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+        <label className="block text-sm"><span className="mb-1.5 block font-medium">Password *</span><PasswordInput required className="input-field" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
         <p className="text-xs text-text-muted">The organization uses this username and password to log in to the app.</p>
         {error ? <div className="alert-error">{error}</div> : null}
         <div className="flex justify-end gap-2">
@@ -980,8 +981,8 @@ function AddOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Organization Name *</span><input required className="input-field" value={name} onChange={(event) => setName(event.target.value)} /></label>
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Phone Number *</span><input required className="input-field" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
         <label className="block text-sm"><span className="mb-1.5 block font-medium">Username *</span><input required className="input-field" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="off" /></label>
-        <label className="block text-sm"><span className="mb-1.5 block font-medium">Password *</span><input required type="text" className="input-field" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" /></label>
-        <label className="block text-sm"><span className="mb-1.5 block font-medium">Confirm Password *</span><input required type="text" className="input-field" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" /></label>
+        <label className="block text-sm"><span className="mb-1.5 block font-medium">Password *</span><PasswordInput required className="input-field" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" /></label>
+        <label className="block text-sm"><span className="mb-1.5 block font-medium">Confirm Password *</span><PasswordInput required className="input-field" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" /></label>
         <p className="text-xs text-text-muted">Enter the username and password this organization will use to log in to the app.</p>
         {error ? <div className="alert-error">{error}</div> : null}
         <div className="flex justify-end gap-2">

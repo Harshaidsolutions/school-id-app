@@ -1,3 +1,4 @@
+import { fieldProblem } from "../utils/validate";
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import axios from "axios";
 import api from "../api/client";
@@ -159,6 +160,13 @@ export function EditStudentModal({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    for (const field of fields) {
+      const problem = fieldProblem(field.key, field.label, fieldValue(field.key));
+      if (problem) {
+        setError(problem);
+        return;
+      }
+    }
     setLoading(true);
 
     const payload: Record<string, string | null> = {

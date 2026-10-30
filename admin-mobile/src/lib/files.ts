@@ -46,12 +46,12 @@ export async function takePhoto(options?: { square?: boolean }): Promise<PickedF
 }
 
 /** Gallery image(s). */
-export async function pickImages(multiple = false): Promise<PickedFile[]> {
+export async function pickImages(multiple = false, limit = 250): Promise<PickedFile[]> {
   const res = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ["images"],
     quality: 0.92,
     allowsMultipleSelection: multiple,
-    selectionLimit: multiple ? 30 : 1,
+    selectionLimit: multiple ? limit : 1,
   });
   if (res.canceled) return [];
   return res.assets.map((a, i) => ({
