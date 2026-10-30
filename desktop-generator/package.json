@@ -1,0 +1,76 @@
+{
+  "name": "msidc-desktop-generator",
+  "productName": "My School ID Card Generator",
+  "version": "1.0.0",
+  "description": "Offline ID card generator by Harsha ID Solutions",
+  "author": "Harsha ID Solutions",
+  "private": true,
+  "main": "electron/main.cjs",
+  "scripts": {
+    "sync-css": "node scripts/sync-admin-css.mjs",
+    "dev": "npm run sync-css && concurrently -k \"vite --port 5174 --strictPort\" \"wait-on http://localhost:5174 && cross-env MSIDC_DEV=1 electron .\"",
+    "build:renderer": "npm run sync-css && tsc --noEmit -p tsconfig.json && vite build",
+    "dist": "npm run build:renderer && electron-builder --win nsis msi --x64 --publish never",
+    "dist:exe": "npm run build:renderer && electron-builder --win nsis --x64 --publish never"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^5.4.296",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.1",
+    "@vitejs/plugin-react": "^5.0.4",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.0.0",
+    "electron": "^38.2.2",
+    "electron-builder": "^26.0.12",
+    "tailwindcss": "^4.1.14",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9",
+    "wait-on": "^8.0.4"
+  },
+  "build": {
+    "appId": "in.harshaidsolutions.idcardgenerator",
+    "productName": "My School ID Card Generator",
+    "copyright": "\u00a9 Harsha ID Solutions",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "dist-renderer/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis",
+        "msi"
+      ],
+      "artifactName": "MySchoolIDCard-Generator-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ID Card Generator",
+      "license": "build/license.txt",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "msi": {
+      "oneClick": false,
+      "perMachine": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "ID Card Generator"
+    }
+  }
+}

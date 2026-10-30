@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@source "./";
+@source "../../admin-web/src/generator";
+@import "./generated/admin.css";
+@import "./generated/generator.css";
+@import "./desktop.css";

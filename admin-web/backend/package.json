@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "setup:storage": "tsx scripts/setupStorage.ts",
     "migrate": "tsx scripts/migrate.ts",
+    "license:keys": "tsx scripts/genDesktopLicenseKeys.ts",
     "migrate:photos-to-s3": "tsx scripts/migratePhotosToS3.ts",
     "migrate:supabase-to-rds": "tsx scripts/migrateSupabaseToRds.ts",
     "verify:db-counts": "tsx scripts/verifyDbCounts.ts",

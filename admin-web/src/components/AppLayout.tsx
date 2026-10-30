@@ -25,6 +25,7 @@ const NAV: NavItem[] = [
   { label: "Notifications", icon: "notification", to: "/notifications" },
   { label: "Instructions & enquiries", icon: "help", to: "/workspace-help" },
   { label: "Admin Management", icon: "shield", to: "/extra-1", superOnly: true },
+  { label: "Desktop Licences", icon: "key", to: "/desktop-licenses", superOnly: true },
 ];
 
 const TITLES: Record<string, string> = {
@@ -35,6 +36,7 @@ const TITLES: Record<string, string> = {
   "/models": "Models",
   "/notifications": "Notifications",
   "/workspace-help": "Instructions & enquiries",
+  "/desktop-licenses": "Desktop Licences",
   "/id-card-generator": "ID Card Generator",
   "/brochures": "Brochures",
   "/extra-1": "Admin Management",
@@ -110,6 +112,13 @@ function SideIcon({ name }: { name: string }) {
         <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </svg>
+      );
+    case "key":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="7.5" cy="15.5" r="4.5" />
+          <path d="M10.7 12.3 20 3M16 7l3 3M14 9l2 2" />
         </svg>
       );
     case "help":
@@ -259,6 +268,26 @@ export function AppLayout() {
 
   const inOrgContext = Boolean(studentsSchoolId || instituteId || searchParams.get("organizationId"));
   const hideSidebar = (ORG_CONTEXT_PATHS.has(location.pathname) && inOrgContext) || isOrganizationDetail;
+
+  // Phones: data tables become stacked cards; label each cell with its column heading.
+  useEffect(() => {
+    const SELECTOR = "table.list-data-table, table.models-table, table.mobile-cards";
+    const label = () => {
+      document.querySelectorAll<HTMLTableElement>(SELECTOR).forEach((table) => {
+        const heads = Array.from(table.querySelectorAll("thead th")).map((th) => (th.textContent ?? "").trim());
+        table.querySelectorAll("tbody tr").forEach((tr) => {
+          Array.from(tr.children).forEach((cell, i) => {
+            const text = heads[i] ?? "";
+            if (cell.getAttribute("data-label") !== text) cell.setAttribute("data-label", text);
+          });
+        });
+      });
+    };
+    label();
+    const observer = new MutationObserver(() => label());
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -444,7 +473,7 @@ export function AppLayout() {
           <div
             className={`app-header-title min-w-0 flex-1 truncate ${
               showCenteredHeading ? "text-center" : ""
-            }`}
+            } ${isDashboard ? "app-header-title--dash" : ""}`}
           >
             {title}
           </div>

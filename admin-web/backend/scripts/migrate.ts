@@ -951,6 +951,24 @@ async function migrate() {
     ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_admin_id UUID REFERENCES users(id) ON DELETE CASCADE;
     CREATE INDEX IF NOT EXISTS notifications_target_admin ON notifications(target_admin_id, created_at DESC) WHERE target_admin_id IS NOT NULL;
   `);
+  // Offline desktop ID Card Generator licences (one computer per key)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS desktop_licenses (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      license_key TEXT NOT NULL UNIQUE,
+      customer_name TEXT NOT NULL,
+      phone TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT '',
+      machine_id TEXT,
+      machine_label TEXT,
+      activated_at TIMESTAMPTZ,
+      last_seen_version TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      expires_at TIMESTAMPTZ,
+      created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+  `);
   console.log("Migration completed successfully.");
 }
 

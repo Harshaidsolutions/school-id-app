@@ -1,3 +1,4 @@
+import {DesktopLicensesPage} from "./pages/DesktopLicensesPage";
 import {IdCardGeneratorPage} from "./pages/IdCardGeneratorPage";
 import {WorkspaceHelpPage} from "./pages/WorkspaceHelpPage";
 import { lazy, Suspense } from "react";
@@ -55,6 +56,7 @@ export default function App() {
               <Route path="/institutes/:id/edit" element={<InstituteFormPage />} />
               <Route path="/id-card-generator" element={<IdCardGeneratorPage />} />
               <Route path="/workspace-help" element={<WorkspaceHelpPage />} />
+              <Route path="/desktop-licenses" element={<DesktopLicensesPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/form-setup" element={<FormSetupPage />} />

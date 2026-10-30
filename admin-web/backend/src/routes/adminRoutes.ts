@@ -1,3 +1,4 @@
+import { createDesktopLicense, deleteDesktopLicense, listDesktopLicenses, updateDesktopLicenseStatus } from "../controllers/desktopLicenseController";
 import {photoArchiveUpload,importPhotos} from "../controllers/photoImportController";
 import {uploadInstructionMedia,messageTemplates,instructionContent,registrations,setCandidateVisibility} from "../controllers/workspaceToolsController";
 import {getSchoolParentLink, setSchoolParentFormEnabled,createSchoolParentLink} from "../controllers/schoolParentFormController";
@@ -274,6 +275,10 @@ router.post("/notifications", uploadImage.single("image"), createNotification);
 router.get("/notifications", listAllAdminNotifications);
 router.get("/notifications/unread-count", incomingUnreadCount);
 router.get("/notifications/inbox", listAdminInbox);
+router.get("/desktop-licenses", listDesktopLicenses);
+router.post("/desktop-licenses", createDesktopLicense);
+router.post("/desktop-licenses/:id/:action", updateDesktopLicenseStatus);
+router.delete("/desktop-licenses/:id", deleteDesktopLicense);
 router.post("/notifications/incoming/mark-read", markIncomingNotificationsRead);
 router.post("/notifications/:id/request-delete-otp", requestNotificationDeleteOtp);
 router.delete("/notifications/:id", deleteNotification);
