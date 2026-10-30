@@ -66,13 +66,20 @@ export function configuredCategoryFields(fields: FormFieldConfig[]): ConfiguredC
   return out;
 }
 
+/** "CLASS" → "Class", "PHOTO NUMBER" → "Photo Number" (Excel headers are often all capitals). */
+export function niceLabel(label: string): string {
+  const t = label.trim();
+  if (/[a-z]/.test(t) || !/[A-Z]/.test(t)) return t;
+  return t.toLowerCase().replace(/(^|[\s_\-/(.])([a-z])/g, (_m, p: string, c: string) => p + c.toUpperCase());
+}
+
 export function wiseActionLabel(
   action: "DOWNLOAD" | "DELETE",
   label: string,
   kind?: "Photos" | "Data"
 ): string {
   const verb = action === "DELETE" ? "Delete" : "Download";
-  const base = `${verb} ${label.trim()}-wise`;
+  const base = `${verb} ${niceLabel(label)}-wise`;
   return kind ? `${base} ${kind}` : base;
 }
 
@@ -82,7 +89,7 @@ export function allValuesLabel(label: string): string {
   if (/^group$/i.test(trimmed)) return "All Groups";
   if (/^designation$/i.test(trimmed)) return "All Designations";
   if (/^department$/i.test(trimmed)) return "All Departments";
-  return `All ${trimmed}`;
+  return `All ${niceLabel(trimmed)}`;
 }
 
 /** Class only. Section, group, and designation stay separate fields. */

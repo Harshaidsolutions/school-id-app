@@ -7,6 +7,8 @@ import {
 
   ActivityIndicator,
 
+  Alert,
+
   Image,
 
   ScrollView,
@@ -262,6 +264,24 @@ export function EditStudentScreen({ navigation, route }: Props) {
     if (!student_name) {
       setError("Student name is required.");
       return;
+    }
+
+    // Emptying a field that had data: ask first. The field is then empty everywhere
+    // (app, admin website, Excel) and the record moves to Pending Data.
+    const cleared = clearedFieldLabels(currentStudent, payload, formFields);
+    if (cleared.length > 0) {
+      const ok = await new Promise<boolean>((resolve) =>
+        Alert.alert(
+          "Are you sure?",
+          `You removed: ${cleared.join(", ")}.\n\nThis will be empty in the app, the admin website and the Excel, and the record will move to Pending Data.`,
+          [
+            { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+            { text: "Yes, save", style: "destructive", onPress: () => resolve(true) },
+          ],
+          { cancelable: true, onDismiss: () => resolve(false) }
+        )
+      );
+      if (!ok) return;
     }
 
     setSaving(true);
@@ -724,4 +744,39 @@ const styles = StyleSheet.create({
   },
 
 });
+
+const CANONICAL_CLEAR_KEYS: Array<[string, string]> = [
+  ["roll_no", "Roll No"],
+  ["dob", "Date of Birth"],
+  ["gender", "Gender"],
+  ["blood_group", "Blood Group"],
+  ["parent_name", "Parent Name"],
+  ["parent_phone", "Parent Phone"],
+  ["address", "Address"],
+];
+
+/** Labels of fields that had a value before and are empty in the payload being saved. */
+function clearedFieldLabels(
+  student: TeacherStudent,
+  payload: Record<string, unknown>,
+  formFields: Array<{ key: string; label: string; enabled: boolean }>
+): string[] {
+  const has = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== "";
+  const out = new Set<string>();
+  const before = { ...(student.extra_fields ?? {}) } as Record<string, unknown>;
+  const after = (payload.extra_fields ?? {}) as Record<string, unknown>;
+  for (const field of formFields) {
+    if (!field.enabled || field.key === "signature_upload") continue;
+    if (!(field.key in after)) continue;
+    if (has(before[field.key]) && !has(after[field.key])) out.add(field.label.trim());
+  }
+  const record = student as unknown as Record<string, unknown>;
+  // Excel-based forms keep every column in extra_fields (checked above).
+  if (formFields.some((f) => /^fld_\d+$/.test(f.key))) return [...out];
+  for (const [key, label] of CANONICAL_CLEAR_KEYS) {
+    if (!(key in payload)) continue;
+    if (has(record[key]) && !has(payload[key])) out.add(label);
+  }
+  return [...out];
+}
 

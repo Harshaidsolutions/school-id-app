@@ -24,7 +24,7 @@ import {
   assertStudentOwnedByAdmin,
   requireAdminScope,
 } from "../utils/adminScope";
-import { loadRequiredDataContext, matchesExportScope, collectRecordFacets } from "../utils/recordStatus";
+import { loadRequiredDataContext, matchesExportScope, collectRecordFacets, withPendingFlags } from "../utils/recordStatus";
 
 function wantsThumb(req: Request): boolean {
   return req.query.thumb === "1";
@@ -429,6 +429,9 @@ async function listPhotoCaptureCounts(
       if (row.capture_date) counts[row.capture_date] = row.photo_count;
     }
     const facetRows = await pool.query<{
+      id: string;
+      school_id: string | null;
+      institute_id: string | null;
       class_section: string | null;
       extra_fields: unknown;
       field_labels: unknown;
@@ -436,13 +439,12 @@ async function listPhotoCaptureCounts(
       photo_captured_at: string | null;
       updated_at: string | null;
     }>(
-      `SELECT class_section, extra_fields, field_labels, photo_url,
-              photo_captured_at, updated_at
+      `SELECT *
        FROM students
        WHERE ${whereOrg} AND app_visible = true`,
       [orgId]
     );
-    const facets = collectRecordFacets(facetRows.rows);
+    const facets = collectRecordFacets(await withPendingFlags(facetRows.rows));
     const signatureDates = await pool.query<{ capture_date: string; photo_count: number }>(
       `SELECT to_char((updated_at AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS capture_date,
               COUNT(*)::int AS photo_count

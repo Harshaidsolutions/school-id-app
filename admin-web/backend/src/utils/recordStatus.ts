@@ -317,7 +317,8 @@ export function sanitizeFieldVisibility(
   return next;
 }
 
-export type NamedCount = { name: string; count: number; key: string };
+/** count = records with a photo; total = all records; pendingData = records with missing/wrong data. */
+export type NamedCount = { name: string; count: number; key: string; total: number; pendingData: number };
 
 function fieldKind(key: string, label: string): "class" | "group" | "designation" | "department" | null {
   const text = `${label} ${key}`.toLowerCase().replace(/[^a-z0-9]+/g, " ");
@@ -333,6 +334,8 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+type Bucket = { count: number; total: number; pendingData: number; key: string };
+
 export function collectRecordFacets(
   rows: Array<{
     class_section?: string | null;
@@ -341,6 +344,7 @@ export function collectRecordFacets(
     photo_url?: string | null;
     photo_captured_at?: string | Date | null;
     updated_at?: string | Date | null;
+    pending_data?: boolean;
   }>
 ): {
   classes: NamedCount[];
@@ -350,10 +354,10 @@ export function collectRecordFacets(
   captureDates: NamedCount[];
 } {
   const buckets = {
-    class: new Map<string, { count: number; key: string }>(),
-    group: new Map<string, { count: number; key: string }>(),
-    designation: new Map<string, { count: number; key: string }>(),
-    department: new Map<string, { count: number; key: string }>(),
+    class: new Map<string, Bucket>(),
+    group: new Map<string, Bucket>(),
+    designation: new Map<string, Bucket>(),
+    department: new Map<string, Bucket>(),
   };
   const dates = new Map<string, number>();
 
@@ -380,7 +384,9 @@ export function collectRecordFacets(
       const once = `${kind}\u0000${item.value}`;
       if (counted.has(once)) continue;
       counted.add(once);
-      const current = buckets[kind].get(item.value) ?? { count: 0, key: item.key };
+      const current = buckets[kind].get(item.value) ?? { count: 0, total: 0, pendingData: 0, key: item.key };
+      current.total += 1;
+      if (row.pending_data) current.pendingData += 1;
       if (hasPhoto) current.count += 1;
       buckets[kind].set(item.value, current);
     }
@@ -390,9 +396,9 @@ export function collectRecordFacets(
     }
   }
 
-  const toList = (map: Map<string, { count: number; key: string }>): NamedCount[] =>
+  const toList = (map: Map<string, Bucket>): NamedCount[] =>
     [...map.entries()]
-      .map(([name, item]) => ({ name, count: item.count, key: item.key }))
+      .map(([name, item]) => ({ name, count: item.count, key: item.key, total: item.total, pendingData: item.pendingData }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
   return {
@@ -401,7 +407,7 @@ export function collectRecordFacets(
     designations: toList(buckets.designation),
     departments: toList(buckets.department),
     captureDates: [...dates.entries()]
-      .map(([name, count]) => ({ name, count, key: "capture_date" }))
+      .map(([name, count]) => ({ name, count, key: "capture_date", total: count, pendingData: 0 }))
       .sort((a, b) => b.name.localeCompare(a.name)),
   };
 }

@@ -1,12 +1,12 @@
 import { MAX_ZIP_MB, uploadPhotoZip, type ImportResult } from "../lib/zipUpload";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, StyleSheet, Text, View } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import api, { apiImage, errMsg } from "../api/client";
 import type { Student } from "../shared/types";
 import type { FormFieldConfig } from "../shared/formFields";
-import { activeFormFields, allValuesLabel, findClassField, findStudentNameField, isClassCategoryField, isPlainPhotoPrompt, wiseActionLabel } from "../shared/formFieldHelpers";
+import { activeFormFields, allValuesLabel, findClassField, findStudentNameField, isClassCategoryField, isPlainPhotoPrompt, niceLabel, wiseActionLabel } from "../shared/formFieldHelpers";
 import { C, F, R, S } from "../theme";
 import { Banner, Button, Check, Field, Muted, Segmented } from "../ui/kit";
 import { Select, Sheet } from "../ui/Sheet";
@@ -19,7 +19,10 @@ import { fieldProblem, isPhoneField } from "../lib/validate";
 const GENDERS = ["Male", "Female", "Other"];
 const BLOOD = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
-export type CountOption = { name: string; count: number; key?: string };
+export type CountOption = { name: string; count: number; key?: string; total?: number; pendingData?: number };
+const recordsOf = (o: CountOption) => o.total ?? o.count;
+const sumPhotos = (f?: CategoryField) => (f?.options ?? []).reduce((a, o) => a + o.count, 0);
+const sumRecords = (f?: CategoryField) => (f?.options ?? []).reduce((a, o) => a + recordsOf(o), 0);
 export type CategoryField = { label: string; key: string; options: CountOption[] };
 
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
@@ -84,9 +87,11 @@ export function RecordFormSheet({
   const [busy, setBusy] = useState(false);
   const isNew = !record;
   const hasSignature = fields.some((f) => f.key === "signature_upload");
-  const numberField = fields.find(
-    (f) => f.key === "photo_id" || /^(id|photoid|photonumber|photono|photoidnumber)$/.test(f.label.toLowerCase().replace(/[^a-z0-9]/g, ""))
-  );
+  // The photo number (photo_id, "Photo No", or the Excel "PHOTO" column that holds it) is shown once, locked.
+  const isIdentity = (f: FormFieldConfig) =>
+    f.key === "photo_id" || /^(id|photoid|photonumber|photono|photoidnumber)$/.test(f.label.toLowerCase().replace(/[^a-z0-9]/g, "")) || isPlainPhotoPrompt(f);
+  const numberField = fields.find(isIdentity);
+  const original = useRef<Record<string, string>>({});
 
   useEffect(() => {
     if (!visible) return;
@@ -113,6 +118,7 @@ export function RecordFormSheet({
       custom_3: record.custom_3 ?? "",
     };
     for (const [k, v] of Object.entries(record.extra_fields ?? {})) next[k] = v ?? "";
+    original.current = next;
     setValues(next);
   }, [visible, record]);
 
@@ -141,9 +147,29 @@ export function RecordFormSheet({
     if (classField && !val(classField.key).trim()) return setError(`${classField.label} is required.`);
     for (const f of [photo, signature]) if (f && !sizeOk(f, 10)) return setError("Photos must be under 10 MB.");
     for (const fl of fields) {
-      if (fl.key === "signature_upload" || isPlainPhotoPrompt(fl)) continue;
+      if (fl.key === "signature_upload" || isPlainPhotoPrompt(fl) || (!isNew && isIdentity(fl))) continue;
       const problem = fieldProblem(fl.key, fl.label, val(fl.key));
       if (problem) return setError(problem);
+    }
+    if (!isNew) {
+      const cleared = fields
+        .filter((fl) => fl.key !== "signature_upload" && !isIdentity(fl))
+        .filter((fl) => (original.current[fl.key] ?? "").trim() && !val(fl.key).trim())
+        .map((fl) => fl.label.trim());
+      if (cleared.length) {
+        const ok = await new Promise<boolean>((resolve) =>
+          Alert.alert(
+            "Are you sure?",
+            `You removed: ${cleared.join(", ")}.\n\nThis will be empty in the app, the website and the Excel, and the record will move to Pending Data.`,
+            [
+              { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+              { text: "Yes, save", style: "destructive", onPress: () => resolve(true) },
+            ],
+            { cancelable: true, onDismiss: () => resolve(false) }
+          )
+        );
+        if (!ok) return;
+      }
     }
     setBusy(true);
     setError(null);
@@ -182,7 +208,8 @@ export function RecordFormSheet({
           custom_3: val("custom_3").trim() || null,
           extra_fields: extra,
         };
-        for (const f of fields) if (f.key !== "signature_upload") body[f.key] = val(f.key).trim() || null;
+        for (const f of fields) if (f.key !== "signature_upload" && !isIdentity(f)) body[f.key] = val(f.key).trim() || null;
+        for (const f of fields) if (isIdentity(f)) delete extra[f.key];
         body.photo_id = record!.photo_id ?? null;
         const { data } = await api.put<{ student: Student }>(`/admin/students/${record!.id}`, body);
         saved = data.student ?? { ...record!, ...(body as Partial<Student>) };
@@ -227,8 +254,18 @@ export function RecordFormSheet({
             current={record?.photo_url ? apiImage(`/admin/students/${record.id}/photo?thumb=1&v=${encodeURIComponent(record.updated_at ?? "")}`) : null}
             hint={record?.photo_url ? "Pick a new photo to replace it." : "Optional. JPG or PNG, up to 10 MB."}
           />
+          {!isNew && (numberField || record?.photo_id) ? (
+            <Field
+              label={numberField && !isPlainPhotoPrompt(numberField) ? numberField.label : "Photo Number"}
+              value={(numberField ? val(numberField.key) : "") || record?.photo_id || ""}
+              editable={false}
+              icon="lock-closed-outline"
+              hint="The photo number cannot be changed."
+              style={{ color: C.muted }}
+            />
+          ) : null}
           {fields
-            .filter((f) => !isPlainPhotoPrompt(f) && f.key !== "signature_upload")
+            .filter((f) => !isPlainPhotoPrompt(f) && f.key !== "signature_upload" && (isNew || !isIdentity(f)))
             .map((f) => {
               if (isClassCategoryField(f) || f.key === "class_section") {
                 return f.key === "class_section" && classes.length ? (
@@ -241,10 +278,6 @@ export function RecordFormSheet({
               if (f.key === "blood_group") return <Select key={f.key} label={f.label} value={val(f.key)} onChange={(v) => set(f.key, v)} options={BLOOD.map((g) => ({ value: g, label: g }))} placeholder="Select blood group" />;
               if (f.key === "dob") return <DateField key={f.key} label={f.label} value={val(f.key)} onChange={(v) => set(f.key, v)} />;
               if (f.key === "address") return <Field key={f.key} label={f.label} value={val(f.key)} onChangeText={(t) => set(f.key, t)} multiline />;
-              if (!isNew && (f.key === "photo_id" || f.key === numberField?.key)) {
-                // The photo number links the record to its photo files — it can never be changed.
-                return <Field key={f.key} label={f.label} value={val(f.key)} editable={false} icon="lock-closed-outline" hint="The photo number cannot be changed." style={{ color: C.muted }} />;
-              }
               const phone = isPhoneField(f.key, f.label);
               return (
                 <Field
@@ -618,7 +651,7 @@ export function ExcelDownloadSheet({
           ))}
           <Choice title="Date-wise captured data" count={captureDates.reduce((a, b) => a + b.count, 0)} chevron onPress={() => setMode("date")} />
           {categoryFields.map((f, i) => (
-            <Choice key={f.key} title={wiseActionLabel("DOWNLOAD", f.label)} count={f.options.reduce((a, b) => a + b.count, 0)} chevron onPress={() => {
+            <Choice key={f.key} title={wiseActionLabel("DOWNLOAD", f.label)} count={sumRecords(f)} chevron onPress={() => {
               setFieldIndex(i);
               setValue("");
               setMode("field");
@@ -628,12 +661,12 @@ export function ExcelDownloadSheet({
       ) : mode === "date" ? (
         <>
           <BackLink onPress={() => setMode("menu")} />
-          <Select label="Capture date" value={date} onChange={setDate} options={captureDates.map((d) => ({ value: d.name, label: `${dayLabel(d.name)} — ${d.count} photos` }))} placeholder="Choose a date" />
+          <Select label="Capture date" value={date} onChange={setDate} options={captureDates.map((d) => ({ value: d.name, label: `${dayLabel(d.name)} — ${d.count} records` }))} placeholder="Choose a date" />
         </>
       ) : (
         <>
           <BackLink onPress={() => setMode("menu")} />
-          <Select label={field?.label ?? "Field"} value={value} onChange={setValue} options={[{ value: "__all__", label: allValuesLabel(field?.label ?? "Field") }, ...(field?.options ?? []).map((o) => ({ value: o.name, label: `${o.name} (${o.count})` }))]} />
+          <Select label={niceLabel(field?.label ?? "Field")} value={value} onChange={setValue} options={[{ value: "__all__", label: `${allValuesLabel(field?.label ?? "Field")} — ${sumRecords(field)} records` }, ...(field?.options ?? []).map((o) => ({ value: o.name, label: `${o.name} — ${recordsOf(o)} records` }))]} />
           <Select label="Download type" value={dataType} onChange={setDataType} options={[{ value: "all", label: "All data" }, { value: "pending-data", label: "Pending data" }, { value: "captured", label: "Captured data" }]} />
         </>
       )}
@@ -704,12 +737,12 @@ export function PhotoDownloadSheet({
       ) : null}
       {categoryFields.map((f) => (
         <View key={f.key}>
-          <Choice on={mode === f.key} title={wiseActionLabel("DOWNLOAD", f.label)} count={f.options.reduce((a, b) => a + b.count, 0)} onPress={() => {
+          <Choice on={mode === f.key} title={wiseActionLabel("DOWNLOAD", f.label)} count={sumPhotos(f)} onPress={() => {
             setMode(f.key);
             setValue("");
           }} />
           {mode === f.key ? (
-            <Select label={f.label} value={value} onChange={setValue} options={[{ value: "__all__", label: allValuesLabel(f.label) }, ...f.options.map((o) => ({ value: o.name, label: `${o.name} (${o.count})` }))]} />
+            <Select label={niceLabel(f.label)} value={value} onChange={setValue} options={[{ value: "__all__", label: `${allValuesLabel(f.label)} — ${sumPhotos(f)} photos` }, ...f.options.filter((o) => o.count > 0).map((o) => ({ value: o.name, label: `${o.name} — ${o.count} photos` }))]} />
           ) : null}
         </View>
       ))}
@@ -759,6 +792,7 @@ export function DeleteOptionsSheet({
   }, [visible]);
   const field = categoryFields[fieldIndex];
   const dates = Object.entries(photoCounts).sort(([a], [b]) => b.localeCompare(a));
+  const chosen = value && value !== "__all__" ? field?.options.find((o) => o.name === value) : undefined;
   return (
     <Sheet visible={visible} onClose={onClose} title="Delete options" subtitle="Only the set you choose is removed, after OTP confirmation.">
       {step === "menu" ? (
@@ -767,7 +801,7 @@ export function DeleteOptionsSheet({
           <Choice danger title="Delete all photos" count={counts.allPhotos} onPress={() => onChoose({ kind: "photos", label: "Delete all photos" })} />
           <Choice danger chevron title="Delete date-wise photos" count={counts.allPhotos} onPress={() => setStep("date")} />
           {categoryFields.map((f, i) => (
-            <Choice key={`p${f.key}`} danger chevron title={wiseActionLabel("DELETE", f.label, "Photos")} count={f.options.reduce((a, b) => a + b.count, 0)} onPress={() => {
+            <Choice key={`p${f.key}`} danger chevron title={wiseActionLabel("DELETE", f.label, "Photos")} count={sumPhotos(f)} onPress={() => {
               setFieldIndex(i);
               setMode("photos");
               setValue("");
@@ -779,7 +813,7 @@ export function DeleteOptionsSheet({
           <Choice danger title="Delete captured data" count={counts.capturedData} onPress={() => onChoose({ kind: "data", dataScope: "captured", label: "Delete captured data" })} />
           <Choice danger title="Delete uncaptured data" count={counts.uncapturedData} onPress={() => onChoose({ kind: "data", dataScope: "uncaptured", label: "Delete uncaptured data" })} />
           {categoryFields.map((f, i) => (
-            <Choice key={`d${f.key}`} danger chevron title={wiseActionLabel("DELETE", f.label, "Data")} count={counts.allData} onPress={() => {
+            <Choice key={`d${f.key}`} danger chevron title={wiseActionLabel("DELETE", f.label, "Data")} count={sumRecords(f)} onPress={() => {
               setFieldIndex(i);
               setMode("data");
               setValue("");
@@ -796,9 +830,28 @@ export function DeleteOptionsSheet({
       ) : (
         <>
           <BackLink onPress={() => setStep("menu")} />
-          <Select label={field?.label ?? "Field"} value={value} onChange={setValue} options={[{ value: "__all__", label: allValuesLabel(field?.label ?? "Field") }, ...(field?.options ?? []).map((o) => ({ value: o.name, label: o.name }))]} />
+          <Select
+            label={niceLabel(field?.label ?? "Field")}
+            value={value}
+            onChange={setValue}
+            options={[
+              { value: "__all__", label: `${allValuesLabel(field?.label ?? "Field")} — ${mode === "photos" ? `${sumPhotos(field)} photos` : `${sumRecords(field)} records`}` },
+              ...(field?.options ?? [])
+                .filter((o) => mode === "data" || o.count > 0)
+                .map((o) => ({ value: o.name, label: `${o.name} — ${mode === "photos" ? `${o.count} photos` : `${recordsOf(o)} records`}` })),
+            ]}
+          />
           {mode === "data" ? (
-            <Select label="Which data" value={dataScope} onChange={setDataScope} options={[{ value: "all", label: "All data" }, { value: "pending-data", label: "Pending data" }, { value: "captured", label: "Captured data" }]} />
+            <Select
+              label="Which data"
+              value={dataScope}
+              onChange={setDataScope}
+              options={[
+                { value: "all", label: `All data (${chosen ? recordsOf(chosen) : sumRecords(field)})` },
+                { value: "pending-data", label: `Pending data (${chosen ? chosen.pendingData ?? 0 : (field?.options ?? []).reduce((a, o) => a + (o.pendingData ?? 0), 0)})` },
+                { value: "captured", label: `Captured data (${chosen ? chosen.count : sumPhotos(field)})` },
+              ]}
+            />
           ) : null}
           <Button
             title="Delete"
@@ -856,9 +909,9 @@ const st = StyleSheet.create({
   errTitle: { fontFamily: F.hSemi, fontSize: 14, color: C.ink, marginBottom: 4 },
   bar: { height: 8, borderRadius: 4, backgroundColor: C.line, overflow: "hidden", marginTop: -4 },
   barFill: { height: 8, borderRadius: 4, backgroundColor: C.primary },
-  choice: { flexDirection: "row", alignItems: "center", gap: S.sm, backgroundColor: C.white, borderRadius: R.md, paddingVertical: 14, paddingHorizontal: S.md, marginBottom: 8, borderWidth: 1, borderColor: C.line },
+  choice: { flexDirection: "row", alignItems: "center", gap: S.sm, backgroundColor: C.white, borderRadius: R.md, paddingVertical: 11, paddingHorizontal: S.md, marginBottom: 6, borderWidth: 1, borderColor: C.line },
   choiceOn: { borderColor: C.primary, backgroundColor: C.primarySoft },
   choiceText: { flex: 1, fontFamily: F.bodySemi, fontSize: 14, color: C.ink },
   count: { fontFamily: F.bodySemi, fontSize: 12, color: C.muted, backgroundColor: C.primarySoft, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, overflow: "hidden" },
-  group: { fontFamily: F.bodySemi, fontSize: 12, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 },
+  group: { fontFamily: F.hSemi, fontSize: 14, color: C.ink, marginBottom: 6 },
 });

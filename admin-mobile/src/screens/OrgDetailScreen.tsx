@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { FlatList, RefreshControl, Share, StyleSheet, Text, View } from "react-native";
+import { Alert, FlatList, RefreshControl, Share, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -468,6 +468,24 @@ function SubmissionEditSheet({
       if (f.field_type === "photo") continue;
       const problem = fieldProblem(f.id, f.field_name, draft[f.id]);
       if (problem) return setError(problem);
+    }
+    const cleared = fields
+      .filter((f) => f.field_type !== "photo" && !isPhotoNumber(f.field_name))
+      .filter((f) => (row.values[f.id]?.text ?? "").trim() && !(draft[f.id] ?? "").trim())
+      .map((f) => f.field_name.trim());
+    if (cleared.length) {
+      const ok = await new Promise<boolean>((resolve) =>
+        Alert.alert(
+          "Are you sure?",
+          `You removed: ${cleared.join(", ")}.\n\nThis will be empty in the app, the website and the Excel, and the record will move to Pending Data.`,
+          [
+            { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+            { text: "Yes, save", style: "destructive", onPress: () => resolve(true) },
+          ],
+          { cancelable: true, onDismiss: () => resolve(false) }
+        )
+      );
+      if (!ok) return;
     }
     setBusy(true);
     setError(null);

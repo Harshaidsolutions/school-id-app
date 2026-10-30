@@ -849,6 +849,10 @@ export function OrganizationDetailPage() {
           onSubmit={async (event) => {
             event.preventDefault();
             if (editBusy) return;
+            const cleared = Object.keys(editDraft)
+              .filter((fieldId) => (editingRow.values[fieldId]?.text ?? "").trim() && !(editDraft[fieldId] ?? "").trim())
+              .map((fieldId) => fields.find((field) => field.id === fieldId)?.field_name ?? "a field");
+            if (cleared.length && !window.confirm(`Are you sure you want to remove: ${cleared.join(", ")}?\n\nThis will be empty in the website, the app and the Excel, and the record will move to Pending Data.`)) return;
             setEditBusy(true); setEditError(null);
             try {
               await api.patch(`/admin/organizations/${id}/submissions/${editingRow.id}`, { values: editDraft });

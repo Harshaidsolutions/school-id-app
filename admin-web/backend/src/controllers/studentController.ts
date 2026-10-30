@@ -628,7 +628,7 @@ export async function updateStudentAdmin(
     if (!student) throw new AppError("Student not found", 404);
     await assertStudentOwnedByAdmin(await requireAdminScope(req), student);
 
-    // Admins may edit photo numbers; mobile permissions remain enforced separately.
+    // The photo number can never be changed (see below).
 
     const textValue = (value: unknown): string | null | undefined => {
       if (value === undefined) return undefined;

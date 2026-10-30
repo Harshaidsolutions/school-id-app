@@ -1,10 +1,10 @@
 import { fieldProblem } from "../utils/validate";
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import axios from "axios";
 import api from "../api/client";
 import type { ApiErrorBody, Student } from "../types";
 import type { FormFieldConfig } from "../constants/formFields";
-import { activeFormFields } from "../utils/formFieldHelpers";
+import { activeFormFields, isPlainPhotoPrompt } from "../utils/formFieldHelpers";
 import {
   authenticatedStudentPhotoUrl,
   invalidateStudentPhotoCache,
@@ -27,7 +27,14 @@ export function EditStudentModal({
   onSaved: (updated: Student) => void;
 }) {
   const fields = useMemo(() => activeFormFields(formFields), [formFields]);
-  const numberField = fields.find(field => field.key === "photo_id" || /^(id|photoid|photonumber|photono|photoidnumber)$/.test(field.label.toLowerCase().replace(/[^a-z0-9]/g, "")));
+  // The photo number (photo_id, "Photo No", or the Excel "PHOTO" column that holds it) is shown once, locked.
+  const isIdentity = (field: FormFieldConfig) =>
+    field.key === "photo_id" ||
+    /^(id|photoid|photonumber|photono|photoidnumber)$/.test(field.label.toLowerCase().replace(/[^a-z0-9]/g, "")) ||
+    isPlainPhotoPrompt(field);
+  const numberField = fields.find(isIdentity);
+  const editableFields = fields.filter((field) => !isIdentity(field));
+  const original = useRef<Record<string, string>>({});
   const [values, setValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,6 +65,7 @@ export function EditStudentModal({
       }
     }
     setValues(next);
+    original.current = next;
     setSignaturePreview(student.signature_url ?? null);
   }, [student]);
 
@@ -160,12 +168,24 @@ export function EditStudentModal({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    for (const field of fields) {
+    for (const field of editableFields) {
       const problem = fieldProblem(field.key, field.label, fieldValue(field.key));
       if (problem) {
         setError(problem);
         return;
       }
+    }
+    const cleared = editableFields
+      .filter((field) => field.key !== "signature_upload")
+      .filter((field) => (original.current[field.key] ?? "").trim() && !fieldValue(field.key).trim())
+      .map((field) => field.label.trim());
+    if (
+      cleared.length > 0 &&
+      !window.confirm(
+        `Are you sure you want to remove: ${cleared.join(", ")}?\n\nThis will be empty in the website, the app and the Excel, and the record will move to Pending Data.`
+      )
+    ) {
+      return;
     }
     setLoading(true);
 
@@ -186,7 +206,7 @@ export function EditStudentModal({
     };
 
     const extraFields: Record<string, string | null> = {};
-    for (const field of fields) {
+    for (const field of editableFields) {
       if (field.key === "signature_upload") continue;
       extraFields[field.key] = fieldValue(field.key).trim() || null;
     }
@@ -194,7 +214,7 @@ export function EditStudentModal({
       ...payload,
       extra_fields: extraFields,
     };
-    for (const field of fields) {
+    for (const field of editableFields) {
       if (field.key === "signature_upload") continue;
       requestBody[field.key] = fieldValue(field.key).trim() || null;
     }
@@ -383,11 +403,24 @@ export function EditStudentModal({
               </label>
             </div>
 
-            {!numberField && student.photo_id ? <label className="block text-sm"><span className="mb-1 block font-medium">Photo Number <span className="text-xs font-normal text-text-muted">(cannot be changed)</span></span><input className="input-field cursor-not-allowed bg-content-bg text-text-muted" value={student.photo_id} readOnly disabled /></label> : null}
+            {numberField || student.photo_id ? (
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium text-text-navy">
+                  {numberField && !isPlainPhotoPrompt(numberField) ? numberField.label : "Photo Number"}{" "}
+                  <span className="text-xs font-normal text-text-muted">(cannot be changed)</span>
+                </span>
+                <input
+                  className="input-field cursor-not-allowed bg-content-bg text-text-muted"
+                  value={(numberField ? fieldValue(numberField.key) : "") || student.photo_id || ""}
+                  readOnly
+                  disabled
+                />
+              </label>
+            ) : null}
             {fields.length === 0 ? (
               <p className="text-sm text-text-muted">No Excel fields configured.</p>
             ) : (
-              fields.map((field) => renderField(field))
+              editableFields.map((field) => renderField(field))
             )}
 
             {error && <div className="alert-error">{error}</div>}

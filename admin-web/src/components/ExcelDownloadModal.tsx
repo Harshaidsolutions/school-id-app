@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { allValuesLabel, wiseActionLabel } from "../utils/formFieldHelpers";
+import { allValuesLabel, niceLabel, wiseActionLabel } from "../utils/formFieldHelpers";
 import type { CategoryField } from "./DownloadPhotosModal";
 
 type ExcelScope =
@@ -71,7 +71,7 @@ export function ExcelDownloadModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4">
-      <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+      <div className="max-h-[94vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-bold text-text-navy">Download Excel</h2>
           <button type="button" onClick={onClose} className="text-text-muted hover:text-text-navy" aria-label="Close">
@@ -85,7 +85,7 @@ export function ExcelDownloadModal({
               <button
                 key={item.scope}
                 type="button"
-                className={`w-full rounded-xl border px-4 py-3 text-left text-sm font-semibold ${
+                className={`w-full rounded-xl border px-4 py-2.5 text-left text-sm font-semibold ${
                   selectedScope === item.scope
                     ? "border-button-blue bg-blue-soft text-button-blue"
                     : "border-border bg-white text-text-navy hover:bg-content-bg"
@@ -97,7 +97,7 @@ export function ExcelDownloadModal({
             ))}
             <button
               type="button"
-              className="w-full rounded-xl border border-border bg-white px-4 py-3 text-left text-sm font-semibold text-text-navy hover:bg-content-bg"
+              className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-left text-sm font-semibold text-text-navy hover:bg-content-bg"
               onClick={() => {
                 setDate("");
                 setStep("date");
@@ -109,7 +109,7 @@ export function ExcelDownloadModal({
               <button
                 key={item.key}
                 type="button"
-                className="w-full rounded-xl border border-border bg-white px-4 py-3 text-left text-sm font-semibold text-text-navy hover:bg-content-bg"
+                className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-left text-sm font-semibold text-text-navy hover:bg-content-bg"
                 onClick={() => {
                   setFieldIndex(index);
                   setSelectedValue("");
@@ -118,7 +118,7 @@ export function ExcelDownloadModal({
                   setStep("value");
                 }}
               >
-                {wiseActionLabel("DOWNLOAD", item.label)} ({item.options.reduce((sum, option) => sum + option.count, 0)})
+                {wiseActionLabel("DOWNLOAD", item.label)} ({item.options.reduce((sum, option) => sum + (option.total ?? option.count), 0)})
               </button>
             ))}
           </div>
@@ -140,7 +140,7 @@ export function ExcelDownloadModal({
                 <option value="">Choose a date</option>
                 {captureDates.map((item) => (
                   <option key={item.name} value={item.name}>
-                    {dayLabel(item.name)} — {item.count} Photos
+                    {dayLabel(item.name)} — {item.count} records
                   </option>
                 ))}
               </select>
@@ -157,17 +157,19 @@ export function ExcelDownloadModal({
               {wiseActionLabel("DOWNLOAD", field?.label ?? "Field")}
             </p>
             <label className="block text-sm font-medium text-text-navy">
-              {field?.label ?? "Field"}
+              {niceLabel(field?.label ?? "Field")}
               <select
                 value={selectedValue}
                 onChange={(event) => setSelectedValue(event.target.value)}
                 className="input-field mt-1 w-full"
               >
                 <option value="">Choose…</option>
-                <option value="__all__">{allValuesLabel(field?.label ?? "Field")}</option>
+                <option value="__all__">
+                  {allValuesLabel(field?.label ?? "Field")} — {options.reduce((sum, item) => sum + (item.total ?? item.count), 0)} records
+                </option>
                 {options.map((item) => (
                   <option key={item.name} value={item.name}>
-                    {item.name}
+                    {item.name} — {item.total ?? item.count} records
                   </option>
                 ))}
               </select>

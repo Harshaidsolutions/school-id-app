@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { allValuesLabel, wiseActionLabel } from "../utils/formFieldHelpers";
+import { allValuesLabel, niceLabel, wiseActionLabel } from "../utils/formFieldHelpers";
 
-export type CountOption = { name: string; count: number; key?: string };
+export type CountOption = { name: string; count: number; key?: string; total?: number; pendingData?: number };
 export type CategoryField = { label: string; key: string; options: CountOption[] };
 
 type Step = "menu" | "all-type" | "dates" | "date-type" | "value" | "asset";
@@ -44,6 +44,8 @@ export function DownloadPhotosModal({
   const options = activeField?.options ?? [];
   const selectedOption = options.find((item) => item.name === selected);
   const photoDates = Object.entries(photoCounts).sort(([a], [b]) => b.localeCompare(a));
+  const allPhotoCount = Object.values(photoCounts).reduce((sum, count) => sum + count, 0);
+  const optionPhotos = options.reduce((sum, item) => sum + item.count, 0);
 
   function backToMenu() {
     setStep("menu");
@@ -54,7 +56,7 @@ export function DownloadPhotosModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4">
-      <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-bold text-text-navy">Download Photos</h2>
           <button type="button" onClick={onClose} className="text-text-muted hover:text-text-navy" aria-label="Close">
@@ -64,8 +66,8 @@ export function DownloadPhotosModal({
 
         {step === "menu" ? (
           <div className="space-y-2">
-            <MenuButton label="All Photos" onClick={() => setStep("all-type")} disabled={downloading} />
-            <MenuButton label="Date-wise Photos" onClick={() => setStep("dates")} disabled={downloading} />
+            <MenuButton label={`All Photos (${allPhotoCount})`} onClick={() => setStep("all-type")} disabled={downloading} />
+            <MenuButton label={`Date-wise Photos (${allPhotoCount})`} onClick={() => setStep("dates")} disabled={downloading} />
             {categoryFields.map((field, index) => (
               <MenuButton
                 key={field.key}
@@ -87,7 +89,7 @@ export function DownloadPhotosModal({
 
         {step === "all-type" ? (
           <AssetStep
-            title={`All Photos (${Object.values(photoCounts).reduce((sum, count) => sum + count, 0)})`}
+            title={`All Photos (${allPhotoCount})`}
             showSignature={showSignature}
             asset={asset}
             onAsset={setAsset}
@@ -107,7 +109,7 @@ export function DownloadPhotosModal({
                 <option value="">Choose a date</option>
                 {photoDates.map(([value, count]) => (
                   <option key={value} value={value} disabled={count === 0}>
-                    {dayLabel(value)} — {count} Photos
+                    {dayLabel(value)} — {count} photos
                   </option>
                 ))}
               </select>
@@ -144,18 +146,17 @@ export function DownloadPhotosModal({
               {wiseActionLabel("DOWNLOAD", activeField?.label ?? "Field")}
             </p>
             <label className="block text-sm font-medium text-text-navy">
-              {activeField?.label ?? "Field"}
+              {niceLabel(activeField?.label ?? "Field")}
               <select
                 value={selected}
                 onChange={(event) => setSelected(event.target.value)}
                 className="input-field mt-1 w-full"
               >
                 <option value="">Choose…</option>
-                <option value="__all__">{allValuesLabel(activeField?.label ?? "Field")}</option>
+                <option value="__all__">{allValuesLabel(activeField?.label ?? "Field")} — {optionPhotos} photos</option>
                 {options.map((item) => (
-                  <option key={item.name} value={item.name}>
-                    {item.name}
-                    {item.count ? ` — ${item.count} Photos` : ""}
+                  <option key={item.name} value={item.name} disabled={!item.count}>
+                    {item.name} — {item.count} photos
                   </option>
                 ))}
               </select>
@@ -256,7 +257,7 @@ function MenuButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="w-full rounded-xl border border-border bg-white px-4 py-3 text-left text-sm font-semibold text-text-navy hover:bg-content-bg disabled:opacity-50"
+      className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-left text-sm font-semibold text-text-navy hover:bg-content-bg disabled:opacity-50"
     >
       {label}
     </button>
