@@ -6,7 +6,8 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.1",
