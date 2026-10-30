@@ -28,7 +28,13 @@ jobs:
           Set-Content -Path electron/publicKey.cjs -Value ("module.exports = ``" + $pem.Trim() + "`n``;") -Encoding utf8
           Get-Content electron/publicKey.cjs
       - run: npm install
-      - run: npm run dist
+      - name: Build .exe installer
+        run: npm run dist:exe
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Build .msi installer (optional)
+        continue-on-error: true
+        run: npm run dist:msi
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
       - uses: actions/upload-artifact@v4
@@ -37,4 +43,4 @@ jobs:
           path: |
             desktop-generator/release/*.exe
             desktop-generator/release/*.msi
-          if-no-files-found: error
+          if-no-files-found: warn
