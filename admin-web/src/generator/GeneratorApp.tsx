@@ -5,20 +5,20 @@ import { HeaderBack } from "../components/HeaderBack";
 import type { Student, Template } from "../types";
 import { authenticatedStudentPhotoUrl, authenticatedStudentSignatureUrl } from "../utils/studentPhotoSrc";
 import { detectRoles } from "./columns";
-import { defaultLayout, isLayout, newImage, newText, uid } from "./defaults";
-import { exportBundle, type ExportFile } from "./exporter";
+import { blankLayout, isLayout, newImage, newText, uid } from "./defaults";
+import { exportBundle, type CardProblem, type ExportFile } from "./exporter";
 import { ensureFonts, restoreCustomFonts } from "./fonts";
-import { CARD_SIZES } from "./impose";
+import { CARD_SIZES, SHEET_SIZES } from "./impose";
 import { dataUrlToBlob, fileToDataUrl } from "./imageData";
 import { addToStore, emptyMedia, filesFromInput, filesFromZip, findMedia } from "./media";
 import { blobToBitmap, mediaLabel, type Bitmap, type MediaResolver } from "./render";
-import type { CardElement, ImageElement, Layout, MediaStore, Row, Side } from "./types";
+import type { CardElement, Layout, MediaStore, Row, Side, TextElement } from "./types";
 import { BatchPreview } from "./ui/BatchPreview";
 import { CardCanvas } from "./ui/CardCanvas";
-import { Colour, Field, Num, Properties, SHAPES, TextToolbar } from "./ui/Inspector";
+import { Field, Properties, TextToolbar } from "./ui/Inspector";
+import { niceLabel } from "../utils/formFieldHelpers";
 
 type TemplateSlot = { bitmap: Bitmap; url: string; name: string; blob: Blob; libraryId?: string } | null;
-type CardBorder = NonNullable<Layout["cardBorder"]>;
 
 function studentsToRows(students: Student[]): { columns: string[]; rows: Row[]; roles: Record<string, string> } {
   const base: [string, (s: Student) => string | null | undefined][] = [
@@ -36,7 +36,20 @@ function studentsToRows(students: Student[]): { columns: string[]; rows: Row[]; 
     return r;
   });
   const used = columns.filter((c) => rows.some((r) => r[c]));
-  return { columns: used, rows, roles: { ...detectRoles(used), admission: "Photo ID", name: "Name", class: "", classSection: "Class", father: "Parent Name", phone: "Phone" } };
+  // Left panel shows only the Excel columns (each once). The fixed keys (Photo ID, Name,
+  // Class…) stay in every row for photo matching and file names, but are not listed twice.
+  const excelLabels: string[] = [];
+  const seen = new Set<string>();
+  for (const k of extraKeys) {
+    if (k === "signature_upload") continue;
+    const label = labelFor(k);
+    const norm = label.trim().toLowerCase();
+    if (!norm || seen.has(norm) || !rows.some((r) => r[label])) continue;
+    seen.add(norm);
+    excelLabels.push(label);
+  }
+  const shown = excelLabels.length ? excelLabels : used;
+  return { columns: shown, rows, roles: { ...detectRoles(used), admission: "Photo ID", name: "Name", class: "", classSection: "Class", father: "Parent Name", phone: "Phone" } };
 }
 
 function download(file: ExportFile) {
@@ -53,8 +66,15 @@ function apiError(e: unknown, fallback: string): string {
   return msg?.message || fallback;
 }
 
-const isPhotoEl = (e: CardElement): e is ImageElement => e.kind === "image" && e.media === "photo";
-const DEFAULT_BORDER: CardBorder = { width: 0, color: "#4f46e5", radius: 3, style: "solid" };
+/** Text formatting that new text fields copy from the last text the admin styled. */
+const STYLE_KEYS = ["font", "weight", "italic", "underline", "size", "minSize", "autoShrink", "multiline", "textCase", "align", "vAlign", "letterSpacing", "lineHeight", "color", "gradient", "stroke", "w", "h"] as const;
+type TextStyle = Partial<Pick<TextElement, (typeof STYLE_KEYS)[number]>>;
+const pickStyle = (el: Partial<TextElement>): TextStyle => {
+  const out: Record<string, unknown> = {};
+  for (const k of STYLE_KEYS) if (el[k] !== undefined) out[k] = el[k];
+  return out as TextStyle;
+};
+const failedKey = (orgId: string) => `idg-failed:${orgId}`;
 
 /**
  * Simple ID card generator for one school / institute:
@@ -78,7 +98,7 @@ export function GeneratorApp() {
   const [mediaVersion, setMediaVersion] = useState(0);
   const serverBlobs = useRef(new Map<string, Blob>());
 
-  const [layout, setLayout] = useState<Layout>(() => ({ ...defaultLayout({}), cardBorder: DEFAULT_BORDER }));
+  const [layout, setLayout] = useState<Layout>(() => blankLayout());
   const [templates, setTemplates] = useState<{ front: TemplateSlot; back: TemplateSlot }>({ front: null, back: null });
   const [side, setSide] = useState<Side>("front");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -89,6 +109,10 @@ export function GeneratorApp() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [tplMenu, setTplMenu] = useState(false);
+  const textStyle = useRef<TextStyle>({});
+  const [print, setPrint] = useState({ sheetKey: "a4", landscape: false, gap: 3, margin: 8 });
+  const [failedIds, setFailedIds] = useState<string[]>([]);
+  const [onlyFailed, setOnlyFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => { void restoreCustomFonts(); }, []);
@@ -115,7 +139,13 @@ export function GeneratorApp() {
         setColumns(built.columns);
         setRows(built.rows);
         serverBlobs.current.clear();
-        setLayout((l) => (l.elements.length > 1 && l.roles.name ? { ...l, roles: built.roles, matchColumn: "Photo ID" } : { ...defaultLayout(built.roles, "Photo ID"), cardBorder: l.cardBorder }));
+        setLayout((l) => ({ ...l, roles: built.roles, matchColumn: "Photo ID" }));
+        try {
+          const saved = JSON.parse(localStorage.getItem(failedKey(orgId)) ?? "[]") as string[];
+          if (Array.isArray(saved)) setFailedIds(saved);
+        } catch {
+          /* nothing saved */
+        }
         setStatus(null);
       })
       .catch(() => say("Records could not be loaded.", "error"));
@@ -165,7 +195,11 @@ export function GeneratorApp() {
   // ---------- class selection: people of the class who have a photo ----------
   const classes = useMemo(() => Array.from(new Set(rows.map((r) => r.Class).filter(Boolean))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [rows]);
   const inClass = useMemo(() => rows.map((row, index) => ({ row, index })).filter(({ row }) => !className || row.Class === className), [rows, className]);
-  const ready = useMemo(() => inClass.filter(({ index }) => hasPhoto(index)), [inClass, hasPhoto]);
+  const readyAll = useMemo(() => inClass.filter(({ index }) => hasPhoto(index)), [inClass, hasPhoto]);
+  const ready = useMemo(
+    () => (onlyFailed && failedIds.length ? readyAll.filter(({ row }) => failedIds.includes(row["Photo ID"] ?? "")) : readyAll),
+    [readyAll, onlyFailed, failedIds]
+  );
   useEffect(() => { setPreviewIndex(0); }, [className]);
   const current = ready[Math.min(previewIndex, Math.max(0, ready.length - 1))] ?? inClass[0];
   const previewRow = current?.row ?? {};
@@ -174,8 +208,25 @@ export function GeneratorApp() {
   // ---------- layout editing ----------
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
   const patchEl = useCallback((id: string, patch: Partial<CardElement>) => {
-    setLayout((l) => ({ ...l, elements: l.elements.map((e) => (e.id === id ? ({ ...e, ...patch } as CardElement) : e)) }));
+    setLayout((l) => ({
+      ...l,
+      elements: l.elements.map((e) => {
+        if (e.id !== id) return e;
+        const next = { ...e, ...patch } as CardElement;
+        // Keep this text formatting for the next text fields added from the left panel.
+        if (next.kind === "text") {
+          const style = pickStyle(patch as Partial<TextElement>);
+          if (Object.keys(style).length) textStyle.current = { ...textStyle.current, ...style };
+        }
+        return next;
+      }),
+    }));
   }, []);
+  /** New text field using the last formatting the admin set. */
+  const styledText = (s: Side, column: string, at: Partial<TextElement> = {}) => newText(s, column, { ...textStyle.current, ...at });
+  /** Excel column added as "Label: value". */
+  const columnText = (s: Side, column: string, at: Partial<TextElement> = {}) =>
+    styledText(s, column, { prefix: `${niceLabel(column)}: `, ...at });
   const addEl = (el: CardElement) => { setLayout((l) => ({ ...l, elements: [...l.elements, el] })); setSelectedId(el.id); };
   const removeEl = (id: string) => { setLayout((l) => ({ ...l, elements: l.elements.filter((e) => e.id !== id) })); setSelectedId(null); };
   const layerEl = (id: string, dir: -1 | 1) => setLayout((l) => {
@@ -188,13 +239,6 @@ export function GeneratorApp() {
   });
   useEffect(() => { void ensureFonts(layout.elements.filter((e) => e.kind === "text").map((e) => (e as { font: string }).font)); }, [layout.elements]);
 
-  // Photo style applies to the selected photo, or to every photo on the card
-  const photoTargets = selected && isPhotoEl(selected) ? [selected] : layout.elements.filter(isPhotoEl);
-  const photoStyle = photoTargets[0];
-  const patchPhotos = (patch: Partial<ImageElement>) => photoTargets.forEach((p) => patchEl(p.id, patch));
-  const border: CardBorder = layout.cardBorder ?? DEFAULT_BORDER;
-  const setBorder = (patch: Partial<CardBorder>) => setLayout((l) => ({ ...l, cardBorder: { ...(l.cardBorder ?? DEFAULT_BORDER), ...patch } }));
-
   // ---------- templates ----------
   async function setTemplateFromBlob(target: Side, blob: Blob, name: string, libraryId?: string) {
     const bitmap = await blobToBitmap(blob, 4000);
@@ -202,7 +246,6 @@ export function GeneratorApp() {
       if (t[target]) URL.revokeObjectURL(t[target]!.url);
       return { ...t, [target]: { bitmap, url: URL.createObjectURL(blob), name, blob, libraryId } };
     });
-    setSide(target);
     const ratio = bitmap.width / bitmap.height;
     const match = CARD_SIZES.find((c) => Math.abs(c.w / c.h - ratio) / ratio < 0.04);
     if (match) setLayout((l) => ({ ...l, card: match }));
@@ -330,19 +373,38 @@ export function GeneratorApp() {
     abortRef.current = ctrl;
     try {
       await ensureFonts(layout.elements.filter((e) => e.kind === "text").map((e) => (e as { font: string }).font));
-      const file = await exportBundle({
+      const sheet = SHEET_SIZES.find((x) => x.key === print.sheetKey) ?? SHEET_SIZES[0];
+      const { file, problems } = await exportBundle({
         layout,
         rows: ready,
         columns,
         templates: { front: templates.front?.bitmap ?? null, back: templates.back?.bitmap ?? null },
         media: resolverFor,
         fileNamePattern: "{Photo ID}_{Name}",
-        jobName: `${orgName || "ID cards"}${className ? ` - ${className}` : ""}`,
+        jobName: `${orgName || "ID cards"}${className ? ` - ${className}` : ""}${onlyFailed ? " - corrected" : ""}`,
+        print: { sheet, landscape: print.landscape, gap: print.gap, margin: print.margin },
+        idColumn: "Photo ID",
+        nameColumn: "Name",
         onProgress: (done, total, label) => setBusy({ label, done, total }),
         signal: ctrl.signal,
       });
       download(file);
-      say(`${ready.length} ID cards ready — “${file.name}” downloaded (card images, A4 print PDF and details).`, "ok");
+      const ids = Array.from(new Set(problems.map((p: CardProblem) => p.id).filter(Boolean)));
+      const remaining = onlyFailed ? ids : Array.from(new Set([...ids]));
+      setFailedIds(remaining);
+      setOnlyFailed(false);
+      try {
+        if (remaining.length) localStorage.setItem(failedKey(orgId), JSON.stringify(remaining));
+        else localStorage.removeItem(failedKey(orgId));
+      } catch {
+        /* storage blocked */
+      }
+      say(
+        problems.length
+          ? `${ready.length} ID cards downloaded (Front and Back folders). ${ids.length} card(s) have text that is cut off or outside the card — see “ERRORS - cards to correct.csv” in the ZIP. Correct them, then use “Regenerate errors only”.`
+          : `${ready.length} ID cards ready — “${file.name}” downloaded (Front and Back folders, print sheets and details).`,
+        problems.length ? "error" : "ok"
+      );
     } catch (e) {
       if ((e as Error).name === "AbortError") say("Generation cancelled.", "info");
       else say(e instanceof Error ? e.message : "ID cards could not be generated.", "error");
@@ -354,16 +416,15 @@ export function GeneratorApp() {
 
   const back = orgId ? (orgKind === "school" ? `/students?schoolId=${orgId}&schoolName=${encodeURIComponent(orgName)}` : `/institute-members?instituteId=${orgId}&instituteName=${encodeURIComponent(orgName)}`) : "/schools";
   const savedDesigns = library.filter((t) => isLayout(t.config_json));
-  const plainTemplates = library.filter((t) => !isLayout(t.config_json) && t.image_url);
   const missing = inClass.length - ready.length;
   const hasBack = Boolean(templates.back) || layout.elements.some((e) => e.side === "back");
+  const sheetLabel = (SHEET_SIZES.find((x) => x.key === print.sheetKey) ?? SHEET_SIZES[0]).label;
 
   return (
-    <div className="app-page idg idg-simple">
-      <HeaderBack to={back}>← Back</HeaderBack>
-
-      {/* Top bar: school, template, bulk uploads, preview, generate */}
+    <div className="app-page idg idg-simple idg-full">
+      {/* Top bar: back, school, template uploads, bulk uploads, preview, generate */}
       <section className="idg-top card">
+        <HeaderBack to={back}>← Back</HeaderBack>
         <div className="idg-top-title">
           <span className="idg-badge" aria-hidden>ID</span>
           <div>
@@ -372,31 +433,25 @@ export function GeneratorApp() {
           </div>
         </div>
         <div className="idg-top-actions">
-          <div className="idg-menu">
-            <button type="button" className="btn-secondary" onClick={() => setTplMenu((v) => !v)} aria-expanded={tplMenu}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M12 16V8M9 11l3-3 3 3" /></svg>
-              Upload template
-            </button>
-            {tplMenu && (
-              <div className="idg-menu-pop">
-                {(["front", "back"] as Side[]).map((s) => (
-                  <label key={s} className="idg-menu-item">
-                    <input type="file" accept="image/png,image/jpeg,.pdf" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void uploadTemplate(s, f); }} />
-                    <b>{s === "front" ? "Front side" : "Back side"}{templates[s] ? " ✓" : ""}</b><small>PNG, JPG or PDF from your computer</small>
-                  </label>
-                ))}
-                {plainTemplates.length > 0 && <div className="idg-menu-label">From Templates ({side})</div>}
-                {plainTemplates.slice(0, 10).map((t) => (
-                  <button key={t.id} type="button" className="idg-menu-item" onClick={() => void loadLibraryTemplate(side, t)}><b>{t.name}</b><small>Use as {side}</small></button>
-                ))}
-                {savedDesigns.length > 0 && <div className="idg-menu-label">Saved designs</div>}
-                {savedDesigns.slice(0, 10).map((t) => (
-                  <button key={t.id} type="button" className="idg-menu-item" onClick={() => void loadLibraryTemplate("front", t)}><b>{t.name}</b><small>Template with all fields</small></button>
-                ))}
-                <button type="button" className="idg-menu-close" onClick={() => setTplMenu(false)}>Close</button>
-              </div>
-            )}
-          </div>
+          {(["front", "back"] as Side[]).map((s) => (
+            <label key={s} className="btn-secondary" title={`Upload the ${s} side design (PNG, JPG or PDF)`}>
+              <input type="file" accept="image/png,image/jpeg,.pdf" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void uploadTemplate(s, f); }} />
+              {s === "front" ? "Front side upload" : "Back side upload"}{templates[s] ? " ✓" : ""}
+            </label>
+          ))}
+          {savedDesigns.length > 0 && (
+            <div className="idg-menu">
+              <button type="button" className="btn-secondary" onClick={() => setTplMenu((v) => !v)} aria-expanded={tplMenu}>Saved designs</button>
+              {tplMenu && (
+                <div className="idg-menu-pop">
+                  {savedDesigns.slice(0, 20).map((t) => (
+                    <button key={t.id} type="button" className="idg-menu-item" onClick={() => void loadLibraryTemplate("front", t)}><b>{t.name}</b><small>Template with all fields</small></button>
+                  ))}
+                  <button type="button" className="idg-menu-close" onClick={() => setTplMenu(false)}>Close</button>
+                </div>
+              )}
+            </div>
+          )}
           <label className="btn-secondary">
             <input type="file" accept=".zip,image/*" multiple hidden onChange={(e) => { if (e.target.files?.length) void addBulk(e.target.files, "photo"); e.target.value = ""; }} />
             Bulk photos{media.photo.size ? ` · ${media.photo.size}` : ""}
@@ -406,7 +461,12 @@ export function GeneratorApp() {
             Bulk signatures{media.parentSign.size ? ` · ${media.parentSign.size}` : ""}
           </label>
           <button type="button" className="btn-secondary" disabled={!ready.length} onClick={() => setPreviewOpen(true)}>Preview</button>
-          <button type="button" className="btn-primary idg-cta" disabled={!ready.length || Boolean(busy)} onClick={() => setConfirmOpen(true)}>Generate ID cards ({ready.length})</button>
+          {failedIds.length > 0 && (
+            <button type="button" className="btn-secondary idg-errors-btn" disabled={Boolean(busy)} onClick={() => { setOnlyFailed(true); setConfirmOpen(true); }} title="Generate again only the cards that had text cut off">
+              Regenerate errors only ({failedIds.length})
+            </button>
+          )}
+          <button type="button" className="btn-primary idg-cta" disabled={!readyAll.length || Boolean(busy)} onClick={() => { setOnlyFailed(false); setConfirmOpen(true); }}>Generate ID cards ({readyAll.length})</button>
         </div>
       </section>
 
@@ -419,23 +479,23 @@ export function GeneratorApp() {
       )}
 
       <div className="idg-workspace">
-        {/* Left: columns + add field */}
+        {/* Left: Excel columns + add field */}
         <aside className="card idg-left">
           <h3>Excel columns</h3>
-          <p className="idg-muted">Drag onto the card or tap +.</p>
+          <p className="idg-muted">Tap + to add “Column: value” to the {side} card, or drag it onto a card.</p>
           <ul className="idg-columns">
             {columns.map((c) => (
               <li key={c} draggable onDragStart={(e) => { e.dataTransfer.setData("text/x-idg-column", c); e.dataTransfer.effectAllowed = "copy"; }}>
                 <span className="idg-grip" aria-hidden>⋮⋮</span>
-                <span className="idg-col-name">{c}<small>{previewRow[c] || "—"}</small></span>
-                <button type="button" onClick={() => addEl(newText(side, c, { y: 8 + (layout.elements.length % 10) * 6 }))} aria-label={`Add ${c}`}>+</button>
+                <span className="idg-col-name">{niceLabel(c)}<small>{previewRow[c] || "—"}</small></span>
+                <button type="button" onClick={() => addEl(columnText(side, c, { x: 4, y: 8 + (layout.elements.filter((e) => e.side === side).length % 12) * 6 }))} aria-label={`Add ${c}`}>+</button>
               </li>
             ))}
             {!columns.length && <li className="idg-muted">Open the generator from a school or institute to see its columns.</li>}
           </ul>
           <h3>Add field</h3>
           <div className="idg-add">
-            <button type="button" onClick={() => addEl(newText(side, "", { staticText: "Text" }))}><b>T</b>Text</button>
+            <button type="button" onClick={() => addEl(styledText(side, "", { staticText: "Text" }))}><b>T</b>Text</button>
             <label className="idg-add-upload">
               <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={async (e) => {
                 const f = e.target.files?.[0]; e.target.value = "";
@@ -450,7 +510,7 @@ export function GeneratorApp() {
           </div>
         </aside>
 
-        {/* Centre: class + toolbar + card */}
+        {/* Centre: front and back side by side */}
         <section className="card idg-center">
           <div className="idg-center-bar">
             <label className="idg-class">
@@ -460,9 +520,6 @@ export function GeneratorApp() {
                 {classes.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </label>
-            <div className="idg-seg" role="tablist" aria-label="Card side">
-              {(["front", "back"] as Side[]).map((s) => <button key={s} type="button" role="tab" aria-selected={side === s} className={side === s ? "is-on" : ""} onClick={() => { setSide(s); setSelectedId(null); }}>{s === "front" ? "Front" : "Back"}</button>)}
-            </div>
             <div className="idg-preview-nav">
               <button type="button" className="idg-tool" disabled={previewIndex <= 0} onClick={() => setPreviewIndex((i) => i - 1)} aria-label="Previous person">‹</button>
               <span>{ready.length ? Math.min(previewIndex + 1, ready.length) : 0} / {ready.length}</span>
@@ -475,78 +532,57 @@ export function GeneratorApp() {
             </div>
           </div>
           <TextToolbar el={selected?.kind === "text" ? selected : null} patch={(pt) => selected && patchEl(selected.id, pt)} />
-          <CardCanvas
-            layout={layout}
-            side={side}
-            row={previewRow}
-            template={templates[side]?.bitmap ?? null}
-            media={previewResolver}
-            selectedId={selectedId}
-            zoom={zoom}
-            onSelect={setSelectedId}
-            onChange={patchEl}
-            onDelete={removeEl}
-            onDropColumn={(c, x, y) => addEl(newText(side, c, { x: Math.max(0, x - 10), y: Math.max(0, y - 3), w: Math.min(40, layout.card.w - x + 10) }))}
-          />
-          {!templates[side] && <p className="idg-muted idg-center-hint">Use “Upload template” to put your ready-made {side} design behind the fields.</p>}
+          <div className="idg-sides">
+            {(["front", "back"] as Side[]).map((s) => (
+              <div
+                key={s}
+                className={`idg-side${side === s ? " is-active" : ""}`}
+                onPointerDownCapture={() => { if (side !== s) setSide(s); }}
+              >
+                <div className="idg-side-label">{s === "front" ? "Front" : "Back"}{side === s ? " · adding here" : ""}</div>
+                <CardCanvas
+                  layout={layout}
+                  side={s}
+                  row={previewRow}
+                  template={templates[s]?.bitmap ?? null}
+                  media={previewResolver}
+                  selectedId={selectedId}
+                  zoom={zoom}
+                  onSelect={setSelectedId}
+                  onChange={patchEl}
+                  onDelete={removeEl}
+                  onDropColumn={(c, x, y) => { setSide(s); addEl(columnText(s, c, { x: Math.max(0, x - 10), y: Math.max(0, y - 3) })); }}
+                />
+              </div>
+            ))}
+          </div>
         </section>
 
-        {/* Right: photo style, card border, selected field */}
+        {/* Right: only the controls of the selected item */}
         <aside className="card idg-right">
-          <h3>Photo shape</h3>
-          {photoStyle ? (
-            <>
-              <div className="idg-shapes" role="radiogroup" aria-label="Photo shape">
-                {SHAPES.map((s) => (
-                  <button key={s.key} type="button" role="radio" aria-checked={photoStyle.shape === s.key} className={photoStyle.shape === s.key ? "is-on" : ""} onClick={() => patchPhotos({ shape: s.key })} title={s.label}>
-                    <svg viewBox="0 0 24 24" aria-hidden><path d={s.d} /></svg>
-                  </button>
-                ))}
-              </div>
-              <h4>Photo stroke</h4>
-              <div className="idg-grid2">
-                <Field label="Thickness"><Num value={photoStyle.border.width} step={0.1} min={0} max={5} suffix="mm" onChange={(v) => patchPhotos({ border: { ...photoStyle.border, width: v } })} /></Field>
-                <Field label="Colour"><Colour label="Photo border colour" value={photoStyle.border.color} onChange={(v) => patchPhotos({ border: { ...photoStyle.border, color: v } })} /></Field>
-              </div>
-              <label className="idg-check"><input type="checkbox" checked={photoStyle.shadow.on} onChange={(e) => patchPhotos({ shadow: { ...photoStyle.shadow, on: e.target.checked } })} /> Photo shadow</label>
-            </>
-          ) : <p className="idg-muted">Add “Student photo” from the left.</p>}
-
-          <h3>Card border &amp; effects</h3>
-          <div className="idg-grid2">
-            <Field label="Border"><Num value={border.width} step={0.1} min={0} max={4} suffix="mm" onChange={(v) => setBorder({ width: v })} /></Field>
-            <Field label="Colour"><Colour label="Card border colour" value={border.color} onChange={(v) => setBorder({ color: v })} /></Field>
-            <Field label="Corners"><Num value={border.radius} step={0.5} min={0} max={10} suffix="mm" onChange={(v) => setBorder({ radius: v })} /></Field>
-            <Field label="Style">
-              <select className="input-field" value={border.style} onChange={(e) => setBorder({ style: e.target.value as CardBorder["style"] })}>
-                <option value="solid">Solid</option><option value="double">Double</option><option value="dashed">Dashed</option>
-              </select>
-            </Field>
-          </div>
-          <Field label="Card size" wide>
-            <select className="input-field" value={layout.card.key} onChange={(e) => { const c = CARD_SIZES.find((x) => x.key === e.target.value); if (c) setLayout((l) => ({ ...l, card: c })); }}>
-              {CARD_SIZES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
-              {!CARD_SIZES.some((c) => c.key === layout.card.key) && <option value={layout.card.key}>{layout.card.label}</option>}
-            </select>
-          </Field>
-
-          <h3>{selected ? (selected.kind === "text" ? `Field · ${selected.column || "Text"}` : `Field · ${selected.kind === "image" ? mediaLabel(selected.media) : selected.kind}`) : "Fields on the card"}</h3>
           {selected ? (
-            <Properties
-              el={selected}
-              columns={columns}
-              patch={(pt) => patchEl(selected.id, pt)}
-              onDelete={() => removeEl(selected.id)}
-              onDuplicate={() => addEl({ ...selected, id: uid(), x: selected.x + 2, y: selected.y + 2 } as CardElement)}
-              onLayer={(d) => layerEl(selected.id, d)}
-            />
+            <>
+              <h3>{selected.kind === "text" ? `Text · ${selected.column ? niceLabel(selected.column) : "Text"}` : selected.kind === "image" ? mediaLabel(selected.media) : selected.kind === "qr" ? "QR code" : "Barcode"}</h3>
+              <Properties
+                el={selected}
+                columns={columns}
+                patch={(pt) => patchEl(selected.id, pt)}
+                onDelete={() => removeEl(selected.id)}
+                onDuplicate={() => addEl({ ...selected, id: uid(), x: selected.x + 2, y: selected.y + 2 } as CardElement)}
+                onLayer={(d) => layerEl(selected.id, d)}
+              />
+            </>
           ) : (
-            <ul className="idg-layers">
-              {layout.elements.filter((e) => e.side === side).map((e) => (
-                <li key={e.id}><button type="button" onClick={() => setSelectedId(e.id)}>{e.kind === "text" ? e.column || `“${e.staticText}”` : e.kind === "image" ? mediaLabel(e.media) : e.kind === "qr" ? "QR code" : "Barcode"}</button></li>
-              ))}
-              {!layout.elements.some((e) => e.side === side) && <li className="idg-muted">Nothing on the {side} yet.</li>}
-            </ul>
+            <>
+              <h3>Edit</h3>
+              <p className="idg-muted">Click a text, photo or signature on a card to edit only that item here.</p>
+              <ul className="idg-layers">
+                {layout.elements.map((e) => (
+                  <li key={e.id}><button type="button" onClick={() => { setSide(e.side); setSelectedId(e.id); }}>{e.side === "front" ? "Front" : "Back"} · {e.kind === "text" ? (e.column ? niceLabel(e.column) : `“${e.staticText}”`) : e.kind === "image" ? mediaLabel(e.media) : e.kind === "qr" ? "QR code" : "Barcode"}</button></li>
+                ))}
+                {!layout.elements.length && <li className="idg-muted">The cards are empty. Add columns, text or a photo from the left.</li>}
+              </ul>
+            </>
           )}
           <div className="idg-save">
             <Field label="Design name" wide><input className="input-field" value={layout.name} onChange={(e) => setLayout((l) => ({ ...l, name: e.target.value }))} /></Field>
@@ -558,12 +594,32 @@ export function GeneratorApp() {
       {confirmOpen && (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Generate ID cards" onClick={() => setConfirmOpen(false)}>
           <div className="card workflow-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-text-navy">Generate {ready.length} ID cards?</h3>
+            <h3 className="text-lg font-bold text-text-navy">{onlyFailed ? `Regenerate ${ready.length} corrected ID cards?` : `Generate ${ready.length} ID cards?`}</h3>
             <p className="text-sm text-text-muted">
-              {orgName}{className ? ` · ${className}` : " · all classes"}. One folder (ZIP) will be downloaded with every card as a 300 DPI image,
-              an A4 print PDF with crop marks{hasBack ? " (front and back)" : ""}, and a details sheet.
+              {orgName}{className ? ` · ${className}` : " · all classes"}. One ZIP is downloaded with a <b>Front</b> folder{hasBack ? " and a Back folder" : ""} (300 DPI images),
+              print sheets with crop marks and a details sheet. If any text is cut off, an error report is added.
               {missing > 0 ? ` ${missing} without a photo are left out.` : ""}
             </p>
+            <div className="idg-grid2">
+              <Field label="Paper size">
+                <select className="input-field" value={print.sheetKey} onChange={(e) => setPrint((p) => ({ ...p, sheetKey: e.target.value }))}>
+                  {SHEET_SIZES.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Sheet direction">
+                <select className="input-field" value={print.landscape ? "landscape" : "portrait"} onChange={(e) => setPrint((p) => ({ ...p, landscape: e.target.value === "landscape" }))}>
+                  <option value="portrait">Vertical (portrait)</option>
+                  <option value="landscape">Horizontal (landscape)</option>
+                </select>
+              </Field>
+              <Field label="Gap between cards (mm)">
+                <input className="input-field" type="number" min={0} max={30} step={0.5} value={print.gap} onChange={(e) => setPrint((p) => ({ ...p, gap: Math.max(0, Math.min(30, Number(e.target.value) || 0)) }))} />
+              </Field>
+              <Field label="Sheet margin (mm)">
+                <input className="input-field" type="number" min={0} max={30} step={0.5} value={print.margin} onChange={(e) => setPrint((p) => ({ ...p, margin: Math.max(0, Math.min(30, Number(e.target.value) || 0)) }))} />
+              </Field>
+            </div>
+            <p className="text-xs text-text-muted">Print sheets: {sheetLabel}{print.landscape ? ", horizontal" : ", vertical"} · {print.gap} mm gap.</p>
             <div className="flex flex-wrap justify-end gap-2">
               <button type="button" className="btn-secondary" onClick={() => setConfirmOpen(false)}>Cancel</button>
               <button type="button" className="btn-primary" onClick={() => void generate()}>OK, generate</button>

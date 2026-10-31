@@ -333,7 +333,7 @@ export function Segmented<T extends string>({ items, value, onChange }: { items:
 }
 
 /** A password that stays hidden (••••) until the eye is tapped. */
-export function Secret({ value, style }: { value?: string | null; style?: StyleProp<TextStyle> }) {
+export function Secret({ value, style, label = "password" }: { value?: string | null; style?: StyleProp<TextStyle>; label?: string }) {
   const [show, setShow] = useState(false);
   if (!value) return <Text style={style}>—</Text>;
   return (
@@ -341,7 +341,7 @@ export function Secret({ value, style }: { value?: string | null; style?: StyleP
       <Text style={[style, { flexShrink: 1 }]} numberOfLines={1} selectable={show}>
         {show ? value : "••••••••"}
       </Text>
-      <Tap onPress={() => setShow((v) => !v)} hitSlop={10} accessibilityLabel={show ? "Hide password" : "Show password"}>
+      <Tap onPress={() => setShow((v) => !v)} hitSlop={10} accessibilityLabel={show ? `Hide ${label}` : `Show ${label}`}>
         <Ionicons name={show ? "eye-off-outline" : "eye-outline"} size={18} color={C.muted} />
       </Tap>
     </View>
@@ -448,14 +448,18 @@ export function Stat({ label, value, icon, tone = "orange", onPress, wide }: { l
   );
 }
 
-export function InfoRow({ label, value, right }: { label: string; value?: string | null; right?: ReactNode }) {
+export function InfoRow({ label, value, right, secret }: { label: string; value?: string | null; right?: ReactNode; secret?: string }) {
   return (
     <View style={st.infoRow}>
       <View style={{ flex: 1 }}>
         <Text style={st.infoLabel}>{label}</Text>
-        <Text style={st.infoValue} selectable>
-          {value?.toString().trim() ? value : "—"}
-        </Text>
+        {secret && value?.toString().trim() ? (
+          <Secret value={value} label={secret} style={st.infoValue} />
+        ) : (
+          <Text style={st.infoValue} selectable>
+            {value?.toString().trim() ? value : "—"}
+          </Text>
+        )}
       </View>
       {right}
     </View>

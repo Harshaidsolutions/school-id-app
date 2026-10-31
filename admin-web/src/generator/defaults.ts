@@ -19,8 +19,8 @@ export function newImage(side: Side, media: MediaKind, at: Partial<ImageElement>
   return {
     id: uid(), kind: "image", side, media, rotation: 0, required: media === "photo",
     x: sign ? 30 : 15, y: sign ? 74 : 14, w: sign ? 20 : 24, h: sign ? 8 : 30,
-    fit: sign || media === "logo" ? "contain" : "cover", shape: "rounded", radius: 2,
-    border: { width: media === "photo" ? 0.4 : 0, color: "#4F46E5" }, shadow: { on: false, blur: 1.5, color: "rgba(30,27,75,0.35)" },
+    fit: sign || media === "logo" ? "contain" : "cover", shape: "rect", radius: 0,
+    border: { width: 0, color: "#4F46E5" }, shadow: { on: false, blur: 1.5, color: "rgba(30,27,75,0.35)" },
     cleanSignature: sign,
     ...at,
   };
@@ -68,6 +68,20 @@ export function defaultLayout(roles: Record<string, string>, matchColumn = ""): 
     card,
     elements,
     matchColumn: matchColumn || roles.admission || roles.roll || roles.name || "",
+    matchBy: "column",
+    roles,
+    photo: { removeBg: false, bg: "#ffffff", face: true, enhance: true },
+  };
+}
+
+/** Completely blank white card (front + back): nothing until the admin adds it. */
+export function blankLayout(roles: Record<string, string> = {}, matchColumn = "Photo ID"): Layout {
+  return {
+    kind: "id-bulk-v2",
+    name: "My ID card layout",
+    card: CARD_SIZES[0],
+    elements: [],
+    matchColumn,
     matchBy: "column",
     roles,
     photo: { removeBg: false, bg: "#ffffff", face: true, enhance: true },

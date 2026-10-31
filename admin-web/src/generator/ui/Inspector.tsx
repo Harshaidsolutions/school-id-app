@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ToggleSwitch } from "../../components/ui/ToggleSwitch";
-import { GOOGLE_FONTS, SYSTEM_FONTS, addCustomFont, loadGoogleFont } from "../fonts";
+import { GOOGLE_FONTS, SYSTEM_FONTS, loadGoogleFont } from "../fonts";
 import { fileToDataUrl } from "../imageData";
 import type { BarcodeElement, CardElement, ImageElement, PhotoShape, QrElement, TextElement } from "../types";
 
@@ -57,7 +57,6 @@ export const SHAPES: { key: PhotoShape; label: string; d: string }[] = [
 
 /** Formatting toolbar above the card (text elements), like a word processor. */
 export function TextToolbar({ el, patch }: { el: TextElement | null; patch: Patch }) {
-  const [fontQuery, setFontQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const disabled = !el;
   const t = el ?? ({} as TextElement);
@@ -75,26 +74,6 @@ export function TextToolbar({ el, patch }: { el: TextElement | null; patch: Patc
         <optgroup label="Google Fonts">{GOOGLE_FONTS.map((f) => <option key={f} value={f}>{f}</option>)}</optgroup>
         <optgroup label="System">{SYSTEM_FONTS.map((f) => <option key={f} value={f}>{f}</option>)}</optgroup>
       </select>
-      <input
-        className="input-field idg-font-search"
-        placeholder="Any Google font…"
-        value={fontQuery}
-        disabled={disabled}
-        onChange={(e) => setFontQuery(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") { void pickFont(fontQuery.trim()); setFontQuery(""); } }}
-        aria-label="Type any Google font name and press Enter"
-      />
-      <label className={`idg-tool${disabled ? " is-disabled" : ""}`} title="Upload your own font (.ttf / .otf)">
-        <input type="file" accept=".ttf,.otf,.woff,.woff2" hidden disabled={disabled} onChange={async (e) => {
-          const f = e.target.files?.[0];
-          e.target.value = "";
-          if (!f) return;
-          try { const family = await addCustomFont(f); patch({ font: family } as Partial<TextElement>); }
-          catch (err) { alert(err instanceof Error ? err.message : "Font could not be loaded"); }
-        }} />
-        <svg viewBox="0 0 24 24" aria-hidden><path d="M12 16V4M7 9l5-5 5 5M4 20h16" /></svg>
-        <span className="sr-only">Upload font</span>
-      </label>
       {busy && <span className="idg-muted">Loading font…</span>}
       <span className="idg-sep" />
       <Num value={t.size ?? 9} step={0.5} min={4} max={72} suffix="pt" onChange={(v) => patch({ size: v } as Partial<TextElement>)} />
@@ -186,7 +165,6 @@ function TextProps({ el, patch, columns }: { el: TextElement; patch: Patch; colu
         <span><ToggleSwitch checked={el.autoShrink} onChange={() => p({ autoShrink: !el.autoShrink })} label="Auto-shrink long text" /> Auto-shrink long text</span>
         {el.autoShrink && <Field label="Smallest size"><Num value={el.minSize} step={0.5} min={3} max={el.size} suffix="pt" onChange={(v) => p({ minSize: v })} /></Field>}
         <span><ToggleSwitch checked={el.multiline} onChange={() => p({ multiline: !el.multiline })} label="Wrap to more lines" /> Wrap to more lines</span>
-        <span><ToggleSwitch checked={el.required} onChange={() => p({ required: !el.required })} label="Required" /> Required (pre-flight)</span>
       </div>
       <div className="idg-grid2">
         <Field label="Outline (stroke)"><Num value={el.stroke.width} step={0.1} min={0} max={4} suffix="pt" onChange={(v) => p({ stroke: { ...el.stroke, width: v } })} /></Field>
@@ -220,11 +198,7 @@ function ImageProps({ el, patch }: { el: ImageElement; patch: Patch }) {
           {el.imageData ? "Replace image" : "Upload image"}
         </label>
       ) : (
-        <Field label="Shows" wide>
-          <select className="input-field" value={el.media} onChange={(e) => p({ media: e.target.value as ImageElement["media"], cleanSignature: e.target.value === "parentSign" })}>
-            <option value="photo">Student photo</option><option value="parentSign">Signature (from bulk signatures)</option>
-          </select>
-        </Field>
+        null
       )}
       <div className="idg-shapes" role="radiogroup" aria-label="Photo shape">
         {SHAPES.map((s) => (
@@ -240,14 +214,13 @@ function ImageProps({ el, patch }: { el: ImageElement; patch: Patch }) {
             <option value="cover">Fill the shape</option><option value="contain">Show whole image</option>
           </select>
         </Field>
-        <Field label="Border"><Num value={el.border.width} step={0.1} min={0} max={5} suffix="mm" onChange={(v) => p({ border: { ...el.border, width: v } })} /></Field>
-        <Field label="Border colour"><Colour label="Border colour" value={el.border.color} onChange={(v) => p({ border: { ...el.border, color: v } })} /></Field>
+        <Field label="Photo stroke"><Num value={el.border.width} step={0.1} min={0} max={5} suffix="mm" onChange={(v) => p({ border: { ...el.border, width: v } })} /></Field>
+        <Field label="Stroke colour"><Colour label="Stroke colour" value={el.border.color} onChange={(v) => p({ border: { ...el.border, color: v } })} /></Field>
       </div>
       <div className="idg-switches">
         <span><ToggleSwitch checked={el.shadow.on} onChange={() => p({ shadow: { ...el.shadow, on: !el.shadow.on } })} label="Drop shadow" /> Drop shadow</span>
         {el.shadow.on && <Field label="Shadow size"><Num value={el.shadow.blur} step={0.5} min={0.5} max={8} suffix="mm" onChange={(v) => p({ shadow: { ...el.shadow, blur: v } })} /></Field>}
         <span><ToggleSwitch checked={el.cleanSignature} onChange={() => p({ cleanSignature: !el.cleanSignature })} label="Remove paper background" /> Remove paper background (signatures)</span>
-        <span><ToggleSwitch checked={el.required} onChange={() => p({ required: !el.required })} label="Required" /> Required (pre-flight)</span>
       </div>
     </>
   );
@@ -289,7 +262,6 @@ function QrProps({ el, patch, columns }: { el: QrElement; patch: Patch; columns:
       </div>
       <div className="idg-switches">
         <span><ToggleSwitch checked={el.logo} onChange={() => p({ logo: !el.logo })} label="School logo in the centre" /> School logo in the centre</span>
-        <span><ToggleSwitch checked={el.required} onChange={() => p({ required: !el.required })} label="Required" /> Required (pre-flight)</span>
       </div>
     </>
   );
@@ -310,7 +282,6 @@ function BarcodeProps({ el, patch, columns }: { el: BarcodeElement; patch: Patch
       </div>
       <div className="idg-switches">
         <span><ToggleSwitch checked={el.showText} onChange={() => p({ showText: !el.showText })} label="Print number under bars" /> Print number under bars</span>
-        <span><ToggleSwitch checked={el.required} onChange={() => p({ required: !el.required })} label="Required" /> Required (pre-flight)</span>
       </div>
     </>
   );

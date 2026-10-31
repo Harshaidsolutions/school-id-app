@@ -38,7 +38,6 @@ export function ModelsPage() {
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selecting, setSelecting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -52,6 +51,7 @@ export function ModelsPage() {
     text: string;
   } | null>(null);
 
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const descriptionWordCount = countWords(description);
   const isTagsTab = tab === "tag";
   const itemLabel = isTagsTab ? "Tag" : "Model";
@@ -63,7 +63,9 @@ export function ModelsPage() {
       const { data } = await api.get<{ items: CatalogItem[] }>("/admin/catalog", {
         params: { kind: tab },
       });
-      setItems(data.items.filter((item) => item.kind === tab));
+      const rows = data.items.filter((item) => item.kind === tab);
+      setItems(rows);
+      setCounts((prev) => ({ ...prev, [tab]: rows.length }));
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const body = err.response?.data as ApiErrorBody | undefined;
@@ -78,15 +80,16 @@ export function ModelsPage() {
     void load();
   }, [load]);
 
+  // Counts for both tabs (ID Card Models / ID Card Tags).
   useEffect(() => {
-    if (!videoFile) {
-      setVideoPreview(null);
-      return;
+    for (const t of MODEL_PAGE_TABS) {
+      void api
+        .get<{ items: CatalogItem[] }>("/admin/catalog", { params: { kind: t.key } })
+        .then(({ data }) => setCounts((prev) => ({ ...prev, [t.key]: data.items.filter((item) => item.kind === t.key).length })))
+        .catch(() => undefined);
     }
-    const url = URL.createObjectURL(videoFile);
-    setVideoPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [videoFile]);
+  }, []);
+
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -262,7 +265,7 @@ export function ModelsPage() {
                   : "border border-border bg-white text-text-navy hover:bg-content-bg"
               }`}
             >
-              {t.label}
+              {t.label}{counts[t.key] !== undefined ? ` (${counts[t.key]})` : ""}
             </button>
           ))}
         </div>
@@ -402,13 +405,13 @@ export function ModelsPage() {
                         <button
                           type="button"
                           onClick={() => setPreviewItem(item)}
-                          className="overflow-hidden rounded-lg ring-1 ring-border transition hover:ring-button-blue"
+                          className="overflow-hidden transition hover:opacity-90"
                           title="Click to enlarge"
                         >
                           <img
                             src={item.image_url}
                             alt={item.name}
-                            className="h-16 w-14 rounded object-contain bg-content-bg"
+                            className="h-16 w-14 object-contain bg-content-bg"
                           />
                         </button>
                       ) : (
@@ -418,7 +421,10 @@ export function ModelsPage() {
                         <video
                           src={item.video_url}
                           controls
-                          className="mt-2 h-16 w-24 rounded bg-[#EEF0FF]"
+                          playsInline
+                          preload="metadata"
+                          controlsList="nodownload"
+                          className="mt-2 h-16 w-24 bg-[#EEF0FF]"
                         />
                       ) : null}
                     </td>
@@ -462,7 +468,7 @@ export function ModelsPage() {
                     </td>
                     <td className="col-actions">
                       <div className="flex flex-col gap-1 sm:flex-row sm:gap-2">
-                        <button
+                        {isTagsTab ? null : <button
                           type="button"
                           className="text-button-blue"
                           onClick={() => {
@@ -475,7 +481,7 @@ export function ModelsPage() {
                           }}
                         >
                           Edit
-                        </button>
+                        </button>}
                         <button
                           type="button"
                           className="text-danger"
@@ -507,7 +513,7 @@ export function ModelsPage() {
               <div className="text-sm text-text-muted group-hover:text-button-blue">
                 {isTagsTab
                   ? tagFiles.length > 0
-                    ? `${tagFiles.length} file(s) selected`
+                    ? `${tagFiles.length} file${tagFiles.length === 1 ? "" : "s"} selected`
                     : "Choose one or more image files"
                   : file
                     ? file.name
@@ -540,9 +546,7 @@ export function ModelsPage() {
                   className="absolute inset-0 cursor-pointer opacity-0"
                 />
               </div>
-              {videoPreview ? (
-                <video src={videoPreview} controls className="mt-2 h-28 w-full rounded bg-[#EEF0FF]" />
-              ) : null}
+
               {videoFile ? (
                 <button type="button" className="mt-1 text-xs text-danger" onClick={() => setVideoFile(null)}>
                   Remove video
@@ -557,11 +561,14 @@ export function ModelsPage() {
             <input
               required
               value={name}
+              readOnly={Boolean(editing)}
+              disabled={Boolean(editing)}
+              title={editing ? "The image name cannot be changed" : undefined}
               onChange={(e) => {
                 setName(e.target.value);
                 setNameFromFile(false);
               }}
-              className="input-field"
+              className={`input-field ${editing ? "cursor-not-allowed bg-content-bg text-text-muted" : ""}`}
             />
             {nameFromFile && !editing && (
               <span className="mt-1 block text-xs text-text-muted">
@@ -594,13 +601,20 @@ export function ModelsPage() {
             </label>
           )}
           <div className="flex gap-2">
-            {editing && (
-              <button type="button" className="btn-secondary flex-1" onClick={resetForm}>
-                Cancel
-              </button>
-            )}
             <button type="submit" disabled={saving} className="btn-primary flex-1">
               {saving ? "Saving…" : "Submit"}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary flex-1"
+              disabled={saving || !(editing || file || videoFile || tagFiles.length || name || description)}
+              onClick={(e) => {
+                resetForm();
+                const form = (e.currentTarget as HTMLButtonElement).form;
+                form?.querySelectorAll<HTMLInputElement>('input[type="file"]').forEach((input) => (input.value = ""));
+              }}
+            >
+              Cancel
             </button>
           </div>
         </form>

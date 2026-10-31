@@ -1,7 +1,7 @@
 import { useState } from "react";
 
-/** Password stays hidden (••••) until the admin clicks the eye. */
-export function PasswordCell({ value }: { value?: string | null }) {
+/** Password (or phone / email) stays hidden (••••) until the admin clicks the eye. */
+export function PasswordCell({ value, label = "password" }: { value?: string | null; label?: string }) {
   const [show, setShow] = useState(false);
   const v = value?.trim();
   if (!v) return <span>—</span>;
@@ -12,8 +12,8 @@ export function PasswordCell({ value }: { value?: string | null }) {
         type="button"
         onClick={() => setShow((s) => !s)}
         className="shrink-0 rounded p-1 text-text-muted hover:bg-content-bg hover:text-button-blue"
-        aria-label={show ? "Hide password" : "Show password"}
-        title={show ? "Hide password" : "Show password"}
+        aria-label={show ? `Hide ${label}` : `Show ${label}`}
+        title={show ? `Hide ${label}` : `Show ${label}`}
       >
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" />
@@ -45,4 +45,9 @@ export function PasswordInput(props: React.InputHTMLAttributes<HTMLInputElement>
       </button>
     </span>
   );
+}
+
+/** Phone number / email hidden behind an eye, like passwords. */
+export function SecretCell({ value, label }: { value?: string | null; label: string }) {
+  return <PasswordCell value={value} label={label} />;
 }

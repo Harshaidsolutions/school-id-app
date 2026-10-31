@@ -11,6 +11,7 @@ import { C, CONTENT_MAX, F, R, S } from "../theme";
 import { Backdrop, Header } from "../ui/Screen";
 import { Banner, Button, Chips, Empty, Fab, Field, Loading, Muted, Pill, SearchBar } from "../ui/kit";
 import { ActionSheet, ImageViewer, Sheet } from "../ui/Sheet";
+import { VideoPlayer } from "../ui/VideoPlayer";
 import { Tap } from "../ui/Pressable";
 import { DOC_TYPES, asFormFile, pickDocuments, pickImages, sizeOk, type PickedFile } from "../lib/files";
 import type { ScreenProps } from "../navigation/types";
@@ -34,13 +35,24 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
   const [menu, setMenu] = useState<CatalogItem | null>(null);
   const [editor, setEditor] = useState<{ item: CatalogItem | null } | null>(null);
   const [viewer, setViewer] = useState<{ item: CatalogItem; index: number } | null>(null);
+  const [playing, setPlaying] = useState<CatalogItem | null>(null);
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const isBrochure = kind === "brochure";
   const title = isBrochure ? "Brochures" : "Models";
 
   const load = useCallback(async () => {
     try {
       const { data } = await api.get<{ items: CatalogItem[] }>("/admin/catalog", { params: { kind } });
-      setItems((data.items ?? []).filter((i) => i.kind === kind));
+      const rows = (data.items ?? []).filter((i) => i.kind === kind);
+      setItems(rows);
+      setCounts((p) => ({ ...p, [kind]: rows.length }));
+      if (kind !== "brochure") {
+        const other: Kind = kind === "model" ? "tag" : "model";
+        void api
+          .get<{ items: CatalogItem[] }>("/admin/catalog", { params: { kind: other } })
+          .then(({ data: d }) => setCounts((p) => ({ ...p, [other]: (d.items ?? []).filter((i) => i.kind === other).length })))
+          .catch(() => undefined);
+      }
       setError(null);
     } catch (e) {
       setError(errMsg(e, "Failed to load."));
@@ -88,8 +100,8 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
               navigation.setParams({ kind: k });
             }}
             items={[
-              { key: "model", label: "ID Card Models" },
-              { key: "tag", label: "ID Card Tags" },
+              { key: "model", label: `ID Card Models${counts.model !== undefined ? ` (${counts.model})` : ""}` },
+              { key: "tag", label: `ID Card Tags${counts.tag !== undefined ? ` (${counts.tag})` : ""}` },
             ]}
           />
         </View>
@@ -132,9 +144,9 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
                   <Image source={authedSource(item.image_url)} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
                 )}
                 {item.video_url ? (
-                  <View style={st.video}>
-                    <Ionicons name="play" size={12} color={C.white} />
-                  </View>
+                  <Tap style={st.video} onPress={() => setPlaying(item)} hitSlop={10} accessibilityLabel="Play video">
+                    <Ionicons name="play" size={14} color={C.white} />
+                  </Tap>
                 ) : null}
                 {(item.extra_image_urls?.length ?? 0) > 0 ? <Pill text={`+${item.extra_image_urls!.length}`} tone="blue" style={{ position: "absolute", top: 8, left: 8 }} /> : null}
               </View>
@@ -155,6 +167,7 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
       )}
       <Fab label={isBrochure ? "Upload" : kind === "tag" ? "Add tag" : "Add model"} icon="add" onPress={() => setEditor({ item: null })} />
 
+      <VideoPlayer url={playing?.video_url ?? null} title={playing?.name} onClose={() => setPlaying(null)} />
       <ActionSheet
         visible={Boolean(menu)}
         onClose={() => setMenu(null)}
@@ -163,8 +176,8 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
           menu
             ? [
                 { label: "View", icon: "eye-outline", onPress: () => (isPdf(menu.image_url) ? void Linking.openURL(mediaUrl(menu.image_url)!) : setViewer({ item: menu, index: 0 })) },
-                { label: "Play video", icon: "play-circle-outline", hidden: !menu.video_url, onPress: () => void Linking.openURL(mediaUrl(menu.video_url)!) },
-                { label: "Edit", icon: "create-outline", hidden: isBrochure, onPress: () => setEditor({ item: menu }) },
+                { label: "Play video", icon: "play-circle-outline", hidden: !menu.video_url, onPress: () => setPlaying(menu) },
+                { label: "Edit description", icon: "create-outline", hidden: isBrochure || kind === "tag", onPress: () => setEditor({ item: menu }) },
                 {
                   label: "Delete",
                   icon: "trash-outline",
@@ -285,14 +298,44 @@ function CatalogEditor({ kind, state, onClose, onDone }: { kind: Kind; state: { 
       visible={Boolean(state)}
       onClose={onClose}
       title={isBrochure ? "Upload brochures" : `${editing ? "Edit" : "Add"} ${isTag ? "tag" : "model"}`}
-      footer={<Button title={isBrochure ? "Upload" : "Save"} icon="checkmark" onPress={() => void save()} loading={busy} />}
+      footer={
+        <View style={{ flexDirection: "row", gap: S.sm }}>
+          <Button
+            title="Cancel"
+            variant="secondary"
+            style={{ flex: 1 }}
+            disabled={busy}
+            onPress={() => {
+              if (editing || !files.length && !video) return onClose();
+              setFiles([]);
+              setVideo(null);
+              setProgress(null);
+              setError(null);
+            }}
+          />
+          <Button title="Submit" icon="checkmark" style={{ flex: 1 }} onPress={() => void save()} loading={busy} disabled={!editing && !files.length && !video} />
+        </View>
+      }
     >
       <Banner text={error} />
       {progress ? <Banner text={progress} tone="blue" /> : null}
-      {!isBrochure ? <Field label="Name" required value={name} onChangeText={setName} /> : null}
+      {!isBrochure ? (
+        <Field
+          label="Name"
+          required
+          value={name}
+          onChangeText={setName}
+          editable={!editing}
+          icon={editing ? "lock-closed-outline" : undefined}
+          hint={editing ? "The image name cannot be changed." : undefined}
+          style={editing ? { color: C.muted } : undefined}
+        />
+      ) : null}
       {!isBrochure && !isTag ? (
         <Field label="Description" value={description} onChangeText={setDescription} multiline hint={`${words(description)} / ${MAX_WORDS} words`} />
       ) : null}
+{editing ? null : (
+        <>
       <View style={{ flexDirection: "row", gap: S.sm, marginBottom: S.sm }}>
         <Button title="Gallery" variant="soft" icon="images-outline" style={{ flex: 1 }} onPress={async () => {
           const picked = await pickImages(isTag || isBrochure);
@@ -310,33 +353,33 @@ function CatalogEditor({ kind, state, onClose, onDone }: { kind: Kind; state: { 
         }} />
       </View>
       {files.length ? (
-        files.map((f, i) => (
-          <Muted key={f.uri}>
-            {i === 0 && isTag ? "★ " : "• "}
-            {f.name}
-          </Muted>
-        ))
+        <Text style={st.selected}>
+          {files.length} file{files.length === 1 ? "" : "s"} selected
+        </Text>
       ) : (
-        <Muted>{editing ? "Keep the current image, or choose a new one." : isTag ? "Choose one or more images. The first is the main image." : "Choose an image or PDF."}</Muted>
+        <Muted>{isTag ? "Choose one or more images. The first is the main image." : isBrochure ? "Choose one or more images or PDFs." : "Choose an image or PDF."}</Muted>
       )}
       {!isBrochure && !isTag ? (
         <View style={{ marginTop: S.lg }}>
-          <Button title={video ? `Video: ${video.name}` : editing?.video_url ? "Replace video" : "Add video (optional)"} variant="secondary" icon="videocam-outline" onPress={async () => {
+          <Button title={video ? `Video: ${video.name}` : "Add video (optional)"} variant="secondary" icon="videocam-outline" onPress={async () => {
             const [v] = await pickDocuments(DOC_TYPES.video);
             if (v) setVideo(v);
           }} />
         </View>
       ) : null}
+        </>
+      )}
     </Sheet>
   );
 }
 
 const st = StyleSheet.create({
-  tile: { backgroundColor: C.surface, borderRadius: R.lg, overflow: "hidden", marginBottom: S.md, borderWidth: 1, borderColor: C.line },
+  tile: { backgroundColor: C.surface, overflow: "hidden", marginBottom: S.md },
   img: { width: "100%", aspectRatio: 1, backgroundColor: C.white },
   pdfBox: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: C.dangerSoft },
   pdfText: { fontFamily: F.h, color: C.danger, marginTop: 4 },
-  video: { position: "absolute", right: 8, bottom: 8, width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" },
+  video: { position: "absolute", right: 8, bottom: 8, width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" },
   foot: { flexDirection: "row", alignItems: "center", padding: S.sm, gap: 4 },
   name: { fontFamily: F.hSemi, fontSize: 13, color: C.ink },
+  selected: { fontFamily: F.hSemi, fontSize: 15, color: C.primaryDeep, textAlign: "center", paddingVertical: S.md, backgroundColor: C.primarySoft, borderRadius: R.md },
 });

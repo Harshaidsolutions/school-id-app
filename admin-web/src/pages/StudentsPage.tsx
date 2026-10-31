@@ -330,7 +330,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [photoImportOpen,setPhotoImportOpen]=useState(false);
   const [selecting, setSelecting] = useState(false);
-  const [visibilityView,setVisibilityView]=useState('visible');
+  const [visibilityView,setVisibilityView]=useState('all');
   const [visibilityBusy,setVisibilityBusy]=useState(false);
   async function changeVisibility(ids:string[],visible:boolean){
     if(!ids.length)return;setVisibilityBusy(true);
@@ -994,7 +994,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             </button>
 
             <div className="detail-toolbar-row2-actions">
-              <select aria-label="Record visibility" className="input-field" value={visibilityView} onChange={e=>{setVisibilityView(e.target.value);setSelectedIds(new Set());}}><option value="visible">Visible</option><option value="hidden">Hidden</option><option value="all">All records</option></select>
+              <select aria-label="Record visibility" className="input-field" value={visibilityView} onChange={e=>{setVisibilityView(e.target.value);setSelectedIds(new Set());}}><option value="all">All records</option><option value="visible">Visible</option><option value="hidden">Hidden</option></select>
               {selecting ? (
                 <button
                   type="button"
@@ -1007,9 +1007,31 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                 >
                   {bulkDeleting ? "Deleting…" : "Bulk Delete"}
                 </button>
+              ) : null}
+              {selecting ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary shrink-0 disabled:opacity-50"
+                    disabled={visibilityBusy || filtered.filter((student) => selectedIds.has(student.id)).length === 0}
+                    onClick={() => void changeVisibility(filtered.filter((student) => selectedIds.has(student.id)).map((student) => student.id), false)}
+                    title="Hide the selected records from the school app"
+                  >
+                    Hide selected
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary shrink-0 disabled:opacity-50"
+                    disabled={visibilityBusy || filtered.filter((student) => selectedIds.has(student.id)).length === 0}
+                    onClick={() => void changeVisibility(filtered.filter((student) => selectedIds.has(student.id)).map((student) => student.id), true)}
+                    title="Show the selected records in the school app"
+                  >
+                    Show selected
+                  </button>
+                </>
               ) : (
                 <button type="button" className="btn-secondary shrink-0" disabled={!orgId || filtered.length === 0} onClick={() => setSelecting(true)}>
-                  Bulk Delete
+                  Select (Hide / Delete)
                 </button>
               )}
               {selecting ? (

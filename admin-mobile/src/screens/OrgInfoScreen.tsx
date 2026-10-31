@@ -129,8 +129,8 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
             <Card>
               <InfoRow label="Name" value={org.name} />
               <InfoRow label="Year" value={org.year} right={sw("detail_year")} />
-              <InfoRow label="Phone" value={org.phone} right={sw("detail_phone")} />
-              {kind !== "institute" ? <InfoRow label="Secondary phone" value={org.phone2} right={sw("detail_phone2")} /> : null}
+              <InfoRow label="Phone" secret="phone number" value={org.phone} right={sw("detail_phone")} />
+              {kind !== "institute" ? <InfoRow label="Secondary phone" secret="phone number" value={org.phone2} right={sw("detail_phone2")} /> : null}
               <InfoRow label={kind === "institute" ? "Institute code" : kind === "school" ? "School code" : "Organisation code"} value={org.school_code ?? org.institute_code} right={sw("detail_code")} />
               <InfoRow label="Address" value={org.address} right={sw("detail_address")} />
               <InfoRow label="Instructions" value={org.instructions} right={sw("detail_instructions")} />
@@ -219,7 +219,7 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
 const st = StyleSheet.create({
   req: { flex: 1, fontFamily: F.bodySemi, fontSize: 14, color: C.ink },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: S.md },
-  tile: { flexBasis: "47%", flexGrow: 1, backgroundColor: C.surface, borderRadius: R.lg, overflow: "hidden", borderWidth: 1, borderColor: C.line },
+  tile: { flexBasis: "47%", flexGrow: 1, backgroundColor: C.surface, overflow: "hidden" },
   tileImg: { height: 130, backgroundColor: C.white },
   tileFoot: { flexDirection: "row", alignItems: "center", padding: S.sm, gap: 4 },
   opt: { flexDirection: "row", alignItems: "center", gap: S.md, backgroundColor: C.white, borderRadius: R.lg, padding: S.md, marginBottom: S.sm, borderWidth: 1, borderColor: C.line },

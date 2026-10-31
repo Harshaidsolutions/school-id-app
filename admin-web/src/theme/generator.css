@@ -278,3 +278,27 @@
 .idg-save { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
 @media (max-width: 1100px) { .idg-top-actions { width: 100%; } .idg-top-actions > * { flex: 1 1 auto; } }
 @media (max-width: 640px) { .idg-menu-pop { width: min(290px, calc(100vw - 40px)); } .idg-class { flex: 1 1 100%; } .idg-class .input-field { flex: 1; } }
+
+/* ── Full-screen generator: no page scroll, front + back side by side ── */
+.idg-fullscreen { display: flex; flex-direction: column; }
+.idg.idg-full { height: 100dvh; max-height: 100dvh; overflow: hidden; gap: 10px; padding: 10px 12px; }
+.idg-full .idg-top { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px !important; }
+.idg-full .idg-top .idg-top-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: 6px; }
+.idg-full .idg-top .btn-secondary, .idg-full .idg-top .btn-primary { min-height: 36px; padding: 0 12px; font-size: 13px; display: inline-flex; align-items: center; cursor: pointer; }
+.idg-full .idg-status, .idg-full .idg-progress { flex: none; }
+.idg-full .idg-workspace { flex: 1; min-height: 0; grid-template-columns: 240px minmax(0, 1fr) 300px; align-items: stretch; }
+.idg-full .idg-left, .idg-full .idg-right { position: static; max-height: none; height: 100%; overflow: auto; }
+.idg-full .idg-center { display: flex; flex-direction: column; min-height: 0; }
+.idg-sides { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 10px; overflow: auto;
+  background: radial-gradient(circle at 1px 1px, #dcd9f6 1px, transparent 0) 0 0 / 16px 16px, linear-gradient(160deg, #f4f3ff, #fff5f7); }
+.idg-side { min-width: 0; display: flex; flex-direction: column; border-radius: 12px; border: 2px solid transparent; transition: border-color 0.15s; }
+.idg-side.is-active { border-color: var(--brand-line, #c7d2fe); }
+.idg-side-label { padding: 6px 10px 0; font-size: 12px; font-weight: 800; color: var(--brand-deep, #4338ca); letter-spacing: 0.02em; }
+.idg-side .idg-stage { background: transparent !important; padding: 8px 8px 12px; min-height: 0; }
+.idg-errors-btn { border-color: #fda4af !important; color: #be123c !important; }
+@media (max-width: 1100px) {
+  .idg.idg-full { height: auto; max-height: none; overflow: visible; }
+  .idg-fullscreen { height: auto !important; overflow: visible !important; }
+  .idg-full .idg-workspace { grid-template-columns: 1fr; }
+  .idg-sides { grid-template-columns: 1fr; }
+}

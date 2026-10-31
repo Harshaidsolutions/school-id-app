@@ -183,7 +183,8 @@ function parseExtraFields(raw: unknown): Record<string, string | null> {
 
 function displayValue(raw: string | null | undefined): string {
 
-  if (raw == null || String(raw).trim() === "") return "—";
+  // "UNKNOWN" is an internal placeholder for a missing name / class — never show it.
+  if (raw == null || String(raw).trim() === "" || String(raw).trim().toUpperCase() === "UNKNOWN") return "—";
 
   return String(raw);
 

@@ -109,7 +109,7 @@ export function AdminsScreen() {
                   <Text style={st.name} numberOfLines={1}>
                     {a.display_name || a.username || a.email}
                   </Text>
-                  <Muted numberOfLines={1}>{a.email}</Muted>
+                  <Secret value={a.email} label="email" style={{ fontFamily: F.body, fontSize: 13, color: C.muted }} />
                   <View style={{ flexDirection: "row", gap: 6, marginTop: 4 }}>
                     <Pill text={a.is_active ? "Active" : "Inactive"} tone={a.is_active ? "green" : "grey"} />
                     {a.username ? <Pill text={`@${a.username}`} tone="blue" /> : null}
@@ -126,7 +126,7 @@ export function AdminsScreen() {
                     <Secret value={a.password_plain} style={{ fontFamily: F.bodyMed, fontSize: 13, color: C.ink }} />
                   </View>
                 ) : (
-                  <Muted>{a.phone ?? ""}</Muted>
+                  <Secret value={a.phone} label="phone number" style={{ fontFamily: F.body, fontSize: 13, color: C.muted }} />
                 )}
                 <Toggle value={a.is_active} disabled={busyId === a.id} onChange={() => void toggle(a)} />
               </View>
@@ -322,8 +322,8 @@ export function AdminDetailScreen({ route }: ScreenProps<"AdminDetail">) {
         <>
           <Card>
             <InfoRow label="Admin / company name" value={String(a?.display_name ?? "")} />
-            <InfoRow label="Email" value={String(a?.email ?? "")} />
-            <InfoRow label="Phone" value={(a?.phone as string) ?? null} />
+            <InfoRow label="Email" secret="email" value={String(a?.email ?? "")} />
+            <InfoRow label="Phone" secret="phone number" value={(a?.phone as string) ?? null} />
             <InfoRow label="WhatsApp" value={(a?.whatsapp as string) ?? null} />
             <InfoRow label="Facebook" value={(a?.facebook_url as string) ?? null} />
             <InfoRow label="Instagram" value={(a?.instagram_url as string) ?? null} />

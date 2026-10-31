@@ -5,6 +5,7 @@ import axios from "axios";
 import api from "../api/client";
 import { ImagePreviewModal } from "../components/ImagePreviewModal";
 import { OrgAppSettings } from "../components/OrgAppSettings";
+import { PasswordCell } from "../components/PasswordCell";
 import type { ApiErrorBody } from "../types";
 
 type TagSelectionItem = {
@@ -92,13 +93,26 @@ function InfoRow({
   showWhenEmpty,
   emptyLabel = "-",
   control,
+  secret,
 }: {
   label: string;
   value: string | null | undefined;
   showWhenEmpty?: boolean;
   emptyLabel?: string;
   control?: ReactNode;
+  secret?: string;
 }) {
+  if (secret && value?.trim()) {
+    return (
+      <div className="org-info-row flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
+        <div className="min-w-0">
+          <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
+          <div className="mt-1 text-sm text-text-navy"><PasswordCell value={value} label={secret} /></div>
+        </div>
+        {control}
+      </div>
+    );
+  }
   const display = value?.trim()
     ? value.trim()
     : showWhenEmpty
@@ -148,13 +162,13 @@ function ImageBlock({
       <button
         type="button"
         onClick={() => onPreview(label, url)}
-        className="block w-full max-w-md overflow-hidden rounded-xl border border-border bg-content-bg transition hover:opacity-95"
+        className="block w-full max-w-md overflow-hidden bg-content-bg transition hover:opacity-95"
         title="Click to enlarge"
       >
         <img
           src={url}
           alt={label}
-          className="mx-auto max-h-72 w-full object-contain p-3"
+          className="mx-auto max-h-72 w-full object-contain"
         />
       </button>
       {caption?.trim() ? (
@@ -461,7 +475,7 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
                 }
               />
               <InfoRow label="Year" value={institute.year} control={detailSwitch("detail_year")} />
-              <InfoRow label="Phone" value={institute.phone} control={detailSwitch("detail_phone")} />
+              <InfoRow label="Phone" secret="phone number" value={institute.phone} control={detailSwitch("detail_phone")} />
               <InfoRow label="Institute Code" value={institute.institute_code} control={detailSwitch("detail_code")} />
               <InfoRow label="Address" value={institute.address} control={detailSwitch("detail_address")} />
               <InfoRow label="Instructions" value={institute.instructions} control={detailSwitch("detail_instructions")} />
@@ -495,8 +509,8 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
                 }
               />
               <InfoRow label="Year" value={school.year} control={detailSwitch("detail_year")} />
-              <InfoRow label="Phone" value={school.phone} control={detailSwitch("detail_phone")} />
-              <InfoRow label="Secondary Phone" value={school.phone2} control={detailSwitch("detail_phone2")} />
+              <InfoRow label="Phone" secret="phone number" value={school.phone} control={detailSwitch("detail_phone")} />
+              <InfoRow label="Secondary Phone" secret="phone number" value={school.phone2} control={detailSwitch("detail_phone2")} />
               <InfoRow label={isOrganization ? "Organization Code" : "School Code"} value={school.school_code} control={detailSwitch("detail_code")} />
               <InfoRow label="Address" value={school.address} control={detailSwitch("detail_address")} />
               <InfoRow label="Instructions" value={school.instructions} control={detailSwitch("detail_instructions")} />

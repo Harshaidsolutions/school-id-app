@@ -27,12 +27,8 @@ const CARD_STYLES = [
 function MetricCard({ label, value, index, onPress }: { label: string; value: string; index: number; onPress?: () => void }) {
   const { width: screenW } = useWindowDimensions();
   const style = CARD_STYLES[index % CARD_STYLES.length];
-  const wide = index >= 4;
   return (
-    <Tap onPress={onPress} disabled={!onPress} scaleTo={onPress ? 0.97 : 1} style={[st.metric, screenW >= 900 && { flexBasis: "30%" }, { backgroundColor: style.bg }, wide && screenW < 900 && st.metricWide]}>
-      <View style={st.metricIcon}>
-        <View style={[st.metricSquare, { borderColor: style.icon }]} />
-      </View>
+    <Tap onPress={onPress} disabled={!onPress} scaleTo={onPress ? 0.97 : 1} style={[st.metric, screenW >= 900 && { flexBasis: "15%" }, { backgroundColor: style.bg }]}>
       <View style={{ flex: 1 }}>
         <Text style={st.metricLabel} numberOfLines={2}>
           {label}
@@ -49,7 +45,7 @@ function MetricCard({ label, value, index, onPress }: { label: string; value: st
 function StatusPill({ label, value, active }: { label: string; value: number; active: boolean }) {
   const { width: screenW } = useWindowDimensions();
   return (
-    <View style={[st.pill, screenW >= 700 && { flexBasis: "22%" }, { borderColor: active ? "#C7D2FE" : "#E6E4F5" }]}>
+    <View style={[st.pill, { borderColor: active ? "#C7D2FE" : "#E6E4F5" }]}>
       <Text style={[st.pillValue, { color: active ? "#0D9488" : "#77759A" }]}>{num(value)}</Text>
       <Text style={[st.pillLabel, { color: active ? "#0D9488" : "#77759A" }]}>{label}</Text>
     </View>
@@ -247,18 +243,18 @@ const st = StyleSheet.create({
   year: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
   yearText: { fontFamily: F.bodySemi, fontSize: 13, color: C.white },
   role: { fontFamily: F.bodySemi, fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 2 },
-  section: { fontFamily: F.h, fontSize: 17, color: C.ink, marginTop: S.lg, marginBottom: S.md },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: S.md },
-  metric: { flexBasis: "47%", flexGrow: 1, flexDirection: "row", gap: 10, padding: S.md, borderRadius: R.lg, minHeight: 92, ...softShadow },
+  section: { fontFamily: F.h, fontSize: 15, color: C.ink, marginTop: S.md, marginBottom: S.sm },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  metric: { flexBasis: "30%", flexGrow: 1, paddingVertical: 8, paddingHorizontal: 10, borderRadius: R.md, ...softShadow },
   metricWide: { flexBasis: "100%" },
   metricIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.8)", alignItems: "center", justifyContent: "center" },
   metricSquare: { width: 15, height: 15, borderRadius: 3, borderWidth: 1.8 },
-  metricLabel: { fontFamily: F.bodyMed, fontSize: 12, color: C.muted },
-  metricValue: { fontFamily: F.h, fontSize: 22, color: C.ink, marginTop: 2 },
-  viewAll: { fontFamily: F.bodySemi, fontSize: 11, color: C.primary, marginTop: 4 },
-  pill: { flexBasis: "47%", flexGrow: 1, alignItems: "center", paddingVertical: S.lg, borderRadius: R.lg, borderWidth: 1, backgroundColor: "#EEF0FF" },
-  pillValue: { fontFamily: F.h, fontSize: 24 },
-  pillLabel: { fontFamily: F.bodySemi, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, marginTop: 4 },
+  metricLabel: { fontFamily: F.bodyMed, fontSize: 11, color: C.muted },
+  metricValue: { fontFamily: F.h, fontSize: 18, color: C.ink, marginTop: 1 },
+  viewAll: { fontFamily: F.bodySemi, fontSize: 10, color: C.primary, marginTop: 2 },
+  pill: { flexBasis: "22%", flexGrow: 1, alignItems: "center", paddingVertical: 8, paddingHorizontal: 4, borderRadius: R.md, borderWidth: 1, backgroundColor: "#EEF0FF" },
+  pillValue: { fontFamily: F.h, fontSize: 18 },
+  pillLabel: { fontFamily: F.bodySemi, fontSize: 10, marginTop: 2, textAlign: "center" },
   contactCard: { backgroundColor: C.white, borderRadius: R.lg, borderWidth: 1, borderColor: C.line, overflow: "hidden" },
   contact: { flexDirection: "row", alignItems: "center", paddingHorizontal: S.lg, paddingVertical: 12 },
   contactLabel: { fontFamily: F.bodySemi, fontSize: 11, color: C.muted, textTransform: "uppercase" },

@@ -260,7 +260,7 @@ export function SchoolListPage() {
                     <PasswordCell value={school.owner_password} />
                   </td>
                   <td className="hidden truncate px-2 py-3 text-text lg:table-cell sm:px-3">
-                    {school.phone ?? "—"}
+                    <PasswordCell value={school.phone} label="phone number" />
                   </td>
                   <td className="hidden px-2 py-3 text-xs text-text-muted sm:table-cell sm:px-3">
                     {formatCalendarDate(school.created_at)}

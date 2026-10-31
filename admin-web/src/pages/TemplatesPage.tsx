@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
 import { SearchInput } from "../components/ui/SearchInput";
@@ -70,9 +69,7 @@ export function TemplatesPage() {
   const [selecting, setSelecting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
-  const navigate = useNavigate();
   const previewPdf = usePdfPages(previewTemplate, [1, 2]);
 
   async function loadTemplates() {
@@ -113,20 +110,6 @@ export function TemplatesPage() {
     }
   }, [tab]);
 
-  useEffect(() => {
-    const first = pendingFiles[0];
-    if (!first) {
-      setPendingPreviewUrl(null);
-      return;
-    }
-    if (first.type.startsWith("image/")) {
-      const url = URL.createObjectURL(first);
-      setPendingPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
-    }
-    setPendingPreviewUrl(null);
-    return undefined;
-  }, [pendingFiles]);
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this template?")) return;
@@ -301,14 +284,6 @@ export function TemplatesPage() {
                     <div className="flex gap-2 text-xs font-medium">
                       <button
                         type="button"
-                        className="text-button-blue hover:underline"
-                        onClick={() => navigate(`/id-card-generator?templateId=${encodeURIComponent(tpl.id)}`)}
-                        title="Open this template in the ID Card Generator"
-                      >
-                        Use
-                      </button>
-                      <button
-                        type="button"
                         className="text-danger hover:underline"
                         onClick={() => void handleDelete(tpl.id)}
                       >
@@ -336,7 +311,7 @@ export function TemplatesPage() {
                     : "bg-content-bg text-text-navy hover:bg-blue-soft"
                 }`}
               >
-                All
+                All ({templates.length})
               </button>
               {TABS.map((item) => (
                 <button
@@ -349,7 +324,7 @@ export function TemplatesPage() {
                       : "bg-content-bg text-text-navy hover:bg-blue-soft"
                   }`}
                 >
-                  {item.label.replace(" – ", " ")}
+                  {item.label.replace(" – ", " ")} ({templates.filter((t) => t.orientation === item.key).length})
                 </button>
               ))}
             </div>
@@ -379,27 +354,14 @@ export function TemplatesPage() {
             <UploadDropzone
               title={
                 pendingFiles.length > 0
-                  ? `${pendingFiles.length} file(s) selected`
+                  ? `${pendingFiles.length} file${pendingFiles.length === 1 ? "" : "s"} selected`
                   : "Click to choose template files"
               }
               hint="Select one or more JPG, PNG or PDF files (Max 10MB each)"
               uploading={uploadingTemplate}
               onClick={() => templateUploadRef.current?.click()}
             />
-            {pendingPreviewUrl && (
-              <div className="mt-3 overflow-hidden rounded-lg border border-border bg-content-bg p-2">
-                <img
-                  src={pendingPreviewUrl}
-                  alt="Selected template preview"
-                  className="mx-auto max-h-48 w-full object-contain"
-                />
-              </div>
-            )}
-            {pendingFiles.length > 0 && !pendingPreviewUrl && (
-              <div className="mt-3 rounded-lg border border-border bg-content-bg px-3 py-4 text-center text-sm text-text-muted">
-                {pendingFiles.map((f) => f.name).join(", ")}
-              </div>
-            )}
+
             <div className="mt-3 flex items-center gap-2">
               <button
                 type="button"
@@ -408,6 +370,17 @@ export function TemplatesPage() {
                 className="btn-primary flex-1"
               >
                 {uploadingTemplate ? "Submitting…" : "Submit"}
+              </button>
+              <button
+                type="button"
+                disabled={pendingFiles.length === 0 || uploadingTemplate}
+                onClick={() => {
+                  setPendingFiles([]);
+                  if (templateUploadRef.current) templateUploadRef.current.value = "";
+                }}
+                className="btn-secondary flex-1"
+              >
+                Cancel
               </button>
               {uploadSuccess && (
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#E6F7F5] text-[#0D9488]" title="Uploaded">

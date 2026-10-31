@@ -2,6 +2,7 @@ import { assertPhotoNumberFree } from "../utils/photoNumber";
 import { isPhotoIdentityLabel } from "../utils/photoIdentity";
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
+import type { PoolClient } from "pg";
 import { AppError } from "../middleware/errorHandler";
 import {
   deleteStudentPhotoFromStorage,
@@ -1312,6 +1313,10 @@ export async function deleteSchoolExcelData(
       `DELETE FROM students WHERE school_id = $1${filter.sql}`,
       [schoolId, ...filter.values]
     );
+    if (!filter.sql.trim()) {
+      // Full "Delete Excel": also remove the Excel field names (form setup + upload history).
+      await clearImportedExcelSchema(client, "school_id", schoolId);
+    }
     await client.query("COMMIT");
 
     res.status(200).json({
@@ -1409,6 +1414,10 @@ export async function deleteInstituteExcelData(
       `DELETE FROM students WHERE institute_id = $1${filter.sql}`,
       [instituteId, ...filter.values]
     );
+    if (!filter.sql.trim()) {
+      // Full "Delete Excel": also remove the Excel field names (form setup + upload history).
+      await clearImportedExcelSchema(client, "institute_id", instituteId);
+    }
     await client.query("COMMIT");
 
     res.status(200).json({
@@ -1797,3 +1806,22 @@ export async function bulkDeleteStudents(
     client.release();
   }
 }
+
+/** Removes the Excel column names (form config + import history) after all Excel data is deleted. */
+async function clearImportedExcelSchema(
+  client: PoolClient,
+  column: "school_id" | "institute_id",
+  orgId: string
+): Promise<void> {
+  await client.query(`DELETE FROM form_configs WHERE ${column} = $1::uuid`, [orgId]);
+  await client.query("SAVEPOINT clear_batches");
+  try {
+    await client.query(`DELETE FROM import_batches WHERE ${column} = $1`, [orgId]);
+  } catch {
+    // Something still points at an old batch: keep the rows but forget their headers.
+    await client.query("ROLLBACK TO SAVEPOINT clear_batches");
+    await client.query(`UPDATE import_batches SET excel_headers = NULL, excel_schema = NULL WHERE ${column} = $1`, [orgId]);
+  }
+  await client.query("RELEASE SAVEPOINT clear_batches");
+}
+

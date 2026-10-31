@@ -81,6 +81,10 @@ export function setNotificationPreference(next: boolean): Promise<void> {
             name: "School notifications",
             importance: Notifications.AndroidImportance.MAX,
             sound: "default",
+            vibrationPattern: [0, 250, 250, 250],
+            enableVibrate: true,
+            showBadge: true,
+            lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
           },
         );
       const permission = await Notifications.requestPermissionsAsync();

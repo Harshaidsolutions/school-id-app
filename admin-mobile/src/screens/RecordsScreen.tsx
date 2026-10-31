@@ -67,7 +67,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ classSection: "", photo: "", pendingData: "", capturedOn: "", group: "", designation: "", department: "" });
-  const [visibility, setVisibility] = useState<"visible" | "hidden" | "all">("visible");
+  const [visibility, setVisibility] = useState<"visible" | "hidden" | "all">("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -245,7 +245,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
   }, [visibleStudents, tab, search, filters.photo, check]);
 
   const photoList = useMemo(() => filtered.filter((s) => s.photo_url), [filtered]);
-  const activeFilterCount = Object.values(filters).filter(Boolean).length + (visibility !== "visible" ? 1 : 0);
+  const activeFilterCount = Object.values(filters).filter(Boolean).length + (visibility !== "all" ? 1 : 0);
   const selectedIds = filtered.filter((s) => selected.has(s.id)).map((s) => s.id);
 
   async function refresh() {
@@ -648,14 +648,14 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
               style={{ flex: 1 }}
               onPress={() => {
                 setFilters({ classSection: "", photo: "", pendingData: "", capturedOn: "", group: "", designation: "", department: "" });
-                setVisibility("visible");
+                setVisibility("all");
               }}
             />
             <Button title="Show results" style={{ flex: 1.4 }} onPress={() => setFilterOpen(false)} />
           </View>
         }
       >
-        <Select label="School app visibility" value={visibility} onChange={(v) => setVisibility(v as typeof visibility)} options={[{ value: "visible", label: "Visible records" }, { value: "hidden", label: "Hidden records" }, { value: "all", label: "All records" }]} />
+        <Select label="School app visibility" value={visibility} onChange={(v) => setVisibility(v as typeof visibility)} options={[{ value: "all", label: "All records" }, { value: "visible", label: "Visible records" }, { value: "hidden", label: "Hidden records" }]} />
         <Select label="Photo" value={filters.photo} onChange={(v) => setFilters((f) => ({ ...f, photo: v }))} options={[{ value: "", label: "Any" }, { value: "captured", label: "Captured" }, { value: "uncaptured", label: "Not captured" }]} />
         <Select label="Pending data" value={filters.pendingData} onChange={(v) => setFilters((f) => ({ ...f, pendingData: v }))} options={[{ value: "", label: "Any" }, { value: "yes", label: "Has missing data" }, { value: "no", label: "Complete" }]} />
         <Select label="Captured on" value={filters.capturedOn} onChange={(v) => setFilters((f) => ({ ...f, capturedOn: v }))} options={[{ value: "", label: "Any date" }, ...(facets?.captureDates ?? []).map((d) => ({ value: d.name, label: `${dayLabel(d.name)} (${d.count})` }))]} />

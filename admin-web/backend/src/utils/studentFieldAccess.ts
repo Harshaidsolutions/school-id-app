@@ -197,7 +197,7 @@ export function rowToInsertParams(
     return {
       photoId: row.photoId || extraFields.photo_id || `IMP-${row.excelRow}`,
       classSection: row.classSection || extraFields.class_section || "UNKNOWN",
-      studentName: row.studentName || extraFields.student_name || "UNKNOWN",
+      studentName: row.studentName || extraFields.student_name || "",
       parentName: row.parentName || extraFields.parent_name || null,
       parentPhone: row.parentPhone || extraFields.parent_phone || null,
       address: null,
@@ -215,7 +215,7 @@ export function rowToInsertParams(
   return {
     photoId: row.photoId || extraFields.photo_id || `IMP-${row.excelRow}`,
     classSection: row.classSection || extraFields.class_section || "UNKNOWN",
-    studentName: row.studentName || extraFields.student_name || "UNKNOWN",
+    studentName: row.studentName || extraFields.student_name || "",
     parentName: row.parentName || extraFields.parent_name || null,
     parentPhone: row.parentPhone || extraFields.parent_phone || null,
     address: row.address ?? extraFields.address ?? null,

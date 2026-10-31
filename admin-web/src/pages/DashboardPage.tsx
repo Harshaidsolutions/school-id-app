@@ -236,11 +236,11 @@ function SuperAdminContactCard() {
   return (
     <section className="dashboard-section dashboard-collection">
       <h2 className="dashboard-section-title">Super Admin contact</h2>
-      <div className="card divide-y divide-border">
+      <div className="card grid divide-y divide-border sm:grid-flow-col sm:divide-x sm:divide-y-0">
         {rows.map(([label, value]) => (
-          <div key={label} className="px-4 py-3 text-sm">
-            <div className="text-xs font-semibold uppercase text-text-muted">{label}</div>
-            <div className="mt-1 text-text-navy">{value}</div>
+          <div key={label} className="px-4 py-2 text-sm">
+            <div className="text-xs font-semibold text-text-muted">{label}</div>
+            <div className="mt-0.5 break-all text-text-navy">{value}</div>
           </div>
         ))}
       </div>

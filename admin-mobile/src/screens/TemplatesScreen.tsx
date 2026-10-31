@@ -238,7 +238,12 @@ function UploadSheet({ visible, defaultOrientation, onClose, onDone }: { visible
     }
   }
   return (
-    <Sheet visible={visible} onClose={onClose} title="Upload templates" subtitle="JPG, PNG or PDF (PDF page 1 = front, page 2 = back)" footer={<Button title={files.length ? `Upload ${files.length}` : "Upload"} icon="cloud-upload-outline" onPress={() => void go()} loading={busy} disabled={!files.length} />}>
+    <Sheet visible={visible} onClose={onClose} title="Upload templates" subtitle="JPG, PNG or PDF (PDF page 1 = front, page 2 = back)" footer={
+        <View style={{ flexDirection: "row", gap: S.sm }}>
+          <Button title="Cancel" variant="secondary" style={{ flex: 1 }} disabled={busy} onPress={() => (files.length ? setFiles([]) : onClose())} />
+          <Button title="Submit" icon="cloud-upload-outline" style={{ flex: 1 }} onPress={() => void go()} loading={busy} disabled={!files.length} />
+        </View>
+      }>
       <Banner text={error} />
       {progress ? <Banner text={progress} tone="blue" /> : null}
       <Select label="Card type" value={orientation} onChange={setOrientation} options={TEMPLATE_TABS.map((t) => ({ value: t.key, label: t.label }))} />
@@ -246,9 +251,11 @@ function UploadSheet({ visible, defaultOrientation, onClose, onDone }: { visible
         <Button title="Gallery images" variant="soft" icon="images-outline" style={{ flex: 1 }} onPress={async () => setFiles(await pickImages(true))} />
         <Button title="Files / PDF" variant="soft" icon="document-outline" style={{ flex: 1 }} onPress={async () => setFiles(await pickDocuments(DOC_TYPES.imageOrPdf, true))} />
       </View>
-      {files.map((f) => (
-        <Muted key={f.uri}>• {f.name}</Muted>
-      ))}
+      {files.length ? (
+        <Text style={{ fontFamily: F.hSemi, fontSize: 15, color: C.primaryDeep, textAlign: "center", paddingVertical: S.md, backgroundColor: C.primarySoft, borderRadius: R.md }}>
+          {files.length} file{files.length === 1 ? "" : "s"} selected
+        </Text>
+      ) : null}
     </Sheet>
   );
 }
@@ -291,7 +298,7 @@ function RenameSheet({ t, onClose, onDone }: { t: Template | null; onClose: () =
 }
 
 const st = StyleSheet.create({
-  tile: { backgroundColor: C.surface, borderRadius: R.lg, overflow: "hidden", marginBottom: S.md, borderWidth: 1, borderColor: C.line },
+  tile: { backgroundColor: C.surface, overflow: "hidden", marginBottom: S.md },
   img: { width: "100%", backgroundColor: C.white },
   pdf: { position: "absolute", top: 8, left: 8, backgroundColor: C.danger, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   pdfText: { color: C.white, fontFamily: F.bodySemi, fontSize: 10 },

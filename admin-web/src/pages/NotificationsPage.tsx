@@ -72,10 +72,18 @@ export function NotificationsPage() {
     }
   }
 
-  const sentNotifications = useMemo(
-    () => notifications.filter((item) => item.audience !== "super_admin"),
-    [notifications]
-  );
+  const [sentSearch, setSentSearch] = useState("");
+  // Sent list, filtered by school / college / institute name (or title).
+  const sentNotifications = useMemo(() => {
+    const q = sentSearch.trim().toLowerCase();
+    return notifications
+      .filter((item) => item.audience !== "super_admin")
+      .filter(
+        (item) =>
+          !q ||
+          [item.school_name, item.institute_name, item.title].some((v) => (v ?? "").toLowerCase().includes(q))
+      );
+  }, [notifications, sentSearch]);
 
   useEffect(() => {
     void (async () => {
@@ -433,7 +441,17 @@ export function NotificationsPage() {
       )}
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-text-navy">Sent Notifications</h2>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+          <h2 className="text-lg font-semibold text-text-navy">Sent Notifications</h2>
+          <input
+            type="search"
+            value={sentSearch}
+            onChange={(e) => setSentSearch(e.target.value)}
+            placeholder="Search by school / college name…"
+            aria-label="Search sent notifications by school or college name"
+            className="input-field h-10 w-full max-w-xs"
+          />
+        </div>
         {!loading && sentNotifications.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
             <BulkModeButtons
@@ -473,7 +491,7 @@ export function NotificationsPage() {
         )}
         {!loading && sentNotifications.length === 0 && (
           <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-10 text-center text-sm text-text-muted">
-            No notifications sent yet. Compose one above to get started.
+            {sentSearch.trim() ? "No sent notifications match this school / college name." : "No notifications sent yet. Compose one above to get started."}
           </div>
         )}
         {sentNotifications.map((n) => (

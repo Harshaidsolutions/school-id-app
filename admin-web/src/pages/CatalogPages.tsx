@@ -34,6 +34,7 @@ export function CatalogGridPage({
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<CatalogItem | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   async function load() {
     setLoading(true);
@@ -120,6 +121,9 @@ export function CatalogGridPage({
             placeholder={searchPlaceholder}
             className="min-w-[12rem] flex-1"
           />
+          <span className="rounded-full bg-blue-soft px-3 py-1 text-xs font-semibold text-button-blue">
+            {kind === "brochure" ? "Brochures" : "Items"}: {items.length}
+          </span>
           {kind === "brochure" && (selecting || filtered.length > 0) ? (
             <BulkModeButtons
               selecting={selecting}
@@ -228,11 +232,27 @@ export function CatalogGridPage({
       <aside className="split-layout-side split-layout-side-sticky panel-right">
         <h3 className="mb-3 text-sm font-semibold text-text-navy">Upload Photo</h3>
         <UploadDropzone
-          title="Click to upload"
+          title={pendingFiles.length ? `${pendingFiles.length} file${pendingFiles.length === 1 ? "" : "s"} selected` : "Click to choose files"}
           hint="Select one or more JPG, PNG or PDF files (Max 10MB each)"
           uploading={uploading}
           onClick={() => inputRef.current?.click()}
         />
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            type="button"
+            className="btn-primary flex-1"
+            disabled={!pendingFiles.length || uploading}
+            onClick={() => {
+              const files = pendingFiles;
+              void handleUpload(files).then(() => setPendingFiles([]));
+            }}
+          >
+            {uploading ? "Submitting…" : "Submit"}
+          </button>
+          <button type="button" className="btn-secondary flex-1" disabled={!pendingFiles.length || uploading} onClick={() => setPendingFiles([])}>
+            Cancel
+          </button>
+        </div>
         <input
           ref={inputRef}
           type="file"
@@ -242,7 +262,7 @@ export function CatalogGridPage({
           onChange={(e) => {
             const files = Array.from(e.target.files ?? []);
             e.target.value = "";
-            if (files.length > 0) void handleUpload(files);
+            setPendingFiles(files);
           }}
         />
       </aside>

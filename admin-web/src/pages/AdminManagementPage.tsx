@@ -512,8 +512,8 @@ export function AdminManagementPage() {
                   <td className="px-3 py-2 font-mono text-xs break-all">
                     <PasswordCell value={a.password_plain} />
                   </td>
-                  <td className="px-3 py-2">{a.email}</td>
-                  <td className="px-3 py-2">{a.phone ?? "—"}</td>
+                  <td className="px-3 py-2"><PasswordCell value={a.email} label="email" /></td>
+                  <td className="px-3 py-2"><PasswordCell value={a.phone} label="phone number" /></td>
 
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">

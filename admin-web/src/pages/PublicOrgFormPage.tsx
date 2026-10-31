@@ -61,11 +61,11 @@ export function PublicOrgFormPage({ school = false }: {school?:boolean}) {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-lg items-center px-4 py-8">
       <div className="public-form-card w-full rounded-2xl border border-border bg-white p-6 shadow-sm">
-        <div className="public-form-brand">
+        <div className="public-form-brand public-form-brand-lg">
           <img src="/brand-wordmark.png" alt="My School ID Card" />
-          <span>{school ? "Student details collection" : "Details collection"}</span>
         </div>
-        <h1 className="text-xl font-bold text-[#4F46E5]">{organizationName || (school ? "School student form" : "Organization form")}</h1>
+        <h1 className="text-center text-2xl font-bold text-[#4F46E5]">{school ? "Student details for ID card" : "Details for ID card"}</h1>
+        {organizationName ? <p className="mt-1 text-center text-base font-semibold text-text-navy">{organizationName}</p> : null}
         {loading ? <p className="mt-4 text-sm text-text-muted">Loading…</p> : null}
         {done ? <p className="mt-4 text-sm font-medium text-[#4F46E5]">Submitted successfully. Your details have been sent to the {school ? "school" : "organization"}.</p> : null}
         {!loading && !done ? (

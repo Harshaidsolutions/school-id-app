@@ -236,11 +236,10 @@ export function OrgListScreen({ kind, back = false }: { kind: ListKind; back?: b
                       <Ionicons name="calendar-outline" size={12} color={C.muted} /> {fmtDate(item.created_at)}
                     </Muted>
                     {item.phone ? (
-                      <Tap onPress={() => void Linking.openURL(`tel:${item.phone}`)} hitSlop={6}>
-                        <Text style={st.phone}>
-                          <Ionicons name="call-outline" size={12} color={C.accentDeep} /> {item.phone}
-                        </Text>
-                      </Tap>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <Ionicons name="call-outline" size={12} color={C.accentDeep} />
+                        <Secret value={item.phone} label="phone number" style={st.phone} />
+                      </View>
                     ) : null}
                   </View>
                   {!selecting ? (

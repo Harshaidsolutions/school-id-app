@@ -7,6 +7,7 @@ import api from "../api/client";
 import { BulkModeButtons } from "./BulkActionBar";
 import { AdminAvatar } from "./AdminAvatar";
 import { OtpConfirmModal } from "./OtpConfirmModal";
+import { PasswordCell } from "./PasswordCell";
 
 interface NavItem {
   label: string;
@@ -205,14 +206,33 @@ function parseNoticeDetails(message: string): { label: string; value: string }[]
   return rows;
 }
 
+/** Notification detail rows: type, name, username, password (no creator, date/time is in the header). */
+function orderedNoticeRows(details: { label: string; value: string }[]): { label: string; value: string; secret?: boolean }[] {
+  const find = (re: RegExp) => details.find((row) => re.test(row.label.trim()));
+  const org = find(/^(school|institute|organization|college)$/i);
+  const out: { label: string; value: string; secret?: boolean }[] = [];
+  if (org) {
+    out.push({ label: "Type", value: org.label.trim() });
+    out.push({ label: `${org.label.trim()} name`, value: org.value });
+  }
+  const user = find(/^username$/i);
+  if (user) out.push({ label: "Username", value: user.value });
+  const pass = find(/^password$/i);
+  if (pass) out.push({ label: "Password", value: pass.value, secret: true });
+  if (!out.length) return details.filter((row) => !/^(created by|date|time)$/i.test(row.label.trim()));
+  return out;
+}
+
 function noticeHeadline(
   title: string,
   details: { label: string; value: string }[]
 ): string {
-  const named = title.match(/^(.*) created a new (school|institute)$/i);
-  if (named?.[1]?.trim()) return named[1].trim();
-  if (/^new (school|institute) created$/i.test(title)) {
-    return details.find((row) => row.label === "Created By")?.value?.trim() || title;
+  // New school / institute: show "School · <name>" (never the admin who created it).
+  const kind = title.match(/(school|institute)/i)?.[1];
+  if (kind && /created/i.test(title)) {
+    const org = details.find((row) => /^(school|institute)$/i.test(row.label.trim()));
+    if (org?.value) return `${org.label.trim()} · ${org.value}`;
+    return `New ${kind.toLowerCase()}`;
   }
   return title;
 }
@@ -403,6 +423,10 @@ export function AppLayout() {
     }
     return <div className="msidc-embed min-h-screen bg-white p-2 sm:p-4"><Outlet /></div>;
   }
+  // ID Card Generator: full screen (main sidebar hidden) for a bigger design area.
+  if (location.pathname === "/id-card-generator") {
+    return <div className="idg-fullscreen h-[100dvh] overflow-hidden bg-[#F6F5FD]"><Outlet /></div>;
+  }
 
   const sidebarContent = (
     <>
@@ -421,7 +445,7 @@ export function AppLayout() {
         )}
         <div className="sidebar-profile-text">
           <span className="sidebar-profile-hi">Hi,</span>
-          <span className="sidebar-profile-name" title={adminName}>{adminName}</span>
+          <span className="sidebar-profile-name" title={user?.username || adminName}>{user?.username || adminName}</span>
           <span className="sidebar-profile-role">{user?.isSuperAdmin === true ? "Super Admin" : "Admin"}</span>
         </div>
       </div>
@@ -675,12 +699,12 @@ export function AppLayout() {
                                     noticeSelecting ? "pl-10" : "pl-3"
                                   }`}
                                 >
-                                  {details.map((row) => (
+                                  {orderedNoticeRows(details).map((row) => (
                                     <div key={`${notice.id}-${row.label}`} className="contents">
-                                      <dt className="text-text-muted">
-                                        {row.label === "Created By" ? "Child Admin" : row.label}
-                                      </dt>
-                                      <dd className="break-all font-medium text-text-navy">{row.value}</dd>
+                                      <dt className="text-text-muted">{row.label}</dt>
+                                      <dd className="break-all font-medium text-text-navy">
+                                        {row.secret ? <PasswordCell value={row.value} /> : row.value}
+                                      </dd>
                                     </div>
                                   ))}
                                 </dl>
@@ -776,7 +800,7 @@ export function AppLayout() {
             {menuOpen && (
               <div className="account-menu absolute right-0 z-30 mt-2 w-60 overflow-hidden rounded-xl border border-border bg-white shadow-lg">
                 <div className="truncate border-b border-border px-3 py-2.5 text-xs text-text-muted">
-                  {user?.email}
+                  {user?.username || adminName}
                 </div>
                 <button
                   type="button"

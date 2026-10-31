@@ -172,9 +172,18 @@ export function ChildAdminDetailPage() {
         <>
           <section className="card grid gap-3 p-4 sm:grid-cols-2">
             <Detail label="Admin/Company Name" value={admin.display_name} />
-            <Detail label="Email" value={admin.email} />
-            <Detail label="Phone" value={admin.phone} />
-            <Detail label="WhatsApp" value={admin.whatsapp} />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Email</p>
+              <p className="mt-1 text-sm text-text-navy"><PasswordCell value={admin.email} label="email" /></p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Phone</p>
+              <p className="mt-1 text-sm text-text-navy"><PasswordCell value={admin.phone} label="phone number" /></p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">WhatsApp</p>
+              <p className="mt-1 text-sm text-text-navy"><PasswordCell value={admin.whatsapp} label="WhatsApp number" /></p>
+            </div>
             <Detail label="Facebook" value={admin.facebook_url} />
             <Detail label="Instagram" value={admin.instagram_url} />
             <Detail label="YouTube" value={admin.youtube_url} />

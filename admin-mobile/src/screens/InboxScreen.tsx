@@ -6,7 +6,7 @@ import api, { authedSource, errMsg } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { C, F, S } from "../theme";
 import { Screen } from "../ui/Screen";
-import { Banner, Button, Card, Check, Empty, IconButton, Loading, Muted, Rise } from "../ui/kit";
+import { Banner, Button, Card, Check, Empty, IconButton, Loading, Muted, Rise, Secret } from "../ui/kit";
 import { OtpSheet } from "../ui/Sheet";
 import { fmtDateTime } from "../lib/format";
 
@@ -31,6 +31,31 @@ function details(message: string) {
     } else rows.push({ label: "", value: t });
   }
   return rows;
+}
+
+/** New school / institute notices: Type, Name, Username, Password (no creator; date is in the header). */
+function orderedRows(message: string): { label: string; value: string; secret?: boolean }[] {
+  const rows = details(message);
+  const find = (re: RegExp) => rows.find((r) => re.test(r.label.trim()));
+  const org = find(/^(school|institute|organization|college)$/i);
+  if (!org) return rows.filter((r) => !/^(created by|date|time)$/i.test(r.label.trim()));
+  const out: { label: string; value: string; secret?: boolean }[] = [
+    { label: "Type", value: org.label.trim() },
+    { label: `${org.label.trim()} name`, value: org.value },
+  ];
+  const user = find(/^username$/i);
+  if (user) out.push({ label: "Username", value: user.value });
+  const pass = find(/^password$/i);
+  if (pass) out.push({ label: "Password", value: pass.value, secret: true });
+  return out;
+}
+
+function headline(title: string, message: string): string {
+  if (/(school|institute)/i.test(title) && /created/i.test(title)) {
+    const org = details(message).find((r) => /^(school|institute)$/i.test(r.label.trim()));
+    if (org?.value) return `${org.label.trim()} · ${org.value}`;
+  }
+  return title;
 }
 
 export function InboxScreen() {
@@ -139,16 +164,20 @@ export function InboxScreen() {
                     <View style={[st.dot, { backgroundColor: n.read ? C.line : C.primary }]} />
                   )}
                   <View style={{ flex: 1 }}>
-                    <Text style={st.title}>{n.title}</Text>
+                    <Text style={st.title}>{headline(n.title, n.message)}</Text>
                     <Muted style={{ fontSize: 11, marginTop: 2 }}>{fmtDateTime(n.created_at)}</Muted>
                     {isOpen ? (
                       <View style={{ marginTop: S.sm }}>
-                        {details(n.message).map((r, k) => (
+                        {orderedRows(n.message).map((r, k) => (
                           <View key={k} style={{ marginBottom: 6 }}>
                             {r.label ? <Text style={st.label}>{r.label}</Text> : null}
-                            <Text style={st.value} selectable>
-                              {r.value}
-                            </Text>
+                            {r.secret ? (
+                              <Secret value={r.value} />
+                            ) : (
+                              <Text style={st.value} selectable>
+                                {r.value}
+                              </Text>
+                            )}
                           </View>
                         ))}
                         {n.image_url ? <Image source={authedSource(n.image_url)} style={st.img} contentFit="cover" /> : null}

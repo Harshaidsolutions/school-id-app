@@ -28,6 +28,11 @@ export function NotificationsScreen({ inTab = false }: { inTab?: boolean }) {
   const [message, setMessage] = useState("");
   const [image, setImage] = useState<PickedFile | null>(null);
   const [sent, setSent] = useState<Row[]>([]);
+  const [sentQuery, setSentQuery] = useState("");
+  const shownSent = sent.filter((n) => {
+    const q = sentQuery.trim().toLowerCase();
+    return !q || [n.school_name, n.institute_name, n.organization_name, n.title].some((v) => (v ?? "").toLowerCase().includes(q));
+  });
   const [templates, setTemplates] = useState<{ id: string; title: string; message: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -236,10 +241,18 @@ export function NotificationsScreen({ inTab = false }: { inTab?: boolean }) {
           <Field label="Message" required value={message} onChangeText={setMessage} multiline placeholder="Write your message…" />
           <PhotoPick label="Image (optional)" value={image} onChange={setImage} wide hint="Shown with the message in the app." />
         </>
+      ) : view === "sent" && sent.length > 0 && !shownSent.length ? (
+        <>
+          <SearchBar value={sentQuery} onChange={setSentQuery} placeholder="Search by school / college name…" />
+          <Empty icon="search-outline" title="No matches" text="No sent notification for this school / college name." />
+        </>
       ) : sent.length === 0 ? (
         <Empty icon="notifications-off-outline" title="No messages sent yet" />
       ) : (
-        sent.map((n, i) => {
+        <>
+        <SearchBar value={sentQuery} onChange={setSentQuery} placeholder="Search by school / college name…" />
+        <View style={{ height: S.md }} />
+        {shownSent.map((n, i) => {
           const on = selected.has(n.id);
           const to = n.school_name || n.institute_name || n.organization_name || n.admin_name || "Recipient";
           return (
@@ -274,7 +287,8 @@ export function NotificationsScreen({ inTab = false }: { inTab?: boolean }) {
               </Card>
             </Rise>
           );
-        })
+        })}
+        </>
       )}
 
       <Sheet

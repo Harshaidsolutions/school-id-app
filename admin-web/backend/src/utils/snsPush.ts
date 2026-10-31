@@ -12,7 +12,7 @@ import {
   requireAndroidPlatformApplicationArn,
 } from "../config/sns";
 
-const ANDROID_CHANNEL_ID = "harsha_teacher_alerts_v2";
+const ANDROID_CHANNEL_ID = "harsha_teacher_alerts_v3";
 
 export type SnsPushPayload = {
   title: string;

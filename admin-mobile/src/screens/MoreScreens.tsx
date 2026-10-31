@@ -61,7 +61,9 @@ export function MoreScreen() {
           <Rise>
             <View style={{ flexDirection: "row", alignItems: "center", gap: S.md, maxWidth: CONTENT_MAX, alignSelf: "center", width: "100%" }}>
               <Tap onPress={() => void changePhoto()} disabled={busy} accessibilityLabel="Change profile photo">
-                <Avatar name={name} uri={photo?.uri} headers={photo?.headers} size={62} />
+                <View style={{ borderRadius: 27, borderWidth: 2.5, borderColor: "#FB7185", padding: 2 }}>
+                  <Avatar name={name} uri={photo?.uri} headers={photo?.headers} size={72} />
+                </View>
                 {isSuperAdmin ? (
                   <View style={st.cam}>
                     <Ionicons name="camera" size={12} color={C.white} />
@@ -71,7 +73,7 @@ export function MoreScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={st.hi}>Hi,</Text>
                 <Text style={st.name} numberOfLines={1}>
-                  {name}
+                  {user?.username || name}
                 </Text>
                 <Text style={st.role}>{isSuperAdmin ? "Super Admin" : "Admin"}</Text>
               </View>
