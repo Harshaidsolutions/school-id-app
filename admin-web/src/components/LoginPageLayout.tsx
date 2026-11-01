@@ -13,21 +13,24 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
         <span className="login-brand-dot" aria-hidden />
         <span className="login-orb login-orb-1" aria-hidden />
         <span className="login-orb login-orb-2" aria-hidden />
-        {/* Rubber-stamp style brand seal */}
+        {/* Rubber-stamp style brand seal: logo in the middle, brand name around it */}
         <div className="login-stamp" aria-hidden>
-          <svg viewBox="0 0 320 320" role="presentation">
+          <svg viewBox="0 0 360 360" role="presentation">
             <defs>
-              <path id="stampTop" d="M 160 160 m -118 0 a 118 118 0 1 1 236 0" />
-              <path id="stampBottom" d="M 160 160 m -128 0 a 128 128 0 0 0 256 0" />
+              <path id="stampRing" d="M 180,180 m -136,0 a 136,136 0 1,1 272,0 a 136,136 0 1,1 -272,0" />
             </defs>
-            <circle cx="160" cy="160" r="150" className="stamp-ring stamp-ring-outer" />
-            <circle cx="160" cy="160" r="140" className="stamp-ring" />
-            <circle cx="160" cy="160" r="96" className="stamp-ring stamp-ring-inner" />
-            <text className="stamp-text"><textPath href="#stampTop" startOffset="50%" textAnchor="middle">MY SCHOOL ID CARD</textPath></text>
-            <text className="stamp-text stamp-text-small"><textPath href="#stampBottom" startOffset="50%" textAnchor="middle">★ HARSHA ID SOLUTIONS ★</textPath></text>
-            <text x="160" y="150" textAnchor="middle" className="stamp-center">ADMIN</text>
-            <text x="160" y="182" textAnchor="middle" className="stamp-center stamp-center-small">VERIFIED WORKSPACE</text>
-            <line x1="104" y1="196" x2="216" y2="196" className="stamp-line" />
+            <circle cx="180" cy="180" r="172" className="stamp-ring-outer" />
+            <circle cx="180" cy="180" r="160" className="stamp-ring-thin" />
+            <g className="stamp-text-ring">
+              <text className="stamp-text">
+                <textPath href="#stampRing" startOffset="0" textLength="850" lengthAdjust="spacing">
+                  MY SCHOOL ID CARD ✦ ADMIN WORKSPACE ✦ HARSHA ID SOLUTIONS ✦
+                </textPath>
+              </text>
+            </g>
+            <circle cx="180" cy="180" r="114" className="stamp-ring-thin" />
+            <circle cx="180" cy="180" r="106" className="stamp-disc" />
+            <image href="/brand-wordmark.png" x="78" y="128" width="204" height="104" preserveAspectRatio="xMidYMid meet" />
           </svg>
         </div>
         <div className="login-brand-copy">

@@ -1051,17 +1051,12 @@ input[type="file"]::file-selector-button:hover { background: #e0e3ff; }
 .admin-avatar-lg { width: 64px !important; height: 64px !important; font-size: 20px !important; box-shadow: 0 0 0 2.5px #fb7185 !important; }
 .public-form-brand-lg img { height: 96px !important; max-width: 100%; }
 
-/* ── Dashboard fills the screen exactly: no empty space below, no page scroll (desktop) ── */
-@media (min-width: 1024px) and (min-height: 600px) {
-  .app-main:has(.dashboard-page) { overflow: hidden !important; }
-  .app-page-content:has(.dashboard-page) { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; padding-top: 12px !important; padding-bottom: 12px !important; }
-  .dashboard-page { flex: 1 1 auto; min-height: 0; display: flex !important; flex-direction: column; gap: 12px !important; padding-bottom: 0 !important; }
-  .dashboard-page > .dashboard-grow { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
-  .dashboard-page > .dashboard-grow .dashboard-pattern-grid { flex: 1 1 auto; min-height: 0; grid-auto-rows: 1fr !important; }
-  .dashboard-page > .dashboard-grow .dashboard-stat-card { height: 100%; }
-  .dashboard-page > .dashboard-status { flex: 0 0 auto; }
-  .dashboard-stat-card .text-xl { font-size: clamp(20px, 2.6vh, 30px) !important; }
-}
+/* ── Dashboard: compact cards sized to their content (fits one laptop screen, no stretching) ── */
+.dashboard-page { justify-content: flex-start; }
+.dashboard-pattern-grid { grid-auto-rows: auto !important; align-items: stretch; }
+.dashboard-stat-card { min-height: clamp(88px, 12vh, 132px) !important; height: auto !important; justify-content: flex-start; }
+.dashboard-stat-card > div:last-child { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.dashboard-status-grid > div { min-height: 0 !important; }
 
 /* Enlarged view: show the photo exactly as it is (no added white frame or rounded corners) */
 .media-viewer-frame img, .media-viewer-pages figure img { border-radius: 0 !important; border: 0 !important; background: transparent !important; }
@@ -1069,18 +1064,17 @@ input[type="file"]::file-selector-button:hover { background: #e0e3ff; }
 .media-viewer-strip img { border-radius: 0 !important; }
 
 /* ── Login: stamp-like brand seal (left) + bigger, softly glowing logo (form) ── */
-.login-stamp { position: relative; z-index: 1; width: min(300px, 70%); aspect-ratio: 1; margin: 8px 0 20px; transform: rotate(-8deg); animation: stamp-in 0.7s var(--ease) backwards; }
-.login-stamp svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 10px 22px rgba(15, 12, 50, 0.35)); }
-.login-stamp .stamp-ring { fill: none; stroke: rgba(255, 255, 255, 0.9); stroke-width: 3; }
-.login-stamp .stamp-ring-outer { stroke-width: 6; stroke-dasharray: 2 0; }
-.login-stamp .stamp-ring-inner { stroke-width: 2; stroke-dasharray: 6 5; }
-.login-stamp .stamp-text { fill: #fff; font-weight: 800; font-size: 25px; letter-spacing: 4px; font-family: inherit; }
-.login-stamp .stamp-text-small { font-size: 16px; letter-spacing: 3px; }
-.login-stamp .stamp-center { fill: #fff; font-weight: 900; font-size: 40px; letter-spacing: 6px; font-family: inherit; }
-.login-stamp .stamp-center-small { font-size: 12.5px; font-weight: 800; letter-spacing: 2.5px; }
-.login-stamp .stamp-line { stroke: rgba(255, 255, 255, 0.85); stroke-width: 2; }
-@keyframes stamp-in { 0% { opacity: 0; transform: rotate(-8deg) scale(1.35); } 70% { opacity: 1; transform: rotate(-8deg) scale(0.96); } 100% { transform: rotate(-8deg) scale(1); } }
+.login-brand-ring { display: none !important; }
+.login-stamp { position: relative; z-index: 1; width: clamp(220px, 26vw, 330px); aspect-ratio: 1; align-self: center; margin: 4px 0 0; animation: stamp-in 0.7s var(--ease) backwards; }
+.login-stamp svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 18px 30px rgba(10, 8, 40, 0.45)); }
+.login-stamp .stamp-ring-outer { fill: none; stroke: #fb7185; stroke-width: 5; }
+.login-stamp .stamp-ring-thin { fill: none; stroke: rgba(255, 255, 255, 0.75); stroke-width: 1.6; }
+.login-stamp .stamp-disc { fill: #fff; }
+.login-stamp .stamp-text { fill: #fff; font-weight: 800; font-size: 17px; letter-spacing: 2px; font-family: inherit; }
+.login-stamp .stamp-text-ring { transform-origin: 180px 180px; animation: stamp-spin 60s linear infinite; }
+@keyframes stamp-spin { to { transform: rotate(360deg); } }
+@keyframes stamp-in { 0% { opacity: 0; transform: scale(1.25); } 70% { opacity: 1; transform: scale(0.97); } 100% { transform: scale(1); } }
 .login-main-logo { width: 300px !important; animation: logo-glow 3.2s ease-in-out infinite !important; transform: none !important; }
 @keyframes logo-glow { 0%, 100% { opacity: 1; filter: drop-shadow(0 0 0 rgba(79, 70, 229, 0)); } 50% { opacity: 0.86; filter: drop-shadow(0 0 14px rgba(79, 70, 229, 0.35)); } }
 @media (max-width: 900px) { .login-main-logo { width: 250px !important; } }
-@media (prefers-reduced-motion: reduce) { .login-main-logo, .login-stamp { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .login-main-logo, .login-stamp, .login-stamp .stamp-text-ring { animation: none !important; } }

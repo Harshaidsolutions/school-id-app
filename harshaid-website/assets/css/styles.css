@@ -367,10 +367,11 @@ h3{font-size:16px;font-weight:600}
 .site-brand{margin-left:0}
 @media(max-width:640px){.wrap{width:calc(100% - 28px)!important}.header .wrap.header-inner{width:calc(100% - 24px)!important}}
 
-/* ── Product photos: whole photo, original proportions, no coloured dots ── */
-.product-media{aspect-ratio:auto!important;min-height:0;display:block!important;background:#fff!important}
+/* ── Product photos: whole photo (never cropped), same-size boxes, no coloured dots ── */
+.product-media{aspect-ratio:4/3!important;display:flex!important;align-items:center;justify-content:center;background:#fff!important;padding:6px}
 .product-media::before{display:none!important}
 .product-tag{display:none!important}
-.product-card img{display:block;width:100%!important;height:auto!important;max-height:none;object-fit:contain!important;padding:0!important;mix-blend-mode:normal!important}
+.product-card img{display:block;width:auto!important;height:auto!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important;padding:0!important;mix-blend-mode:normal!important}
 .product-card:hover img{transform:none!important}
+.product-card h3{min-height:2.6em;align-items:flex-start}
 @media(min-width:1500px){.product-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
