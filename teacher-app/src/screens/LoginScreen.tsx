@@ -1,4 +1,3 @@
-import { BRAND as THEME } from "../theme/brandTheme";
 import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import {ServiceRegistration} from "../components/ServiceRegistration";
 import { LinearGradient } from "expo-linear-gradient";
@@ -9,8 +8,12 @@ import { API_BASE_URL } from "../api/client";
 import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
+  StyleSheet,
   KeyboardAvoidingView,
   Linking,
+  Image,
   Platform,
   Pressable as RNPressable,
   ScrollView,
@@ -21,19 +24,18 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FloatingShapes } from "../components/FloatingShapes";
 import api, { getErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { AppIcon } from "../components/AppIcon";
-import { loginLogoSize } from "../constants/headerLogo";
 import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
-import { BrandLockup } from "../components/BrandLockup";
 import { BRAND } from "../constants/brand";
 import { RainbowBar } from "../components/RainbowBar";
+import { BrandLockup } from "../components/BrandLockup";
+import { RAINBOW } from "../theme/brandTheme";
 import type { LoginResponse } from "../types";
 import type { RootStackParamList } from "../navigation/types";
-import { cardShadow, radius, spacing } from "../theme/colors";
+import { spacing } from "../theme/colors";
 import { fonts, textStyles, type as typeScale } from "../theme/typography";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
 import {
@@ -55,9 +57,19 @@ export function LoginScreen(_props: Props) {
   const insets = useSafeAreaInsets();
   const [focused, setFocused] = useState<"user" | "pass" | null>(null);
   const userRef = useRef<TextInput>(null);
+  const float = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(float, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(float, { toValue: 0, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [float]);
   const passRef = useRef<TextInput>(null);
   const { width } = useResponsiveLayout();
-  const logoSize = loginLogoSize(width);
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -146,275 +158,224 @@ export function LoginScreen(_props: Props) {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["bottom"]}><ScreenBackdrop />
-      <RainbowBar style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 2 }} />
-      <View style={styles.flex}>
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <View style={[styles.safe, { backgroundColor: isDark ? colors.background : "#F6F7FC" }]}>
+      <ScreenBackdrop />
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing.md }]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            contentContainerStyle={styles.scroll}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            showsVerticalScrollIndicator={false}
-          >
-            <LinearGradient colors={isDark ? ["rgba(19,28,46,0.6)", "rgba(11,18,32,0)"] : ["rgba(255,255,255,0.75)", "rgba(255,255,255,0)"]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[styles.hero, { paddingTop: insets.top + spacing.xl }]}>
-              <FloatingShapes color={isDark ? "#FFFFFF" : colors.primaryOrange} />
-              <Entrance style={styles.identityPanel}>
-                <View style={styles.logoCard}>
-                  <BrandLockup
-                    variant="hero"
-                    harshaColor={colors.textPrimary}
-                    solutionsColor={colors.primaryOrange}
-                    taglineColor={colors.textMuted}
-                    title={BRAND.appName}
-                    subtitle={BRAND.headerSubtitle}
-                    showTagline={false}
-                    singleLine
-                  />
-                </View>
-              </Entrance>
-            </LinearGradient>
-
-            <View style={styles.authPanel}>
-              <Text style={styles.title} accessibilityRole="header">Welcome Back!</Text>
-              <View style={styles.subtitleRow}>
-                <View style={styles.subtitleBar} />
-                <Text style={styles.subtitle}>Login to continue</Text>
-                <View style={styles.subtitleBar} />
-              </View>
-
-              <RNPressable style={[styles.field, focused === "user" && styles.fieldFocused]} onPress={() => userRef.current?.focus()} accessible={false}>
-                <View style={[styles.fieldIcon, focused === "user" && styles.fieldIconFocused]}>
-                  <Ionicons name="person" size={17} color={focused === "user" ? "#FFFFFF" : colors.primaryOrange} />
-                </View>
-                <TextInput
-                  ref={userRef}
-                  editable={!loading}
-                  autoComplete="username"
-                  textContentType="username"
-                  importantForAutofill="yes"
-                  style={styles.input}
-                  placeholder="Username"
-                  placeholderTextColor={colors.textPlaceholder}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="default"
-                  value={username}
-                  onChangeText={setUsername}
-                  onFocus={() => setFocused("user")}
-                  onBlur={() => setFocused(null)}
-                  returnKeyType="next"
-                  onSubmitEditing={() => passRef.current?.focus()}
-                />
-              </RNPressable>
-              <RNPressable style={[styles.field, focused === "pass" && styles.fieldFocused]} onPress={() => passRef.current?.focus()} accessible={false}>
-                <View style={[styles.fieldIcon, focused === "pass" && styles.fieldIconFocused]}>
-                  <Ionicons name="lock-closed" size={16} color={focused === "pass" ? "#FFFFFF" : colors.primaryOrange} />
-                </View>
-                <TextInput
-                  ref={passRef}
-                  editable={!loading}
-                  autoComplete="password"
-                  textContentType="password"
-                  importantForAutofill="yes"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="go"
-                  onSubmitEditing={() => void handleLogin()}
-                  style={styles.input}
-                  placeholder="Password"
-                  placeholderTextColor={colors.textPlaceholder}
-                  secureTextEntry={!showPassword}
-                  value={password}
-                  onChangeText={setPassword}
-                  onFocus={() => setFocused("pass")}
-                  onBlur={() => setFocused(null)}
-                />
-                <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8} accessibilityLabel={showPassword ? "Hide password" : "Show password"}>
-                  <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
-                    size={20}
-                    color={colors.textMuted}
-                  />
-                </Pressable>
-              </RNPressable>
-
-              {error ? (
-                <View style={styles.errorBox}>
-                  <Ionicons name="alert-circle" size={18} color={colors.danger} />
-                  <Text style={styles.error}>{error}</Text>
-                </View>
-              ) : null}
-
-              <Pressable
-                onPress={() => void handleLogin()}
-                disabled={loading}
-                style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
-              >
-                <LinearGradient colors={[...submitGradient]} start={{x:0,y:0}} end={{x:1,y:1}} style={styles.loginGradient}>
-                  <Text style={styles.loginBtnText}>
-                    {loading ? "Logging in…" : "Login"}
-                  </Text>
-                  {!loading ? <View style={styles.loginArrow}><Ionicons name="arrow-forward" size={18} color="#FFFFFF" /></View> : null}
-                </LinearGradient>
-              </Pressable>
+          {/* Top: the same "My School ID Card" logo as the splash screen, gently floating */}
+          <View style={[styles.top, { paddingTop: insets.top + spacing.xl }]}>
+            <LinearGradient colors={isDark ? [colors.background, colors.background] : ["#F3EDFA", "#E9F6FD", "#F6F7FC"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+            <FloatingShapes color={colors.primaryOrange} />
+            <RainbowBar style={{ position: "absolute", top: 0, left: 0, right: 0 }} />
+            <Animated.View style={{ transform: [{ translateY: float.interpolate({ inputRange: [0, 1], outputRange: [4, -6] }) }] }}>
+              <BrandLockup variant="hero" title={BRAND.appName} subtitle={BRAND.headerSubtitle} showTagline={false} singleLine />
+            </Animated.View>
+            <View style={styles.dotsRow}>
+              {RAINBOW.map((c) => (
+                <View key={c} style={[styles.dot, { backgroundColor: c }]} />
+              ))}
             </View>
+          </View>
 
-            <Entrance style={styles.below} delay={240}>
-              <ServiceRegistration />
-              <View style={styles.contactCard}>
-                <Text style={styles.contactPrompt}>
-                  Please contact us if you want login
-                </Text>
+          {/* White sheet that rises over the top area */}
+          <View style={styles.sheet}>
+          <View style={styles.sheetInner}>
+          {/* Login form (plain View — no animated layer over the inputs) */}
+          <View style={styles.authPanel}>
+            <Text style={styles.title} accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+              Welcome <Text style={{ color: colors.primaryOrange }}>Back!</Text>
+            </Text>
+            <Text style={styles.subtitle}>Login with the username and password from your school.</Text>
 
-                <View style={styles.contactBtns}>
-                  <Pressable style={styles.waBtn} onPress={handleWhatsAppPress}>
-                    <Ionicons name="logo-whatsapp" size={20} color="#FFFFFF" />
-                    <Text style={styles.contactBtnText}>WhatsApp</Text>
-                  </Pressable>
-                  <Pressable style={styles.callBtn} onPress={openCall}>
-                    <Ionicons name="call" size={18} color={colors.primaryOrange} />
-                    <Text style={[styles.contactBtnText, { color: colors.primaryOrange }]}>Call</Text>
-                  </Pressable>
-                </View>
+            <Text style={styles.label}>Username</Text>
+            <RNPressable style={[styles.field, focused === "user" && styles.fieldFocused]} onPress={() => userRef.current?.focus()} accessible={false}>
+              <Ionicons name="person-outline" size={19} color={focused === "user" ? SKY : colors.textMuted} />
+              <TextInput
+                ref={userRef}
+                editable={!loading}
+                autoComplete="username"
+                textContentType="username"
+                importantForAutofill="yes"
+                style={styles.input}
+                placeholder="Enter your username"
+                placeholderTextColor={colors.textPlaceholder}
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={username}
+                onChangeText={setUsername}
+                onFocus={() => setFocused("user")}
+                onBlur={() => setFocused(null)}
+                returnKeyType="next"
+                onSubmitEditing={() => passRef.current?.focus()}
+              />
+            </RNPressable>
 
-                <View style={styles.linkRow}>
-                  <Pressable style={styles.contactRow} onPress={openWebsite}>
-                    <Ionicons name="globe-outline" size={16} color={colors.primaryOrange} />
-                    <Text style={styles.contactText} numberOfLines={1}>www.harshaidsolutions.in</Text>
-                  </Pressable>
+            <Text style={styles.label}>Password</Text>
+            <RNPressable style={[styles.field, focused === "pass" && styles.fieldFocused]} onPress={() => passRef.current?.focus()} accessible={false}>
+              <Ionicons name="lock-closed-outline" size={19} color={focused === "pass" ? SKY : colors.textMuted} />
+              <TextInput
+                ref={passRef}
+                editable={!loading}
+                autoComplete="password"
+                textContentType="password"
+                importantForAutofill="yes"
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="go"
+                onSubmitEditing={() => void handleLogin()}
+                style={styles.input}
+                placeholder="Enter your password"
+                placeholderTextColor={colors.textPlaceholder}
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+                onFocus={() => setFocused("pass")}
+                onBlur={() => setFocused(null)}
+              />
+              <RNPressable onPress={() => setShowPassword((v) => !v)} hitSlop={10} accessibilityLabel={showPassword ? "Hide password" : "Show password"}>
+                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={colors.textMuted} />
+              </RNPressable>
+            </RNPressable>
 
-                  <Pressable style={styles.contactRow} onPress={openMail}>
-                    <Ionicons name="mail-outline" size={16} color={colors.primaryOrange} />
-                    <Text style={styles.contactText} numberOfLines={1}>{SUPPORT_EMAIL}</Text>
-                  </Pressable>
-                </View>
+            <RNPressable style={styles.rememberRow} onPress={() => setRememberMe((v) => !v)} accessibilityRole="checkbox" accessibilityState={{ checked: rememberMe }}>
+              <View style={[styles.check, rememberMe && styles.checkOn]}>{rememberMe ? <Ionicons name="checkmark" size={14} color="#FFFFFF" /> : null}</View>
+              <Text style={styles.rememberText}>Remember my username</Text>
+            </RNPressable>
+
+            {error ? (
+              <View style={styles.errorBox}>
+                <Ionicons name="alert-circle" size={18} color={colors.danger} />
+                <Text style={styles.error}>{error}</Text>
               </View>
-            </Entrance>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </View>
-    </SafeAreaView>
+            ) : null}
+
+            <Pressable onPress={() => void handleLogin()} disabled={loading} style={[styles.loginBtn, loading && styles.loginBtnDisabled]} accessibilityRole="button">
+              <LinearGradient colors={[...submitGradient]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.loginGradient}>
+                <Text style={styles.loginBtnText}>{loading ? "Logging in…" : "Login"}</Text>
+                {!loading ? (
+                  <View style={styles.loginArrow}>
+                    <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                  </View>
+                ) : null}
+              </LinearGradient>
+            </Pressable>
+          </View>
+
+          <View style={styles.below}>
+            <View style={styles.orRow}>
+              <View style={styles.orLine} />
+              <Text style={styles.orText}>New here?</Text>
+              <View style={styles.orLine} />
+            </View>
+            <ServiceRegistration />
+
+            {/* Help: compact row of round buttons */}
+            <View style={styles.contactCard}>
+              <Text style={styles.contactPrompt}>Need a login? Contact us</Text>
+              <View style={styles.contactBtns}>
+                <Pressable style={[styles.circleBtn, { backgroundColor: "#25D366" }]} onPress={handleWhatsAppPress} accessibilityLabel="WhatsApp">
+                  <Ionicons name="logo-whatsapp" size={22} color="#FFFFFF" />
+                </Pressable>
+                <Pressable style={[styles.circleBtn, { backgroundColor: SKY }]} onPress={openCall} accessibilityLabel="Call">
+                  <Ionicons name="call" size={20} color="#FFFFFF" />
+                </Pressable>
+                <Pressable style={[styles.circleBtn, { backgroundColor: "#E8243C" }]} onPress={openMail} accessibilityLabel="Email">
+                  <Ionicons name="mail" size={20} color="#FFFFFF" />
+                </Pressable>
+                <Pressable style={[styles.circleBtn, { backgroundColor: colors.primaryOrange }]} onPress={openWebsite} accessibilityLabel="Website">
+                  <Ionicons name="globe-outline" size={21} color="#FFFFFF" />
+                </Pressable>
+              </View>
+              <Text style={styles.contactText} numberOfLines={1}>
+                www.harshaidsolutions.in · {SUPPORT_EMAIL}
+              </Text>
+            </View>
+          </View>
+          </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
+
+const SKY = "#1EA0E1";
 
 function useLoginStyles() {
   const { colors, isDark } = useTheme();
   return useResponsiveStyles(({ wp, scale }) => {
     const formW = Math.min(wp(100) - spacing.pagePad * 2, 440);
+    const card = isDark ? colors.inputBg : "#FFFFFF";
     return {
-      safe: { flex: 1, backgroundColor: colors.background },
+      safe: { flex: 1 },
       flex: { flex: 1 },
-      scroll: {
-        flexGrow: 1,
-        alignItems: "center",
-        paddingBottom: spacing.xl,
-      },
-      hero: {
+      scroll: { flexGrow: 1, alignItems: "center" },
+      top: { width: "100%", alignItems: "center", paddingBottom: scale(54), overflow: "hidden" },
+      dotsRow: { flexDirection: "row", gap: 6, marginTop: scale(10) },
+      dot: { width: 7, height: 7, borderRadius: 4 },
+      sheet: {
         width: "100%",
-        alignItems: "center",
-        paddingBottom: scale(84),
-        borderBottomLeftRadius: scale(32),
-        borderBottomRightRadius: scale(32),
-        overflow: "hidden",
-      },
-      identityPanel: { alignItems: "center", width: formW },
-      logoCard: {
-        alignItems: "center",
-        paddingHorizontal: spacing.xs,
-      },
-      heroAccent: {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: 3,
-        backgroundColor: colors.brandOrange,
-        opacity: 0.85,
-      },
-      authPanel: {
-        width: formW,
-        marginTop: -scale(56),
-        borderWidth: 1,
-        borderColor: colors.border,
-        padding: spacing.lg,
-        backgroundColor: isDark ? colors.inputBg : "#FFFFFF",
-        borderRadius: scale(26),
+        flexGrow: 1,
+        marginTop: -scale(30),
+        zIndex: 2,
+        backgroundColor: card,
+        borderTopLeftRadius: scale(32),
+        borderTopRightRadius: scale(32),
+        paddingTop: spacing.lg,
         shadowColor: "#1B1F3B",
-        shadowOpacity: 0.09,
-        shadowRadius: 22,
-        shadowOffset: { width: 0, height: 12 },
-        elevation: 5,
-      },
-      titleBadge: {
-        alignSelf: "center",
-        flexDirection: "row",
+        shadowOpacity: 0.08,
+        shadowRadius: 20,
+        shadowOffset: { width: 0, height: -6 },
+        elevation: 10,
         alignItems: "center",
-        gap: 6,
-        paddingHorizontal: spacing.sm,
-        paddingVertical: scale(5),
-        borderRadius: radius.full,
-        backgroundColor: colors.orangeSoft,
       },
-      titleBadgeText: { fontFamily: fonts.headingSemiBold, fontSize: scale(12), color: colors.orangeDark },
+      sheetInner: { width: formW },
+      authPanel: { width: "100%" },
       title: {
-        marginTop: spacing.xs,
-        fontSize: scale(34),
+        fontSize: scale(30),
         lineHeight: scale(42),
-        letterSpacing: -0.5,
+        paddingTop: scale(2),
+        includeFontPadding: true,
+        letterSpacing: -0.6,
         fontFamily: fonts.headingExtraBold,
-        textAlign: "center",
-        color: colors.primaryOrange,
+        color: colors.textPrimary,
       },
-      subtitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, marginTop: scale(4), marginBottom: spacing.lg },
-      subtitleBar: { width: scale(22), height: 2, borderRadius: 1, backgroundColor: colors.brandOrange, opacity: 0.8 },
-      subtitle: {
-        fontFamily: fonts.bodySemiBold,
-        fontSize: typeScale.subtitle,
-        letterSpacing: 0.4,
-        color: colors.textSecondary,
-        textAlign: "center",
-      },
+      subtitle: { fontFamily: fonts.body, fontSize: scale(14), lineHeight: scale(20), color: colors.textSecondary, marginTop: 2, marginBottom: spacing.md },
+      label: { fontFamily: fonts.headingSemiBold, fontSize: scale(13.5), color: colors.textPrimary, marginBottom: 6 },
       field: {
         flexDirection: "row",
         alignItems: "center",
-        gap: spacing.sm,
-        minHeight: scale(58),
-        paddingLeft: scale(8),
-        paddingRight: spacing.md,
-        marginBottom: spacing.md,
+        gap: spacing.xs,
+        minHeight: scale(54),
+        paddingHorizontal: spacing.sm,
+        marginBottom: spacing.sm,
         borderRadius: scale(16),
         borderWidth: 1.5,
         borderColor: colors.border,
         backgroundColor: isDark ? colors.inputBg : "#F6F7FC",
       },
-      fieldFocused: {
-        borderColor: "#1EA0E1",
-        backgroundColor: isDark ? colors.inputBg : "#FFFFFF",
-      },
-      fieldIcon: { width: scale(40), height: scale(40), borderRadius: scale(13), alignItems: "center", justifyContent: "center", backgroundColor: colors.blueSoft },
-      fieldIconFocused: { backgroundColor: colors.primaryOrange },
+      fieldFocused: { borderColor: SKY, backgroundColor: card },
       input: {
         flex: 1,
         ...textStyles.input,
         color: colors.textPrimary,
         paddingVertical: Platform.OS === "ios" ? spacing.sm : spacing.xs,
       },
+      rememberRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: spacing.sm, alignSelf: "flex-start" },
+      check: { width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: card },
+      checkOn: { backgroundColor: colors.primaryOrange, borderColor: colors.primaryOrange },
+      rememberText: { fontFamily: fonts.bodyMedium, fontSize: scale(13.5), color: colors.textSecondary },
       errorBox: { flexDirection: "row", alignItems: "flex-start", gap: spacing.xs, padding: spacing.sm, borderRadius: scale(14), backgroundColor: colors.dangerSoft, marginBottom: spacing.sm },
-      error: {
-        flex: 1,
-        fontFamily: fonts.bodyMedium,
-        fontSize: typeScale.label,
-        color: colors.danger,
-      },
+      error: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: typeScale.label, color: colors.danger },
       loginBtn: {
         width: "100%",
-        alignSelf: "center",
         borderRadius: 999,
-        minHeight: scale(58),
-        marginTop: spacing.xs,
+        minHeight: scale(56),
         overflow: "hidden",
         elevation: 6,
         shadowColor: "#F26A1B",
@@ -422,76 +383,24 @@ function useLoginStyles() {
         shadowRadius: 14,
         shadowOffset: { width: 0, height: 8 },
       },
-      loginGradient: { width: "100%", minHeight: scale(58), paddingVertical: spacing.sm, borderRadius: 999, flexDirection: "row", gap: spacing.sm, alignItems: "center", justifyContent: "center" },
+      loginGradient: { width: "100%", minHeight: scale(56), borderRadius: 999, flexDirection: "row", gap: spacing.sm, alignItems: "center", justifyContent: "center" },
       loginArrow: { width: scale(28), height: scale(28), borderRadius: scale(14), backgroundColor: "rgba(255,255,255,0.22)", alignItems: "center", justifyContent: "center" },
       loginBtnDisabled: { opacity: 0.65 },
-      loginBtnText: {
-        ...textStyles.button,
-        fontSize: scale(17),
-        letterSpacing: 0.3,
-        color: "#FFFFFF",
-      },
-      below: { width: formW, alignItems: "center" },
+      loginBtnText: { ...textStyles.button, fontSize: scale(17), letterSpacing: 0.3, color: "#FFFFFF" },
+      below: { width: "100%", alignItems: "center" },
+      orRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, alignSelf: "stretch", marginTop: spacing.lg },
+      orLine: { flex: 1, height: 1, backgroundColor: colors.border },
+      orText: { fontFamily: fonts.bodyMedium, fontSize: scale(12.5), color: colors.textMuted },
       contactCard: {
         width: "100%",
         marginTop: spacing.md,
-        padding: spacing.md,
-        borderRadius: scale(24),
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: colors.border,
-      },
-      contactPrompt: {
-        textAlign: "center",
-        fontFamily: fonts.headingSemiBold,
-        fontSize: typeScale.label,
-        color: colors.textPrimary,
-        marginBottom: spacing.sm,
-      },
-      contactBtns: {
-        flexDirection: "row",
-        gap: spacing.sm,
-        marginBottom: spacing.sm,
-      },
-      waBtn: {
-        flex: 1,
-        flexDirection: "row",
         alignItems: "center",
-        justifyContent: "center",
         gap: spacing.xs,
-        minHeight: scale(48),
-        borderRadius: scale(16),
-        backgroundColor: colors.whatsappGreen,
       },
-      callBtn: {
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: spacing.xs,
-        minHeight: scale(48),
-        borderRadius: scale(16),
-        backgroundColor: colors.blueSoft,
-      },
-      contactBtnText: {
-        fontFamily: fonts.headingSemiBold,
-        fontSize: typeScale.body,
-        color: "#FFFFFF",
-      },
-      linkRow: { gap: scale(6), alignItems: "center" },
-      contactRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: spacing.xs,
-        paddingVertical: scale(4),
-        maxWidth: "100%",
-      },
-      contactText: {
-        fontFamily: fonts.bodyMedium,
-        fontSize: typeScale.label,
-        color: colors.textBody,
-      },
+      contactPrompt: { fontFamily: fonts.headingSemiBold, fontSize: scale(14.5), color: colors.textPrimary },
+      contactBtns: { flexDirection: "row", gap: spacing.md },
+      circleBtn: { width: scale(48), height: scale(48), borderRadius: scale(24), alignItems: "center", justifyContent: "center" },
+      contactText: { fontFamily: fonts.body, fontSize: scale(12), color: colors.textMuted },
     };
   }, [colors, isDark]);
 }

@@ -2,12 +2,14 @@
   "expo": {
     "name": "My School ID Admin",
     "slug": "my-school-id-admin",
-    "version": "2.0.1",
+    "version": "2.0.2",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": { "backgroundColor": "#FFFFFF" },
+    "splash": {
+      "backgroundColor": "#FFFFFF"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.schoolid.admin",
@@ -18,12 +20,16 @@
     },
     "android": {
       "package": "com.schoolid.admin",
-      "versionCode": 11,
+      "versionCode": 12,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundImage": "./assets/adaptive-icon-background.png",
+        "backgroundColor": "#4A63C4"
       },
-      "permissions": ["android.permission.CAMERA", "android.permission.INTERNET"],
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.INTERNET"
+      ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -34,16 +40,29 @@
       "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [
-      ["expo-splash-screen", { "backgroundColor": "#FFFFFF", "image": "./assets/splash-blank.png", "imageWidth": 120, "resizeMode": "contain" }],
-      ["expo-image-picker", {
-        "photosPermission": "Choose ID card photos, logos and templates.",
-        "cameraPermission": "Take ID card photos of students and members.",
-        "microphonePermission": false
-      }],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/splash-blank.png",
+          "imageWidth": 120,
+          "resizeMode": "contain"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose ID card photos, logos and templates.",
+          "cameraPermission": "Take ID card photos of students and members.",
+          "microphonePermission": false
+        }
+      ],
       "expo-secure-store",
       "expo-font",
       "@react-native-community/datetimepicker"
     ],
-    "extra": { "apiUrl": "https://myschoolidcard.in" }
+    "extra": {
+      "apiUrl": "https://myschoolidcard.in"
+    }
   }
 }

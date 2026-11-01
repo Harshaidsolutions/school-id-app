@@ -36,12 +36,18 @@ export function CardCanvas(p: Props) {
     const el = wrapRef.current;
     if (!el) return;
     // Fit the card into the space the playground actually has (no scrolling at 100%).
-    const ro = new ResizeObserver(() =>
-      setAvail({
-        w: Math.max(120, el.clientWidth - 24),
-        h: el.clientHeight > 160 ? el.clientHeight - 28 : Math.max(260, Math.min(window.innerHeight * 0.66, 760)),
-      })
-    );
+    // On phones / narrow screens the page stacks and the stage height follows the card,
+    // so only the width is measured there (measuring height made the card resize itself
+    // in a loop, which looked like flickering in the admin app). Tiny changes are ignored.
+    const measure = () => {
+      const narrow = window.innerWidth <= 1100;
+      const w = Math.max(120, Math.round(el.clientWidth - 24));
+      const h = narrow
+        ? Math.round(Math.max(260, Math.min(window.innerHeight * 0.6, 640)))
+        : Math.round(el.clientHeight > 160 ? el.clientHeight - 28 : Math.max(260, Math.min(window.innerHeight * 0.66, 760)));
+      setAvail((prev) => (Math.abs(prev.w - w) < 3 && Math.abs(prev.h - h) < 3 ? prev : { w, h }));
+    };
+    const ro = new ResizeObserver(() => measure());
     ro.observe(el);
     return () => ro.disconnect();
   }, []);

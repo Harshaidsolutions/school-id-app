@@ -5,7 +5,6 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Image } from "expo-image";
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { C } from "./src/theme";
@@ -20,9 +19,8 @@ function Gate() {
   const { ready } = useAuth();
   if (!ready) {
     return (
-      <View style={{ flex: 1, backgroundColor: C.white, alignItems: "center", justifyContent: "center" }}>
-        <Image source={require("./assets/logo-mark.png")} style={{ width: 120, height: 120 }} contentFit="contain" />
-      </View>
+      // No second splash: a plain page while the saved login is read (a fraction of a second).
+      <View style={{ flex: 1, backgroundColor: C.bg }} />
     );
   }
   return <RootNavigator />;

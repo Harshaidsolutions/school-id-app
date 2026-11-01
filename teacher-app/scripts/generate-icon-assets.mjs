@@ -9,9 +9,15 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const assets = path.join(__dirname, "..", "assets");
+// Launcher icon artwork: the "My School ID Card" mark (falls back to the in-app logo).
+const launcherLogoPath = path.join(assets, "launcher-logo.png");
 const loginLogoPath = path.join(assets, "in-app-logo.png");
 const fallbackLogoPath = path.join(assets, "mascot-id-card.png");
-const logoPath = fs.existsSync(loginLogoPath) ? loginLogoPath : fallbackLogoPath;
+const logoPath = fs.existsSync(launcherLogoPath)
+  ? launcherLogoPath
+  : fs.existsSync(loginLogoPath)
+    ? loginLogoPath
+    : fallbackLogoPath;
 
 const SIZE = 1024;
 const ORANGE = { r: 245, g: 129, b: 31, alpha: 1 };

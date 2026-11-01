@@ -6,11 +6,12 @@ import Constants from "expo-constants";
 import api, { authedSource, errMsg } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { C, CONTENT_MAX, F, S, headerGradient } from "../theme";
-import { Backdrop, Screen } from "../ui/Screen";
+import { Backdrop, RainbowBar, Screen } from "../ui/Screen";
 import { Avatar, Banner, Button, Card, InfoRow, ListItem, Muted, Rise, Section, type IconName } from "../ui/kit";
 import { Tap } from "../ui/Pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { PhotoPick } from "../ui/PhotoPick";
+import { LogoutModal } from "../ui/LogoutModal";
 import { asFormFile, pickImages, resetDownloadFolder, type PickedFile } from "../lib/files";
 import { useNav } from "../navigation/hooks";
 
@@ -22,6 +23,7 @@ export function MoreScreen() {
   const photo = authedSource(user?.photoUrl);
   const name = user?.displayName || user?.username || "Admin";
   const [busy, setBusy] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   async function changePhoto() {
     if (!isSuperAdmin || !user) return nav.navigate("Profile");
@@ -57,11 +59,11 @@ export function MoreScreen() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Backdrop />
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}>
-        <LinearGradient colors={["#2B2770", "#3B3592"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.hero, { paddingTop: insets.top + 18 }]}>
+        <LinearGradient colors={headerGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.hero, { paddingTop: insets.top + 18 }]}>
           <Rise>
             <View style={{ flexDirection: "row", alignItems: "center", gap: S.md, maxWidth: CONTENT_MAX, alignSelf: "center", width: "100%" }}>
               <Tap onPress={() => void changePhoto()} disabled={busy} accessibilityLabel="Change profile photo">
-                <View style={{ borderRadius: 27, borderWidth: 2.5, borderColor: "#FB7185", padding: 2 }}>
+                <View style={{ borderRadius: 27, borderWidth: 2.5, borderColor: "rgba(255,255,255,0.9)", padding: 2 }}>
                   <Avatar name={name} uri={photo?.uri} headers={photo?.headers} size={72} />
                 </View>
                 {isSuperAdmin ? (
@@ -79,6 +81,7 @@ export function MoreScreen() {
               </View>
             </View>
           </Rise>
+          <RainbowBar style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} />
         </LinearGradient>
         <View style={{ padding: S.lg, maxWidth: CONTENT_MAX, alignSelf: "center", width: "100%" }}>
           <View style={st.navCard}>
@@ -95,7 +98,6 @@ export function MoreScreen() {
               ))}
           </View>
           <Section title="More">
-            <ListItem title="Organization" subtitle="Organisations with their own forms" icon="briefcase-outline" tone="purple" onPress={() => nav.navigate("Orgs")} />
             <ListItem title="ID Card Generator" icon="card-outline" tone="blue" onPress={() => nav.navigate("WebTool", { title: "ID Card Generator", path: "/id-card-generator" })} />
             <ListItem title="My profile" icon="person-circle-outline" tone="blue" onPress={() => nav.navigate("Profile")} />
             <ListItem title="Privacy policy" icon="document-lock-outline" tone="grey" onPress={() => void Linking.openURL("https://harshaidsolutions.in/privacy-policy")} />
@@ -103,19 +105,24 @@ export function MoreScreen() {
               title="Logout"
               icon="log-out-outline"
               danger
-              onPress={() =>
-                Alert.alert("Logout?", "You will need your password to log in again.", [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Logout", style: "destructive", onPress: () => void logout() },
-                ])
-              }
+              onPress={() => setConfirmLogout(true)}
             />
           </Section>
-          <Muted style={{ textAlign: "center", marginTop: S.xl }}>My School ID Admin v{Constants.expoConfig?.version ?? ""} · Harsha ID Solutions</Muted>
+          <Muted style={{ textAlign: "center", marginTop: S.lg }}>My School ID Admin v{Constants.expoConfig?.version ?? ""} · Harsha ID Solutions</Muted>
         </View>
       </ScrollView>
       {/* Keeps scrolled content from showing under the phone's status bar. */}
-      <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top, backgroundColor: "#1B1F3B" }} />
+      <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top, backgroundColor: "#1E9BDD" }} />
+      <LogoutModal
+        visible={confirmLogout}
+        name={name}
+        photo={photo}
+        onCancel={() => setConfirmLogout(false)}
+        onConfirm={() => {
+          setConfirmLogout(false);
+          void logout();
+        }}
+      />
     </View>
   );
 }
@@ -173,7 +180,7 @@ export function ProfileScreen() {
 }
 
 const st = StyleSheet.create({
-  hero: { paddingHorizontal: S.lg, paddingBottom: S.xl, borderBottomLeftRadius: 26, borderBottomRightRadius: 26 },
+  hero: { paddingHorizontal: S.lg, paddingBottom: S.xl, borderBottomLeftRadius: 22, borderBottomRightRadius: 22, overflow: "hidden" },
   hi: { fontFamily: F.bodyMed, fontSize: 12, color: "rgba(255,255,255,0.8)" },
   cam: { position: "absolute", right: -2, bottom: -2, width: 22, height: 22, borderRadius: 11, backgroundColor: C.primary, borderWidth: 2, borderColor: C.white, alignItems: "center", justifyContent: "center" },
   navCard: { backgroundColor: C.white, borderRadius: 18, borderWidth: 1, borderColor: C.line, overflow: "hidden" },
