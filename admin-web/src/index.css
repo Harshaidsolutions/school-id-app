@@ -1170,3 +1170,10 @@ input[type="file"]::file-selector-button:hover { background: #e0e3ff; }
   .dash-stat { min-width: 0; padding: clamp(10px, 2vh, 20px) clamp(10px, 1vw, 16px); }
   .dash-stat b { font-size: clamp(20px, min(1.7vw, 4vh), 34px); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 }
+/* Dashboard v2 polish: numbers never wrap, tiles line up, ring caps follow the SVG attribute */
+.dash-ring-value.is-thin { stroke-linecap: butt; }
+.dash-stat b { white-space: nowrap; overflow-wrap: normal !important; }
+.dash-stat span { min-height: 2.7em; }
+@media (min-width: 1024px) and (min-height: 620px) {
+  .dash-stat b { font-size: clamp(18px, min(1.55vw, 3.8vh), 32px); }
+}

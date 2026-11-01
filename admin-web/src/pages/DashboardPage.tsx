@@ -9,8 +9,9 @@ import type { ApiErrorBody, DashboardSummary } from "../types";
 const REFRESH_MS = 30_000;
 
 function pct(part: number, total: number): string {
-  if (total <= 0) return "0.0%";
-  return `${((part / total) * 100).toFixed(1)}%`;
+  if (total <= 0 || part <= 0) return "0%";
+  const v = (part / total) * 100;
+  return `${Number.isInteger(Number(v.toFixed(1))) ? v.toFixed(0) : v.toFixed(1)}%`;
 }
 
 /** Ring chart: captured share of all photos. */
@@ -22,7 +23,16 @@ function CaptureRing({ captured, total, tone }: { captured: number; total: numbe
     <div className={`dash-ring dash-ring-${tone}`}>
       <svg viewBox="0 0 128 128" aria-hidden>
         <circle cx="64" cy="64" r={r} className="dash-ring-track" />
-        <circle cx="64" cy="64" r={r} className="dash-ring-value" strokeDasharray={`${share * c} ${c}`} transform="rotate(-90 64 64)" />
+        {share > 0 ? (
+          <circle
+            cx="64"
+            cy="64"
+            r={r}
+            className={share < 0.06 ? "dash-ring-value is-thin" : "dash-ring-value"}
+            strokeDasharray={`${Math.max(share * c, 2)} ${c}`}
+            transform="rotate(-90 64 64)"
+          />
+        ) : null}
       </svg>
       <div className="dash-ring-label">
         <b>{pct(captured, total)}</b>
