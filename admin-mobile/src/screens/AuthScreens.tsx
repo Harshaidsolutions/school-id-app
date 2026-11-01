@@ -8,7 +8,7 @@ import api, { errMsg } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import type { LoginResponse } from "../shared/types";
 import { C, F, R, S, headerGradient, shadow } from "../theme";
-import { Backdrop } from "../ui/Screen";
+import { Backdrop, RainbowBar } from "../ui/Screen";
 import { Banner, Button, Field, Muted, Rise } from "../ui/kit";
 import { Tap } from "../ui/Pressable";
 import { waLink } from "../lib/format";
@@ -36,6 +36,7 @@ function AuthShell({ title, subtitle, children, onBack }: { title: string; subti
             </Rise>
             <Text style={st.brand}>My School ID Admin</Text>
             <Text style={st.brandSub}>by Harsha ID Solutions</Text>
+            <RainbowBar style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} />
           </LinearGradient>
           <Rise delay={80} style={st.cardWrap}>
             <View style={[st.card, shadow]}>
@@ -203,11 +204,11 @@ const st = StyleSheet.create({
   bubbleB: { position: "absolute", width: 150, height: 150, borderRadius: 75, backgroundColor: "rgba(255,255,255,0.09)", bottom: -40, left: -30 },
   back: { position: "absolute", left: S.lg, top: 48, width: 40, height: 40, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.22)", alignItems: "center", justifyContent: "center", zIndex: 2 },
   logoCard: { width: 100, height: 100, borderRadius: 30, backgroundColor: C.white, alignItems: "center", justifyContent: "center", ...shadow },
-  brand: { fontFamily: F.hX, fontSize: 24, color: C.white, marginTop: S.md },
+  brand: { fontFamily: F.hX, fontSize: 24, color: C.white, marginTop: S.md, letterSpacing: -0.4 },
   brandSub: { fontFamily: F.bodyMed, fontSize: 13, color: "rgba(255,255,255,0.9)" },
   cardWrap: { paddingHorizontal: S.lg, marginTop: -48, width: "100%", maxWidth: 520, alignSelf: "center" },
   card: { backgroundColor: C.white, borderRadius: 26, padding: S.xl },
-  title: { fontFamily: F.h, fontSize: 22, color: C.primary, marginBottom: 4 },
+  title: { fontFamily: F.hX, fontSize: 24, color: C.ink, marginBottom: 2, letterSpacing: -0.4 },
   link: { fontFamily: F.bodySemi, color: C.primary, fontSize: 14 },
   help: { marginTop: S.xl, paddingTop: S.lg, borderTopWidth: 1, borderTopColor: C.line },
   small: { fontFamily: F.bodyMed, fontSize: 12, color: C.muted },

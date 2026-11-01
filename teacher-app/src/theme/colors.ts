@@ -5,6 +5,7 @@ import { scale as s } from "./responsive";
 import { BRAND, withAlpha } from "./brandTheme";
 
 const P = BRAND;
+const CTA = (P.cta ?? [P.primaryLight, P.primary, P.primaryDeep]) as readonly [string, string, string];
 const tintP = withAlpha(P.primary, 0.09);
 const tintA = withAlpha(P.accent, 0.14);
 
@@ -27,14 +28,14 @@ export const colors = {
   softPink: tintA,
 
   background: P.background,
-  // Glass cards: slightly see-through white over the soft page glow.
-  surface: "rgba(255,255,255,0.86)",
+  // Solid white cards (see-through cards showed grey shadow boxes on Android).
+  surface: "#FFFFFF",
   text: P.ink,
   textPrimary: P.ink,
-  textSecondary: "#64748B",
-  textBody: "#3F4660",
+  textSecondary: "#6B7090",
+  textBody: "#41466B",
   textPlaceholder: "#98A0B3",
-  border: withAlpha(P.primary, 0.12),
+  border: "#E8E9F3",
 
   // Header / gradients
   headerOrangeStart: P.primary,
@@ -77,7 +78,7 @@ export const colors = {
   borderLight: withAlpha(P.primary, 0.08),
   track: withAlpha(P.primary, 0.1),
 
-  textMuted: "#64748B",
+  textMuted: "#6B7090",
   textSubtle: "#98A0B3",
   textNav: P.ink,
 
@@ -134,17 +135,17 @@ export const idCardsHeaderGradient = [...P.header] as unknown as readonly [strin
 export const headerGradient = [...P.header] as unknown as readonly [string, string, string];
 
 /** Floating action: accent */
-export const fabGradient = [P.accentLight, P.accent] as const;
+export const fabGradient = [CTA[0], CTA[1]] as const;
 
 export const primaryGradient = [P.primaryLight, P.primary, P.primaryDeep] as const;
 
 /** Main buttons */
-export const orangeButtonGradient = [P.primaryLight, P.primary] as const;
+export const orangeButtonGradient = [CTA[0], CTA[1]] as const;
 
 /** Submit / confirm CTA */
-export const submitGradient = [P.primaryLight, P.primary, P.primaryDeep] as const;
+export const submitGradient = [CTA[0], CTA[1], CTA[2]] as const;
 
-export const loginGradient = [P.primary, P.primaryDeep] as const;
+export const loginGradient = [CTA[1], CTA[2]] as const;
 
 export const splashGradient = [P.primary, P.primaryDeep] as const;
 

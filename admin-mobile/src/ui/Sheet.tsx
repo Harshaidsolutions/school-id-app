@@ -12,6 +12,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -312,7 +313,7 @@ function errorText(e: unknown, fallback: string) {
   return ax?.response?.data?.message ?? (e instanceof Error && e.message ? e.message : fallback);
 }
 
-/** Full-screen photo viewer with next / previous. */
+/** Full-screen photo viewer: swipe left / right or tap the arrows to move through every photo. */
 export function ImageViewer({
   visible,
   onClose,
@@ -329,7 +330,15 @@ export function ImageViewer({
   actions?: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
-  const item = items[index];
+  const { width } = useWindowDimensions();
+  const listRef = useRef<FlatList<(typeof items)[number]>>(null);
+  const safeIndex = Math.min(Math.max(index, 0), Math.max(items.length - 1, 0));
+  const item = items[safeIndex];
+  const go = (i: number) => {
+    if (i < 0 || i >= items.length) return;
+    onIndex(i);
+    listRef.current?.scrollToIndex({ index: i, animated: true });
+  };
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <View style={[st.viewer, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12 }]}>
@@ -338,27 +347,48 @@ export function ImageViewer({
             <Text style={st.viewerTitle} numberOfLines={1}>
               {item?.title ?? ""}
             </Text>
-            {item?.sub ? <Text style={st.viewerSub}>{item.sub}</Text> : null}
+            {item?.sub ? <Text style={st.viewerSub} numberOfLines={1}>{item.sub}</Text> : null}
           </View>
           <Tap onPress={onClose} hitSlop={10} accessibilityLabel="Close" style={st.viewerBtn}>
             <Ionicons name="close" size={22} color={C.white} />
           </Tap>
         </View>
-        <View style={{ flex: 1, justifyContent: "center" }}>
-          {item?.source ? (
-            <Image source={item.source} style={{ width: "100%", height: "100%" }} contentFit="contain" transition={150} />
-          ) : (
-            <Text style={[st.viewerSub, { textAlign: "center" }]}>No image</Text>
-          )}
-        </View>
+        {visible && items.length ? (
+          <FlatList
+            ref={listRef}
+            style={{ flex: 1 }}
+            data={items}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            initialScrollIndex={safeIndex}
+            getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+            keyExtractor={(_, i) => String(i)}
+            onMomentumScrollEnd={(e) => {
+              const i = Math.round(e.nativeEvent.contentOffset.x / width);
+              if (i !== safeIndex) onIndex(i);
+            }}
+            renderItem={({ item: it }) => (
+              <View style={{ width, flex: 1, justifyContent: "center", paddingHorizontal: S.md }}>
+                {it.source ? (
+                  <Image source={it.source} style={{ width: "100%", height: "100%" }} contentFit="contain" transition={150} />
+                ) : (
+                  <Text style={[st.viewerSub, { textAlign: "center" }]}>No image</Text>
+                )}
+              </View>
+            )}
+          />
+        ) : (
+          <View style={{ flex: 1 }} />
+        )}
         <View style={st.viewerFoot}>
-          <Tap onPress={() => onIndex(index - 1)} disabled={index <= 0} style={st.viewerBtn} accessibilityLabel="Previous">
+          <Tap onPress={() => go(safeIndex - 1)} disabled={safeIndex <= 0} style={[st.viewerBtn, safeIndex <= 0 && { opacity: 0.35 }]} accessibilityLabel="Previous">
             <Ionicons name="chevron-back" size={24} color={C.white} />
           </Tap>
-          <Text style={st.viewerSub}>
-            {items.length ? `${index + 1} / ${items.length}` : ""}
+          <Text style={st.viewerCount}>
+            {items.length ? `${safeIndex + 1} / ${items.length}` : ""}
           </Text>
-          <Tap onPress={() => onIndex(index + 1)} disabled={index >= items.length - 1} style={st.viewerBtn} accessibilityLabel="Next">
+          <Tap onPress={() => go(safeIndex + 1)} disabled={safeIndex >= items.length - 1} style={[st.viewerBtn, safeIndex >= items.length - 1 && { opacity: 0.35 }]} accessibilityLabel="Next">
             <Ionicons name="chevron-forward" size={24} color={C.white} />
           </Tap>
         </View>
@@ -391,5 +421,6 @@ const st = StyleSheet.create({
   viewerTitle: { fontFamily: F.hSemi, fontSize: 16, color: C.white },
   viewerSub: { fontFamily: F.body, fontSize: 13, color: "rgba(255,255,255,0.75)" },
   viewerBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" },
+  viewerCount: { fontFamily: F.hSemi, fontSize: 14, color: C.white, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" },
   viewerFoot: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: S.lg, paddingVertical: S.md },
 });

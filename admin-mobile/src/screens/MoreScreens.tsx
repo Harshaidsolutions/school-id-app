@@ -115,7 +115,7 @@ export function MoreScreen() {
         </View>
       </ScrollView>
       {/* Keeps scrolled content from showing under the phone's status bar. */}
-      <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top, backgroundColor: "#2B2770" }} />
+      <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top, backgroundColor: "#1B1F3B" }} />
     </View>
   );
 }

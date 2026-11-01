@@ -111,7 +111,7 @@ export function RootNavigator() {
 }
 
 const st = StyleSheet.create({
-  bar: { backgroundColor: "rgba(255,255,255,0.98)", borderTopWidth: 0, paddingTop: 6, elevation: 16, shadowColor: "#312E81", shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: -4 } },
+  bar: { backgroundColor: "rgba(255,255,255,0.98)", borderTopWidth: 0, paddingTop: 6, elevation: 16, shadowColor: "#1B1F3B", shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: -4 } },
   label: { fontFamily: F.bodyMed, fontSize: 11 },
   icon: { width: 46, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   iconOn: { backgroundColor: C.primarySoft },

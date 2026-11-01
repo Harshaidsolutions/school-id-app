@@ -6,16 +6,10 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import {
-  PlusJakartaSans_400Regular,
-  PlusJakartaSans_500Medium,
-  PlusJakartaSans_600SemiBold,
-  PlusJakartaSans_700Bold,
-  PlusJakartaSans_800ExtraBold,
-} from "@expo-google-fonts/plus-jakarta-sans";
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { C } from "./src/theme";
+import { AlertHost } from "./src/ui/AlertHost";
 
 // Keep text readable but stop huge system font sizes from breaking layouts.
 type WithDefaults = { defaultProps?: { maxFontSizeMultiplier?: number } };
@@ -36,11 +30,14 @@ function Gate() {
 
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
-    PlusJakartaSans_400Regular,
-    PlusJakartaSans_500Medium,
-    PlusJakartaSans_600SemiBold,
-    PlusJakartaSans_700Bold,
-    PlusJakartaSans_800ExtraBold,
+    // Same fonts as harshaidsolutions.in headings (Poppins) + clean body text (Inter), bundled locally.
+    Poppins_500Medium: require("./assets/fonts/Poppins_500Medium.ttf"),
+    Poppins_600SemiBold: require("./assets/fonts/Poppins_600SemiBold.ttf"),
+    Poppins_700Bold: require("./assets/fonts/Poppins_700Bold.ttf"),
+    Poppins_800ExtraBold: require("./assets/fonts/Poppins_800ExtraBold.ttf"),
+    Inter_400Regular: require("./assets/fonts/Inter_400Regular.ttf"),
+    Inter_500Medium: require("./assets/fonts/Inter_500Medium.ttf"),
+    Inter_600SemiBold: require("./assets/fonts/Inter_600SemiBold.ttf"),
   });
   const ready = fontsLoaded || Boolean(fontError);
   useEffect(() => {
@@ -53,6 +50,7 @@ export default function App() {
         <AuthProvider>
           <StatusBar style="light" />
           <Gate />
+          <AlertHost />
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

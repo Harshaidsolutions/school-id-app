@@ -313,3 +313,20 @@
 .idg-sides { overflow: hidden !important; grid-template-rows: minmax(0, 1fr); }
 .idg-side { min-height: 0; }
 .idg-side .idg-stage { flex: 1 1 auto; min-height: 0; justify-content: center; }
+
+/* Phones / admin app (narrow screens): one column — cards first, then columns, then the editing panel */
+@media (max-width: 1100px) {
+  .idg.idg-full { height: auto; max-height: none; overflow: visible; padding: 8px; gap: 8px; }
+  .idg-full .idg-workspace, .idg-full .idg-workspace.is-panel-hidden { display: flex; flex-direction: column; gap: 10px; }
+  .idg-full .idg-center { order: 1; }
+  .idg-full .idg-left { order: 2; height: auto; }
+  .idg-full .idg-right { order: 3; height: auto; }
+  .idg-full .idg-workspace.is-panel-hidden .idg-right { display: block; }
+  .idg-panel-toggle { display: none !important; }
+  .idg-sides { overflow: visible !important; grid-template-columns: 1fr; grid-template-rows: auto; padding: 8px; }
+  .idg-side .idg-stage { flex: none; }
+  .idg-full .idg-top { padding: 10px !important; }
+  .idg-full .idg-top .idg-top-actions { margin-left: 0; width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .idg-full .idg-top .idg-top-actions > * { width: 100%; justify-content: center; }
+  .idg-left .idg-columns { grid-template-columns: 1fr; }
+}

@@ -60,6 +60,16 @@ export function TemplatesScreen() {
     const q = search.trim().toLowerCase();
     return items.filter((t) => (tab === "all" || t.orientation === tab) && (!q || t.name.toLowerCase().includes(q)));
   }, [items, tab, search]);
+  /** All templates in the current tab, so Next / Previous moves through every design (PDFs show front and back). */
+  const allSlides = list.flatMap((t) =>
+    isPdf(t.image_url)
+      ? [
+          { t, slide: { title: t.name, sub: "Front", source: thumbSource(t, 1) } },
+          { t, slide: { title: t.name, sub: "Back", source: thumbSource(t, 2) } },
+        ]
+      : [{ t, slide: { title: t.name, sub: labelOf(t.orientation), source: thumbSource(t) } }]
+  );
+  const openPreview = (t: Template) => setPreview({ t, index: Math.max(0, allSlides.findIndex((x) => x.t.id === t.id)) });
 
   async function remove(t: Template) {
     try {
@@ -109,7 +119,7 @@ export function TemplatesScreen() {
           }
           ListEmptyComponent={<Empty icon="albums-outline" title="No templates here" text="Upload JPG, PNG or PDF card designs." />}
           renderItem={({ item }) => (
-            <Tap onPress={() => setPreview({ t: item, index: 0 })} onLongPress={() => setMenu(item)} style={[st.tile, { width: tileW }]}>
+            <Tap onPress={() => openPreview(item)} onLongPress={() => setMenu(item)} style={[st.tile, { width: tileW }]}>
               <View style={[st.img, item.orientation?.startsWith("horizontal") ? { aspectRatio: 1.58 } : { aspectRatio: 0.63 }]}>
                 <Image source={thumbSource(item)} style={StyleSheet.absoluteFill} contentFit="contain" transition={150} />
                 {isPdf(item.image_url) ? (
@@ -144,7 +154,7 @@ export function TemplatesScreen() {
         actions={
           menu
             ? [
-                { label: "Preview", icon: "eye-outline", onPress: () => setPreview({ t: menu, index: 0 }) },
+                { label: "Preview", icon: "eye-outline", onPress: () => openPreview(menu) },
                 { label: "Rename / change type", icon: "create-outline", onPress: () => setRename(menu) },
                 {
                   label: "Delete template",
@@ -165,16 +175,7 @@ export function TemplatesScreen() {
         onClose={() => setPreview(null)}
         index={preview?.index ?? 0}
         onIndex={(i) => setPreview((p) => (p ? { ...p, index: i } : p))}
-        items={
-          preview
-            ? isPdf(preview.t.image_url)
-              ? [
-                  { title: preview.t.name, sub: "Front", source: thumbSource(preview.t, 1) },
-                  { title: preview.t.name, sub: "Back", source: thumbSource(preview.t, 2) },
-                ]
-              : [{ title: preview.t.name, sub: labelOf(preview.t.orientation), source: thumbSource(preview.t) }]
-            : []
-        }
+        items={allSlides.map((x) => x.slide)}
       />
       <UploadSheet
         visible={upload}

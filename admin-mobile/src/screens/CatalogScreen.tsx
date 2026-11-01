@@ -84,6 +84,9 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
 
   const tileW = (Math.min(width, CONTENT_MAX) - S.lg * 2 - S.md * (cols - 1)) / cols;
   const pics = (i: CatalogItem) => [i.image_url, ...(i.extra_image_urls ?? [])].filter((u): u is string => Boolean(u) && !isPdf(u));
+  /** Every image of every item in the list, so Next / Previous moves through all of them. */
+  const allPics = list.flatMap((item) => pics(item).map((url) => ({ item, url })));
+  const openViewer = (item: CatalogItem) => setViewer({ item, index: Math.max(0, allPics.findIndex((x) => x.item.id === item.id)) });
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -131,7 +134,7 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
           renderItem={({ item }) => (
             <Tap
               style={[st.tile, { width: tileW }]}
-              onPress={() => (isPdf(item.image_url) ? void Linking.openURL(mediaUrl(item.image_url)!) : setViewer({ item, index: 0 }))}
+              onPress={() => (isPdf(item.image_url) ? void Linking.openURL(mediaUrl(item.image_url)!) : openViewer(item))}
               onLongPress={() => setMenu(item)}
             >
               <View style={st.img}>
@@ -175,7 +178,7 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
         actions={
           menu
             ? [
-                { label: "View", icon: "eye-outline", onPress: () => (isPdf(menu.image_url) ? void Linking.openURL(mediaUrl(menu.image_url)!) : setViewer({ item: menu, index: 0 })) },
+                { label: "View", icon: "eye-outline", onPress: () => (isPdf(menu.image_url) ? void Linking.openURL(mediaUrl(menu.image_url)!) : openViewer(menu)) },
                 { label: "Play video", icon: "play-circle-outline", hidden: !menu.video_url, onPress: () => setPlaying(menu) },
                 { label: "Edit description", icon: "create-outline", hidden: isBrochure || kind === "tag", onPress: () => setEditor({ item: menu }) },
                 {
@@ -197,7 +200,7 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
         onClose={() => setViewer(null)}
         index={viewer?.index ?? 0}
         onIndex={(i) => setViewer((v) => (v ? { ...v, index: i } : v))}
-        items={viewer ? pics(viewer.item).map((u) => ({ title: viewer.item.name, sub: viewer.item.description ?? undefined, source: authedSource(u) })) : []}
+        items={allPics.map((x) => ({ title: x.item.name, sub: x.item.description ?? undefined, source: authedSource(x.url) }))}
       />
       <CatalogEditor
         kind={kind}

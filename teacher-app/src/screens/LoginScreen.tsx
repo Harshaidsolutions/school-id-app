@@ -7,11 +7,12 @@ import { Entrance } from "../components/Entrance";
 import { Pressable } from "../components/Pressable";
 import { API_BASE_URL } from "../api/client";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Linking,
   Platform,
+  Pressable as RNPressable,
   ScrollView,
   Text,
   TextInput,
@@ -29,7 +30,7 @@ import { loginLogoSize } from "../constants/headerLogo";
 import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import { BrandLockup } from "../components/BrandLockup";
 import { BRAND } from "../constants/brand";
-import { KeyboardDismissView } from "../components/KeyboardDismissView";
+import { RainbowBar } from "../components/RainbowBar";
 import type { LoginResponse } from "../types";
 import type { RootStackParamList } from "../navigation/types";
 import { cardShadow, radius, spacing } from "../theme/colors";
@@ -53,6 +54,8 @@ export function LoginScreen(_props: Props) {
   const { colors, isDark, submitGradient } = useTheme();
   const insets = useSafeAreaInsets();
   const [focused, setFocused] = useState<"user" | "pass" | null>(null);
+  const userRef = useRef<TextInput>(null);
+  const passRef = useRef<TextInput>(null);
   const { width } = useResponsiveLayout();
   const logoSize = loginLogoSize(width);
   const { login } = useAuth();
@@ -144,7 +147,8 @@ export function LoginScreen(_props: Props) {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["bottom"]}><ScreenBackdrop />
-      <KeyboardDismissView style={styles.flex}>
+      <RainbowBar style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 2 }} />
+      <View style={styles.flex}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -152,6 +156,7 @@ export function LoginScreen(_props: Props) {
           <ScrollView
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
           >
             <LinearGradient colors={isDark ? ["rgba(19,28,46,0.6)", "rgba(11,18,32,0)"] : ["rgba(255,255,255,0.75)", "rgba(255,255,255,0)"]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[styles.hero, { paddingTop: insets.top + spacing.xl }]}>
@@ -172,7 +177,7 @@ export function LoginScreen(_props: Props) {
               </Entrance>
             </LinearGradient>
 
-            <Entrance style={styles.authPanel} delay={120}>
+            <View style={styles.authPanel}>
               <Text style={styles.title} accessibilityRole="header">Welcome Back!</Text>
               <View style={styles.subtitleRow}>
                 <View style={styles.subtitleBar} />
@@ -180,11 +185,16 @@ export function LoginScreen(_props: Props) {
                 <View style={styles.subtitleBar} />
               </View>
 
-              <View style={[styles.field, focused === "user" && styles.fieldFocused]}>
+              <RNPressable style={[styles.field, focused === "user" && styles.fieldFocused]} onPress={() => userRef.current?.focus()} accessible={false}>
                 <View style={[styles.fieldIcon, focused === "user" && styles.fieldIconFocused]}>
                   <Ionicons name="person" size={17} color={focused === "user" ? "#FFFFFF" : colors.primaryOrange} />
                 </View>
                 <TextInput
+                  ref={userRef}
+                  editable={!loading}
+                  autoComplete="username"
+                  textContentType="username"
+                  importantForAutofill="yes"
                   style={styles.input}
                   placeholder="Username"
                   placeholderTextColor={colors.textPlaceholder}
@@ -195,13 +205,24 @@ export function LoginScreen(_props: Props) {
                   onChangeText={setUsername}
                   onFocus={() => setFocused("user")}
                   onBlur={() => setFocused(null)}
+                  returnKeyType="next"
+                  onSubmitEditing={() => passRef.current?.focus()}
                 />
-              </View>
-              <View style={[styles.field, focused === "pass" && styles.fieldFocused]}>
+              </RNPressable>
+              <RNPressable style={[styles.field, focused === "pass" && styles.fieldFocused]} onPress={() => passRef.current?.focus()} accessible={false}>
                 <View style={[styles.fieldIcon, focused === "pass" && styles.fieldIconFocused]}>
                   <Ionicons name="lock-closed" size={16} color={focused === "pass" ? "#FFFFFF" : colors.primaryOrange} />
                 </View>
                 <TextInput
+                  ref={passRef}
+                  editable={!loading}
+                  autoComplete="password"
+                  textContentType="password"
+                  importantForAutofill="yes"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="go"
+                  onSubmitEditing={() => void handleLogin()}
                   style={styles.input}
                   placeholder="Password"
                   placeholderTextColor={colors.textPlaceholder}
@@ -218,7 +239,7 @@ export function LoginScreen(_props: Props) {
                     color={colors.textMuted}
                   />
                 </Pressable>
-              </View>
+              </RNPressable>
 
               {error ? (
                 <View style={styles.errorBox}>
@@ -239,7 +260,7 @@ export function LoginScreen(_props: Props) {
                   {!loading ? <View style={styles.loginArrow}><Ionicons name="arrow-forward" size={18} color="#FFFFFF" /></View> : null}
                 </LinearGradient>
               </Pressable>
-            </Entrance>
+            </View>
 
             <Entrance style={styles.below} delay={240}>
               <ServiceRegistration />
@@ -274,13 +295,13 @@ export function LoginScreen(_props: Props) {
             </Entrance>
           </ScrollView>
         </KeyboardAvoidingView>
-      </KeyboardDismissView>
+      </View>
     </SafeAreaView>
   );
 }
 
 function useLoginStyles() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   return useResponsiveStyles(({ wp, scale }) => {
     const formW = Math.min(wp(100) - spacing.pagePad * 2, 440);
     return {
@@ -319,13 +340,13 @@ function useLoginStyles() {
         borderWidth: 1,
         borderColor: colors.border,
         padding: spacing.lg,
-        backgroundColor: colors.surface,
-        borderRadius: scale(28),
-        shadowColor: THEME.primaryDeep,
-        shadowOpacity: 0.12,
-        shadowRadius: 24,
+        backgroundColor: isDark ? colors.inputBg : "#FFFFFF",
+        borderRadius: scale(26),
+        shadowColor: "#1B1F3B",
+        shadowOpacity: 0.09,
+        shadowRadius: 22,
         shadowOffset: { width: 0, height: 12 },
-        elevation: 6,
+        elevation: 5,
       },
       titleBadge: {
         alignSelf: "center",
@@ -367,16 +388,11 @@ function useLoginStyles() {
         borderRadius: scale(16),
         borderWidth: 1.5,
         borderColor: colors.border,
-        backgroundColor: colors.inputBg,
+        backgroundColor: isDark ? colors.inputBg : "#F6F7FC",
       },
       fieldFocused: {
-        borderColor: colors.primaryOrange,
-        backgroundColor: colors.surface,
-        shadowColor: THEME.primary,
-        shadowOpacity: 0.18,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 3,
+        borderColor: "#1EA0E1",
+        backgroundColor: isDark ? colors.inputBg : "#FFFFFF",
       },
       fieldIcon: { width: scale(40), height: scale(40), borderRadius: scale(13), alignItems: "center", justifyContent: "center", backgroundColor: colors.blueSoft },
       fieldIconFocused: { backgroundColor: colors.primaryOrange },
@@ -396,17 +412,17 @@ function useLoginStyles() {
       loginBtn: {
         width: "100%",
         alignSelf: "center",
-        borderRadius: scale(16),
+        borderRadius: 999,
         minHeight: scale(58),
         marginTop: spacing.xs,
         overflow: "hidden",
         elevation: 6,
-        shadowColor: THEME.primaryDeep,
-        shadowOpacity: 0.35,
+        shadowColor: "#F26A1B",
+        shadowOpacity: 0.3,
         shadowRadius: 14,
         shadowOffset: { width: 0, height: 8 },
       },
-      loginGradient: { width: "100%", minHeight: scale(58), paddingVertical: spacing.sm, borderRadius: scale(16), flexDirection: "row", gap: spacing.sm, alignItems: "center", justifyContent: "center" },
+      loginGradient: { width: "100%", minHeight: scale(58), paddingVertical: spacing.sm, borderRadius: 999, flexDirection: "row", gap: spacing.sm, alignItems: "center", justifyContent: "center" },
       loginArrow: { width: scale(28), height: scale(28), borderRadius: scale(14), backgroundColor: "rgba(255,255,255,0.22)", alignItems: "center", justifyContent: "center" },
       loginBtnDisabled: { opacity: 0.65 },
       loginBtnText: {
@@ -477,5 +493,5 @@ function useLoginStyles() {
         color: colors.textBody,
       },
     };
-  }, [colors]);
+  }, [colors, isDark]);
 }

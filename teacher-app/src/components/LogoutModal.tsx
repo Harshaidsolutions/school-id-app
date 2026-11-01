@@ -8,7 +8,7 @@ import { fonts } from "../theme/typography";
 
 /** Modern logout confirmation (replaces the plain system alert). */
 export function LogoutModal({ visible, onCancel, onConfirm }: { visible: boolean; onCancel: () => void; onConfirm: () => void }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!visible) {
@@ -39,7 +39,7 @@ export function LogoutModal({ visible, onCancel, onConfirm }: { visible: boolean
             width: "100%",
             maxWidth: 380,
             borderRadius: 26,
-            backgroundColor: colors.surface === "rgba(255,255,255,0.86)" ? "#FFFFFF" : colors.inputBg,
+            backgroundColor: isDark ? colors.inputBg : "#FFFFFF",
             paddingHorizontal: 22,
             paddingTop: 26,
             paddingBottom: 20,

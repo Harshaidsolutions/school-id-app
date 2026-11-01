@@ -22,6 +22,8 @@ export type BrandTheme = {
   glowA: string;
   glowB: string;
   headingFont: "Outfit" | "Poppins";
+  /** Optional call-to-action gradient for main buttons (defaults to the primary colours). */
+  cta?: readonly [string, string, string];
 };
 
 export const THEMES = {
@@ -82,12 +84,28 @@ export const THEMES = {
     background: "#F4F7FE", ink: "#0F1B3D", glowA: "#A5B8FC", glowB: "#99F6E4",
     headingFont: "Poppins",
   },
+  /**
+   * Same look as harshaidsolutions.in: white pages, deep-ink text, purple brand,
+   * sky → purple headers and the warm orange → red call-to-action gradient.
+   */
+  harsha: {
+    name: "Harsha",
+    primary: "#6A2C9E", primaryLight: "#8E4FC4", primaryDeep: "#521F7C",
+    accent: "#F26A1B", accentLight: "#FF8A1F", accentDeep: "#C2410C", onAccent: "#FFFFFF",
+    header: ["#1EA0E1", "#4A63C4", "#6A2C9E"],
+    background: "#F6F7FC", ink: "#1B1F3B", glowA: "#BDE3F7", glowB: "#E9D8F7",
+    headingFont: "Poppins",
+    cta: ["#FF8A1F", "#F26A1B", "#E8243C"],
+  },
 } as const satisfies Record<string, BrandTheme>;
+
+/** The six logo-tile colours used for the rainbow strip (same as the website). */
+export const RAINBOW = ["#E8243C", "#1EA0E1", "#B9B51F", "#6A2C9E", "#F26A1B", "#FBB316"] as const;
 
 export type ThemeKey = keyof typeof THEMES;
 
 /** ← Change this one value to restyle the whole app. */
-export const ACTIVE_THEME: ThemeKey = "royal";
+export const ACTIVE_THEME: ThemeKey = "harsha";
 
 export const BRAND: BrandTheme = THEMES[ACTIVE_THEME];
 

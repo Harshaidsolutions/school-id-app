@@ -1,3 +1,4 @@
+import { RainbowBar } from "./RainbowBar";
 import { StyleSheet, View, type ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -32,6 +33,7 @@ export function IdCardsGreenHeader({ children, style }: Props) {
     >
       <FloatingShapes />
       <View style={styles.inner}>{children}</View>
+      <RainbowBar style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} />
     </LinearGradient>
   );
 }

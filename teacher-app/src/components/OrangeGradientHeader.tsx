@@ -1,3 +1,4 @@
+import { RainbowBar } from "./RainbowBar";
 import { StyleSheet, Text, View, type ViewStyle } from "react-native";
 import { Pressable } from "./Pressable";
 import { LinearGradient } from "expo-linear-gradient";
@@ -102,6 +103,7 @@ export function OrangeGradientHeader({
           <View style={[styles.iconSlot, { width: iconSize, height: iconSize }]} />
         )}
       </View>
+      <RainbowBar style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} />
     </LinearGradient>
   );
 }

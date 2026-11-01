@@ -47,8 +47,9 @@ export function initials(name?: string | null): string {
 }
 
 export function pct(part: number, total: number): string {
-  if (total <= 0) return "0%";
-  return `${((part / total) * 100).toFixed(1)}%`;
+  if (total <= 0 || part <= 0) return "0%";
+  const v = Number(((part / total) * 100).toFixed(1));
+  return `${Number.isInteger(v) ? v.toFixed(0) : v.toFixed(1)}%`;
 }
 
 export function num(n: number | null | undefined): string {

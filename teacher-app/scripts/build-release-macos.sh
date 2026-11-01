@@ -19,7 +19,7 @@ node -e 'const c=require("./google-services.json");if(!c.client?.some(x=>x.clien
 read -r -s -p 'Keystore password: ' SCHOOL_ID_STORE_PASSWORD; printf '\n'
 read -r -s -p 'Key password: ' SCHOOL_ID_KEY_PASSWORD; printf '\n'
 export SCHOOL_ID_STORE_PASSWORD SCHOOL_ID_KEY_PASSWORD SCHOOL_ID_KEYSTORE SCHOOL_ID_KEY_ALIAS
-trap 'unset SCHOOL_ID_STORE_PASSWORD SCHOOL_ID_KEY_PASSWORD; if [[ -n "${SIGNING_DIR:-}" ]]; then rm -f "$SIGNING_DIR/signing.gradle"; rmdir "$SIGNING_DIR"; fi' EXIT
+trap 'unset SCHOOL_ID_STORE_PASSWORD SCHOOL_ID_KEY_PASSWORD' EXIT
 npm ci
 npm run assets:generate
 npm run assets:verify
@@ -30,25 +30,15 @@ fi
 node scripts/verify-push-config.cjs
 node scripts/sync-release-version.mjs
 npm run android:network
-SIGNING_DIR="$(mktemp -d -t school-id-signing)"
-SIGNING_INIT="$SIGNING_DIR/signing.gradle"
-cat > "$SIGNING_INIT" <<'GRADLE'
-gradle.projectsEvaluated {
-    rootProject.allprojects { p ->
-        if (p.plugins.hasPlugin('com.android.application')) {
-            def signing = p.android.signingConfigs.findByName('schoolIdRelease') ?: p.android.signingConfigs.create('schoolIdRelease')
-            signing.storeFile = new File(System.getenv('SCHOOL_ID_KEYSTORE'))
-            signing.storePassword = System.getenv('SCHOOL_ID_STORE_PASSWORD')
-            signing.keyAlias = System.getenv('SCHOOL_ID_KEY_ALIAS')
-            signing.keyPassword = System.getenv('SCHOOL_ID_KEY_PASSWORD')
-            p.android.buildTypes.release.signingConfig = signing
-        }
-    }
-}
-GRADLE
 cd android
 chmod +x gradlew
-./gradlew --init-script "$SIGNING_INIT" assembleRelease
+# Sign with the keystore passed in the environment. Uses the Android Gradle Plugin's
+# injected-signing properties (the same ones Android Studio uses), which work on new AGP versions.
+./gradlew assembleRelease \
+  -Pandroid.injected.signing.store.file="$SCHOOL_ID_KEYSTORE" \
+  -Pandroid.injected.signing.store.password="$SCHOOL_ID_STORE_PASSWORD" \
+  -Pandroid.injected.signing.key.alias="$SCHOOL_ID_KEY_ALIAS" \
+  -Pandroid.injected.signing.key.password="$SCHOOL_ID_KEY_PASSWORD"
 VERSION="$(node -p 'require("../app.json").expo.version')"
 TARGET="$HOME/Desktop/MySchoolIDCard-v$VERSION.apk"
 cp app/build/outputs/apk/release/app-release.apk "$TARGET"

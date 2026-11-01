@@ -223,7 +223,7 @@ const st = StyleSheet.create({
   tileImg: { height: 130, backgroundColor: C.white },
   tileFoot: { flexDirection: "row", alignItems: "center", padding: S.sm, gap: 4 },
   opt: { flexDirection: "row", alignItems: "center", gap: S.md, backgroundColor: C.white, borderRadius: R.lg, padding: S.md, marginBottom: S.sm, borderWidth: 1, borderColor: C.line },
-  optOn: { borderColor: "#C7D2FE", backgroundColor: "#F7F7FF" },
+  optOn: { borderColor: C.primaryLight, backgroundColor: C.primarySoft },
   optIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#F4F3FF", alignItems: "center", justifyContent: "center" },
   optTitle: { fontFamily: F.h, fontSize: 15, color: C.ink },
   tileLabel: { flex: 1, fontFamily: F.bodySemi, fontSize: 12, color: C.text },
