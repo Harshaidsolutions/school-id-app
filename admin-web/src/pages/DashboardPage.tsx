@@ -1,189 +1,88 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-
+import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-
 import axios from "axios";
-
 import api from "../api/client";
-
 import { useAuth } from "../context/AuthContext";
 import { useYear } from "../context/YearContext";
-
 import type { ApiErrorBody, DashboardSummary } from "../types";
-
-
 
 const REFRESH_MS = 30_000;
 
-
-
-function MetricCard({
-
-  label,
-
-  value,
-
-  icon,
-
-  iconBg,
-
-  iconColor,
-
-  cardClass = "",
-
-  linkTo,
-
-  suffix,
-
-  spanTwo,
-
-}: {
-
-  label: string;
-
-  value: string | number;
-
-  icon: ReactNode;
-
-  iconBg: string;
-
-  iconColor: string;
-
-  cardClass?: string;
-
-  linkTo?: string;
-
-  suffix?: string;
-
-  spanTwo?: boolean;
-
-}) {
-
-  return (
-
-    <div className={`dashboard-stat-card h-full ${cardClass} ${spanTwo ? "dashboard-stat-card-span-2" : ""}`}>
-
-      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}>
-
-        {icon}
-
-      </div>
-
-      <div className="min-w-0 flex-1">
-
-        <div className="text-xs text-text-muted">{label}</div>
-
-        <div className="mt-0.5 text-xl font-bold text-text-navy">
-
-          {typeof value === "number" ? value.toLocaleString() : value}
-
-          {suffix ? <span className="text-base">{suffix}</span> : null}
-
-        </div>
-
-        {linkTo && (
-
-          <Link to={linkTo} className="mt-1 inline-block text-[11px] font-semibold text-button-blue hover:underline">
-
-            View all
-
-          </Link>
-
-        )}
-
-      </div>
-
-    </div>
-
-  );
-
-}
-
-
-
 function pct(part: number, total: number): string {
-
   if (total <= 0) return "0.0%";
-
   return `${((part / total) * 100).toFixed(1)}%`;
-
 }
 
-
-
-function StatusPill({ label, value, tone }: { label: string; value: number; tone: string }) {
-
+/** Ring chart: captured share of all photos. */
+function CaptureRing({ captured, total, tone }: { captured: number; total: number; tone: "indigo" | "teal" }) {
+  const share = total > 0 ? Math.min(1, captured / total) : 0;
+  const r = 52;
+  const c = 2 * Math.PI * r;
   return (
-
-    <div className={`h-full rounded-xl border px-4 py-4 text-center ${tone}`}>
-
-      <div className="text-2xl font-bold">{value.toLocaleString()}</div>
-
-      <div className="mt-1 text-xs font-semibold uppercase tracking-wide">{label}</div>
-
+    <div className={`dash-ring dash-ring-${tone}`}>
+      <svg viewBox="0 0 128 128" aria-hidden>
+        <circle cx="64" cy="64" r={r} className="dash-ring-track" />
+        <circle cx="64" cy="64" r={r} className="dash-ring-value" strokeDasharray={`${share * c} ${c}`} transform="rotate(-90 64 64)" />
+      </svg>
+      <div className="dash-ring-label">
+        <b>{pct(captured, total)}</b>
+        <span>captured</span>
+      </div>
     </div>
-
   );
-
 }
 
+type PanelProps = {
+  title: string;
+  tone: "indigo" | "teal";
+  count: number;
+  countLabel: string;
+  link: string;
+  people: string; // "Students" / "Members"
+  total: number;
+  captured: number;
+  pending: number;
+  active: number;
+  inactive: number;
+};
 
-
-function MetricPatternGrid({
-
-  cards,
-
-  cardStyle,
-
-  icon,
-
-}: {
-
-  cards: Array<{
-
-    label: string;
-
-    value: string | number;
-
-    linkTo?: string;
-
-  }>;
-
-  cardStyle: Array<{ iconBg: string; iconColor: string; cardClass?: string }>;
-
-  icon: ReactNode;
-
-}) {
-
+/** One big panel per area (Schools / Institutes): count, capture ring, numbers, active vs inactive. */
+function OverviewPanel(p: PanelProps) {
+  const orgTotal = p.active + p.inactive;
+  const activeShare = orgTotal > 0 ? (p.active / orgTotal) * 100 : 0;
   return (
-
-    <div className="dashboard-pattern-grid">
-
-      {cards.map((card, i) => (
-
-        <MetricCard
-
-          key={card.label}
-
-          {...card}
-
-          {...cardStyle[i % cardStyle.length]}
-
-          icon={icon}
-
-          spanTwo={i >= 4}
-
-        />
-
-      ))}
-
-    </div>
-
+    <section className={`dash-panel dash-panel-${p.tone}`} aria-label={p.title}>
+      <header className="dash-panel-head">
+        <div>
+          <span className="dash-panel-eyebrow">{p.title}</span>
+          <div className="dash-panel-count">
+            <b>{p.count.toLocaleString()}</b>
+            <span>{p.countLabel}</span>
+          </div>
+        </div>
+        <Link to={p.link} className="dash-panel-link">View all →</Link>
+      </header>
+      <div className="dash-panel-body">
+        <CaptureRing captured={p.captured} total={p.total} tone={p.tone} />
+        <div className="dash-stats">
+          <div className="dash-stat"><span>Total {p.people}</span><b>{p.total.toLocaleString()}</b></div>
+          <div className="dash-stat is-good"><span>{p.people} Captured</span><b>{p.captured.toLocaleString()}</b></div>
+          <div className="dash-stat is-warn"><span>{p.people} Uncaptured</span><b>{p.pending.toLocaleString()}</b></div>
+          <div className="dash-stat"><span>Uncapture Percentage</span><b>{pct(p.pending, p.total)}</b></div>
+        </div>
+      </div>
+      <footer className="dash-panel-foot">
+        <div className="dash-active-row">
+          <span><i className="dot is-on" /> Active {p.title} <b>{p.active}</b></span>
+          <span><i className="dot" /> Inactive {p.title} <b>{p.inactive}</b></span>
+        </div>
+        <div className="dash-bar" role="img" aria-label={`${p.active} active, ${p.inactive} inactive`}>
+          <i style={{ width: `${activeShare}%` }} />
+        </div>
+      </footer>
+    </section>
   );
-
 }
-
-
 
 function SuperAdminContactCard() {
   const { user } = useAuth();
@@ -334,173 +233,42 @@ export function DashboardPage() {
 
 
 
-  const schoolCards = useMemo(
-
-    () => [
-
-      { label: "Total Schools", value: summary?.totalSchools ?? 0, linkTo: "/schools" },
-
-      { label: "Total Students", value: schoolTotal },
-
-      { label: "Students Captured", value: schoolCaptured },
-
-      { label: "Students Uncaptured", value: schoolPending },
-
-      { label: "Capture Percentage", value: pct(schoolCaptured, schoolTotal) },
-
-      { label: "Uncapture Percentage", value: pct(schoolPending, schoolTotal) },
-
-    ],
-
-    [summary, schoolTotal, schoolCaptured, schoolPending]
-
-  );
-
-
-
-  const instituteCards = useMemo(
-
-    () => [
-
-      { label: "Total Institutes", value: summary?.totalInstitutes ?? 0, linkTo: "/institutes" },
-
-      { label: "Total Members", value: instituteTotal },
-
-      { label: "Members Captured", value: instituteCaptured },
-
-      { label: "Members Uncaptured", value: institutePending },
-
-      { label: "Capture Percentage", value: pct(instituteCaptured, instituteTotal) },
-
-      { label: "Uncapture Percentage", value: pct(institutePending, instituteTotal) },
-
-    ],
-
-    [summary, instituteTotal, instituteCaptured, institutePending]
-
-  );
-
-
-
-  const cardStyle = [
-
-    { iconBg: "bg-white/80", iconColor: "text-button-blue", cardClass: "bg-[#EEF0FF]" },
-
-    { iconBg: "bg-white/80", iconColor: "text-[#0D9488]", cardClass: "bg-[#EEF0FF]" },
-
-    { iconBg: "bg-white/80", iconColor: "text-primary-orange", cardClass: "bg-[#FFF1F3]" },
-
-    { iconBg: "bg-white/80", iconColor: "text-accent-purple", cardClass: "bg-[#F4F3FF]" },
-
-    { iconBg: "bg-white/80", iconColor: "text-[#4338CA]", cardClass: "bg-[#F7F7FC]" },
-
-    { iconBg: "bg-white/80", iconColor: "text-accent-pink", cardClass: "bg-[#FFF1F3]" },
-
-  ];
-
-
-
-  const icon = (
-
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-
-    </svg>
-
-  );
-
-
-
   return (
-
-    <div className="app-page dashboard-page space-y-6 pb-2 sm:space-y-8">
-
+    <div className="app-page dashboard-page dash-v2">
       {error && <div className="alert-error">{error}</div>}
       <SuperAdminContactCard />
-
       {loading ? (
-
         <div className="text-sm text-text-muted">Loading summary…</div>
-
       ) : (
-
-        <>
-
-          <section className="dashboard-section dashboard-collection dashboard-grow">
-
-            <h2 className="dashboard-section-title">Schools</h2>
-
-            <MetricPatternGrid cards={schoolCards} cardStyle={cardStyle} icon={icon} />
-
-          </section>
-
-
-
-          <section className="dashboard-section dashboard-grow">
-
-            <h2 className="dashboard-section-title">Institutes</h2>
-
-            <MetricPatternGrid cards={instituteCards} cardStyle={cardStyle} icon={icon} />
-
-          </section>
-
-
-
-          <section className="dashboard-section dashboard-status">
-            <div className="dashboard-status-grid">
-
-              <StatusPill
-
-                label="Active Schools"
-
-                value={summary?.activeSchools ?? 0}
-
-                tone="border-[#C7D2FE] bg-[#EEF0FF] text-[#0D9488]"
-
-              />
-
-              <StatusPill
-
-                label="Inactive Schools"
-
-                value={summary?.inactiveSchools ?? 0}
-
-                tone="border-[#E6E4F5] bg-[#EEF0FF] text-[#77759A]"
-
-              />
-
-              <StatusPill
-
-                label="Active Institutes"
-
-                value={summary?.activeInstitutes ?? 0}
-
-                tone="border-[#C7D2FE] bg-[#EEF0FF] text-[#0D9488]"
-
-              />
-
-              <StatusPill
-
-                label="Inactive Institutes"
-
-                value={summary?.inactiveInstitutes ?? 0}
-
-                tone="border-[#E6E4F5] bg-[#EEF0FF] text-[#77759A]"
-
-              />
-
-            </div>
-
-          </section>
-
-        </>
-
+        <div className="dash-panels">
+          <OverviewPanel
+            title="Schools"
+            tone="indigo"
+            count={summary?.totalSchools ?? 0}
+            countLabel="Total Schools"
+            link="/schools"
+            people="Students"
+            total={schoolTotal}
+            captured={schoolCaptured}
+            pending={schoolPending}
+            active={summary?.activeSchools ?? 0}
+            inactive={summary?.inactiveSchools ?? 0}
+          />
+          <OverviewPanel
+            title="Institutes"
+            tone="teal"
+            count={summary?.totalInstitutes ?? 0}
+            countLabel="Total Institutes"
+            link="/institutes"
+            people="Members"
+            total={instituteTotal}
+            captured={instituteCaptured}
+            pending={institutePending}
+            active={summary?.activeInstitutes ?? 0}
+            inactive={summary?.inactiveInstitutes ?? 0}
+          />
+        </div>
       )}
-
     </div>
-
   );
-
 }
-

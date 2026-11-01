@@ -5,7 +5,7 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
   appBrand?: boolean; brandAccent?: boolean; titleClassName?: string;
   onTitlePress?: () => void;
 }) {
-  const logo = <img src="/brand-wordmark.png" alt="My School ID Card" className="login-main-logo" />;
+  const logo = <img src="/brand-wordmark-clear.png" alt="My School ID Card" className="login-main-logo" />;
   return (
     <main className="login-shell"><div className="login-composition">
       <section className="login-brand-panel" aria-label="My School ID Card">
@@ -30,7 +30,7 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
             </g>
             <circle cx="180" cy="180" r="114" className="stamp-ring-thin" />
             <circle cx="180" cy="180" r="106" className="stamp-disc" />
-            <image href="/brand-wordmark.png" x="78" y="128" width="204" height="104" preserveAspectRatio="xMidYMid meet" />
+            <image href="/brand-wordmark-clear.png" x="72" y="135" width="216" height="90" preserveAspectRatio="xMidYMid meet" />
           </svg>
         </div>
         <div className="login-brand-copy">

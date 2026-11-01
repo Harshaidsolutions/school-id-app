@@ -1078,3 +1078,95 @@ input[type="file"]::file-selector-button:hover { background: #e0e3ff; }
 @keyframes logo-glow { 0%, 100% { opacity: 1; filter: drop-shadow(0 0 0 rgba(79, 70, 229, 0)); } 50% { opacity: 0.86; filter: drop-shadow(0 0 14px rgba(79, 70, 229, 0.35)); } }
 @media (max-width: 900px) { .login-main-logo { width: 250px !important; } }
 @media (prefers-reduced-motion: reduce) { .login-main-logo, .login-stamp, .login-stamp .stamp-text-ring { animation: none !important; } }
+
+/* ── Dashboard v2: two overview panels that fill the screen ── */
+.dash-v2 { display: flex !important; flex-direction: column; gap: 14px !important; }
+.dash-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.dash-panel { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 18px; padding: clamp(16px, 2.2vw, 28px); border-radius: 22px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow-sm); animation: fade-up 0.45s var(--ease) backwards; }
+.dash-panel::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 5px; background: var(--brand-grad); }
+.dash-panel-teal::before { background: linear-gradient(90deg, #0d9488, #22d3ee); }
+.dash-panel::after { content: ""; position: absolute; right: -90px; top: -90px; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(79, 70, 229, 0.09), transparent 70%); pointer-events: none; }
+.dash-panel-teal::after { background: radial-gradient(circle, rgba(13, 148, 136, 0.1), transparent 70%); }
+.dash-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.dash-panel-eyebrow { display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brand); background: var(--brand-soft); padding: 4px 10px; border-radius: 999px; }
+.dash-panel-teal .dash-panel-eyebrow { color: #0f766e; background: #e6f7f5; }
+.dash-panel-count { display: flex; align-items: baseline; gap: 10px; margin-top: 10px; }
+.dash-panel-count b { font-size: clamp(34px, 4.2vw, 52px); line-height: 1; font-weight: 800; color: var(--ink); letter-spacing: -0.03em; }
+.dash-panel-count span { font-size: 14px; font-weight: 600; color: var(--muted); }
+.dash-panel-link { flex: none; font-size: 13px; font-weight: 700; color: var(--brand); padding: 8px 12px; border-radius: 10px; background: var(--brand-soft); text-decoration: none; }
+.dash-panel-teal .dash-panel-link { color: #0f766e; background: #e6f7f5; }
+.dash-panel-link:hover { filter: brightness(0.96); }
+.dash-panel-body { flex: 1; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: clamp(14px, 2vw, 28px); }
+.dash-ring { position: relative; width: clamp(130px, 14vw, 200px); aspect-ratio: 1; }
+.dash-ring svg { width: 100%; height: 100%; }
+.dash-ring-track { fill: none; stroke: #eef0ff; stroke-width: 14; }
+.dash-ring-value { fill: none; stroke: var(--brand); stroke-width: 14; stroke-linecap: round; transition: stroke-dasharray 0.8s var(--ease); }
+.dash-ring-teal .dash-ring-track { stroke: #e6f7f5; }
+.dash-ring-teal .dash-ring-value { stroke: #0d9488; }
+.dash-ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.dash-ring-label b { font-size: clamp(20px, 2.2vw, 28px); font-weight: 800; color: var(--ink); }
+.dash-ring-label span { font-size: 12px; font-weight: 600; color: var(--muted); }
+.dash-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.dash-stat { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 14px; background: #f7f7fc; border: 1px solid var(--line-soft, #eeedf8); }
+.dash-stat span { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.dash-stat b { font-size: clamp(20px, 2vw, 26px); font-weight: 800; color: var(--ink); line-height: 1.1; }
+.dash-stat.is-good b { color: #0d9488; }
+.dash-stat.is-warn b { color: #e11d48; }
+.dash-panel-foot { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.dash-active-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.dash-active-row b { color: var(--ink); font-size: 15px; margin-left: 4px; }
+.dash-active-row .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #cbd5e1; margin-right: 6px; }
+.dash-active-row .dot.is-on { background: #10b981; }
+.dash-bar { height: 10px; border-radius: 999px; background: #eef0ff; overflow: hidden; }
+.dash-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #10b981, #34d399); }
+@media (min-width: 1024px) and (min-height: 620px) {
+  .app-main:has(.dash-v2) { overflow: hidden !important; }
+  .app-page-content:has(.dash-v2) { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+  .dash-v2 { flex: 1 1 auto; min-height: 0; }
+  .dash-panels { flex: 1 1 auto; min-height: 0; }
+  .dash-panel { min-height: 0; }
+}
+@media (max-width: 1100px) { .dash-panels { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .dash-panel-body { grid-template-columns: 1fr; justify-items: center; } .dash-stats { width: 100%; } }
+
+/* ── Login v3: logo with no background box, page fits the screen (no scrolling) ── */
+.login-main-logo, .login-logo-action { background: transparent !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important; padding: 0 !important; }
+.login-main-logo { width: min(280px, 100%) !important; margin: 0 auto 6px; }
+@keyframes logo-glow { 0%, 100% { opacity: 1; filter: drop-shadow(0 0 0 rgba(79, 70, 229, 0)); } 50% { opacity: 0.82; filter: drop-shadow(0 2px 8px rgba(79, 70, 229, 0.28)); } }
+@media (min-width: 861px) {
+  .login-shell, .login-composition { height: 100dvh; min-height: 0; overflow: hidden; }
+  .login-brand-panel { gap: clamp(8px, 2vh, 28px); padding: clamp(18px, 3.4vh, 48px) clamp(28px, 4vw, 56px); }
+  .login-stamp { width: min(clamp(200px, 24vw, 310px), 36vh); margin: 0; }
+  .login-brand-copy h2 { font-size: clamp(22px, min(3vw, 4.4vh), 42px); margin: clamp(6px, 1.3vh, 16px) 0; }
+  .login-brand-copy p { font-size: clamp(13px, 1.9vh, 16px); line-height: 1.5; }
+  .login-feature-list { margin-top: clamp(8px, 2vh, 24px); gap: clamp(5px, 1.1vh, 12px); }
+  .login-feature-list b { width: clamp(28px, 4.2vh, 36px); height: clamp(28px, 4.2vh, 36px); }
+  .login-form-panel { padding: clamp(10px, 3vh, 40px) 24px; overflow-y: auto; scrollbar-width: none; }
+  .auth-card { padding: clamp(16px, 3.2vh, 34px) 32px clamp(14px, 2.8vh, 28px); }
+  .login-heading { font-size: clamp(21px, 3.4vh, 26px); }
+  .login-caption { margin: 4px 0 clamp(10px, 2.2vh, 22px); }
+  .login-shell form { gap: clamp(9px, 1.8vh, 16px); }
+  .login-shell .input-field-icon, .login-shell button[type=submit] { min-height: clamp(40px, 5.6vh, 48px); }
+  .login-footer { margin-top: clamp(8px, 2vh, 20px); padding-top: clamp(6px, 1.6vh, 16px); }
+  .login-support a { padding: clamp(3px, 0.7vh, 8px) 8px; }
+  .login-support a > span:first-child { width: clamp(30px, 4.4vh, 38px); height: clamp(30px, 4.4vh, 38px); }
+}
+
+/* Dashboard v2: grow the ring and tiles with the screen so the panels look full */
+@media (min-width: 1024px) and (min-height: 620px) {
+  .dash-panel-body { gap: clamp(18px, 2.4vw, 40px); }
+  .dash-ring { width: clamp(150px, min(16vw, 36vh), 290px); }
+  .dash-ring-label b { font-size: clamp(24px, min(2.6vw, 4.8vh), 44px); }
+  .dash-ring-label span { font-size: clamp(12px, 1.7vh, 15px); }
+  .dash-stats { gap: clamp(10px, 1.8vh, 18px); }
+  .dash-stat { padding: clamp(12px, 2.6vh, 26px) clamp(14px, 1.4vw, 22px); gap: clamp(4px, 1vh, 10px); border-radius: 18px; }
+  .dash-stat span { font-size: clamp(12.5px, 1.7vh, 15px); }
+  .dash-stat b { font-size: clamp(22px, min(2.4vw, 4.4vh), 40px); }
+}
+@media (min-width: 1024px) and (min-height: 620px) {
+  .dash-panel-body { grid-template-columns: 1fr; justify-items: center; align-content: space-evenly; gap: clamp(12px, 2.4vh, 28px); }
+  .dash-ring { width: clamp(130px, 27vh, 250px); }
+  .dash-stats { width: 100%; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dash-stat { min-width: 0; padding: clamp(10px, 2vh, 20px) clamp(10px, 1vw, 16px); }
+  .dash-stat b { font-size: clamp(20px, min(1.7vw, 4vh), 34px); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+}
