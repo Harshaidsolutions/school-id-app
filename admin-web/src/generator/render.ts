@@ -72,9 +72,11 @@ export function blobToBitmap(blob: Blob, maxSide = 1600): Promise<ImageBitmap> {
   bitmapCache.set(blob, p);
   while (bitmapCache.size > CACHE_LIMIT) {
     const [oldBlob, oldP] = bitmapCache.entries().next().value as [Blob, Promise<ImageBitmap>];
+    // Only forget it here. Never close() it: the template / photos may still be held by the
+    // page or a long "Generate" run, and a closed bitmap fails with "The image source is
+    // detached". The browser frees it automatically once nothing uses it.
     bitmapCache.delete(oldBlob);
-    // Close after a moment so a render that is still drawing it can finish
-    void oldP.then((b) => setTimeout(() => b.close(), 4000)).catch(() => undefined);
+    void oldP;
   }
   p.catch(() => bitmapCache.delete(blob));
   return p;
