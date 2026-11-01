@@ -83,7 +83,7 @@ export function ForgotPasswordPage() {
       titleClassName="text-[#0D9488]"
       footer={
         <div className="text-center">
-          <Link to="/login" className="text-sm font-medium text-button-blue hover:underline">
+          <Link to="/" className="text-sm font-medium text-button-blue hover:underline">
             Back to Login
           </Link>
         </div>

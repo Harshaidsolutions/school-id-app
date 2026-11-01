@@ -1,8 +1,10 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { LoginPage } from "../pages/LoginPage";
 
 export function ProtectedRoute() {
   const { isAuthenticated, authReady } = useAuth();
+  const location = useLocation();
 
   if (!authReady) {
     return (
@@ -13,7 +15,9 @@ export function ProtectedRoute() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // The login screen lives at the site root (no "/login" in the address bar).
+    if (location.pathname === "/") return <LoginPage />;
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import api from "../api/client";
-import { HeaderBack } from "../components/HeaderBack";
 import type { Student, Template } from "../types";
 import { authenticatedStudentPhotoUrl, authenticatedStudentSignatureUrl } from "../utils/studentPhotoSrc";
 import { detectRoles } from "./columns";
@@ -109,6 +108,7 @@ export function GeneratorApp() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [tplMenu, setTplMenu] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
   const textStyle = useRef<TextStyle>({});
   const [print, setPrint] = useState({ sheetKey: "a4", landscape: false, gap: 3, margin: 8 });
   const [failedIds, setFailedIds] = useState<string[]>([]);
@@ -207,6 +207,9 @@ export function GeneratorApp() {
 
   // ---------- layout editing ----------
   const selected = layout.elements.find((e) => e.id === selectedId) ?? null;
+  useEffect(() => {
+    if (selectedId) setPanelOpen(true);
+  }, [selectedId]);
   const patchEl = useCallback((id: string, patch: Partial<CardElement>) => {
     setLayout((l) => ({
       ...l,
@@ -424,7 +427,10 @@ export function GeneratorApp() {
     <div className="app-page idg idg-simple idg-full">
       {/* Top bar: back, school, template uploads, bulk uploads, preview, generate */}
       <section className="idg-top card">
-        <HeaderBack to={back}>← Back</HeaderBack>
+        {/* Real link (the page header is hidden in this full-screen view). */}
+        <Link to={back} className="idg-back" aria-label={`Back to ${orgName || (orgKind === "school" ? "the school" : "the institute")}`}>
+          <span aria-hidden>←</span> Back
+        </Link>
         <div className="idg-top-title">
           <span className="idg-badge" aria-hidden>ID</span>
           <div>
@@ -478,7 +484,7 @@ export function GeneratorApp() {
         </div>
       )}
 
-      <div className="idg-workspace">
+      <div className={`idg-workspace${panelOpen ? "" : " is-panel-hidden"}`}>
         {/* Left: Excel columns + add field */}
         <aside className="card idg-left">
           <h3>Excel columns</h3>
@@ -525,6 +531,9 @@ export function GeneratorApp() {
               <span>{ready.length ? Math.min(previewIndex + 1, ready.length) : 0} / {ready.length}</span>
               <button type="button" className="idg-tool" disabled={previewIndex >= ready.length - 1} onClick={() => setPreviewIndex((i) => i + 1)} aria-label="Next person">›</button>
             </div>
+            <button type="button" className="btn-secondary idg-panel-toggle" onClick={() => setPanelOpen((v) => !v)} aria-expanded={panelOpen} title={panelOpen ? "Hide the editing panel to get a bigger playground" : "Show the editing panel"}>
+              {panelOpen ? "Hide panel ⟩" : "⟨ Show panel"}
+            </button>
             <div className="idg-zoom">
               <button type="button" className="idg-tool" onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))} aria-label="Zoom out">−</button>
               <span>{Math.round(zoom * 100)}%</span>
@@ -559,7 +568,7 @@ export function GeneratorApp() {
         </section>
 
         {/* Right: only the controls of the selected item */}
-        <aside className="card idg-right">
+        <aside className="card idg-right" hidden={!panelOpen}>
           {selected ? (
             <>
               <h3>{selected.kind === "text" ? `Text · ${selected.column ? niceLabel(selected.column) : "Text"}` : selected.kind === "image" ? mediaLabel(selected.media) : selected.kind === "qr" ? "QR code" : "Barcode"}</h3>

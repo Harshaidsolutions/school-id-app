@@ -8,7 +8,7 @@
     ["about", "/about-us", "About Us"],
     ["brochures", "/brochures", "Brochures"],
     ["videos", "/videos", "Videos"],
-    ["buy", "/buy-now", "Buy Now"],
+    ["buy", "/buy-now", "Order Now"],
     ["touch", "/get-in-touch", "Get in Touch"],
     ["app", "/my-app", "My App"],
   ];
@@ -85,11 +85,11 @@
         <div>
           <h2>Social</h2>
           <div class="socials">
-            <a class="fb" href="${site.social.facebook}" aria-label="Facebook">${ICONS.facebook}</a>
-            <a class="ig" href="${site.social.instagram}" aria-label="Instagram">${ICONS.instagram}</a>
-            <a class="yt" href="${site.social.youtube}" aria-label="YouTube">${ICONS.youtube}</a>
             <a class="wa" href="${site.whatsapp}" aria-label="WhatsApp">${ICONS.whatsapp}</a>
             <a class="em" href="mailto:${site.email}" aria-label="Email">${ICONS.mail}</a>
+            <a class="ig" href="${site.social.instagram}" aria-label="Instagram">${ICONS.instagram}</a>
+            <a class="yt" href="${site.social.youtube}" aria-label="YouTube">${ICONS.youtube}</a>
+            <a class="fb" href="${site.social.facebook}" aria-label="Facebook">${ICONS.facebook}</a>
           </div>
         </div>
       </div>
@@ -142,9 +142,9 @@
       .map(
         (product) => `
         <article class="product-card">
-          <div class="product-media"><span class="product-tag" aria-hidden="true"></span><img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy" /></div>
+          <div class="product-media"><img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy" /></div>
           <h3>${escapeHtml(product.name)}</h3>
-          <a class="button book-product" target="_blank" rel="noopener noreferrer" href="${escapeHtml(site.whatsapp + '?text=' + encodeURIComponent('Hello, I would like to order ' + product.name + '. Please share the price and availability.\nProduct image: ' + new URL(product.image, location.origin).href))}">Book Now ↗</a>
+          <a class="button book-product" target="_blank" rel="noopener noreferrer" href="${escapeHtml(site.whatsapp + '?text=' + encodeURIComponent('Hello, I would like to order ' + product.name + '. Please share the price and availability.\nProduct image: ' + new URL(product.image, location.origin).href))}">Order Now ↗</a>
           <button class="share-product" type="button" data-product="${escapeHtml(product.name)}">${ICONS.share}Share product image</button>
         </article>`
       )
@@ -165,7 +165,7 @@
         if (navigator.canShare?.({files:[file]})) await navigator.share(data);
         else window.open(site.whatsapp + "?text=" + encodeURIComponent(data.text + "\nProduct image: " + new URL(product.image, location.origin).href), "_blank", "noopener,noreferrer");
       } catch (error) {
-        if (error.name !== "AbortError") alert("Please use Book Now to send the product details and image link to our team.");
+        if (error.name !== "AbortError") alert("Please use Order Now to send the product details and photo link to us.");
       } finally { button.disabled = false; }
     });
   });

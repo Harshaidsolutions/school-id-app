@@ -1,3 +1,4 @@
+import { LogoutModal } from "../components/LogoutModal";
 import { BRAND } from "../theme/brandTheme";
 import { Entrance } from "../components/Entrance";
 import { useEffect, useState } from "react";
@@ -142,18 +143,9 @@ export function DrawerMenuScreen({ navigation }: Props) {
     }
   }
 
+  const [logoutOpen, setLogoutOpen] = useState(false);
   function confirmLogout() {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Confirm",
-        style: "destructive",
-        onPress: () => {
-          navigation.goBack();
-          void logout();
-        },
-      },
-    ]);
+    setLogoutOpen(true);
   }
 
   const menuItems: MenuItem[] = ([
@@ -383,6 +375,15 @@ export function DrawerMenuScreen({ navigation }: Props) {
           ))}
         </InfoModal>
       </View>
+      <LogoutModal
+        visible={logoutOpen}
+        onCancel={() => setLogoutOpen(false)}
+        onConfirm={() => {
+          setLogoutOpen(false);
+          navigation.goBack();
+          void logout();
+        }}
+      />
     </View>
   );
 }

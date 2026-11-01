@@ -326,15 +326,11 @@ function Page2({
           Capture student photos, manage data & create ID cards in minutes.
         </Text>
 
-        <View style={styles.p2ImageWrap}>
-          <Image
-            source={require("../../assets/onboarding-hero.png")}
-            style={{
-              width: illustrationW,
-              height: illustrationH,
-            }}
-            resizeMode="contain"
-          />
+        {/* Instruction pictures are shown only after login (Instructions section). */}
+        <View style={[styles.p2ImageWrap, { minHeight: Math.min(illustrationH, 120) }]}>
+          <View style={styles.p2Badge}>
+            <Text style={styles.p2BadgeText}>📸 Capture  •  🗂 Organize  •  🪪 Print</Text>
+          </View>
         </View>
       </View>
 
@@ -570,6 +566,15 @@ function useOnboardingStyles() {
       maxWidth: wp(82),
       textAlign: "left",
     },
+    p2Badge: {
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+      borderRadius: 999,
+      backgroundColor: colors.blueSoft,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    p2BadgeText: { fontFamily: fonts.headingSemiBold, fontSize: 14, color: colors.primaryOrange, textAlign: "center" as const },
     p2ImageWrap: {
       flex: 1,
       width: "100%",

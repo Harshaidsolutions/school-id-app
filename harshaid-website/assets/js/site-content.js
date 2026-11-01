@@ -46,21 +46,21 @@ window.SITE = {
     { kind: "heading", text: "ABOUT US" },
     {
       kind: "text",
-      text: "Our services begins in 2016, We have been leading ID manufacturers in the three Uttarandhra Districts i.e., Srikakulam, Vizianaggaram and Visakhapatnam. We have successfully completed so many projects related to state government and central government including private sectors. We started our bussiness with STUDENT ID CARDS, TIES and BELTS. Within short period of time, Harsha ID Solutions developed the business to small scale industry.",
+      text: "We started in 2016. Today we are a leading ID card maker in 4 districts of North Andhra, including Srikakulam, Vizianagaram and Visakhapatnam. We have done many projects for the State Government, the Central Government and private companies. We started with student ID cards, ties and belts. In a short time, Harsha ID Solutions grew into a small-scale industry.",
     },
     {
       kind: "text",
-      text: "We have been in the business of ID CARDS, TIES, MULTI COLOUR BELTS, REPORT CARDS, DAIRIES, T-SHIRT PRINTING, LOGO BADGES and SCREEN PRINTING for the past 10 Years catering various sectors i.e., Corporate, Industrial, Banks, Educational Institutions etc. Taking on the challenges and fulfilling the customer expectations. The company has been providing solutions on technology, machinery, Raw materials to ID sellers across the state.",
+      text: "For about 10 years we have made ID cards, ties, multi-colour belts, report cards, diaries, T-shirt printing, logo badges and screen printing. We work for schools, colleges, companies, factories and banks. We also supply machines, raw materials and technical help to ID card sellers across the state.",
     },
     { kind: "heading", text: "OUR STRENGTH" },
     {
       kind: "text",
-      text: "Maintaining good quality, providing latest models with in-time delivery, Commited and skilled manpower, fully automated advanced machinery, assured raw material support, resulting in excelling customer expectations.",
+      text: "Good quality, the latest designs and on-time delivery. A skilled and committed team, modern automatic machines and a steady supply of raw materials.",
     },
     { kind: "heading", text: "SINGLE LINE ABOUT HARSHA ID SOLUTIONS" },
     {
       kind: "text",
-      text: "HARSHA ID SOLUTIONS MOTO IS PROVIDING TRUSTED SERVICES TO OUR CUSTOMERS.",
+      text: "Our aim is simple: trusted service for every customer.",
     },
     { kind: "heading", text: "*** GET IDENTITY HERE ***" },
   ],

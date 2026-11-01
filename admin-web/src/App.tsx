@@ -7,7 +7,6 @@ import { AuthProvider } from "./context/AuthContext";
 import { YearProvider } from "./context/YearContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./components/AppLayout";
-const LoginPage = lazy(() => import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })));
 const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const StudentsPage = lazy(() => import("./pages/StudentsPage").then((module) => ({ default: module.StudentsPage })));
 const BulkUploadPage = lazy(() => import("./pages/BulkUploadPage").then((module) => ({ default: module.BulkUploadPage })));
@@ -38,7 +37,7 @@ export default function App() {
       <BrowserRouter>
         <Suspense fallback={<div role="status" className="p-6">Loading…</div>}>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/school-form/:token" element={<PublicOrgFormPage school />} />
           <Route path="/org-form/:token" element={<PublicOrgFormPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />

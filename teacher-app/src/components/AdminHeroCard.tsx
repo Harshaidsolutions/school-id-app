@@ -44,12 +44,12 @@ export function AdminHeroCard({ adminName, photoUrl, loading }: Props) {
             <Ionicons name="shield-checkmark" size={scale(12)} color="#FFFFFF" />
             <Text style={[styles.chipText, { fontSize: scale(11) }]}>Your ID card partner</Text>
           </View>
-          <Text style={[styles.name, { fontSize: scale(24), lineHeight: scale(30) }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
+          <Text style={[styles.name, { fontSize: scale(24), lineHeight: scale(30) }]} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.6}>
             {adminName}
           </Text>
-          <Text style={[styles.sub, { fontSize: scale(12.5) }]} numberOfLines={1}>
-            My School ID Card · Get Your Identity Here...
-          </Text>
+          {/* Full text on every phone (no "…" truncation). */}
+          <Text style={[styles.sub, { fontSize: scale(12.5), lineHeight: scale(17) }]}>My School ID Card</Text>
+          <Text style={[styles.sub, { fontSize: scale(12.5), lineHeight: scale(17), marginTop: 0 }]}>Get Your Identity Here...</Text>
         </View>
       </View>
     </LinearGradient>

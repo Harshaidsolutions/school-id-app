@@ -808,7 +808,7 @@ export function AppLayout() {
                   onClick={() => {
                     setMenuOpen(false);
                     logout();
-                    navigate("/login", { replace: true });
+                    navigate("/", { replace: true });
                   }}
                 >
                   Logout

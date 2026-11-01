@@ -24,10 +24,16 @@ export async function instructionContent(req:Request,res:Response,next:NextFunct
 }catch(e){next(e);}}
 export async function getAppInstructions(req:Request,res:Response,next:NextFunction){try{
  if(!req.user)throw new AppError('Login required',401);
+ // The school's own admin's "School App Instructions"; if that admin has not written any,
+ // fall back to the Super Admin's instructions so teachers always see the published content.
  const result=await pool.query(`SELECT c.title,c.body,c.media FROM users u
  LEFT JOIN schools s ON s.id=u.school_id LEFT JOIN institutes i ON i.id=u.institute_id
  JOIN app_instruction_content c ON c.owner_id=COALESCE(s.owner_admin_id,i.owner_admin_id)
- WHERE u.id=$1`,[req.user.userId]);res.json({content:result.rows[0]??null});
+ WHERE u.id=$1
+ UNION ALL
+ SELECT c.title,c.body,c.media FROM app_instruction_content c
+ JOIN users a ON a.id=c.owner_id AND a.role='admin' AND COALESCE(a.is_super_admin,false)=true
+ LIMIT 1`,[req.user.userId]);res.json({content:result.rows[0]??null});
 }catch(e){next(e);}}
 const hits=new Map<string,{count:number;until:number}>();
 export async function registerServiceInterest(req:Request,res:Response,next:NextFunction){try{

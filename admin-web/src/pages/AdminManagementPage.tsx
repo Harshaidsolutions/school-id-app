@@ -86,7 +86,7 @@ function ProfilePhotoField({
         <img
           src={previewUrl}
           alt="Profile photo"
-          className="mb-2 h-auto max-h-28 w-auto max-w-full rounded-lg bg-white object-contain"
+          className="mb-2 h-auto max-h-28 w-auto max-w-full bg-white object-contain"
         />
       ) : null}
       {inlineActions ? (

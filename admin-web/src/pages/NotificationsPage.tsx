@@ -306,7 +306,7 @@ export function NotificationsPage() {
           />
           {imagePreview ? (
             <div className="mt-2 flex items-start gap-3">
-              <img src={imagePreview} alt="" className="max-h-32 max-w-full rounded-lg object-contain" />
+              <img src={imagePreview} alt="" className="max-h-32 max-w-full object-contain" />
               <button
                 type="button"
                 className="btn-secondary"
@@ -538,7 +538,7 @@ export function NotificationsPage() {
               {n.message}
             </p>
             {n.image_url ? (
-              <img src={n.image_url} alt="" className="mt-3 max-h-40 max-w-full rounded-lg object-contain" />
+              <img src={n.image_url} alt="" className="mt-3 max-h-40 max-w-full object-contain" />
             ) : null}
             <div className="mt-3 text-xs font-medium text-accent-blue">
               {targetLabel(n)}

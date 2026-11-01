@@ -12,6 +12,17 @@ import { Tap } from "../ui/Pressable";
 import { DOC_TYPES, asFormFile, pickDocuments, pickImages, sizeOk, type PickedFile } from "../lib/files";
 import { waLink } from "../lib/format";
 
+/** Same guide as the website's "Guides for Admins" (shown to child admins only). */
+const ADMIN_GUIDE = [
+  "Open the correct school or institute. Check its name and academic year before making changes.",
+  "Use Form Setup to choose fields. Check a small sample before uploading the full Excel file.",
+  "Match each photo file name with the Photo Number in Excel. Do not use the student's name as the photo file name.",
+  "Use the eye control to hide or show records in the school app. Hidden records are not deleted.",
+  "In Cropping Tool, select an area and press OK to preview. Save to keep the change.",
+  "Check recipients, text and image before sending a notification. A saved message only saves its wording.",
+  "Do not share your login or OTP. Do not delete records without checking with the school. Contact the super admin if you are unsure.",
+];
+
 type Media = { type: string; url: string; caption: string };
 type Lead = { id: string; name: string; organization: string; phone: string; email: string; message: string; status: string };
 
@@ -102,6 +113,20 @@ export function HelpScreen() {
         <Loading />
       ) : view === "instructions" ? (
         <>
+          {!isSuperAdmin ? (
+            <Section title="Guides for Admins">
+              <Card>
+                {ADMIN_GUIDE.map((g, i) => (
+                  <View key={i} style={{ flexDirection: "row", gap: 10, marginBottom: i === ADMIN_GUIDE.length - 1 ? 0 : 10 }}>
+                    <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: C.primarySoft, alignItems: "center", justifyContent: "center" }}>
+                      <Text style={{ fontFamily: F.h, fontSize: 12, color: C.primaryDeep }}>{i + 1}</Text>
+                    </View>
+                    <Text style={{ flex: 1, fontFamily: F.body, fontSize: 14, lineHeight: 21, color: C.text }}>{g}</Text>
+                  </View>
+                ))}
+              </Card>
+            </Section>
+          ) : null}
           <Muted style={{ marginBottom: S.md }}>These appear after login in the school app for your schools and institutes, along with the standard photo guide.</Muted>
           <Field label="Heading" required value={title} onChangeText={setTitle} maxLength={120} />
           <Field label="Instructions" value={body} onChangeText={setBody} multiline maxLength={12000} />

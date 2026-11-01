@@ -317,7 +317,7 @@ export function AddStudentModal({
             <img
               src={signaturePreview}
               alt="Selected signature"
-              className="mb-2 h-20 w-full rounded-lg object-contain"
+              className="mb-2 h-20 w-full object-contain"
             />
           ) : null}
           <label className="group relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy hover:border-button-blue/40 hover:bg-blue-soft/30">
@@ -398,7 +398,7 @@ export function AddStudentModal({
                 <img
                   src={photoPreview}
                   alt="Selected photo"
-                  className="mb-2 h-28 w-24 rounded-lg object-cover"
+                  className="mb-2 h-28 w-24 object-cover"
                 />
               ) : null}
               <label className="group relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy hover:border-button-blue/40 hover:bg-blue-soft/30">

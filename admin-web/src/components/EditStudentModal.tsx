@@ -346,7 +346,7 @@ export function EditStudentModal({
             <img
               src={signaturePreview}
               alt="Signature"
-              className="mb-2 h-16 w-full rounded-lg bg-white object-contain"
+              className="mb-2 h-16 w-full bg-white object-contain"
             />
           ) : null}
           <label className="relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy">
@@ -400,7 +400,7 @@ export function EditStudentModal({
             <div className="rounded-xl border border-border bg-content-bg/50 p-4 text-center">
               <p className="mb-3 text-sm font-medium text-text-navy">Photo</p>
               {photoPreview ? (
-                <img src={photoPreview} alt="Student" className="mx-auto mb-3 h-28 w-28 rounded-lg object-cover ring-2 ring-border" />
+                <img src={photoPreview} alt="Student" className="mx-auto mb-3 h-28 w-28 object-cover" />
               ) : (
                 <div className="mx-auto mb-3 flex h-28 w-28 items-center justify-center rounded-lg bg-content-bg text-sm text-text-muted">
                   No photo

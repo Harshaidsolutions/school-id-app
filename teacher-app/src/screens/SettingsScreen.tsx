@@ -1,3 +1,4 @@
+import { LogoutModal } from "../components/LogoutModal";
 import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { contentMaxStyle } from "../theme/responsive";
 import { Pressable } from "../components/Pressable";
@@ -82,11 +83,9 @@ export function SettingsScreen({ navigation }: Props) {
     };
   }, []);
 
+  const [logoutOpen, setLogoutOpen] = useState(false);
   function confirmLogout() {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Confirm", style: "destructive", onPress: () => void logout() },
-    ]);
+    setLogoutOpen(true);
   }
 
   async function checkForUpdate() {
@@ -260,6 +259,14 @@ export function SettingsScreen({ navigation }: Props) {
           <InfoParagraph key={p.slice(0, 24)} text={p} colors={colors} />
         ))}
       </InfoModal>
+      <LogoutModal
+        visible={logoutOpen}
+        onCancel={() => setLogoutOpen(false)}
+        onConfirm={() => {
+          setLogoutOpen(false);
+          void logout();
+        }}
+      />
     </View>
   );
 }

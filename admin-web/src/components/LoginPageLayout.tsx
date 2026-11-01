@@ -13,19 +13,23 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
         <span className="login-brand-dot" aria-hidden />
         <span className="login-orb login-orb-1" aria-hidden />
         <span className="login-orb login-orb-2" aria-hidden />
-        <div className="login-cards" aria-hidden>
-          {[0, 1, 2].map((i) => (
-            <div key={i} className={`login-idcard login-idcard-${i}`}>
-              <i className="login-idcard-band" />
-              <i className="login-idcard-photo" />
-              <i className="login-idcard-line is-wide" />
-              <i className="login-idcard-line" />
-              <i className="login-idcard-line is-short" />
-              <i className="login-idcard-qr" />
-            </div>
-          ))}
+        {/* Rubber-stamp style brand seal */}
+        <div className="login-stamp" aria-hidden>
+          <svg viewBox="0 0 320 320" role="presentation">
+            <defs>
+              <path id="stampTop" d="M 160 160 m -118 0 a 118 118 0 1 1 236 0" />
+              <path id="stampBottom" d="M 160 160 m -128 0 a 128 128 0 0 0 256 0" />
+            </defs>
+            <circle cx="160" cy="160" r="150" className="stamp-ring stamp-ring-outer" />
+            <circle cx="160" cy="160" r="140" className="stamp-ring" />
+            <circle cx="160" cy="160" r="96" className="stamp-ring stamp-ring-inner" />
+            <text className="stamp-text"><textPath href="#stampTop" startOffset="50%" textAnchor="middle">MY SCHOOL ID CARD</textPath></text>
+            <text className="stamp-text stamp-text-small"><textPath href="#stampBottom" startOffset="50%" textAnchor="middle">★ HARSHA ID SOLUTIONS ★</textPath></text>
+            <text x="160" y="150" textAnchor="middle" className="stamp-center">ADMIN</text>
+            <text x="160" y="182" textAnchor="middle" className="stamp-center stamp-center-small">VERIFIED WORKSPACE</text>
+            <line x1="104" y1="196" x2="216" y2="196" className="stamp-line" />
+          </svg>
         </div>
-        <div className="login-wordmark"><img src="/brand-wordmark.png" alt="My School ID Card" /></div>
         <div className="login-brand-copy">
           <span className="login-eyebrow">ADMIN WORKSPACE</span>
           <h2>Every identity.<br />One organized place.</h2>

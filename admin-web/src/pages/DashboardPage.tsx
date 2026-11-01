@@ -427,7 +427,7 @@ export function DashboardPage() {
 
         <>
 
-          <section className="dashboard-section dashboard-collection">
+          <section className="dashboard-section dashboard-collection dashboard-grow">
 
             <h2 className="dashboard-section-title">Schools</h2>
 
@@ -437,7 +437,7 @@ export function DashboardPage() {
 
 
 
-          <section className="dashboard-section">
+          <section className="dashboard-section dashboard-grow">
 
             <h2 className="dashboard-section-title">Institutes</h2>
 
@@ -447,7 +447,7 @@ export function DashboardPage() {
 
 
 
-          <section className="dashboard-section">
+          <section className="dashboard-section dashboard-status">
             <div className="dashboard-status-grid">
 
               <StatusPill

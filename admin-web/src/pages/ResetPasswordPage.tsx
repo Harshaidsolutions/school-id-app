@@ -60,7 +60,7 @@ export function ResetPasswordPage() {
         resetToken,
         newPassword: password,
       });
-      navigate("/login", { replace: true });
+      navigate("/", { replace: true });
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const body = err.response?.data as { message?: string } | undefined;
@@ -78,7 +78,7 @@ export function ResetPasswordPage() {
       title="Reset Password"
       footer={
         <div className="text-center">
-          <Link to="/login" className="text-sm font-medium text-button-blue hover:underline">
+          <Link to="/" className="text-sm font-medium text-button-blue hover:underline">
             Back to Login
           </Link>
         </div>

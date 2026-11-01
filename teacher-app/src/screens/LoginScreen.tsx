@@ -156,7 +156,6 @@ export function LoginScreen(_props: Props) {
           >
             <LinearGradient colors={isDark ? ["rgba(19,28,46,0.6)", "rgba(11,18,32,0)"] : ["rgba(255,255,255,0.75)", "rgba(255,255,255,0)"]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[styles.hero, { paddingTop: insets.top + spacing.xl }]}>
               <FloatingShapes color={isDark ? "#FFFFFF" : colors.primaryOrange} />
-              <View style={styles.heroAccent} />
               <Entrance style={styles.identityPanel}>
                 <View style={styles.logoCard}>
                   <BrandLockup
@@ -174,12 +173,12 @@ export function LoginScreen(_props: Props) {
             </LinearGradient>
 
             <Entrance style={styles.authPanel} delay={120}>
-              <View style={styles.titleBadge}>
-                <Ionicons name="shield-checkmark" size={14} color={colors.orangeDark} />
-                <Text style={styles.titleBadgeText}>Teacher & staff login</Text>
+              <Text style={styles.title} accessibilityRole="header">Welcome Back!</Text>
+              <View style={styles.subtitleRow}>
+                <View style={styles.subtitleBar} />
+                <Text style={styles.subtitle}>Login to continue</Text>
+                <View style={styles.subtitleBar} />
               </View>
-              <Text style={styles.title}>Welcome Back!</Text>
-              <Text style={styles.subtitle}>Login to continue</Text>
 
               <View style={[styles.field, focused === "user" && styles.fieldFocused]}>
                 <View style={[styles.fieldIcon, focused === "user" && styles.fieldIconFocused]}>
@@ -340,35 +339,45 @@ function useLoginStyles() {
       },
       titleBadgeText: { fontFamily: fonts.headingSemiBold, fontSize: scale(12), color: colors.orangeDark },
       title: {
-        marginTop: spacing.sm,
-        fontSize: scale(28),
-        letterSpacing: -0.3,
+        marginTop: spacing.xs,
+        fontSize: scale(34),
+        lineHeight: scale(42),
+        letterSpacing: -0.5,
         fontFamily: fonts.headingExtraBold,
         textAlign: "center",
-        color: colors.textPrimary,
+        color: colors.primaryOrange,
       },
+      subtitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, marginTop: scale(4), marginBottom: spacing.lg },
+      subtitleBar: { width: scale(22), height: 2, borderRadius: 1, backgroundColor: colors.brandOrange, opacity: 0.8 },
       subtitle: {
-        marginTop: scale(2),
-        marginBottom: spacing.lg,
-        fontFamily: fonts.body,
+        fontFamily: fonts.bodySemiBold,
         fontSize: typeScale.subtitle,
-        color: colors.textMuted,
+        letterSpacing: 0.4,
+        color: colors.textSecondary,
         textAlign: "center",
       },
       field: {
         flexDirection: "row",
         alignItems: "center",
         gap: spacing.sm,
-        minHeight: scale(56),
+        minHeight: scale(58),
         paddingLeft: scale(8),
         paddingRight: spacing.md,
-        marginBottom: spacing.sm,
-        borderRadius: scale(18),
+        marginBottom: spacing.md,
+        borderRadius: scale(16),
         borderWidth: 1.5,
         borderColor: colors.border,
         backgroundColor: colors.inputBg,
       },
-      fieldFocused: { borderColor: colors.primaryOrange, backgroundColor: colors.surface },
+      fieldFocused: {
+        borderColor: colors.primaryOrange,
+        backgroundColor: colors.surface,
+        shadowColor: THEME.primary,
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 3,
+      },
       fieldIcon: { width: scale(40), height: scale(40), borderRadius: scale(13), alignItems: "center", justifyContent: "center", backgroundColor: colors.blueSoft },
       fieldIconFocused: { backgroundColor: colors.primaryOrange },
       input: {
@@ -387,8 +396,8 @@ function useLoginStyles() {
       loginBtn: {
         width: "100%",
         alignSelf: "center",
-        borderRadius: scale(18),
-        minHeight: scale(56),
+        borderRadius: scale(16),
+        minHeight: scale(58),
         marginTop: spacing.xs,
         overflow: "hidden",
         elevation: 6,
@@ -397,11 +406,13 @@ function useLoginStyles() {
         shadowRadius: 14,
         shadowOffset: { width: 0, height: 8 },
       },
-      loginGradient: { width: "100%", minHeight: scale(56), paddingVertical: spacing.sm, borderRadius: scale(18), flexDirection: "row", gap: spacing.sm, alignItems: "center", justifyContent: "center" },
+      loginGradient: { width: "100%", minHeight: scale(58), paddingVertical: spacing.sm, borderRadius: scale(16), flexDirection: "row", gap: spacing.sm, alignItems: "center", justifyContent: "center" },
       loginArrow: { width: scale(28), height: scale(28), borderRadius: scale(14), backgroundColor: "rgba(255,255,255,0.22)", alignItems: "center", justifyContent: "center" },
       loginBtnDisabled: { opacity: 0.65 },
       loginBtnText: {
         ...textStyles.button,
+        fontSize: scale(17),
+        letterSpacing: 0.3,
         color: "#FFFFFF",
       },
       below: { width: formW, alignItems: "center" },

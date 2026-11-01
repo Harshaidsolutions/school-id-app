@@ -1207,7 +1207,7 @@ function GalleryThumb({
     >
       <span className={large ? "relative block h-40 w-full" : "relative block h-11 w-11 shrink-0"}>
         {src ? (
-          <img src={src} alt="" className={large ? "h-40 w-full rounded-lg bg-[#F7F7FC] object-contain" : "h-11 w-11 rounded object-cover"} />
+          <img src={src} alt="" className={large ? "h-40 w-full bg-[#F7F7FC] object-contain" : "h-11 w-11 object-cover"} />
         ) : (
           <span className={large ? "block h-40 w-full animate-pulse rounded-lg bg-[#EEF0FF]" : "block h-11 w-11 animate-pulse rounded bg-[#EEF0FF]"} />
         )}

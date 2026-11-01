@@ -302,3 +302,14 @@
   .idg-full .idg-workspace { grid-template-columns: 1fr; }
   .idg-sides { grid-template-columns: 1fr; }
 }
+
+/* Back button, collapsible editing panel, no-scroll playground */
+.idg-back { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border-radius: 10px; background: var(--brand, #4f46e5); color: #fff !important; font-weight: 700; font-size: 14px; text-decoration: none; box-shadow: 0 6px 14px -8px rgba(79, 70, 229, 0.8); }
+.idg-back:hover { background: var(--brand-deep, #4338ca); }
+.idg-full .idg-workspace { grid-template-columns: 220px minmax(0, 1fr) 300px; }
+.idg-full .idg-workspace.is-panel-hidden { grid-template-columns: 220px minmax(0, 1fr); }
+.idg-full .idg-workspace.is-panel-hidden .idg-right { display: none; }
+.idg-panel-toggle { min-height: 34px; padding: 0 10px; font-size: 12.5px; }
+.idg-sides { overflow: hidden !important; grid-template-rows: minmax(0, 1fr); }
+.idg-side { min-height: 0; }
+.idg-side .idg-stage { flex: 1 1 auto; min-height: 0; justify-content: center; }

@@ -73,12 +73,21 @@ export const THEMES = {
     background: "#FFF9F2", ink: "#2B1D0E", glowA: "#FFD8A8", glowB: "#A5D8FF",
     headingFont: "Poppins",
   },
+  /** Professional royal blue + teal (replaces the old orange & white look). */
+  royal: {
+    name: "Royal",
+    primary: "#2F5BEA", primaryLight: "#5B7FF2", primaryDeep: "#1E3FB8",
+    accent: "#14B8A6", accentLight: "#5EEAD4", accentDeep: "#0F766E", onAccent: "#FFFFFF",
+    header: ["#3D6BF5", "#2F5BEA", "#5B3FD9"],
+    background: "#F4F7FE", ink: "#0F1B3D", glowA: "#A5B8FC", glowB: "#99F6E4",
+    headingFont: "Poppins",
+  },
 } as const satisfies Record<string, BrandTheme>;
 
 export type ThemeKey = keyof typeof THEMES;
 
 /** ← Change this one value to restyle the whole app. */
-export const ACTIVE_THEME: ThemeKey = "citrus";
+export const ACTIVE_THEME: ThemeKey = "royal";
 
 export const BRAND: BrandTheme = THEMES[ACTIVE_THEME];
 

@@ -85,7 +85,7 @@ export function ImageUploadField({
           <img
             src={previewUrl}
             alt=""
-            className="mx-auto mb-3 max-h-24 rounded-lg object-contain"
+            className="mx-auto mb-3 max-h-24 object-contain"
           />
         ) : (
           <div className="mb-2 flex justify-center text-text-muted">

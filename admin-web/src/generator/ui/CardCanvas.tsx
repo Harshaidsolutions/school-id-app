@@ -35,7 +35,13 @@ export function CardCanvas(p: Props) {
   useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setAvail({ w: el.clientWidth - 32, h: Math.max(260, Math.min(window.innerHeight * 0.66, 760)) }));
+    // Fit the card into the space the playground actually has (no scrolling at 100%).
+    const ro = new ResizeObserver(() =>
+      setAvail({
+        w: Math.max(120, el.clientWidth - 24),
+        h: el.clientHeight > 160 ? el.clientHeight - 28 : Math.max(260, Math.min(window.innerHeight * 0.66, 760)),
+      })
+    );
     ro.observe(el);
     return () => ro.disconnect();
   }, []);

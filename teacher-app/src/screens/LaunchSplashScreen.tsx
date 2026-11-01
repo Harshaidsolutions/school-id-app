@@ -1,6 +1,8 @@
 import { BRAND as THEME } from "../theme/brandTheme";
 import { useEffect, useRef } from "react";
-import { Animated, Easing, View } from "react-native";
+import { Animated, Easing, StyleSheet, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { withAlpha } from "../theme/brandTheme";
 import { AppIcon } from "../components/AppIcon";
 import { BrandLockup } from "../components/BrandLockup";
 import { BRAND } from "../constants/brand";
@@ -38,6 +40,32 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
     signalReady();
   }, []);
 
+  // Soft "ripple" rings that keep breathing around the logo.
+  const ringA = useRef(new Animated.Value(0)).current;
+  const ringB = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = (v: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(v, { toValue: 1, duration: 2400, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(v, { toValue: 0, duration: 0, useNativeDriver: true }),
+        ])
+      );
+    const a = loop(ringA, 0);
+    const b = loop(ringB, 1200);
+    a.start();
+    b.start();
+    return () => {
+      a.stop();
+      b.stop();
+    };
+  }, [ringA, ringB]);
+  const ringStyle = (v: Animated.Value) => ({
+    opacity: v.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0.55, 0] }),
+    transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.7] }) }],
+  });
+
   useEffect(() => {
     if (!fontsReady) return;
     Animated.parallel([
@@ -58,6 +86,9 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
 
   return (
     <View style={styles.root} onLayout={signalReady}>
+      <LinearGradient colors={["#FFFFFF", THEME.background, withAlpha(THEME.primaryLight, 0.18)]} style={StyleSheet.absoluteFill} />
+      <Animated.View pointerEvents="none" style={[styles.ring, { width: circleSize * 1.6, height: circleSize * 1.6, borderRadius: circleSize * 0.8 }, ringStyle(ringA)]} />
+      <Animated.View pointerEvents="none" style={[styles.ring, styles.ringAccent, { width: circleSize * 1.6, height: circleSize * 1.6, borderRadius: circleSize * 0.8 }, ringStyle(ringB)]} />
       {fontsReady ? (
         <Animated.View
           style={[
@@ -86,6 +117,16 @@ function useLaunchSplashStyles() {
       backgroundColor: "#FFFFFF",
       alignItems: "center",
       justifyContent: "center",
+    },
+    ring: {
+      position: "absolute" as const,
+      borderWidth: 2,
+      borderColor: withAlpha(THEME.primary, 0.45),
+      backgroundColor: withAlpha(THEME.primary, 0.05),
+    },
+    ringAccent: {
+      borderColor: withAlpha(THEME.accent, 0.45),
+      backgroundColor: withAlpha(THEME.accent, 0.05),
     },
     wordmark: {
       alignItems: "center",

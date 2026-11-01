@@ -1031,7 +1031,7 @@ function OrgPhoto({
   if (!src) return <span className="text-text-muted">Photo</span>;
   return (
     <button type="button" title={`View ${alt}`} onClick={() => onOpen?.({ src, alt })}>
-      <img alt={alt} className="h-14 w-14 rounded-lg object-cover" src={src} />
+      <img alt={alt} className="h-14 w-14 object-cover" src={src} />
     </button>
   );
 }

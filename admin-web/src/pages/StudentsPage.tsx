@@ -151,7 +151,7 @@ function StudentThumb({ student }: { student: Student }): ReactNode {
         <img
           src={src}
           alt={student.student_name ?? "Student"}
-          className="h-12 w-12 rounded-lg object-cover ring-1 ring-border"
+          className="h-12 w-12 object-cover"
         />
       ) : (
         <div className="h-12 w-12 animate-pulse rounded-lg bg-content-bg ring-1 ring-border" />
@@ -208,7 +208,7 @@ function SignatureThumb({
         <img
           src={src}
           alt="Signature"
-          className="h-8 w-16 rounded bg-white object-contain ring-1 ring-border"
+          className="h-8 w-16 bg-white object-contain"
         />
       ) : (
         <span className="block h-8 w-16 animate-pulse rounded bg-content-bg ring-1 ring-border" />

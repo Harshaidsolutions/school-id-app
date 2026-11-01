@@ -360,3 +360,17 @@ h3{font-size:16px;font-weight:600}
 .product-card:nth-child(6n+3) .button:hover,.product-card:nth-child(6n+6) .button:hover{color:#fff}
 @media(max-width:640px){.hero-blob{display:none}}
 @media(min-width:1500px){:root{--max:min(1440px,90vw)}}
+
+/* ── Fluid layout: no big empty side gutters on large screens ── */
+.wrap{width:min(1800px,calc(100% - clamp(32px,6vw,112px)))!important}
+.header .wrap.header-inner{width:calc(100% - clamp(24px,4vw,72px))!important;max-width:none}
+.site-brand{margin-left:0}
+@media(max-width:640px){.wrap{width:calc(100% - 28px)!important}.header .wrap.header-inner{width:calc(100% - 24px)!important}}
+
+/* ── Product photos: whole photo, original proportions, no coloured dots ── */
+.product-media{aspect-ratio:auto!important;min-height:0;display:block!important;background:#fff!important}
+.product-media::before{display:none!important}
+.product-tag{display:none!important}
+.product-card img{display:block;width:100%!important;height:auto!important;max-height:none;object-fit:contain!important;padding:0!important;mix-blend-mode:normal!important}
+.product-card:hover img{transform:none!important}
+@media(min-width:1500px){.product-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}

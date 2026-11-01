@@ -238,7 +238,7 @@ export function TemplateFormModal({
                 <img
                   src={previewUrl}
                   alt="Template preview"
-                  className="mx-auto mb-3 max-h-40 rounded-lg object-contain"
+                  className="mx-auto mb-3 max-h-40 object-contain"
                 />
               ) : (
                 <div className="mb-2 flex justify-center text-text-muted">

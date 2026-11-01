@@ -55,11 +55,10 @@ function BrandLine({
   const fontSize = scaleFont(baseSize, minSize, undefined, width);
   return (
     <Text
-      style={[style, { fontSize, lineHeight: fontSize * 1.18, width, paddingBottom: 2 }]}
-      numberOfLines={1}
+      style={[style, { fontSize, lineHeight: fontSize * 1.3, width, paddingBottom: 2, includeFontPadding: true }]}
+      numberOfLines={2}
       adjustsFontSizeToFit
       minimumFontScale={fontScaleMin(baseSize, minSize)}
-      ellipsizeMode="clip"
     >
       {text}
     </Text>
@@ -111,7 +110,7 @@ export function BrandLockup({
     letterSpacing: 0.4,
     color: hColor,
     textAlign,
-    includeFontPadding: false,
+    includeFontPadding: true,
   };
   const solutionsStyle: TextStyle = {
     fontFamily: fonts.headingBold,
@@ -119,7 +118,7 @@ export function BrandLockup({
     color: sColor,
     textAlign,
     marginTop: sizes.gap,
-    includeFontPadding: false,
+    includeFontPadding: true,
   };
   const tagStyle: TextStyle = {
     fontFamily: fonts.headingSemiBold,
@@ -127,7 +126,7 @@ export function BrandLockup({
     color: tColor,
     textAlign,
     marginTop: scale(4, screenW),
-    includeFontPadding: false,
+    includeFontPadding: true,
   };
 
   const harshaMin = variant === "compact" ? 14 : BRAND_MIN.harsha;
@@ -165,7 +164,7 @@ export function BrandLockup({
             const accentSize = scaleFont(sizes.solutions, solutionsMin, undefined, screenW);
             const line = (fontSize: number) => ({
               fontSize,
-              lineHeight: fontSize * 1.02,
+              lineHeight: fontSize * 1.25,
               width: lineW,
               marginTop: 0,
               paddingBottom: 0,
@@ -231,14 +230,15 @@ export function BrandLockup({
             tagStyle,
             {
               fontSize: scaleFont(19, 16, 24, screenW),
-              lineHeight: scaleFont(19, 16, 24, screenW) * 1.3,
+              lineHeight: scaleFont(19, 16, 24, screenW) * 1.4,
+              paddingBottom: 2,
               width: lineW,
               color: variant === "splash" ? "rgba(255,255,255,0.95)" : tColor,
             },
           ]}
           numberOfLines={1}
           adjustsFontSizeToFit
-          minimumFontScale={0.75}
+          minimumFontScale={0.6}
         >
           {subtitle}
         </Text>
