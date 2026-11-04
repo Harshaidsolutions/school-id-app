@@ -68,15 +68,31 @@ function createLicenseManager({ app, safeStorage, netFetch, publicKeyPem }) {
 
   async function activate(rawKey) {
     const licenseKey = String(rawKey || "").toUpperCase().replace(/[^A-Z0-9-]/g, "");
+    if (!/^MSIDC(-[A-Z0-9]{5}){4}$/.test(licenseKey)) return { ok: false, message: "Enter the full licence key, like MSIDC-XXXXX-XXXXX-XXXXX-XXXXX." };
+    const request = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ licenseKey, machineId: machineId(), machineLabel: machineLabel(), appVersion: app.getVersion() }),
+    };
+    // Try Chromium's network (uses Windows proxy settings), then Node's own network as a fallback.
+    const attempts = [
+      () => netFetch(ACTIVATE_URL, request),
+      () => fetch(ACTIVATE_URL, { ...request, signal: AbortSignal.timeout(20000) }),
+    ];
     let res;
-    try {
-      res = await netFetch(ACTIVATE_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ licenseKey, machineId: machineId(), machineLabel: machineLabel(), appVersion: app.getVersion() }),
-      });
-    } catch {
-      return { ok: false, message: "Could not reach the licence server. Connect to the internet for this one-time activation and try again." };
+    const errors = [];
+    for (const go of attempts) {
+      try { res = await go(); break; } catch (e) { errors.push(String((e && (e.cause?.code || e.code || e.message)) || e).slice(0, 120)); }
+    }
+    if (!res) {
+      const detail = errors.join(" / ");
+      const clock = /CERT_DATE|CERT_NOT_YET|CERT_HAS_EXPIRED|certificate has expired|not yet valid/i.test(detail);
+      return {
+        ok: false,
+        message: clock
+          ? `The computer's date or time is wrong, so the secure connection failed. Correct the date and time in Windows settings and try again. (${detail})`
+          : `Could not reach the licence server. Check the internet, and allow "ID Card Generator" in any antivirus or firewall, then try again. (${detail})`,
+      };
     }
     const body = await res.json().catch(() => ({}));
     if (!res.ok || !body.license) return { ok: false, message: body.message || `Activation failed (${res.status}).` };
@@ -96,4 +112,4 @@ function createLicenseManager({ app, safeStorage, netFetch, publicKeyPem }) {
   return { status, activate, deactivateLocal, verifyLicense };
 }
 
-module.exports = { createLicenseManager, PRODUCT };
+module.exports = { createLicenseManager, PRODUCT, ACTIVATE_URL };

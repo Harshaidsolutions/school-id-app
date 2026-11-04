@@ -135,9 +135,9 @@ export function CardCanvas(p: Props) {
               onPointerDown={(e) => onPointerDown(e, el, "move")}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
-              title={issues.filter((i) => i.elementId === el.id).map((i) => i.message).join("\n") || label(el)}
+              title={issues.filter((i) => i.elementId === el.id).map((i) => i.message).join("\n") || undefined}
+              aria-label={label(el)}
             >
-              {sel && <span className="idg-box-tag">{label(el)}</span>}
               {sel && (
                 <span
                   className="idg-handle"

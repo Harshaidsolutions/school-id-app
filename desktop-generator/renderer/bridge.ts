@@ -16,6 +16,10 @@ export type DesktopBridge = {
   saveFile(defaultName: string, data: ArrayBuffer, filters?: FileFilter[]): Promise<{ saved: boolean; filePath?: string }>;
   openFile(filters?: FileFilter[]): Promise<{ name: string; data: ArrayBuffer } | null>;
   reveal(filePath: string): Promise<void>;
+  /** Pick an output folder on this computer (null when cancelled). */
+  pickFolder(): Promise<string | null>;
+  /** Write one file inside a picked folder; returns the full path. */
+  writeInFolder(root: string, rel: string, data: ArrayBuffer): Promise<string>;
   info(): Promise<{ version: string }>;
 };
 

@@ -89,7 +89,7 @@ export async function getTeacherOrganization(
         ? await pool.query<Pick<TemplateRow, "id" | "name" | "orientation">>(
             `SELECT id, name, orientation
              FROM templates
-             WHERE owner_admin_id = $1
+             WHERE owner_admin_id = $1 AND purpose = 'school'
              ORDER BY name ASC`,
             [ownerAdminId]
           )
@@ -175,7 +175,7 @@ export async function updateTeacherOrganization(
       if (templateId) {
         const ownerAdminId = await loadOrgOwnerAdminId("institutes", orgId);
         const tpl = await pool.query(
-          `SELECT id FROM templates WHERE id = $1 AND owner_admin_id = $2 LIMIT 1`,
+          `SELECT id FROM templates WHERE id = $1 AND owner_admin_id = $2 AND purpose = 'school' LIMIT 1`,
           [templateId, ownerAdminId]
         );
         if (!tpl.rows[0]) {
@@ -296,7 +296,7 @@ export async function updateTeacherOrganization(
     if (templateId) {
       const ownerAdminId = await loadOrgOwnerAdminId(schoolTable, orgId);
       const tpl = await pool.query(
-        `SELECT id FROM templates WHERE id = $1 AND owner_admin_id = $2 LIMIT 1`,
+        `SELECT id FROM templates WHERE id = $1 AND owner_admin_id = $2 AND purpose = 'school' LIMIT 1`,
         [templateId, ownerAdminId]
       );
       if (!tpl.rows[0]) {

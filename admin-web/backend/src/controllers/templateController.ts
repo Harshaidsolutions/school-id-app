@@ -42,6 +42,8 @@ export async function createTemplate(
     const name = String(req.body.name ?? "").trim();
     const orientation = String(req.body.orientation ?? "").trim();
     const configJson = parseConfigJson(req.body.config_json ?? req.body.configJson);
+    // "generator" = uploaded inside the ID Card Generator; never listed with school templates.
+    const purpose = String(req.body.purpose ?? "").trim() === "generator" ? "generator" : "school";
 
     if (!name) throw new AppError("Template name is required", 400);
     if (!isTemplateOrientation(orientation)) {
@@ -52,10 +54,10 @@ export async function createTemplate(
     }
 
     const inserted = await pool.query<TemplateRow>(
-      `INSERT INTO templates (school_id, name, orientation, config_json, owner_admin_id)
-       VALUES (NULL, $1, $2, $3, $4)
+      `INSERT INTO templates (school_id, name, orientation, config_json, owner_admin_id, purpose)
+       VALUES (NULL, $1, $2, $3, $4, $5)
        RETURNING *`,
-      [name, orientation, configJson, scope.adminUserId]
+      [name, orientation, configJson, scope.adminUserId, purpose]
     );
 
     const template = inserted.rows[0];
@@ -95,6 +97,10 @@ export async function listTemplates(
     const owner = adminCatalogOwnerSql(scope, "templates", 1);
     conditions.push(`owner_admin_id = $${values.length + 1}`);
     values.push(owner.value);
+    // ?purpose=generator → generator templates only; ?purpose=all → both; default → school templates only.
+    const purposeQ = typeof req.query.purpose === "string" ? req.query.purpose : "";
+    if (purposeQ === "generator") conditions.push(`purpose = 'generator'`);
+    else if (purposeQ !== "all") conditions.push(`purpose = 'school'`);
     if (orientation) {
       if (!isTemplateOrientation(orientation)) {
         throw new AppError("Invalid orientation filter", 400);
@@ -302,7 +308,7 @@ export async function listTeacherTemplates(
     }
 
     const values: unknown[] = [ownerAdminId];
-    const conditions: string[] = [`owner_admin_id = $1`];
+    const conditions: string[] = [`owner_admin_id = $1`, `purpose = 'school'`];
     if (orientation) {
       if (!isTemplateOrientation(orientation)) {
         throw new AppError("Invalid orientation filter", 400);
@@ -361,7 +367,7 @@ export async function selectTeacherTemplate(
     }
 
     const template = await pool.query<TemplateRow>(
-      `SELECT * FROM templates WHERE id = $1 AND owner_admin_id = $2 LIMIT 1`,
+      `SELECT * FROM templates WHERE id = $1 AND owner_admin_id = $2 AND purpose = 'school' LIMIT 1`,
       [id, ownerAdminId]
     );
     if (!template.rows[0]) {

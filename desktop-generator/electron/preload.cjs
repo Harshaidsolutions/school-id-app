@@ -7,5 +7,7 @@ contextBridge.exposeInMainWorld("desktop", {
   saveFile: (defaultName, data, filters) => ipcRenderer.invoke("file:save", { defaultName, data, filters }),
   openFile: (filters) => ipcRenderer.invoke("file:open", { filters }),
   reveal: (filePath) => ipcRenderer.invoke("file:reveal", filePath),
+  pickFolder: () => ipcRenderer.invoke("folder:pick"),
+  writeInFolder: (root, rel, data) => ipcRenderer.invoke("folder:write", { root, rel, data }),
   info: () => ipcRenderer.invoke("app:info"),
 });

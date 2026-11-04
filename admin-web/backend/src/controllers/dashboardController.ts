@@ -84,7 +84,7 @@ export async function getDashboardSummary(
     activityValues.push(scope.adminUserId);
     const catalogParam = activityValues.length;
     activityParts.push(
-      `SELECT 'template'::text AS kind, name AS title, created_at FROM templates WHERE owner_admin_id = $${catalogParam}`
+      `SELECT 'template'::text AS kind, name AS title, created_at FROM templates WHERE owner_admin_id = $${catalogParam} AND purpose = 'school'`
     );
     activityParts.push(
       `SELECT kind, name, created_at FROM catalog_items WHERE owner_admin_id = $${catalogParam}`
@@ -169,7 +169,7 @@ export async function getDashboardSummary(
         instituteMemberValues
       ),
       pool.query<{ count: string }>(
-        `SELECT COUNT(*)::text AS count FROM templates WHERE owner_admin_id = $1`,
+        `SELECT COUNT(*)::text AS count FROM templates WHERE owner_admin_id = $1 AND purpose = 'school'`,
         [scope.adminUserId]
       ),
       pool.query<{ count: string }>(modelCountSql, [scope.adminUserId]),

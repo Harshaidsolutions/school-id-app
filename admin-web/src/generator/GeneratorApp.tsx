@@ -181,7 +181,7 @@ export function GeneratorApp() {
 
   useEffect(() => { void restoreCustomFonts(); }, []);
   useEffect(() => {
-    api.get<{ templates: Template[] }>("/admin/templates")
+    api.get<{ templates: Template[] }>("/admin/templates", { params: { purpose: "all" } })
       .then((r) => setLibrary(r.data.templates ?? []))
       .catch(() => undefined)
       .finally(() => setLibraryLoaded(true));
@@ -475,6 +475,7 @@ export function GeneratorApp() {
       if (both && templates.back && !backId) {
         const form = new FormData();
         form.append("name", `${name} (back)`);
+        form.append("purpose", "generator");
         form.append("orientation", orientation(false));
         form.append("image", templates.back.blob, templates.back.name || "back.png");
         const { data } = await api.post("/admin/templates", form);
@@ -483,6 +484,7 @@ export function GeneratorApp() {
       const nextLayout = { ...layout, name };
       const form = new FormData();
       form.append("name", name);
+      form.append("purpose", "generator");
       form.append("orientation", orientation(both));
       const config = { ...nextLayout, orgId, sideMode, backTemplateId: backId, frontTemplateId: templates.front.libraryId };
       form.append("config_json", JSON.stringify(config));

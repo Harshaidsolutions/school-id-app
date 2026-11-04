@@ -1,3 +1,4 @@
+const { ACTIVATE_URL: LICENSE_ACTIVATE_URL } = require("./license.cjs");
 const { app, BrowserWindow, ipcMain, dialog, safeStorage, net, shell, Menu } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -35,7 +36,9 @@ function createWindow() {
 
   // Fully offline: block every network request from the window except local files.
   win.webContents.session.webRequest.onBeforeRequest((details, cb) => {
-    const ok = /^(file|data|blob|devtools|chrome-extension):/.test(details.url) || (isDev && details.url.startsWith("http://localhost:5174"));
+    // The one exception: the one-time licence activation (made by the app itself, not the page).
+    const activation = details.url.startsWith(LICENSE_ACTIVATE_URL) && details.method === "POST";
+    const ok = activation || /^(file|data|blob|devtools|chrome-extension):/.test(details.url) || (isDev && details.url.startsWith("http://localhost:5174"));
     cb({ cancel: !ok });
   });
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
@@ -75,6 +78,27 @@ app.whenReady().then(() => {
     return { name: path.basename(filePaths[0]), data: buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) };
   }));
   ipcMain.handle("file:reveal", guard(async (_e, filePath) => { shell.showItemInFolder(filePath); }));
+
+  // Output folder: the user picks it once; the app may then write the generated cards inside it (and only there).
+  const foldersFile = path.join(app.getPath("userData"), "folders.json");
+  const allowed = new Set((() => { try { return JSON.parse(fs.readFileSync(foldersFile, "utf8")); } catch { return []; } })());
+  ipcMain.handle("folder:pick", guard(async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, { properties: ["openDirectory", "createDirectory"], defaultPath: app.getPath("documents") });
+    if (canceled || !filePaths[0]) return null;
+    const root = path.resolve(filePaths[0]);
+    allowed.add(root);
+    try { fs.writeFileSync(foldersFile, JSON.stringify([...allowed].slice(-20))); } catch { /* ignore */ }
+    return root;
+  }));
+  ipcMain.handle("folder:write", guard(async (_e, { root, rel, data }) => {
+    const base = path.resolve(String(root || ""));
+    if (!allowed.has(base)) throw new Error("Choose the output folder again (Output step).");
+    const target = path.resolve(base, String(rel || ""));
+    if (target !== base && !target.startsWith(base + path.sep)) throw new Error("Invalid file name.");
+    await fs.promises.mkdir(path.dirname(target), { recursive: true });
+    await fs.promises.writeFile(target, Buffer.from(data));
+    return target;
+  }));
   ipcMain.handle("app:info", () => ({ version: app.getVersion() }));
 
   createWindow();

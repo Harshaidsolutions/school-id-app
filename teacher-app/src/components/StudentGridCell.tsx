@@ -50,7 +50,15 @@ export const StudentGridCell = memo(function StudentGridCell({
             !captured && styles.avatarPending,
           ]}
         >
-          {captured && item.photo_url ? (
+          {item.id_card_url ? (
+            // After "Generate" in the ID Card Generator the grid shows the finished ID card.
+            <Image
+              source={{ uri: item.id_card_url }}
+              style={[styles.avatarImg, { backgroundColor: colors.surface }]}
+              resizeMode="contain"
+              fadeDuration={0}
+            />
+          ) : captured && item.photo_url ? (
             <Image
               source={{ uri: item.photo_url }}
               style={styles.avatarImg}

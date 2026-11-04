@@ -984,6 +984,25 @@ async function migrate() {
       END LOOP;
     END $$;
   `);
+  // Templates uploaded inside the ID Card Generator are kept apart from school templates:
+  // the Templates sections and the teacher app show only purpose = 'school'.
+  await pool.query(`
+    ALTER TABLE templates ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT 'school';
+    CREATE INDEX IF NOT EXISTS idx_templates_owner_purpose ON templates (owner_admin_id, purpose);
+    DO $$
+    BEGIN
+      UPDATE templates SET purpose = 'generator'
+       WHERE purpose = 'school' AND config_json IS NOT NULL
+         AND (config_json::jsonb ? 'elements') AND (config_json::jsonb ? 'card');
+      UPDATE templates SET purpose = 'generator'
+       WHERE purpose = 'school' AND name LIKE '%(back)' AND id::text IN (
+         SELECT config_json::jsonb ->> 'backTemplateId' FROM templates
+          WHERE purpose = 'generator' AND config_json IS NOT NULL AND (config_json::jsonb ? 'backTemplateId'));
+      UPDATE schools SET template_id = NULL WHERE template_id IN (SELECT id FROM templates WHERE purpose = 'generator');
+      UPDATE institutes SET template_id = NULL WHERE template_id IN (SELECT id FROM templates WHERE purpose = 'generator');
+    EXCEPTION WHEN others THEN RAISE NOTICE 'template purpose backfill skipped: %', SQLERRM;
+    END $$;
+  `);
   // Super admin → child admin notifications (shown on the admin's dashboard bell)
   await pool.query(`
     ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_admin_id UUID REFERENCES users(id) ON DELETE CASCADE;
