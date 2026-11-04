@@ -4,7 +4,7 @@ import api from "../api/client";
 import type { Student, Template } from "../types";
 import { authenticatedStudentPhotoUrl, authenticatedStudentSignatureUrl } from "../utils/studentPhotoSrc";
 import { detectRoles } from "./columns";
-import { blankLayout, isLayout, newImage, newText, uid } from "./defaults";
+import { blankLayout, isLayout, newImage, newText, stripColumnLabels, uid } from "./defaults";
 import { clearDraft, clearFolder, loadDraft, loadFolder, saveDraft, saveFolder, type Draft } from "./draftStore";
 import { exportBundle, type CardProblem, type ExportFile, type OutputFolder } from "./exporter";
 import { ensureFonts, restoreCustomFonts } from "./fonts";
@@ -291,7 +291,8 @@ export function GeneratorApp() {
   }, []);
   /** New text field: the default box (Arial 8 pt, X 18, Y 55, 30 × 3.5 mm) with the last formatting used. */
   const styledText = (s: Side, column: string, at: Partial<TextElement> = {}) => newText(s, column, { ...textStyle.current, ...at });
-  const columnText = (s: Side, column: string, at: Partial<TextElement> = {}) => styledText(s, column, { prefix: `${niceLabel(column)}: `, ...at });
+  /** A column dropped on the card shows only its value (no "Name:" label in front). */
+  const columnText = (s: Side, column: string, at: Partial<TextElement> = {}) => styledText(s, column, { prefix: "", ...at });
   const addEl = (el: CardElement) => { setLayout((l) => ({ ...l, elements: [...l.elements, el] })); setSelectedId(el.id); };
   const removeEl = (id: string) => { setLayout((l) => ({ ...l, elements: l.elements.filter((e) => e.id !== id) })); setSelectedId(null); };
   const layerEl = (id: string, dir: -1 | 1) => setLayout((l) => {
@@ -354,7 +355,7 @@ export function GeneratorApp() {
 
   async function applyDesign(t: Template, quiet = false) {
     if (!isLayout(t.config_json)) return;
-    const saved = t.config_json as Layout & { sideMode?: SideMode };
+    const saved = stripColumnLabels(t.config_json as Layout) as Layout & { sideMode?: SideMode };
     const mode: SideMode = saved.sideMode ?? (saved.backTemplateId || saved.elements.some((e) => e.side === "back") ? "double" : "single");
     setLayout((l) => ({ ...saved, roles: l.roles, matchColumn: "Photo ID", matchBy: "column" }));
     setSideMode(mode);
@@ -396,7 +397,7 @@ export function GeneratorApp() {
       if (draft) {
         setBusy({ label: "Opening your unsaved work…", done: 0, total: 0 });
         try {
-          setLayout((l) => ({ ...draft.layout, roles: l.roles, matchColumn: "Photo ID", matchBy: "column" }));
+          setLayout((l) => ({ ...stripColumnLabels(draft.layout), roles: l.roles, matchColumn: "Photo ID", matchBy: "column" }));
           setSideMode(draft.sideMode);
           setPrint(draft.print);
           setClassName(draft.className);
@@ -860,8 +861,8 @@ export function GeneratorApp() {
                   {!canPickFolder && <small className="idg-muted">Choosing a folder works in Chrome or Edge on a computer. Here the cards download as a ZIP.</small>}
                 </span>
               </li>
-              <li><b>Front folder</b><span>Front/&lt;Photo ID&gt;.png</span></li>
-              {sideMode === "double" && <li><b>Back folder</b><span>Back/&lt;Photo ID&gt;.png</span></li>}
+              <li><b>Front folder</b><span>Front/&lt;Photo ID&gt;.jpg</span></li>
+              {sideMode === "double" && <li><b>Back folder</b><span>Back/&lt;Photo ID&gt;.jpg</span></li>}
               <li><b>Resolution</b><span>{templates.front ? `${templates.front.bitmap.width} × ${templates.front.bitmap.height} px (${outputDpi} DPI) — same as the template` : "Upload a template first"}</span></li>
               <li><b>Card size</b><span>{layout.card.w} × {layout.card.h} mm</span></li>
               <li><b>Also</b><span>Print sheets PDF ({sheetLabel}), card details and an error list if text is cut off</span></li>
@@ -992,7 +993,7 @@ export function GeneratorApp() {
           <div className="card workflow-dialog" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-text-navy">{onlyFailed ? `Regenerate ${ready.length} corrected ID cards?` : `Generate ${ready.length} ID cards?`}</h3>
             <p className="text-sm text-text-muted">
-              {orgName}{className ? ` · ${className}` : " · all classes"}. One ZIP is downloaded with a <b>Front</b> folder{sideMode === "double" ? " and a Back folder" : ""} (files named by Photo ID, {outputDpi} DPI — the template's resolution),
+              {orgName}{className ? ` · ${className}` : " · all classes"}. One ZIP is downloaded with a <b>Front</b> folder{sideMode === "double" ? " and a Back folder" : ""} (files named by Photo ID, {outputDpi} DPI, JPG at the template's exact pixel size),
               print sheets on {sheetLabel}{print.landscape ? " (horizontal)" : ""} with crop marks, and a details sheet.
               {missing > 0 ? ` ${missing} without a photo are left out.` : ""}
             </p>

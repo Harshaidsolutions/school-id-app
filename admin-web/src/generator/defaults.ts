@@ -94,3 +94,19 @@ export function isLayout(v: unknown): v is Layout {
   const l = v as Layout | null;
   return Boolean(l && l.kind === "id-bulk-v2" && l.card && Array.isArray(l.elements));
 }
+
+/**
+ * Older designs put the column name in front of each value ("Name: Ravi").
+ * Fields now show only the value: drop a prefix that is just "<column>:".
+ */
+export function stripColumnLabels(layout: Layout): Layout {
+  const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return {
+    ...layout,
+    elements: layout.elements.map((e) => {
+      if (e.kind !== "text" || !e.column || !e.prefix) return e;
+      const p = e.prefix.trim();
+      return p.endsWith(":") && norm(p.slice(0, -1)) === norm(e.column) ? { ...e, prefix: "" } : e;
+    }),
+  };
+}

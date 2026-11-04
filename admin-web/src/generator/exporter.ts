@@ -208,6 +208,31 @@ export type OutputFolder = {
 /** `file` is the ZIP to download, or null when the cards were written straight into a chosen folder. */
 export type BundleResult = { file: ExportFile | null; problems: CardProblem[]; savedTo?: string };
 
+/** The finished card at exactly the template's width × height in pixels (unchanged when it already matches). */
+function atTemplateSize(card: HTMLCanvasElement, template: Bitmap | null, spare: HTMLCanvasElement): HTMLCanvasElement {
+  if (!template || (card.width === template.width && card.height === template.height)) return card;
+  spare.width = template.width;
+  spare.height = template.height;
+  const ctx = spare.getContext("2d")!;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(card, 0, 0, template.width, template.height);
+  return spare;
+}
+
+/** High-quality JPG with the print resolution (DPI) written into its JFIF header. */
+async function jpegWithDpi(canvas: HTMLCanvasElement, dpi: number): Promise<Blob> {
+  const blob = await canvasBlob(canvas, "image/jpeg", 0.95);
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const jfif = bytes[2] === 0xff && bytes[3] === 0xe0 && bytes[6] === 0x4a && bytes[7] === 0x46 && bytes[8] === 0x49 && bytes[9] === 0x46;
+  if (jfif) {
+    const d = Math.max(1, Math.min(65535, Math.round(dpi)));
+    bytes[13] = 1; // dots per inch
+    bytes[14] = d >> 8; bytes[15] = d & 255;
+    bytes[16] = d >> 8; bytes[17] = d & 255;
+  }
+  return new Blob([bytes], { type: "image/jpeg" });
+}
+
 async function writeIntoFolder(root: OutputFolder, path: string, blob: Blob): Promise<void> {
   const parts = path.split("/").filter(Boolean);
   const name = parts.pop() ?? "file";
@@ -243,8 +268,8 @@ function textProblems(layout: Layout, side: Side, row: Row, issues: RenderIssue[
 
 /**
  * One ZIP "folder" with everything for the batch:
- *   <Job>/Front/<PhotoID>.png      — every front side, at the template's own resolution
- *   <Job>/Back/<PhotoID>.png       — every back side
+ *   <Job>/Front/<PhotoID>.jpg      — every front side, exactly the template's pixel size
+ *   <Job>/Back/<PhotoID>.jpg       — every back side
  *   <Job>/Print sheets (<paper>).pdf                     — cards on the chosen paper with crop marks
  *   <Job>/Card details.csv                               — every column for every card
  *   <Job>/ERRORS - cards to correct.csv                  — only when some text was cut off
@@ -267,6 +292,7 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
   const total = o.rows.length * sides.length;
   let done = 0;
   const canvas = document.createElement("canvas");
+  const scaled = document.createElement("canvas");
   const used = new Map<string, number>();
   const names = new Map<number, string>();
   const problems: CardProblem[] = [];
@@ -291,7 +317,9 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
         for (const message of textProblems(o.layout, side, item.row, issues)) {
           problems.push({ index: item.index, id: item.row[o.idColumn] ?? "", name: item.row[o.nameColumn] ?? "", side, message });
         }
-        await put(`${folder}/${side === "front" ? "Front" : "Back"}/${fileBase}.png`, await canvasBlob(canvas, "image/png"));
+        // Same pixel size as the uploaded template, saved as JPG (with the print DPI in the file).
+        const out = atTemplateSize(canvas, o.templates[side], scaled);
+        await put(`${folder}/${side === "front" ? "Front" : "Back"}/${fileBase}.jpg`, await jpegWithDpi(out, dpi));
         if (side === "front" && o.onFront) await o.onFront(item.index, canvas);
         const ref = pdf.addJpeg(await canvasBlob(canvas, "image/jpeg", 0.93), canvas.width, canvas.height);
         const slot = side === "back" ? mirrorSlot(imp.slots[k], imp.cellW, sheet.w) : imp.slots[k];

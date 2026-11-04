@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { niceLabel } from "@admin/utils/formFieldHelpers";
 import { detectRoles } from "@gen/columns";
-import { blankLayout, isLayout, newImage, newText, uid } from "@gen/defaults";
+import { blankLayout, isLayout, newImage, newText, stripColumnLabels, uid } from "@gen/defaults";
 import { clearDraft, loadDraft, saveDraft, type Draft } from "@gen/draftStore";
 import { exportBundle, type CardProblem, type OutputFolder } from "@gen/exporter";
 import { ensureFonts, restoreCustomFonts } from "@gen/fonts";
@@ -200,7 +200,8 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
     }));
   }, []);
   const styledText = (s: Side, column: string, at: Partial<TextElement> = {}) => newText(s, column, { ...textStyle.current, ...at });
-  const columnText = (s: Side, column: string, at: Partial<TextElement> = {}) => styledText(s, column, { prefix: `${niceLabel(column)}: `, ...at });
+  /** A column dropped on the card shows only its value (no "Name:" label in front). */
+  const columnText = (s: Side, column: string, at: Partial<TextElement> = {}) => styledText(s, column, { prefix: "", ...at });
   const addEl = (el: CardElement) => { setLayout((l) => ({ ...l, elements: [...l.elements, el] })); setSelectedId(el.id); };
   const removeEl = (id: string) => { setLayout((l) => ({ ...l, elements: l.elements.filter((e) => e.id !== id) })); setSelectedId(null); };
   const layerEl = (id: string, dir: -1 | 1) => setLayout((l) => {
@@ -263,7 +264,7 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
       if (!draft) { savedSnapshot.current = snapshot(); return; }
       setBusy({ label: "Opening your unsaved work…", done: 0, total: 0 });
       try {
-        setLayout(draft.layout);
+        setLayout(stripColumnLabels(draft.layout));
         setSideMode(draft.sideMode);
         setPrint(draft.print);
         if (draft.templates.front) await setTemplateFromBlob("front", draft.templates.front.blob, draft.templates.front.name, false);
@@ -330,7 +331,7 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
       const design = JSON.parse(new TextDecoder().decode(file.data)) as DesignFile;
       if (design.kind !== "msidc-design-v1" || !isLayout(design.layout)) throw new Error("This is not an ID card design file.");
       const mode: SideMode = design.sideMode ?? (design.templates.back || design.layout.elements.some((e) => e.side === "back") ? "double" : "single");
-      const next = { ...design.layout, roles: Object.keys(layout.roles).length ? layout.roles : design.layout.roles, matchColumn: layout.matchColumn || design.layout.matchColumn, matchBy: layout.matchColumn ? layout.matchBy : design.layout.matchBy };
+      const next = { ...stripColumnLabels(design.layout), roles: Object.keys(layout.roles).length ? layout.roles : design.layout.roles, matchColumn: layout.matchColumn || design.layout.matchColumn, matchBy: layout.matchColumn ? layout.matchBy : design.layout.matchBy };
       setLayout(next);
       setSideMode(mode);
       setTemplates({ front: null, back: null });
@@ -675,8 +676,8 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
                   </span>
                 </span>
               </li>
-              <li><b>Front folder</b><span>Front/&lt;{byRow ? "row number" : idCol}&gt;.png</span></li>
-              {sideMode === "double" && <li><b>Back folder</b><span>Back/&lt;{byRow ? "row number" : idCol}&gt;.png</span></li>}
+              <li><b>Front folder</b><span>Front/&lt;{byRow ? "row number" : idCol}&gt;.jpg</span></li>
+              {sideMode === "double" && <li><b>Back folder</b><span>Back/&lt;{byRow ? "row number" : idCol}&gt;.jpg</span></li>}
               <li><b>Resolution</b><span>{templates.front ? `${templates.front.bitmap.width} × ${templates.front.bitmap.height} px (${outputDpi} DPI) — same as the template` : "Upload a template first"}</span></li>
               <li><b>Card size</b><span>{layout.card.w} × {layout.card.h} mm</span></li>
               <li><b>Also</b><span>Print sheets PDF ({sheetLabel}), card details and an error list if text is cut off</span></li>
@@ -804,7 +805,7 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
           <div className="card workflow-dialog" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-text-navy">{onlyFailed ? `Regenerate ${ready.length} corrected ID cards?` : `Generate ${ready.length} ID cards?`}</h3>
             <p className="text-sm text-text-muted">
-              {jobName || "ID cards"}{className ? ` · ${className}` : " · all classes"}. {outFolder ? `Saved into “${baseName(outFolder)}”` : "One ZIP is saved on this computer"} with a <b>Front</b> folder{sideMode === "double" ? " and a Back folder" : ""} (files named by {byRow ? "row number" : idCol}, {outputDpi} DPI — the template's resolution),
+              {jobName || "ID cards"}{className ? ` · ${className}` : " · all classes"}. {outFolder ? `Saved into “${baseName(outFolder)}”` : "One ZIP is saved on this computer"} with a <b>Front</b> folder{sideMode === "double" ? " and a Back folder" : ""} (files named by {byRow ? "row number" : idCol}, {outputDpi} DPI, JPG at the template's exact pixel size),
               print sheets on {sheetLabel}{print.landscape ? " (horizontal)" : ""} with crop marks, and a details sheet.
               {missing > 0 ? ` ${missing} without a photo are left out.` : ""}
             </p>

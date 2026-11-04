@@ -36,8 +36,8 @@ powershell -ExecutionPolicy Bypass -File .\desktop-generator\scripts\build-windo
 ```
 
 Output in `desktop-generator\release\`:
-* `MySchoolIDCard-Generator-Setup-1.0.3.exe` – normal installer (recommended)
-* `MySchoolIDCard-Generator-Setup-1.0.3.msi` – for IT departments / group policy
+* `MySchoolIDCard-Generator-Setup-1.0.4.exe` – normal installer (recommended)
+* `MySchoolIDCard-Generator-Setup-1.0.4.msi` – for IT departments / group policy
 
 Give the customer the installer **and** their licence key (the admin page can send both instructions on WhatsApp).
 
