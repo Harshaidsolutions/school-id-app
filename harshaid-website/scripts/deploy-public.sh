@@ -5,6 +5,8 @@ TARGET=/var/www/harshaidsolutions
 [[ -f "$SOURCE/index.html" ]] || { echo 'Website source missing'; exit 1; }
 [[ -d "$TARGET" ]] || { echo 'Expected public web root missing. Check Nginx root first.'; exit 1; }
 sudo cp -a "$TARGET" "${TARGET}-backup-$(date +%Y%m%d%H%M%S)"
+# Keep only the 2 newest backups so the small server disk does not fill up.
+ls -1dt "${TARGET}"-backup-* 2>/dev/null | tail -n +3 | xargs -r sudo rm -rf
 sudo cp -a "$SOURCE/." "$TARGET/"
 # Support clean URLs even when Nginx has only try_files $uri $uri/ /index.html.
 while read -r route source; do

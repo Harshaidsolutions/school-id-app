@@ -33,7 +33,11 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
               {logo}
             </button>
           ) : logo}
-          <h1 className="login-heading">{title}</h1>
+          <h1 className="login-heading">
+            {onTitlePress ? (
+              <button type="button" onClick={onTitlePress} className="login-heading-action">{title}</button>
+            ) : title}
+          </h1>
           <p className="login-caption text-sm text-text-muted">Your workspace starts here.</p>
           {children}
           {footer ? <div className="login-footer border-t border-border">{footer}</div> : null}

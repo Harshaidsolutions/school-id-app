@@ -1182,3 +1182,16 @@ input[type="file"]::file-selector-button:hover { background: #e0e3ff; }
 .login-brand-logo { position: relative; z-index: 1; align-self: flex-start; background: #fff; border-radius: 22px; padding: clamp(12px, 2vh, 20px) clamp(16px, 2vw, 26px); box-shadow: 0 22px 44px -18px rgba(10, 8, 40, 0.6); animation: fade-up 0.6s var(--ease) backwards, float-y 6s ease-in-out infinite 0.6s; }
 .login-brand-logo img { display: block; width: clamp(220px, 24vw, 340px); max-height: 24vh; height: auto; object-fit: contain; }
 @media (prefers-reduced-motion: reduce) { .login-brand-logo { animation: none; } }
+
+/* Login v4: left panel content centred vertically; one logo only (left on desktop, in the form on phones) */
+@media (min-width: 861px) {
+  .login-brand-panel { justify-content: center !important; gap: clamp(20px, 4vh, 40px) !important; padding-left: clamp(40px, 6vw, 96px) !important; padding-right: clamp(32px, 5vw, 72px) !important; }
+  .login-brand-panel .login-brand-footnote { position: absolute; left: clamp(40px, 6vw, 96px); bottom: clamp(16px, 3vh, 32px); }
+  .login-brand-logo { align-self: flex-start; padding: clamp(14px, 2.4vh, 22px) clamp(20px, 2.4vw, 30px); }
+  .login-brand-logo img { width: clamp(260px, 26vw, 380px); }
+  .login-brand-copy { max-width: 520px; }
+  .auth-card .login-main-logo, .auth-card .login-logo-action { display: none !important; }
+  .auth-card { padding-top: clamp(24px, 4vh, 40px) !important; }
+  .login-heading { font-size: clamp(26px, 3.6vh, 32px) !important; }
+}
+.login-heading-action { cursor: default; font: inherit; color: inherit; border: 0; padding: 0; background: transparent; }

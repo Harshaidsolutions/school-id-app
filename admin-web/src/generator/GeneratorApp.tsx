@@ -601,8 +601,10 @@ export function GeneratorApp() {
         {(["single", "double"] as SideMode[]).map((m) => (
           <button key={m} type="button" role="radio" aria-checked={sideMode === m} className={sideMode === m ? "is-on" : ""} onClick={() => { setSideMode(m); if (m === "single") setSide("front"); }}>
             <span className={`idg-mode-ic${m === "double" ? " is-two" : ""}`} aria-hidden><i /><i /></span>
-            <b>{m === "single" ? "Single side" : "Front & back"}</b>
-            <small>{m === "single" ? "One template, one side printed" : "Two templates: front and back"}</small>
+            <span className="idg-mode-text">
+              <span className="idg-mode-title">{m === "single" ? "Single side" : "Front & back"}</span>
+              <span className="idg-mode-sub">{m === "single" ? "One template, one side printed" : "Two templates: front and back"}</span>
+            </span>
           </button>
         ))}
       </div>
@@ -724,9 +726,13 @@ export function GeneratorApp() {
         {header}
         {statusBar}
         <div className="idg-wizard-body">
-          <section className="card idg-step">
-            <h3>Records &amp; photos</h3>
-            <p className="idg-muted">{rows.length} {orgKind === "school" ? "students" : "members"} from {orgName || "this organisation"} · {readyAll.length} with a photo{className ? ` in ${className}` : ""}.</p>
+          <section className="card idg-wiz-card">
+            <div className="idg-wiz-head"><span className="idg-wiz-num">1</span><div><h3>Records &amp; photos</h3><p className="idg-muted">From {orgName || "this organisation"}</p></div></div>
+            <div className="idg-wiz-stats">
+              <div><b>{inClass.length}</b><span>{orgKind === "school" ? "Students" : "Members"}</span></div>
+              <div className="is-ok"><b>{readyAll.length}</b><span>With photo</span></div>
+              <div className="is-warn"><b>{Math.max(0, inClass.length - readyAll.length)}</b><span>Without photo</span></div>
+            </div>
             <div className="idg-grid2">
               <Field label="Class">
                 <select className="input-field" value={className} onChange={(e) => setClassName(e.target.value)}>
@@ -738,7 +744,7 @@ export function GeneratorApp() {
                 <input className="input-field" value="Photo ID" readOnly />
               </Field>
             </div>
-            <div className="idg-step-uploads">
+            <div className="idg-wiz-uploads">
               <label className="btn-secondary">
                 <input type="file" accept=".zip,image/*" multiple hidden onChange={(e) => { if (e.target.files?.length) void addBulk(e.target.files, "photo"); e.target.value = ""; }} />
                 Bulk photos (ZIP / images){media.photo.size ? ` · ${media.photo.size}` : ""}
@@ -750,8 +756,8 @@ export function GeneratorApp() {
             </div>
             <p className="idg-muted">Photos captured in the app are used automatically. Bulk photos are optional.</p>
           </section>
-          <section className="card idg-step">
-            <h3>Template</h3>
+          <section className="card idg-wiz-card">
+            <div className="idg-wiz-head"><span className="idg-wiz-num">2</span><div><h3>Template</h3><p className="idg-muted">One side, or front and back</p></div></div>
             {templatePicker}
           </section>
         </div>
@@ -771,8 +777,8 @@ export function GeneratorApp() {
         {header}
         {statusBar}
         <div className="idg-wizard-body">
-          <section className="card idg-step">
-            <h3>Print sheets</h3>
+          <section className="card idg-wiz-card">
+            <div className="idg-wiz-head"><span className="idg-wiz-num">1</span><div><h3>Print sheets</h3><p className="idg-muted">Paper and spacing for printing</p></div></div>
             <div className="idg-grid2">
               <Field label="Paper / press sheet">
                 <select className="input-field" value={print.sheetKey} onChange={(e) => setPrint((p) => ({ ...p, sheetKey: e.target.value }))}>
@@ -793,8 +799,8 @@ export function GeneratorApp() {
               </Field>
             </div>
           </section>
-          <section className="card idg-step">
-            <h3>Output</h3>
+          <section className="card idg-wiz-card">
+            <div className="idg-wiz-head"><span className="idg-wiz-num">2</span><div><h3>Output</h3><p className="idg-muted">What you get after Generate</p></div></div>
             <ul className="idg-outlist">
               <li><b>Where</b><span>One ZIP file in your Downloads folder</span></li>
               <li><b>Front folder</b><span>Front/&lt;Photo ID&gt;.png</span></li>
