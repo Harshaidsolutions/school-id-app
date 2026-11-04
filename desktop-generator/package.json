@@ -1,7 +1,7 @@
 {
   "name": "msidc-desktop-generator",
   "productName": "My School ID Card Generator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Offline ID card generator by Harsha ID Solutions",
   "author": "Harsha ID Solutions",
   "private": true,

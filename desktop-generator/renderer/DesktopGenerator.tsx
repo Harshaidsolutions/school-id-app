@@ -3,7 +3,7 @@ import { detectRoles } from "@gen/columns";
 import { defaultLayout, isLayout, newImage, newText, uid } from "@gen/defaults";
 import { exportBundle } from "@gen/exporter";
 import { ensureFonts, restoreCustomFonts } from "@gen/fonts";
-import { CARD_SIZES } from "@gen/impose";
+import { CARD_SIZES, SHEET_SIZES } from "@gen/impose";
 import { dataUrlToBlob, fileToDataUrl } from "@gen/imageData";
 import { addToStore, emptyMedia, filesFromInput, filesFromZip, findMedia } from "@gen/media";
 import { blobToBitmap, mediaLabel, type Bitmap, type MediaResolver } from "@gen/render";
@@ -234,7 +234,8 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
     try {
       await ensureFonts(layout.elements.filter((e) => e.kind === "text").map((e) => (e as { font: string }).font));
       const nameCol = layout.roles.name || columns[0] || "";
-      const file = await exportBundle({
+      const front = templates.front?.bitmap;
+      const { file, problems } = await exportBundle({
         layout,
         rows: ready,
         columns,
@@ -242,13 +243,18 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
         media: resolverFor,
         fileNamePattern: matchColumn && nameCol ? `{${matchColumn}}_{${nameCol}}` : "card",
         jobName: `${jobName || "ID cards"}${className ? ` - ${className}` : ""}`,
+        print: { sheet: SHEET_SIZES[0], landscape: false, gap: 3, margin: 8 },
+        idColumn: matchColumn || "Photo ID",
+        nameColumn: nameCol || "Name",
+        dpi: front ? Math.round((front.width / layout.card.w) * 25.4) : 300,
         onProgress: (done, total, label) => setBusy({ label, done, total }),
         signal: ctrl.signal,
       });
+      if (!file) throw new Error("ID cards could not be packed into a ZIP.");
       setBusy({ label: "Saving…", done: 0, total: 0 });
       const res = await desktop().saveFile(file.name, await file.blob.arrayBuffer(), [{ name: "ZIP folder", extensions: ["zip"] }]);
       if (res.saved && res.filePath) {
-        say(`${ready.length} ID cards saved to ${res.filePath}`, "ok");
+        say(`${ready.length} ID cards saved to ${res.filePath}${problems.length ? ` — ${problems.length} problem(s) listed in “ERRORS - cards to correct.csv”` : ""}`, problems.length ? "error" : "ok");
         void desktop().reveal(res.filePath);
       } else say("Save cancelled.", "info");
     } catch (e) {
