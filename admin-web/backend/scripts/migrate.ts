@@ -961,6 +961,29 @@ async function migrate() {
     ALTER TABLE students ADD COLUMN IF NOT EXISTS id_card_url TEXT;
     ALTER TABLE students ADD COLUMN IF NOT EXISTS id_card_updated_at TIMESTAMPTZ;
   `);
+  // Deletes must never be blocked by "who created / uploaded it" links:
+  // every link to users / templates that had no delete rule now becomes ON DELETE SET NULL.
+  await pool.query(`
+    DO $$
+    DECLARE r record;
+    BEGIN
+      FOR r IN
+        SELECT c.conname, c.conrelid::regclass AS tbl, a.attname AS col, c.confrelid::regclass AS ref
+        FROM pg_constraint c
+        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+        WHERE c.contype = 'f'
+          AND c.confrelid IN ('public.users'::regclass, 'public.templates'::regclass)
+          AND c.confdeltype IN ('a', 'r')
+          AND array_length(c.conkey, 1) = 1
+          AND NOT a.attnotnull
+      LOOP
+        EXECUTE format(
+          'ALTER TABLE %s DROP CONSTRAINT %I, ADD CONSTRAINT %I FOREIGN KEY (%I) REFERENCES %s(id) ON DELETE SET NULL',
+          r.tbl, r.conname, r.conname, r.col, r.ref
+        );
+      END LOOP;
+    END $$;
+  `);
   // Super admin → child admin notifications (shown on the admin's dashboard bell)
   await pool.query(`
     ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_admin_id UUID REFERENCES users(id) ON DELETE CASCADE;

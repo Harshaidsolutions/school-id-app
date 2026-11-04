@@ -368,7 +368,27 @@ export async function deleteManagedAdmin(
       throw new AppError("Super admin cannot be deleted", 403);
     }
 
-    await pool.query(`DELETE FROM users WHERE id = $1`, [id]);
+    // Nothing is lost: everything this admin owned moves to the super admin, and
+    // records that only remember "who uploaded / created it" keep the record without the name.
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const table of ["schools", "institutes", "templates", "catalog_items", "organizations"]) {
+        await client.query("SAVEPOINT owner_move");
+        try {
+          await client.query(`UPDATE ${table} SET owner_admin_id = $2 WHERE owner_admin_id = $1`, [id, superScope.adminUserId]);
+        } catch {
+          await client.query("ROLLBACK TO SAVEPOINT owner_move"); // table/column not present on this server
+        }
+      }
+      await client.query(`DELETE FROM users WHERE id = $1`, [id]);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
     res.status(200).json({ status: "ok", deleted: true });
   } catch (error) {
     next(error);
