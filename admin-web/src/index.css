@@ -1190,8 +1190,10 @@ input[type="file"]::file-selector-button:hover { background: #e0e3ff; }
   .login-brand-logo { align-self: flex-start; padding: clamp(14px, 2.4vh, 22px) clamp(20px, 2.4vw, 30px); }
   .login-brand-logo img { width: clamp(260px, 26vw, 380px); }
   .login-brand-copy { max-width: 520px; }
-  .auth-card .login-main-logo, .auth-card .login-logo-action { display: none !important; }
-  .auth-card { padding-top: clamp(24px, 4vh, 40px) !important; }
   .login-heading { font-size: clamp(26px, 3.6vh, 32px) !important; }
 }
 .login-heading-action { cursor: default; font: inherit; color: inherit; border: 0; padding: 0; background: transparent; }
+
+/* Left-panel logo: no white box, just the logo on the dark background */
+.login-brand-logo { background: transparent !important; box-shadow: none !important; padding: 0 !important; border-radius: 0 !important; }
+.login-brand-logo img { filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.35)); }
