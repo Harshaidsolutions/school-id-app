@@ -1,3 +1,4 @@
+import { purgeOrgFiles } from "../config/storage";
 import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
@@ -752,6 +753,7 @@ export async function deleteSchool(
     await client.query(`DELETE FROM schools WHERE id = $1`, [schoolId]);
 
     await client.query("COMMIT");
+    void purgeOrgFiles({ schools: [String(schoolId)] }); // photos, signatures, ID cards: removed for good
 
     res.status(200).json({
       status: "ok",
@@ -859,6 +861,7 @@ export async function bulkDeleteSchools(
       [ids]
     );
     await client.query("COMMIT");
+    void purgeOrgFiles({ schools: ids });
 
     res.status(200).json({
       status: "ok",

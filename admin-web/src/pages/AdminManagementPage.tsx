@@ -715,7 +715,7 @@ export function AdminManagementPage() {
       {deleteTarget ? (
         <OtpConfirmModal
           title="Delete admin"
-          description={`Delete admin "${deleteTarget.display_name ?? deleteTarget.username ?? deleteTarget.email}"? This cannot be undone.`}
+          description={`Delete admin "${deleteTarget.display_name ?? deleteTarget.username ?? deleteTarget.email}"? This permanently deletes the admin AND all their schools, institutes, organisations, students, members, photos, templates and catalog items. Nothing can be restored.`}
           confirmLabel="Delete admin"
           onClose={() => setDeleteTarget(null)}
           onRequestOtp={async () => {

@@ -8,6 +8,7 @@ import { AppError } from "../middleware/errorHandler";
 import {
   readBucketObject,
   deleteFromBucket,
+  purgeOrgFiles,
   STUDENT_PHOTOS_BUCKET,
   uploadBufferToBucket,
 } from "../config/storage";
@@ -1104,6 +1105,7 @@ export async function bulkDeleteOrganizations(req: Request, res: Response, next:
       [ids]
     );
     await client.query("COMMIT");
+    void purgeOrgFiles({ organizations: ids });
     res.json({
       status: "ok",
       deleted: deleted.rows.map((row) => row.id),
@@ -1168,6 +1170,7 @@ export async function deleteOrganization(req: Request, res: Response, next: Next
     await client.query(`DELETE FROM users WHERE organization_id = $1`, [organizationId]);
     await client.query(`DELETE FROM organizations WHERE id = $1`, [organizationId]);
     await client.query("COMMIT");
+    void purgeOrgFiles({ organizations: [organizationId] });
     res.json({ status: "ok", deleted: true });
   } catch (error) {
     try {

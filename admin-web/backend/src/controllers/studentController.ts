@@ -1,3 +1,4 @@
+import { deleteFromBucket, STUDENT_PHOTOS_BUCKET } from "../config/storage";
 import { assertPhotoNumberFree } from "../utils/photoNumber";
 import { isPhotoIdentityLabel } from "../utils/photoIdentity";
 import { Request, Response, NextFunction } from "express";
@@ -1788,11 +1789,18 @@ export async function bulkDeleteStudents(
     // Remove the photo files only after the records are really gone, a few at a time
     // (one-by-one inside the transaction was slow for big selections and could time out).
     const files = locked.rows
-      .map((row) => ({ orgId: studentPhotoOrgId(row.school_id, row.institute_id), id: row.id, has: Boolean(row.photo_url) }))
-      .filter((f): f is { orgId: string; id: string; has: boolean } => Boolean(f.has && f.orgId));
+      .map((row) => ({ orgId: studentPhotoOrgId(row.school_id, row.institute_id), id: row.id }))
+      .filter((f): f is { orgId: string; id: string } => Boolean(f.orgId));
     for (let i = 0; i < files.length; i += 20) {
       await Promise.all(
-        files.slice(i, i + 20).map((f) => deleteStudentPhotoFromStorage(f.orgId, f.id).catch((e) => console.error("[student-bulk-delete] photo cleanup", f.id, e)))
+        files.slice(i, i + 20).map((f) =>
+          Promise.allSettled([
+            deleteStudentPhotoFromStorage(f.orgId, f.id),
+            deleteFromBucket(STUDENT_PHOTOS_BUCKET, `${f.orgId}/signatures/${f.id}.jpg`),
+            deleteFromBucket(STUDENT_PHOTOS_BUCKET, `${f.orgId}/signatures/${f.id}.png`),
+            deleteFromBucket(STUDENT_PHOTOS_BUCKET, `${f.orgId}/id-cards/${f.id}.jpg`),
+          ])
+        )
       );
     }
 

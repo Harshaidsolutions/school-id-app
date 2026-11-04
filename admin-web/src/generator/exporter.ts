@@ -77,6 +77,7 @@ export async function exportCards(o: ExportOptions): Promise<ExportFile[]> {
   // ---------- Individual image files in a ZIP ----------
   if (o.format === "png-zip" || o.format === "tiff-zip" || o.format === "jpg-zip") {
     const zip = new ZipWriter();
+  const put = (path: string, blob: Blob) => (o.outputFolder ? writeIntoFolder(o.outputFolder, path, blob) : zip.add(path, blob));
     const used = new Map<string, number>();
     for (const item of o.rows) {
       check();
@@ -190,13 +191,34 @@ export type BundleOptions = {
   dpi?: number;
   /** Called with every finished front side (e.g. to save a copy for the teacher app). */
   onFront?: (rowIndex: number, canvas: HTMLCanvasElement) => Promise<void> | void;
+  /** Write the Front / Back folders and files into this folder instead of downloading a ZIP. */
+  outputFolder?: OutputFolder | null;
   onProgress: (done: number, total: number, label: string) => void;
   signal?: AbortSignal;
 };
 
 /** A card whose text is cut off / runs outside the card: listed in the error report. */
 export type CardProblem = { index: number; id: string; name: string; side: Side; message: string };
-export type BundleResult = { file: ExportFile; problems: CardProblem[] };
+/** A folder the admin picked on the computer (browser "choose folder"). Minimal shape we use. */
+export type OutputFolder = {
+  name: string;
+  getDirectoryHandle(name: string, options?: { create?: boolean }): Promise<OutputFolder>;
+  getFileHandle(name: string, options?: { create?: boolean }): Promise<{ createWritable(): Promise<{ write(data: Blob): Promise<void>; close(): Promise<void> }> }>;
+};
+
+/** `file` is the ZIP to download, or null when the cards were written straight into a chosen folder. */
+export type BundleResult = { file: ExportFile | null; problems: CardProblem[]; savedTo?: string };
+
+async function writeIntoFolder(root: OutputFolder, path: string, blob: Blob): Promise<void> {
+  const parts = path.split("/").filter(Boolean);
+  const name = parts.pop() ?? "file";
+  let dir = root;
+  for (const p of parts) dir = await dir.getDirectoryHandle(p, { create: true });
+  const fh = await dir.getFileHandle(name, { create: true });
+  const w = await fh.createWritable();
+  await w.write(blob);
+  await w.close();
+}
 
 function csvCell(v: string): string {
   return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
@@ -269,7 +291,7 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
         for (const message of textProblems(o.layout, side, item.row, issues)) {
           problems.push({ index: item.index, id: item.row[o.idColumn] ?? "", name: item.row[o.nameColumn] ?? "", side, message });
         }
-        await zip.add(`${folder}/${side === "front" ? "Front" : "Back"}/${fileBase}.png`, await canvasBlob(canvas, "image/png"));
+        await put(`${folder}/${side === "front" ? "Front" : "Back"}/${fileBase}.png`, await canvasBlob(canvas, "image/png"));
         if (side === "front" && o.onFront) await o.onFront(item.index, canvas);
         const ref = pdf.addJpeg(await canvasBlob(canvas, "image/jpeg", 0.93), canvas.width, canvas.height);
         const slot = side === "back" ? mirrorSlot(imp.slots[k], imp.cellW, sheet.w) : imp.slots[k];
@@ -286,17 +308,18 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
   }
   o.onProgress(total, total, "Packing the folder…");
   const sheetName = /^\d+x\d+$/.test(base.key) ? `${base.key} in` : base.label.split(" (")[0];
-  await zip.add(`${folder}/Print sheets (${sheetName}${o.print.landscape ? ", landscape" : ""}).pdf`, pdf.finish());
+  await put(`${folder}/Print sheets (${sheetName}${o.print.landscape ? ", landscape" : ""}).pdf`, pdf.finish());
   const header = ["S.No", "File name", ...o.columns];
   const lines = [header.map(csvCell).join(",")];
   o.rows.forEach((item, i) => lines.push([String(i + 1), names.get(item.index) ?? "", ...o.columns.map((c) => item.row[c] ?? "")].map(csvCell).join(",")));
-  await zip.add(`${folder}/Card details.csv`, new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv" }));
+  await put(`${folder}/Card details.csv`, new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv" }));
   if (problems.length) {
     const report = [["S.No", "Photo ID", "Name", "Side", "Problem", "What to do"].join(",")];
     problems.forEach((p, i) =>
       report.push([String(i + 1), p.id, p.name, p.side === "front" ? "Front" : "Back", p.message, "Correct the text (or make the text box bigger), then use Regenerate errors"].map(csvCell).join(","))
     );
-    await zip.add(`${folder}/ERRORS - cards to correct.csv`, new Blob(["\ufeff" + report.join("\r\n")], { type: "text/csv" }));
+    await put(`${folder}/ERRORS - cards to correct.csv`, new Blob(["\ufeff" + report.join("\r\n")], { type: "text/csv" }));
   }
+  if (o.outputFolder) return { file: null, problems, savedTo: `${o.outputFolder.name}/${folder}` };
   return { file: { name: `${folder}.zip`, blob: zip.finish() }, problems };
 }

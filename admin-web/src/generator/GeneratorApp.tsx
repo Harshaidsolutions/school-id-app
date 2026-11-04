@@ -5,8 +5,8 @@ import type { Student, Template } from "../types";
 import { authenticatedStudentPhotoUrl, authenticatedStudentSignatureUrl } from "../utils/studentPhotoSrc";
 import { detectRoles } from "./columns";
 import { blankLayout, isLayout, newImage, newText, uid } from "./defaults";
-import { clearDraft, loadDraft, saveDraft, type Draft } from "./draftStore";
-import { exportBundle, type CardProblem, type ExportFile } from "./exporter";
+import { clearDraft, clearFolder, loadDraft, loadFolder, saveDraft, saveFolder, type Draft } from "./draftStore";
+import { exportBundle, type CardProblem, type ExportFile, type OutputFolder } from "./exporter";
 import { ensureFonts, restoreCustomFonts } from "./fonts";
 import { CARD_SIZES, SHEET_SIZES } from "./impose";
 import { dataUrlToBlob, fileToDataUrl } from "./imageData";
@@ -50,6 +50,23 @@ function studentsToRows(students: Student[]): { columns: string[]; rows: Row[]; 
   }
   const shown = excelLabels.length ? excelLabels : used;
   return { columns: shown, rows, roles: { ...detectRoles(used), admission: "Photo ID", name: "Name", class: "", classSection: "Class", father: "Parent Name", phone: "Phone" } };
+}
+
+/** Folder handle as Chrome / Edge give it (File System Access API). */
+type FolderHandle = OutputFolder & {
+  queryPermission?(o: { mode: "readwrite" }): Promise<PermissionState>;
+  requestPermission?(o: { mode: "readwrite" }): Promise<PermissionState>;
+};
+const canPickFolder = typeof window !== "undefined" && "showDirectoryPicker" in window;
+
+async function folderAllowed(h: FolderHandle): Promise<boolean> {
+  try {
+    if (!h.queryPermission) return true;
+    if ((await h.queryPermission({ mode: "readwrite" })) === "granted") return true;
+    return (await h.requestPermission?.({ mode: "readwrite" })) === "granted";
+  } catch {
+    return false;
+  }
 }
 
 function download(file: ExportFile) {
@@ -103,6 +120,27 @@ export function GeneratorApp() {
   const say = (text: string, tone: "info" | "ok" | "error" = "info") => setStatus({ text, tone });
 
   const [stage, setStage] = useState<Stage>("input");
+  const [outFolder, setOutFolder] = useState<FolderHandle | null>(null);
+  useEffect(() => {
+    if (!orgId || !canPickFolder) return;
+    let live = true;
+    void loadFolder(orgId).then((h) => { if (live && h) setOutFolder(h as FolderHandle); });
+    return () => { live = false; };
+  }, [orgId]);
+  async function chooseFolder() {
+    try {
+      const pick = (window as unknown as { showDirectoryPicker(o: { mode: "readwrite"; id?: string }): Promise<FolderHandle> }).showDirectoryPicker;
+      const h = await pick.call(window, { mode: "readwrite", id: "idg-output" });
+      setOutFolder(h);
+      if (orgId) void saveFolder(orgId, h);
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") say("That folder could not be opened. Choose another folder.", "error");
+    }
+  }
+  function resetToDownloads() {
+    setOutFolder(null);
+    if (orgId) void clearFolder(orgId);
+  }
   const [students, setStudents] = useState<Student[]>([]);
   const [studentsLoaded, setStudentsLoaded] = useState(false);
   const [columns, setColumns] = useState<string[]>([]);
@@ -524,7 +562,13 @@ export function GeneratorApp() {
     try {
       await ensureFonts(layout.elements.filter((e) => e.kind === "text").map((e) => (e as { font: string }).font));
       const sheet = SHEET_SIZES.find((x) => x.key === print.sheetKey) ?? SHEET_SIZES[0];
-      const { file, problems } = await exportBundle({
+      let target: FolderHandle | null = outFolder;
+      if (target && !(await folderAllowed(target))) {
+        say(`No permission to save into “${target.name}”. The cards will download as a ZIP instead.`, "info");
+        target = null;
+      }
+      const { file, problems, savedTo } = await exportBundle({
+        outputFolder: target,
         layout: genLayout,
         rows: ready,
         columns,
@@ -545,7 +589,8 @@ export function GeneratorApp() {
         onProgress: (done, total, label) => setBusy({ label, done, total }),
         signal: ctrl.signal,
       });
-      download(file);
+      if (file) download(file);
+      const where = savedTo ? `saved in “${savedTo}”` : `“${file?.name ?? "ID cards.zip"}” downloaded`;
       const ids = Array.from(new Set(problems.map((p: CardProblem) => p.id).filter(Boolean)));
       setFailedIds(ids);
       setOnlyFailed(false);
@@ -571,8 +616,8 @@ export function GeneratorApp() {
       await Promise.all([worker(), worker(), worker(), worker()]);
       say(
         problems.length
-          ? `${ready.length} ID cards downloaded. ${ids.length} card(s) have text that is cut off or outside the card — see “ERRORS - cards to correct.csv” in the ZIP, correct them, then use “Regenerate errors only”.`
-          : `${ready.length} ID cards ready — “${file.name}” downloaded.${failedUploads ? ` ${failedUploads} could not be sent to the teacher app.` : " The cards now also show in the teacher app."}`,
+          ? `${ready.length} ID cards ${where}. ${ids.length} card(s) have text that is cut off or outside the card — see “ERRORS - cards to correct.csv”, correct them, then use “Regenerate errors only”.`
+          : `${ready.length} ID cards ready — ${where}.${failedUploads ? ` ${failedUploads} could not be sent to the teacher app.` : " The cards now also show in the teacher app."}`,
         problems.length || failedUploads ? "error" : "ok"
       );
     } catch (e) {
@@ -802,7 +847,17 @@ export function GeneratorApp() {
           <section className="card idg-wiz-card">
             <div className="idg-wiz-head"><span className="idg-wiz-num">2</span><div><h3>Output</h3><p className="idg-muted">What you get after Generate</p></div></div>
             <ul className="idg-outlist">
-              <li><b>Where</b><span>One ZIP file in your Downloads folder</span></li>
+              <li className="idg-outwhere">
+                <b>Save to</b>
+                <span>
+                  {outFolder ? <>Folder “{outFolder.name}” — a new sub-folder is made for each batch</> : "One ZIP file in your Downloads folder"}
+                  <span className="idg-outbtns">
+                    {canPickFolder && <button type="button" className="btn-secondary" onClick={() => void chooseFolder()}>{outFolder ? "Change folder…" : "Choose folder…"}</button>}
+                    {outFolder && <button type="button" className="btn-secondary" onClick={resetToDownloads}>Use Downloads (ZIP)</button>}
+                  </span>
+                  {!canPickFolder && <small className="idg-muted">Choosing a folder works in Chrome or Edge on a computer. Here the cards download as a ZIP.</small>}
+                </span>
+              </li>
               <li><b>Front folder</b><span>Front/&lt;Photo ID&gt;.png</span></li>
               {sideMode === "double" && <li><b>Back folder</b><span>Back/&lt;Photo ID&gt;.png</span></li>}
               <li><b>Resolution</b><span>{templates.front ? `${templates.front.bitmap.width} × ${templates.front.bitmap.height} px (${outputDpi} DPI) — same as the template` : "Upload a template first"}</span></li>

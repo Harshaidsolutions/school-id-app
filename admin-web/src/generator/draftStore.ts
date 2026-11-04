@@ -46,3 +46,8 @@ async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
 export const loadDraft = (orgId: string) => run<Draft>("readonly", (s) => s.get(orgId) as IDBRequest<Draft>);
 export const saveDraft = (orgId: string, draft: Draft) => run("readwrite", (s) => s.put(draft, orgId));
 export const clearDraft = (orgId: string) => run("readwrite", (s) => s.delete(orgId));
+
+/** The output folder the admin picked for this school / institute (a browser folder handle). */
+export const loadFolder = (orgId: string) => run<unknown>("readonly", (s) => s.get(`dir:${orgId}`));
+export const saveFolder = (orgId: string, handle: unknown) => run("readwrite", (s) => s.put(handle, `dir:${orgId}`));
+export const clearFolder = (orgId: string) => run("readwrite", (s) => s.delete(`dir:${orgId}`));

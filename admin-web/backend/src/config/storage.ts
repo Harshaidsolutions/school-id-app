@@ -1,5 +1,7 @@
 import {
   DeleteObjectCommand,
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
   GetObjectCommand,
   HeadBucketCommand,
   PutObjectCommand,
@@ -356,4 +358,37 @@ export async function assertS3BucketAccessible(): Promise<void> {
   const client = getS3Client();
   const bucket = getBucketName();
   await client.send(new HeadBucketCommand({ Bucket: bucket }));
+}
+
+/**
+ * Permanently removes every file under a folder prefix (e.g. all photos, signatures and
+ * ID cards of one school: "<schoolId>/"). Used when a school / institute / admin is deleted.
+ */
+export async function deletePrefixFromBucket(folder: string, prefix: string): Promise<number> {
+  const clean = prefix.replace(/^\/+/, "");
+  if (clean.length < 8) return 0; // never wipe a whole folder by mistake
+  const client = getS3Client();
+  const bucket = getBucketName();
+  const fullPrefix = objectKey(folder, clean.endsWith("/") ? clean : `${clean}/`);
+  let token: string | undefined;
+  let removed = 0;
+  do {
+    const page = await client.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: fullPrefix, ContinuationToken: token, MaxKeys: 1000 }));
+    const keys = (page.Contents ?? []).map((o) => o.Key).filter((k): k is string => Boolean(k));
+    if (keys.length) {
+      await client.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true } }));
+      removed += keys.length;
+    }
+    token = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (token);
+  return removed;
+}
+
+/** Best-effort file cleanup for deleted schools / institutes / organizations (never throws). */
+export async function purgeOrgFiles(orgIds: { schools?: string[]; institutes?: string[]; organizations?: string[] }): Promise<void> {
+  const jobs: Promise<unknown>[] = [];
+  for (const id of [...(orgIds.schools ?? []), ...(orgIds.institutes ?? [])]) jobs.push(deletePrefixFromBucket(STUDENT_PHOTOS_BUCKET, `${id}/`));
+  for (const id of orgIds.organizations ?? []) jobs.push(deletePrefixFromBucket(STUDENT_PHOTOS_BUCKET, `organizations/${id}/`));
+  const results = await Promise.allSettled(jobs);
+  results.forEach((r) => { if (r.status === "rejected") console.error("[purge-files]", r.reason); });
 }

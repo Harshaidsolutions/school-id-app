@@ -437,3 +437,8 @@
   .idg-wiz-stats b { font-size: 20px; }
   .idg-wiz-uploads, .idg-mode { grid-template-columns: 1fr; }
 }
+
+/* Output folder chooser */
+.idg-outwhere > span { display: flex; flex-direction: column; gap: 6px; }
+.idg-outbtns { display: flex; flex-wrap: wrap; gap: 8px; }
+.idg-outbtns .btn-secondary { padding: 6px 12px; font-size: 13px; }

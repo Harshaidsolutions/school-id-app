@@ -1,3 +1,4 @@
+import { purgeOrgFiles } from "../config/storage";
 import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import { pool } from "../config/database";
@@ -606,6 +607,7 @@ export async function deleteInstitute(
     await client.query(`DELETE FROM users WHERE institute_id = $1`, [instituteId]);
     await client.query(`DELETE FROM institutes WHERE id = $1`, [instituteId]);
     await client.query("COMMIT");
+    void purgeOrgFiles({ institutes: [instituteId] });
 
     res.status(200).json({
       status: "ok",
@@ -709,6 +711,7 @@ export async function bulkDeleteInstitutes(
       [ids]
     );
     await client.query("COMMIT");
+    void purgeOrgFiles({ institutes: ids });
 
     res.status(200).json({
       status: "ok",

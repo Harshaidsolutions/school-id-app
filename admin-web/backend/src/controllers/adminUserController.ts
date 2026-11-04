@@ -1,3 +1,4 @@
+import { purgeOrgFiles } from "../config/storage";
 import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import { pool } from "../config/database";
@@ -368,17 +369,48 @@ export async function deleteManagedAdmin(
       throw new AppError("Super admin cannot be deleted", 403);
     }
 
-    // Nothing is lost: everything this admin owned moves to the super admin, and
-    // records that only remember "who uploaded / created it" keep the record without the name.
+    // Deleting a child admin deletes EVERYTHING they own, permanently: their schools,
+    // institutes and organisations (with all students / members, teachers' logins,
+    // forms, notifications), their templates and catalog items, and all their files.
     const client = await pool.connect();
+    let owned: { schools: string[]; institutes: string[]; organizations: string[] } = { schools: [], institutes: [], organizations: [] };
     try {
       await client.query("BEGIN");
-      for (const table of ["schools", "institutes", "templates", "catalog_items", "organizations"]) {
-        await client.query("SAVEPOINT owner_move");
+      const ids = async (table: string): Promise<string[]> => {
+        await client.query("SAVEPOINT owned_q");
         try {
-          await client.query(`UPDATE ${table} SET owner_admin_id = $2 WHERE owner_admin_id = $1`, [id, superScope.adminUserId]);
+          const r = await client.query<{ id: string }>(`SELECT id FROM ${table} WHERE owner_admin_id = $1`, [id]);
+          return r.rows.map((x) => x.id);
         } catch {
-          await client.query("ROLLBACK TO SAVEPOINT owner_move"); // table/column not present on this server
+          await client.query("ROLLBACK TO SAVEPOINT owned_q"); // table not present on this server
+          return [];
+        }
+      };
+      owned = { schools: await ids("schools"), institutes: await ids("institutes"), organizations: await ids("organizations") };
+      if (owned.schools.length) {
+        await client.query(`DELETE FROM users WHERE school_id = ANY($1::uuid[])`, [owned.schools]);
+        await client.query(`DELETE FROM students WHERE school_id = ANY($1::uuid[])`, [owned.schools]);
+        await client.query(`DELETE FROM schools WHERE id = ANY($1::uuid[])`, [owned.schools]);
+      }
+      if (owned.institutes.length) {
+        await client.query(`DELETE FROM users WHERE institute_id = ANY($1::uuid[])`, [owned.institutes]);
+        await client.query(`DELETE FROM students WHERE institute_id = ANY($1::uuid[])`, [owned.institutes]);
+        await client.query(`DELETE FROM institutes WHERE id = ANY($1::uuid[])`, [owned.institutes]);
+      }
+      if (owned.organizations.length) {
+        await client.query(`DELETE FROM users WHERE organization_id = ANY($1::uuid[])`, [owned.organizations]);
+        await client.query(`DELETE FROM organizations WHERE id = ANY($1::uuid[])`, [owned.organizations]);
+      }
+      for (const table of ["templates", "catalog_items"]) {
+        await client.query("SAVEPOINT owned_rm");
+        try {
+          if (table === "templates") {
+            await client.query(`UPDATE schools SET template_id = NULL WHERE template_id IN (SELECT id FROM templates WHERE owner_admin_id = $1)`, [id]);
+            await client.query(`UPDATE institutes SET template_id = NULL WHERE template_id IN (SELECT id FROM templates WHERE owner_admin_id = $1)`, [id]);
+          }
+          await client.query(`DELETE FROM ${table} WHERE owner_admin_id = $1`, [id]);
+        } catch {
+          await client.query("ROLLBACK TO SAVEPOINT owned_rm");
         }
       }
       await client.query(`DELETE FROM users WHERE id = $1`, [id]);
@@ -389,6 +421,7 @@ export async function deleteManagedAdmin(
     } finally {
       client.release();
     }
+    void purgeOrgFiles(owned); // photos, signatures and ID cards removed from storage
     res.status(200).json({ status: "ok", deleted: true });
   } catch (error) {
     next(error);

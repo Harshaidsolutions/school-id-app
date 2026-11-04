@@ -162,7 +162,7 @@ export function AdminsScreen() {
       <OtpSheet
         visible={Boolean(deleteTarget)}
         title="Delete admin"
-        description={`Delete admin “${deleteTarget?.display_name ?? deleteTarget?.username ?? deleteTarget?.email ?? ""}”? This cannot be undone.`}
+        description={`Delete admin “${deleteTarget?.display_name ?? deleteTarget?.username ?? deleteTarget?.email ?? ""}”? This permanently deletes the admin and ALL their schools, institutes, organisations, students, photos, templates and catalog items. Nothing can be restored.`}
         confirmLabel="Delete admin"
         onClose={() => setDeleteTarget(null)}
         onRequest={async () => (await api.post(`/admin/managed-admins/${deleteTarget!.id}/request-delete-otp`)).data}
