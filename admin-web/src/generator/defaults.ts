@@ -5,11 +5,12 @@ export const uid = () => Math.random().toString(36).slice(2, 10);
 
 export function newText(side: Side, column: string, at: Partial<TextElement> = {}): TextElement {
   return {
-    id: uid(), kind: "text", side, x: 4, y: 50, w: 46, h: 6, rotation: 0, required: Boolean(column),
+    // Defaults asked for by the admin: Arial 8 pt black, at X 18 mm, Y 55 mm, 30 × 3.5 mm.
+    id: uid(), kind: "text", side, x: 18, y: 55, w: 30, h: 3.5, rotation: 0, required: Boolean(column),
     column, prefix: "", suffix: "", staticText: column ? "" : "Text",
-    font: "Poppins", weight: 500, italic: false, underline: false, size: 9, minSize: 5, autoShrink: true, multiline: false,
+    font: "Arial", weight: 400, italic: false, underline: false, size: 8, minSize: 4, autoShrink: true, multiline: false,
     textCase: "none", align: "left", vAlign: "middle", letterSpacing: 0, lineHeight: 1.15,
-    color: "#1E1B4B", gradient: { on: false, color2: "#F43F5E", angle: 0 }, stroke: { width: 0, color: "#ffffff" },
+    color: "#000000", gradient: { on: false, color2: "#F43F5E", angle: 0 }, stroke: { width: 0, color: "#ffffff" },
     ...at,
   };
 }
@@ -18,7 +19,8 @@ export function newImage(side: Side, media: MediaKind, at: Partial<ImageElement>
   const sign = media !== "photo" && media !== "logo";
   return {
     id: uid(), kind: "image", side, media, rotation: 0, required: media === "photo",
-    x: sign ? 30 : 15, y: sign ? 74 : 14, w: sign ? 20 : 24, h: sign ? 8 : 30,
+    // Photo default: X 15 mm, Y 22 mm, 25 × 30 mm.
+    x: sign ? 30 : 15, y: sign ? 74 : 22, w: sign ? 20 : 25, h: sign ? 8 : 30,
     fit: sign || media === "logo" ? "contain" : "cover", shape: "rect", radius: 0,
     border: { width: 0, color: "#4F46E5" }, shadow: { on: false, blur: 1.5, color: "rgba(30,27,75,0.35)" },
     cleanSignature: sign,

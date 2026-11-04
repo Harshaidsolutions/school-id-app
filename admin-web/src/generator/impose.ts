@@ -14,6 +14,9 @@ export const SHEET_SIZES: SheetSize[] = [
   { key: "a3", label: "A3 (297 × 420 mm)", w: 297, h: 420 },
   { key: "12x18", label: "12 × 18 in press sheet", w: 304.8, h: 457.2 },
   { key: "13x19", label: "13 × 19 in press sheet", w: 330.2, h: 482.6 },
+  { key: "12x36", label: "12 × 36 in press sheet", w: 304.8, h: 914.4 },
+  { key: "8x12", label: "8 × 12 in press sheet", w: 203.2, h: 304.8 },
+  { key: "4x6", label: "4 × 6 in press sheet", w: 101.6, h: 152.4 },
   { key: "letter", label: "Letter (8.5 × 11 in)", w: 215.9, h: 279.4 },
 ];
 

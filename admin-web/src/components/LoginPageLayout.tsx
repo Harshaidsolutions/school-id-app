@@ -13,25 +13,9 @@ export function LoginPageLayout({ title, children, footer, onTitlePress }: {
         <span className="login-brand-dot" aria-hidden />
         <span className="login-orb login-orb-1" aria-hidden />
         <span className="login-orb login-orb-2" aria-hidden />
-        {/* Rubber-stamp style brand seal: logo in the middle, brand name around it */}
-        <div className="login-stamp" aria-hidden>
-          <svg viewBox="0 0 360 360" role="presentation">
-            <defs>
-              <path id="stampRing" d="M 180,180 m -136,0 a 136,136 0 1,1 272,0 a 136,136 0 1,1 -272,0" />
-            </defs>
-            <circle cx="180" cy="180" r="172" className="stamp-ring-outer" />
-            <circle cx="180" cy="180" r="160" className="stamp-ring-thin" />
-            <g className="stamp-text-ring">
-              <text className="stamp-text">
-                <textPath href="#stampRing" startOffset="0" textLength="850" lengthAdjust="spacing">
-                  MY SCHOOL ID CARD ✦ ADMIN WORKSPACE ✦ HARSHA ID SOLUTIONS ✦
-                </textPath>
-              </text>
-            </g>
-            <circle cx="180" cy="180" r="114" className="stamp-ring-thin" />
-            <circle cx="180" cy="180" r="106" className="stamp-disc" />
-            <image href="/brand-wordmark-clear.png" x="72" y="135" width="216" height="90" preserveAspectRatio="xMidYMid meet" />
-          </svg>
+        {/* Same logo as the login form, on a white card */}
+        <div className="login-brand-logo">
+          <img src="/brand-wordmark-clear.png" alt="" />
         </div>
         <div className="login-brand-copy">
           <span className="login-eyebrow">ADMIN WORKSPACE</span>

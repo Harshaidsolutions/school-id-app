@@ -202,16 +202,13 @@ export async function deleteTemplate(
 
     await assertCatalogRowOwnedByAdmin(scope, "templates", id);
 
+    await pool.query(`UPDATE schools SET template_id = NULL WHERE template_id = $1`, [id]);
+    await pool.query(`UPDATE institutes SET template_id = NULL WHERE template_id = $1`, [id]);
     const result = await pool.query(
       `DELETE FROM templates WHERE id = $1 RETURNING id`,
       [id]
     );
     if (!result.rows[0]) throw new AppError("Template not found", 404);
-
-    await pool.query(
-      `UPDATE schools SET template_id = NULL WHERE template_id = $1`,
-      [id]
-    );
 
     res.status(200).json({ status: "ok", deleted: true });
   } catch (error) {
@@ -234,14 +231,17 @@ export async function bulkDeleteTemplates(
       ),
     ];
     if (ids.length === 0) throw new AppError("Select at least one item", 400);
-    if (ids.length > 200) {
-      throw new AppError("Select 200 items or fewer at a time", 400);
+    if (ids.length > 1000) {
+      throw new AppError("Select 1000 items or fewer at a time", 400);
     }
     const deleted: string[] = [];
     const failed: { id: string; message: string }[] = [];
     for (const id of ids) {
       try {
         await assertCatalogRowOwnedByAdmin(scope, "templates", id);
+        // Unlink schools / institutes first, otherwise the database refuses the delete.
+        await pool.query(`UPDATE schools SET template_id = NULL WHERE template_id = $1`, [id]);
+        await pool.query(`UPDATE institutes SET template_id = NULL WHERE template_id = $1`, [id]);
         const result = await pool.query(
           `DELETE FROM templates WHERE id = $1 RETURNING id`,
           [id]
@@ -250,14 +250,6 @@ export async function bulkDeleteTemplates(
           failed.push({ id, message: "Template not found" });
           continue;
         }
-        await pool.query(
-          `UPDATE schools SET template_id = NULL WHERE template_id = $1`,
-          [id]
-        );
-        await pool.query(
-          `UPDATE institutes SET template_id = NULL WHERE template_id = $1`,
-          [id]
-        );
         deleted.push(id);
       } catch (error) {
         failed.push({

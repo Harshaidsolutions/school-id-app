@@ -167,7 +167,56 @@ export function shapePath(ctx: CanvasRenderingContext2D, shape: PhotoShape, x: n
       ctx.closePath();
       break;
     }
+    case "apple": case "pomegranate": case "cherry": case "orange":
+      fruitPath(ctx, shape, x, y, w, h);
+      break;
     default: ctx.rect(x, y, w, h);
+  }
+}
+
+/** Fruit photo frames, drawn in a 0–1 box scaled to the element. */
+function fruitPath(ctx: CanvasRenderingContext2D, shape: "apple" | "pomegranate" | "cherry" | "orange", x: number, y: number, w: number, h: number): void {
+  const X = (u: number) => x + u * w;
+  const Y = (v: number) => y + v * h;
+  const leaf = (cx: number, cy: number, rx: number, ry: number, rot: number) => {
+    ctx.moveTo(X(cx + rx * Math.cos(rot)), Y(cy + ry * Math.sin(rot)));
+    ctx.ellipse(X(cx), Y(cy), rx * w, ry * h, rot, 0, Math.PI * 2);
+  };
+  switch (shape) {
+    case "apple":
+      ctx.moveTo(X(0.5), Y(0.24));
+      ctx.bezierCurveTo(X(0.38), Y(0.12), X(0.02), Y(0.14), X(0.04), Y(0.5));
+      ctx.bezierCurveTo(X(0.06), Y(0.82), X(0.3), Y(1.0), X(0.42), Y(0.97));
+      ctx.bezierCurveTo(X(0.47), Y(0.95), X(0.53), Y(0.95), X(0.58), Y(0.97));
+      ctx.bezierCurveTo(X(0.7), Y(1.0), X(0.94), Y(0.82), X(0.96), Y(0.5));
+      ctx.bezierCurveTo(X(0.98), Y(0.14), X(0.62), Y(0.12), X(0.5), Y(0.24));
+      ctx.closePath();
+      leaf(0.62, 0.1, 0.12, 0.06, -0.5);
+      break;
+    case "orange":
+      ctx.moveTo(X(0.96), Y(0.58));
+      ctx.ellipse(X(0.5), Y(0.58), 0.46 * w, 0.42 * h, 0, 0, Math.PI * 2);
+      leaf(0.6, 0.11, 0.11, 0.05, -0.4);
+      break;
+    case "cherry":
+      ctx.moveTo(X(0.62), Y(0.7));
+      ctx.ellipse(X(0.32), Y(0.7), 0.3 * w, 0.28 * h, 0, 0, Math.PI * 2);
+      ctx.moveTo(X(0.98), Y(0.64));
+      ctx.ellipse(X(0.7), Y(0.64), 0.28 * w, 0.26 * h, 0, 0, Math.PI * 2);
+      leaf(0.62, 0.12, 0.13, 0.06, -0.3);
+      break;
+    case "pomegranate":
+      ctx.moveTo(X(0.94), Y(0.6));
+      ctx.ellipse(X(0.5), Y(0.6), 0.44 * w, 0.39 * h, 0, 0, Math.PI * 2);
+      ctx.moveTo(X(0.36), Y(0.26));
+      ctx.lineTo(X(0.36), Y(0.06));
+      ctx.lineTo(X(0.44), Y(0.15));
+      ctx.lineTo(X(0.5), Y(0.03));
+      ctx.lineTo(X(0.56), Y(0.15));
+      ctx.lineTo(X(0.64), Y(0.06));
+      ctx.lineTo(X(0.64), Y(0.26));
+      ctx.closePath();
+      break;
   }
 }
 

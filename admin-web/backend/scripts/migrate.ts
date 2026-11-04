@@ -958,6 +958,8 @@ async function migrate() {
       email TEXT NOT NULL DEFAULT '', organization TEXT NOT NULL DEFAULT '', message TEXT NOT NULL DEFAULT '',
       status TEXT NOT NULL DEFAULT 'new', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     ALTER TABLE students ADD COLUMN IF NOT EXISTS app_visible BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE students ADD COLUMN IF NOT EXISTS id_card_url TEXT;
+    ALTER TABLE students ADD COLUMN IF NOT EXISTS id_card_updated_at TIMESTAMPTZ;
   `);
   // Super admin → child admin notifications (shown on the admin's dashboard bell)
   await pool.query(`

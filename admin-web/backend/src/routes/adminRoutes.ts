@@ -1,4 +1,5 @@
 import { createDesktopLicense, deleteDesktopLicense, listDesktopLicenses, updateDesktopLicenseStatus } from "../controllers/desktopLicenseController";
+import { generatedCardUpload, uploadStudentIdCard } from "../controllers/generatedCardController";
 import {photoArchiveUpload,importPhotos} from "../controllers/photoImportController";
 import {photoChunkBody,receivePhotoChunk,finishPhotoUpload,photoImportJobStatus} from "../controllers/photoImportJobs";
 import {uploadInstructionMedia,messageTemplates,instructionContent,registrations,setCandidateVisibility} from "../controllers/workspaceToolsController";
@@ -314,6 +315,7 @@ router.delete("/students/:id/photo", deleteStudentPhotoAdmin);
 router.delete("/students/:id", deleteStudentAdmin);
 router.get("/students/:studentId/photo", downloadStudentPhoto);
 router.get("/students/:studentId/signature", downloadStudentSignature);
+router.post("/students/:studentId/id-card", generatedCardUpload, uploadStudentIdCard);
 router.get("/students/:schoolId/export", exportStudentsExcel);
 router.get("/students/:schoolId", listStudentsBySchool);
 

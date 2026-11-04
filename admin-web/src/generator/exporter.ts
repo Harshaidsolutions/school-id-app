@@ -186,6 +186,10 @@ export type BundleOptions = {
   print: PrintSettings;
   idColumn: string; // e.g. "Photo ID"
   nameColumn: string; // e.g. "Name"
+  /** Output resolution. Use the template's own resolution so the cards come out exactly as uploaded. */
+  dpi?: number;
+  /** Called with every finished front side (e.g. to save a copy for the teacher app). */
+  onFront?: (rowIndex: number, canvas: HTMLCanvasElement) => Promise<void> | void;
   onProgress: (done: number, total: number, label: string) => void;
   signal?: AbortSignal;
 };
@@ -218,14 +222,14 @@ function textProblems(layout: Layout, side: Side, row: Row, issues: RenderIssue[
 
 /**
  * One ZIP "folder" with everything for the batch:
- *   <Job>/Front/<PhotoID>_<Name>.png                     — 300 DPI, every front side
- *   <Job>/Back/<PhotoID>_<Name>.png                      — 300 DPI, every back side
+ *   <Job>/Front/<PhotoID>.png      — every front side, at the template's own resolution
+ *   <Job>/Back/<PhotoID>.png       — every back side
  *   <Job>/Print sheets (<paper>).pdf                     — cards on the chosen paper with crop marks
  *   <Job>/Card details.csv                               — every column for every card
  *   <Job>/ERRORS - cards to correct.csv                  — only when some text was cut off
  */
 export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
-  const dpi = 300;
+  const dpi = Math.max(72, Math.min(1200, Math.round(o.dpi ?? 300)));
   const hasBack = hasSide(o.layout, "back", o.templates);
   const sides: Side[] = hasBack ? ["front", "back"] : ["front"];
   const folder = safeName(o.jobName);
@@ -266,6 +270,7 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
           problems.push({ index: item.index, id: item.row[o.idColumn] ?? "", name: item.row[o.nameColumn] ?? "", side, message });
         }
         await zip.add(`${folder}/${side === "front" ? "Front" : "Back"}/${fileBase}.png`, await canvasBlob(canvas, "image/png"));
+        if (side === "front" && o.onFront) await o.onFront(item.index, canvas);
         const ref = pdf.addJpeg(await canvasBlob(canvas, "image/jpeg", 0.93), canvas.width, canvas.height);
         const slot = side === "back" ? mirrorSlot(imp.slots[k], imp.cellW, sheet.w) : imp.slots[k];
         ops.push({ type: "image", ref, x: slot.x, y: slot.y, w: imp.cellW, h: imp.cellH });
@@ -275,12 +280,13 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
       }
       const mx = (x: number) => (side === "back" ? sheet.w - x : x);
       for (const l of marks.lines) ops.push({ type: "line", x1: mx(l.x1), y1: l.y1, x2: mx(l.x2), y2: l.y2, width: 0.2 });
-      if (o.print.margin >= 5) ops.push({ type: "text", x: 6, y: sheet.h - 2.5, size: 6, text: `${o.jobName} | Sheet ${s + 1} | ${side.toUpperCase()} | ${group.length} cards | 300 DPI` });
+      if (o.print.margin >= 5) ops.push({ type: "text", x: 6, y: sheet.h - 2.5, size: 6, text: `${o.jobName} | Sheet ${s + 1} | ${side.toUpperCase()} | ${group.length} cards | ${dpi} DPI` });
       pdf.addPage(sheet.w, sheet.h, ops);
     }
   }
   o.onProgress(total, total, "Packing the folder…");
-  await zip.add(`${folder}/Print sheets (${base.key === "12x18" ? "12x18 in" : base.label.split(" (")[0]}${o.print.landscape ? ", landscape" : ""}).pdf`, pdf.finish());
+  const sheetName = /^\d+x\d+$/.test(base.key) ? `${base.key} in` : base.label.split(" (")[0];
+  await zip.add(`${folder}/Print sheets (${sheetName}${o.print.landscape ? ", landscape" : ""}).pdf`, pdf.finish());
   const header = ["S.No", "File name", ...o.columns];
   const lines = [header.map(csvCell).join(",")];
   o.rows.forEach((item, i) => lines.push([String(i + 1), names.get(item.index) ?? "", ...o.columns.map((c) => item.row[c] ?? "")].map(csvCell).join(",")));

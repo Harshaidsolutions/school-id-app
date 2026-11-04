@@ -24,6 +24,9 @@ export interface TeacherStudent {
   /** ISO timestamp when the student photo was last successfully captured/uploaded. */
   photo_captured_at?: string | null;
   signature_url?: string | null;
+  /** Generated ID card (front) from the admin's ID Card Generator, shown instead of the photo. */
+  id_card_url?: string | null;
+  id_card_updated_at?: string | null;
   pending_photo?: boolean;
   pending_data?: boolean;
   fully_captured?: boolean;

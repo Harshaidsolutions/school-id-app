@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
 
@@ -12,8 +13,8 @@ export function parseBulkIds(raw: unknown, label: string): string[] {
     ),
   ];
   if (ids.length === 0) throw new AppError(`Select at least one ${label}`, 400);
-  if (ids.length > 200) {
-    throw new AppError(`Select 200 ${label} or fewer at a time`, 400);
+  if (ids.length > MAX_BULK) {
+    throw new AppError(`Select ${MAX_BULK} ${label}s or fewer at a time`, 400);
   }
   for (const id of ids) {
     if (!UUID_RE.test(id)) throw new AppError(`Invalid ${label} id`, 400);
@@ -21,8 +22,17 @@ export function parseBulkIds(raw: unknown, label: string): string[] {
   return ids;
 }
 
+/** Most items one bulk action may touch. */
+export const MAX_BULK = 1000;
+
+/**
+ * Short, stable key for "this exact set of ids" (used to bind the delete OTP).
+ * The old key joined every id into one long string; above ~70 ids it was too long for
+ * the database index, so requesting the OTP — and every bulk delete — failed.
+ */
 export function bulkResourceId(ids: string[]): string {
-  return [...ids].sort().join(",");
+  const sorted = [...ids].sort();
+  return `bulk:${sorted.length}:${crypto.createHash("sha256").update(sorted.join(",")).digest("hex")}`;
 }
 
 export async function requireAdminEmail(adminUserId: string): Promise<string> {

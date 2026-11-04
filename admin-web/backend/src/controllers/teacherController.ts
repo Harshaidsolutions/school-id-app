@@ -122,7 +122,8 @@ interface TeacherModelRow {
 const TEACHER_STUDENT_SELECT = `
   app_visible, id, student_name, roll_no, photo_url, photo_captured_at, signature_url, status, school_id, institute_id, class_section,
   parent_name, parent_phone, address, photo_id,
-  dob, gender, blood_group, custom_1, custom_2, custom_3, extra_fields, field_labels
+  dob, gender, blood_group, custom_1, custom_2, custom_3, extra_fields, field_labels,
+  id_card_url, id_card_updated_at
 `;
 
 function nullableText(value: unknown): string | null {

@@ -1,3 +1,4 @@
+import { GeneratedIdCard } from "../components/GeneratedIdCard";
 import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { contentMaxStyle } from "../theme/responsive";
 import { Pressable } from "../components/Pressable";
@@ -125,6 +126,9 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
         <View style={styles.photoSection}>
 
+          {student.id_card_url ? (
+            <GeneratedIdCard uri={student.id_card_url} maxWidth={scale(230)} maxHeight={scale(360)} />
+          ) : (
           <View
 
             style={[
@@ -187,6 +191,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
             </Pressable>
 
           </View>
+          )}
 
           {formatCapturedAt(student.photo_captured_at) ? (
             <Text style={{ marginTop: 8, color: colors.textMuted, textAlign: "center" }}>

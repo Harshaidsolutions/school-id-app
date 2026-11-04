@@ -33,7 +33,7 @@ export async function requestAdminActionOtp(params: {
     logPrefix,
   } = params;
 
-  consumeAttempt(`otp-send:${adminUserId}`, 1, 60_000);
+  consumeAttempt(`otp-send:${adminUserId}`, 3, 60_000);
 
   await pool.query(
     `UPDATE admin_action_otps

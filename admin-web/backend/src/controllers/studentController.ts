@@ -1778,16 +1778,23 @@ export async function bulkDeleteStudents(
         throw new AppError("Member not found", 404);
       }
       await assertStudentOwnedByAdmin(scope, row);
-      const photoOrgId = studentPhotoOrgId(row.school_id, row.institute_id);
-      if (row.photo_url && photoOrgId) {
-        await deleteStudentPhotoFromStorage(photoOrgId, row.id);
-      }
     }
     const deleted = await client.query<{ id: string }>(
       `DELETE FROM students WHERE id = ANY($1::uuid[]) RETURNING id`,
       [ids]
     );
     await client.query("COMMIT");
+
+    // Remove the photo files only after the records are really gone, a few at a time
+    // (one-by-one inside the transaction was slow for big selections and could time out).
+    const files = locked.rows
+      .map((row) => ({ orgId: studentPhotoOrgId(row.school_id, row.institute_id), id: row.id, has: Boolean(row.photo_url) }))
+      .filter((f): f is { orgId: string; id: string; has: boolean } => Boolean(f.has && f.orgId));
+    for (let i = 0; i < files.length; i += 20) {
+      await Promise.all(
+        files.slice(i, i + 20).map((f) => deleteStudentPhotoFromStorage(f.orgId, f.id).catch((e) => console.error("[student-bulk-delete] photo cleanup", f.id, e)))
+      );
+    }
 
     res.status(200).json({
       status: "ok",

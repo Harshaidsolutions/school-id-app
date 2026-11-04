@@ -108,8 +108,8 @@ function parseBulkIds(raw: unknown): string[] {
     ...new Set(raw.map((id) => String(id).trim()).filter((id) => id.length > 0)),
   ];
   if (ids.length === 0) throw new AppError("Select at least one item", 400);
-  if (ids.length > 200) {
-    throw new AppError("Select 200 items or fewer at a time", 400);
+  if (ids.length > 1000) {
+    throw new AppError("Select 1000 items or fewer at a time", 400);
   }
   return ids;
 }

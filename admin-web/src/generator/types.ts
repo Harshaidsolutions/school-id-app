@@ -7,7 +7,8 @@ export type Side = "front" | "back";
 export type TextCase = "none" | "upper" | "lower" | "title" | "sentence";
 export type PhotoShape =
   | "rect" | "rounded" | "square" | "circle" | "oval" | "arch"
-  | "hexagon" | "octagon" | "pentagon" | "diamond" | "shield" | "star";
+  | "hexagon" | "octagon" | "pentagon" | "diamond" | "shield" | "star"
+  | "apple" | "pomegranate" | "cherry" | "orange";
 
 /** Which uploaded media an image element shows. */
 export type MediaKind = "photo" | "parentSign" | "principalSign" | "thumb" | "logo" | "static";

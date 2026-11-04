@@ -1,91 +1,96 @@
 import { useEffect, useState } from "react";
-import { MediaLightbox } from "../../components/MediaLightbox";
-import { canvasBlob, renderCard, type Bitmap, type MediaResolver } from "../render";
+import { canvasBlob, renderCard, type Bitmap, type MediaResolver, type RenderIssue } from "../render";
 import type { Layout, Row } from "../types";
 
-/** Gallery of the real cards (front + back) before printing; click any card for the large viewer. */
-export function BatchPreview({ layout, rows, templates, resolverFor, nameCol, onClose }: {
+/**
+ * Preview: ONE card at a time, large, so every detail can be checked before generating.
+ * Use ‹ › to move to the next person.
+ */
+export function BatchPreview({ layout, rows, start = 0, templates, resolverFor, nameCol, idCol, showBack, dpi, onClose }: {
   layout: Layout;
   rows: { row: Row; index: number }[];
+  start?: number;
   templates: { front: Bitmap | null; back: Bitmap | null };
   resolverFor: (i: number) => MediaResolver;
   nameCol?: string;
+  idCol?: string;
+  showBack: boolean;
+  dpi: number;
   onClose: () => void;
 }) {
-  const per = 12;
-  const [page, setPage] = useState(0);
-  const [cards, setCards] = useState<{ index: number; front: string; back: string | null; issues: number }[]>([]);
-  const [open, setOpen] = useState<number | null>(null);
-  const hasBack = Boolean(templates.back) || layout.elements.some((e) => e.side === "back");
+  const [at, setAt] = useState(Math.min(Math.max(0, start), Math.max(0, rows.length - 1)));
+  const [card, setCard] = useState<{ front: string; back: string | null; issues: RenderIssue[] } | null>(null);
+  const item = rows[at];
+
   useEffect(() => {
+    if (!item) return;
     let live = true;
     const made: string[] = [];
-    setCards([]);
+    setCard(null);
     (async () => {
       const c = document.createElement("canvas");
-      const out: { index: number; front: string; back: string | null; issues: number }[] = [];
-      for (const item of rows.slice(page * per, (page + 1) * per)) {
-        const media = resolverFor(item.index);
-        const i1 = await renderCard(c, { layout, side: "front", row: item.row, dpi: 150, template: templates.front, media });
-        const front = URL.createObjectURL(await canvasBlob(c, "image/jpeg", 0.88));
-        made.push(front);
-        let back: string | null = null;
-        let i2: unknown[] = [];
-        if (hasBack) {
-          i2 = await renderCard(c, { layout, side: "back", row: item.row, dpi: 150, template: templates.back, media });
-          back = URL.createObjectURL(await canvasBlob(c, "image/jpeg", 0.88));
-          made.push(back);
-        }
-        if (!live) return;
-        out.push({ index: item.index, front, back, issues: i1.length + i2.length });
-        setCards([...out]);
+      const media = resolverFor(item.index);
+      const d = Math.min(300, dpi);
+      const i1 = await renderCard(c, { layout, side: "front", row: item.row, dpi: d, template: templates.front, media });
+      const front = URL.createObjectURL(await canvasBlob(c, "image/png"));
+      made.push(front);
+      let back: string | null = null;
+      let i2: RenderIssue[] = [];
+      if (showBack) {
+        i2 = await renderCard(c, { layout, side: "back", row: item.row, dpi: d, template: templates.back, media });
+        back = URL.createObjectURL(await canvasBlob(c, "image/png"));
+        made.push(back);
       }
+      if (live) setCard({ front, back, issues: [...i1, ...i2] });
     })();
-    return () => { live = false; made.forEach((u) => URL.revokeObjectURL(u)); };
-  }, [page, rows, layout, templates, resolverFor, hasBack]);
-  const pages = Math.max(1, Math.ceil(rows.length / per));
-  const current = open !== null ? cards[open] : null;
+    return () => {
+      live = false;
+      made.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [item, layout, templates, resolverFor, showBack, dpi]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight") setAt((a) => Math.min(rows.length - 1, a + 1));
+      if (e.key === "ArrowLeft") setAt((a) => Math.max(0, a - 1));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [rows.length, onClose]);
+
   return (
-    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Preview batch">
-      <div className="card idg-batch" onClick={(e) => e.stopPropagation()}>
-        <div className="idg-batch-head">
+    <div className="modal-overlay idg-preview-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Preview ID card">
+      <div className="idg-preview-one" onClick={(e) => e.stopPropagation()}>
+        <div className="idg-preview-head">
           <div>
-            <h3>Preview batch</h3>
-            <p className="idg-muted">{rows.length} cards · showing {page * per + 1}–{Math.min(rows.length, (page + 1) * per)}. Click a card to see it large.</p>
+            <h3>Preview</h3>
+            <p className="idg-muted">
+              {item ? `${at + 1} of ${rows.length}` : "No cards"}
+              {item && idCol ? ` · ${item.row[idCol] || "—"}` : ""}
+              {item && nameCol ? ` · ${item.row[nameCol] || ""}` : ""}
+            </p>
           </div>
           <div className="idg-preview-nav">
-            <button type="button" className="idg-tool" disabled={page === 0} onClick={() => setPage((p) => p - 1)} aria-label="Previous page">‹</button>
-            <span>{page + 1} / {pages}</span>
-            <button type="button" className="idg-tool" disabled={page >= pages - 1} onClick={() => setPage((p) => p + 1)} aria-label="Next page">›</button>
+            <button type="button" className="idg-tool" disabled={at <= 0} onClick={() => setAt((a) => a - 1)} aria-label="Previous card">‹</button>
+            <button type="button" className="idg-tool" disabled={at >= rows.length - 1} onClick={() => setAt((a) => a + 1)} aria-label="Next card">›</button>
             <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
           </div>
         </div>
-        <div className="idg-batch-grid">
-          {cards.map((c, k) => (
-            <button key={c.index} type="button" className={`idg-batch-card${c.issues ? " has-issue" : ""}`} onClick={() => setOpen(k)}>
-              <span className="idg-batch-sides">
-                <img src={c.front} alt="Front" />
-                {c.back && <img src={c.back} alt="Back" />}
-              </span>
-              <span className="idg-batch-name">{c.index + 1}. {nameCol ? rows.find((r) => r.index === c.index)?.row[nameCol] : ""}</span>
-              {c.issues > 0 && <span className="idg-batch-flag">{c.issues} issue{c.issues > 1 ? "s" : ""}</span>}
-            </button>
-          ))}
-          {cards.length < Math.min(per, rows.length - page * per) && <div className="idg-batch-loading">Rendering cards…</div>}
+        <div className={`idg-preview-cards${showBack ? " is-two" : ""}`}>
+          {card ? (
+            <>
+              <figure><img src={card.front} alt="Front side" /><figcaption>Front</figcaption></figure>
+              {card.back && <figure><img src={card.back} alt="Back side" /><figcaption>Back</figcaption></figure>}
+            </>
+          ) : (
+            <div className="idg-batch-loading">Rendering the card…</div>
+          )}
         </div>
-      {current && (
-        <MediaLightbox
-          title={`Card ${current.index + 1}${nameCol ? " · " + (rows.find((r) => r.index === current.index)?.row[nameCol] ?? "") : ""}`}
-          index={open ?? 0}
-          total={cards.length}
-          pages={[{ src: current.front, label: "Front" }, ...(current.back ? [{ src: current.back, label: "Back" }] : [])]}
-          onPrevious={open! > 0 ? () => setOpen((o) => (o ?? 1) - 1) : null}
-          onNext={open! < cards.length - 1 ? () => setOpen((o) => (o ?? 0) + 1) : null}
-          onClose={() => setOpen(null)}
-        />
-      )}
+        {card && card.issues.length > 0 && (
+          <ul className="idg-issues">{card.issues.slice(0, 6).map((i, k) => <li key={k}>{i.message}</li>)}</ul>
+        )}
       </div>
     </div>
   );
 }
-

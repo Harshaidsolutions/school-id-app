@@ -43,7 +43,6 @@ export function Colour({ value, onChange, label }: { value: string; onChange: (v
 export const SHAPES: { key: PhotoShape; label: string; d: string }[] = [
   { key: "rect", label: "Rectangle", d: "M4 5h16v14H4z" },
   { key: "rounded", label: "Rounded", d: "M8 5h8a4 4 0 014 4v6a4 4 0 01-4 4H8a4 4 0 01-4-4V9a4 4 0 014-4z" },
-  { key: "square", label: "Square", d: "M5 5h14v14H5z" },
   { key: "circle", label: "Circle", d: "M12 4a8 8 0 110 16 8 8 0 010-16z" },
   { key: "oval", label: "Oval", d: "M12 3c4 0 6 4 6 9s-2 9-6 9-6-4-6-9 2-9 6-9z" },
   { key: "arch", label: "Arch", d: "M5 20V11a7 7 0 0114 0v9z" },
@@ -53,6 +52,10 @@ export const SHAPES: { key: PhotoShape; label: string; d: string }[] = [
   { key: "diamond", label: "Diamond", d: "M12 3l9 9-9 9-9-9z" },
   { key: "shield", label: "Shield", d: "M4 5c5-2 11-2 16 0v7c0 5-4 8-8 9-4-1-8-4-8-9z" },
   { key: "star", label: "Star", d: "M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z" },
+  { key: "apple", label: "Apple", d: "M12 7.2C10.4 5.4 5 5.6 4.8 10.6c-.3 4.6 2.6 8.8 5 8.6.7 0 1.4-.4 2.2-.4s1.5.4 2.2.4c2.4.2 5.3-4 5-8.6-.2-5-5.6-5.2-7.2-3.4zM12.6 5.6c.4-1.5 1.6-2.4 3.1-2.6-.3 1.5-1.5 2.5-3.1 2.6z" },
+  { key: "pomegranate", label: "Pomegranate", d: "M12 8.5a8 7.2 0 110 14.4 8 7.2 0 010-14.4zM8.6 9.2V4l2 2.2L12 2.8l1.4 3.4 2-2.2v5.2z" },
+  { key: "cherry", label: "Cherry", d: "M7.8 11.2a5.6 5.4 0 110 10.8 5.6 5.4 0 010-10.8zM16.6 10a5.3 5.1 0 110 10.2 5.3 5.1 0 010-10.2zM13 4.4c1.6-1.4 4.2-1.5 6-.2-1.7 1.4-4.3 1.5-6 .2z" },
+  { key: "orange", label: "Orange", d: "M12 6.6a8.6 7.8 0 110 15.6 8.6 7.8 0 010-15.6zM13 5.2c.6-1.4 2-2.2 3.6-2.2-.5 1.5-2 2.3-3.6 2.2z" },
 ];
 
 /** Formatting toolbar above the card (text elements), like a word processor. */
@@ -134,17 +137,11 @@ function ColumnSelect({ value, columns, onChange, allowNone }: { value: string; 
   );
 }
 
-function TextProps({ el, patch, columns }: { el: TextElement; patch: Patch; columns: string[] }) {
+function TextProps({ el, patch }: { el: TextElement; patch: Patch }) {
   const p = patch as (x: Partial<TextElement>) => void;
   return (
     <>
-      <Field label="Excel column" wide><ColumnSelect value={el.column} columns={columns} allowNone="— Static text —" onChange={(v) => p({ column: v, required: Boolean(v) })} /></Field>
-      {el.column ? (
-        <div className="idg-grid2">
-          <Field label="Before value"><input className="input-field" value={el.prefix} placeholder="e.g. Class : " onChange={(e) => p({ prefix: e.target.value })} /></Field>
-          <Field label="After value"><input className="input-field" value={el.suffix} onChange={(e) => p({ suffix: e.target.value })} /></Field>
-        </div>
-      ) : (
+      {el.column ? null : (
         <Field label="Text" wide><textarea className="input-field" rows={2} value={el.staticText} onChange={(e) => p({ staticText: e.target.value })} /></Field>
       )}
       <div className="idg-grid2">
@@ -294,7 +291,7 @@ export function Properties({ el, patch, columns, onDelete, onDuplicate, onLayer 
     <div className="idg-props">
       <Geometry el={el} patch={patch} />
       <Rotation el={el} patch={patch} />
-      {el.kind === "text" && <TextProps el={el} patch={patch} columns={columns} />}
+      {el.kind === "text" && <TextProps el={el} patch={patch} />}
       {el.kind === "image" && <ImageProps el={el} patch={patch} />}
       {el.kind === "qr" && <QrProps el={el} patch={patch} columns={columns} />}
       {el.kind === "barcode" && <BarcodeProps el={el} patch={patch} columns={columns} />}

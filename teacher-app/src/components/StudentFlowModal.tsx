@@ -1,3 +1,4 @@
+import { GeneratedIdCard } from "./GeneratedIdCard";
 import { Pressable } from "./Pressable";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -165,6 +166,11 @@ export function StudentFlowModal({
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.photoCenter}>
+            {student.id_card_url ? (
+              <Pressable onPress={() => setFullscreenPhoto(true)} accessibilityLabel="Open ID card">
+                <GeneratedIdCard uri={student.id_card_url} maxWidth={photoSize * 0.78} maxHeight={photoSize * 1.25} />
+              </Pressable>
+            ) : (
             <Pressable
               style={[
                 styles.photoWrap,
@@ -202,6 +208,7 @@ export function StudentFlowModal({
                 </View>
               )}
             </Pressable>
+            )}
             {formatCapturedAt(student.photo_captured_at) ? (
               <Text style={[styles.tapHint, { color: colors.textMuted, marginTop: 6 }]}>
                 Captured: {formatCapturedAt(student.photo_captured_at)}
@@ -310,10 +317,10 @@ export function StudentFlowModal({
             style={StyleSheet.absoluteFill}
             onPress={() => setFullscreenPhoto(false)}
           />
-          {student.photo_url ? (
+          {student.id_card_url || student.photo_url ? (
             <View style={styles.fullscreenPhotoWrap} {...photoSwipeClose.panHandlers}>
               <Image
-                source={{ uri: student.photo_url }}
+                source={{ uri: (student.id_card_url || student.photo_url) as string }}
                 style={styles.fullscreenPhoto}
                 resizeMode="contain"
               />
