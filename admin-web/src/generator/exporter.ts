@@ -77,7 +77,6 @@ export async function exportCards(o: ExportOptions): Promise<ExportFile[]> {
   // ---------- Individual image files in a ZIP ----------
   if (o.format === "png-zip" || o.format === "tiff-zip" || o.format === "jpg-zip") {
     const zip = new ZipWriter();
-  const put = (path: string, blob: Blob) => (o.outputFolder ? writeIntoFolder(o.outputFolder, path, blob) : zip.add(path, blob));
     const used = new Map<string, number>();
     for (const item of o.rows) {
       check();
@@ -256,6 +255,7 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
   const sides: Side[] = hasBack ? ["front", "back"] : ["front"];
   const folder = safeName(o.jobName);
   const zip = new ZipWriter();
+  const put = (path: string, blob: Blob) => (o.outputFolder ? writeIntoFolder(o.outputFolder, path, blob) : zip.add(path, blob));
   const pdf = new PdfWriter(o.jobName);
   const base = o.print.sheet;
   const sheet = o.print.landscape
