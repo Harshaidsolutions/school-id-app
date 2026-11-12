@@ -43,13 +43,10 @@ export function MoreScreen() {
   }
 
   const items: { title: string; icon: IconName; onPress: () => void; superOnly?: boolean }[] = [
-    { title: "Dashboard", icon: "grid-outline", onPress: () => nav.navigate("Tabs", { screen: "Home" } as never) },
-    { title: "Schools", icon: "school-outline", onPress: () => nav.navigate("Tabs", { screen: "Schools" } as never) },
-    { title: "Institutes", icon: "business-outline", onPress: () => nav.navigate("Tabs", { screen: "Institutes" } as never) },
+    // Dashboard, Schools, Institutes and Notifications are the bottom tabs: not repeated here.
     { title: "Templates", icon: "albums-outline", onPress: () => nav.navigate("Templates") },
     { title: "Models", icon: "cube-outline", onPress: () => nav.navigate("Catalog", { kind: "model" }) },
     { title: "Brochures", icon: "book-outline", onPress: () => nav.navigate("Catalog", { kind: "brochure" }) },
-    { title: "Notifications", icon: "notifications-outline", onPress: () => nav.navigate("Tabs", { screen: "Notify" } as never) },
     { title: "Instructions & enquiries", icon: "help-circle-outline", onPress: () => nav.navigate("Help") },
     { title: "Admin Management", icon: "shield-checkmark-outline", onPress: () => nav.navigate("Admins"), superOnly: true },
     { title: "Desktop Licences", icon: "key-outline", onPress: () => nav.navigate("Licences"), superOnly: true },
@@ -98,7 +95,6 @@ export function MoreScreen() {
               ))}
           </View>
           <Section title="More">
-            <ListItem title="ID Card Generator" icon="card-outline" tone="blue" onPress={() => nav.navigate("WebTool", { title: "ID Card Generator", path: "/id-card-generator" })} />
             <ListItem title="My profile" icon="person-circle-outline" tone="blue" onPress={() => nav.navigate("Profile")} />
             <ListItem title="Privacy policy" icon="document-lock-outline" tone="grey" onPress={() => void Linking.openURL("https://harshaidsolutions.in/privacy-policy")} />
             <ListItem

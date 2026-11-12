@@ -5,6 +5,9 @@ const { machineId, machineLabel } = require("./machineId.cjs");
 
 const PRODUCT = "msidc-desktop-generator";
 const ACTIVATE_URL = process.env.MSIDC_LICENSE_URL || "https://myschoolidcard.in/api/public/desktop-license/activate";
+const CHECK_URL = ACTIVATE_URL.replace(/activate$/, "check");
+/** The licence must be confirmed online at least this often (disabled licences stop even on offline PCs). */
+const ONLINE_CHECK_DAYS = 30;
 
 /**
  * Licence storage & verification — everything here works offline.
@@ -18,6 +21,8 @@ function createLicenseManager({ app, safeStorage, netFetch, publicKeyPem }) {
   const dir = app.getPath("userData");
   const file = path.join(dir, "license.dat");
   const seenFile = path.join(dir, "state.dat");
+  const verifiedFile = path.join(dir, "verified.dat");
+  const revokedFile = path.join(dir, "revoked.dat");
 
   const canEncrypt = () => { try { return safeStorage.isEncryptionAvailable(); } catch { return false; } };
   const seal = (text) => (canEncrypt() ? Buffer.concat([Buffer.from("E1"), safeStorage.encryptString(text)]) : Buffer.concat([Buffer.from("P1"), Buffer.from(text, "utf8")]));
@@ -52,15 +57,38 @@ function createLicenseManager({ app, safeStorage, netFetch, publicKeyPem }) {
     try { fs.writeFileSync(seenFile, seal(String(Math.max(Date.now(), readLastSeen())))); } catch { /* ignore */ }
   }
 
+  function readVerified() {
+    try { return Number(open(fs.readFileSync(verifiedFile))) || 0; } catch { return 0; }
+  }
+  function markVerified() {
+    try { fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(verifiedFile, seal(String(Date.now()))); } catch { /* ignore */ }
+  }
+  function revokedReason() {
+    try { return open(fs.readFileSync(revokedFile)) || null; } catch { return null; }
+  }
+  function revoke(reason) {
+    try { fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(revokedFile, seal(reason)); } catch { /* ignore */ }
+    try { fs.unlinkSync(file); } catch { /* ignore */ }
+  }
+
   function load() {
     try { return JSON.parse(open(fs.readFileSync(file))); } catch { return null; }
   }
 
   function status() {
+    const revoked = revokedReason();
+    if (revoked) return { licensed: false, machineLabel: machineLabel(), reason: revoked };
     const lic = load();
     if (!lic) return { licensed: false, machineLabel: machineLabel(), reason: null };
     const v = verifyLicense(lic);
-    if (v.ok) touch();
+    if (v.ok) {
+      touch();
+      const verified = readVerified();
+      if (!verified) markVerified(); // first start after updating: the 30 days start now
+      else if (Date.now() - verified > ONLINE_CHECK_DAYS * 86400000) {
+        return { licensed: false, machineLabel: machineLabel(), reason: `Connect this computer to the internet and press Activate once: the licence has to be checked online every ${ONLINE_CHECK_DAYS} days.` };
+      }
+    }
     return v.ok
       ? { licensed: true, customer: v.payload.customer, licenseKey: v.payload.licenseKey, expiresAt: v.payload.expiresAt, machineLabel: machineLabel() }
       : { licensed: false, machineLabel: machineLabel(), reason: v.reason };
@@ -100,8 +128,46 @@ function createLicenseManager({ app, safeStorage, netFetch, publicKeyPem }) {
     if (!v.ok) return { ok: false, message: v.reason };
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(file, seal(JSON.stringify(body.license)));
+    try { fs.unlinkSync(revokedFile); } catch { /* ignore */ }
+    markVerified();
     touch();
     return { ok: true, status: status() };
+  }
+
+  /**
+   * Online check (start-up and every hour). Offline → nothing changes. Disabled, expired or moved →
+   * the licence is removed from this computer and the app locks. Active → a fresh signed copy is kept.
+   */
+  async function checkOnline(netFetchFn) {
+    const lic = load();
+    if (!lic) return { changed: false };
+    const v = verifyLicense(lic);
+    const key = v.payload?.licenseKey;
+    if (!key) return { changed: false };
+    const request = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ licenseKey: key, machineId: machineId(), appVersion: app.getVersion() }),
+    };
+    let res;
+    for (const go of [() => (netFetchFn || netFetch)(CHECK_URL, request), () => fetch(CHECK_URL, { ...request, signal: AbortSignal.timeout(15000) })]) {
+      try { res = await go(); break; } catch { /* try the next way */ }
+    }
+    if (!res || !res.ok) return { changed: false };
+    const body = await res.json().catch(() => null);
+    if (!body || typeof body.status !== "string") return { changed: false };
+    if (body.status === "active" && body.license) {
+      const fresh = verifyLicense(body.license);
+      if (!fresh.ok) return { changed: false };
+      fs.writeFileSync(file, seal(JSON.stringify(body.license)));
+      markVerified();
+      return { changed: false };
+    }
+    if (["disabled", "expired", "not_found", "moved"].includes(body.status)) {
+      revoke(String(body.message || "This licence is no longer valid. Contact Harsha ID Solutions."));
+      return { changed: true };
+    }
+    return { changed: false };
   }
 
   function deactivateLocal() {
@@ -109,7 +175,7 @@ function createLicenseManager({ app, safeStorage, netFetch, publicKeyPem }) {
     return status();
   }
 
-  return { status, activate, deactivateLocal, verifyLicense };
+  return { status, activate, deactivateLocal, verifyLicense, checkOnline };
 }
 
-module.exports = { createLicenseManager, PRODUCT, ACTIVATE_URL };
+module.exports = { createLicenseManager, PRODUCT, ACTIVATE_URL, CHECK_URL };

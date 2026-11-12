@@ -271,24 +271,41 @@ function textProblems(layout: Layout, side: Side, row: Row, issues: RenderIssue[
  *   <Job>/Front/<PhotoID>.jpg      — every front side, exactly the template's pixel size
  *   <Job>/Back/<PhotoID>.jpg       — every back side
  *   <Job>/Print sheets (<paper>).pdf                     — cards on the chosen paper with crop marks
+ *   <Job>/Print sheets (<paper>).zip                     — the same sheets as JPG images
  *   <Job>/Card details.csv                               — every column for every card
  *   <Job>/ERRORS - cards to correct.csv                  — only when some text was cut off
  */
 export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
-  const dpi = Math.max(72, Math.min(1200, Math.round(o.dpi ?? 300)));
+  // The template's own resolution, exactly (300 stays 300 — never rounded to 313 or reset to 72).
+  const dpi = Math.max(72, Math.min(2400, o.dpi ?? 300));
   const hasBack = hasSide(o.layout, "back", o.templates);
   const sides: Side[] = hasBack ? ["front", "back"] : ["front"];
   const folder = safeName(o.jobName);
   const zip = new ZipWriter();
   const put = (path: string, blob: Blob) => (o.outputFolder ? writeIntoFolder(o.outputFolder, path, blob) : zip.add(path, blob));
   const pdf = new PdfWriter(o.jobName);
-  const base = o.print.sheet;
-  const sheet = o.print.landscape
+  let base = o.print.sheet;
+  let sheet = o.print.landscape
     ? { ...base, w: Math.max(base.w, base.h), h: Math.min(base.w, base.h) }
     : { ...base, w: Math.min(base.w, base.h), h: Math.max(base.w, base.h) };
-  const imp = impose({ sheet, card: { w: o.layout.card.w, h: o.layout.card.h }, margin: o.print.margin, gap: o.print.gap, perSheet: 0, allowRotate: false });
-  if (!imp.capacity) throw new Error(`This card size does not fit on ${base.label} with these margins and gap.`);
+  const card = { w: o.layout.card.w, h: o.layout.card.h };
+  let imp = impose({ sheet, card, margin: o.print.margin, gap: o.print.gap, perSheet: 0, allowRotate: false });
+  if (!imp.capacity) {
+    // Large designs (e.g. an A4 template): the card does not fit on the chosen paper with these margins,
+    // so each print page is the card itself — the cards are still all generated.
+    base = { key: "card", label: "card size", w: card.w, h: card.h };
+    sheet = { ...base };
+    imp = impose({ sheet, card, margin: 0, gap: 0, perSheet: 0, allowRotate: false });
+  }
   const marks = cropMarks(imp, sheet);
+  // Print sheets are also saved as images (one JPG per sheet side) in a ZIP, next to the PDF.
+  const sheetDpi = Math.min(dpi, 300, 14000 / (Math.max(sheet.w, sheet.h) / 25.4));
+  const smm = sheetDpi / 25.4;
+  const sheetZip = new ZipWriter();
+  const sheetCanvas = document.createElement("canvas");
+  sheetCanvas.width = Math.round(sheet.w * smm);
+  sheetCanvas.height = Math.round(sheet.h * smm);
+  const sctx = sheetCanvas.getContext("2d")!;
   const total = o.rows.length * sides.length;
   let done = 0;
   const canvas = document.createElement("canvas");
@@ -302,6 +319,9 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
     const group = o.rows.slice(s * imp.capacity, (s + 1) * imp.capacity);
     for (const side of sides) {
       const ops: PdfOp[] = [];
+      sctx.setTransform(1, 0, 0, 1, 0, 0);
+      sctx.fillStyle = "#ffffff";
+      sctx.fillRect(0, 0, sheetCanvas.width, sheetCanvas.height);
       for (let k = 0; k < group.length; k++) {
         check();
         const item = group[k];
@@ -324,19 +344,30 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
         const ref = pdf.addJpeg(await canvasBlob(canvas, "image/jpeg", 0.93), canvas.width, canvas.height);
         const slot = side === "back" ? mirrorSlot(imp.slots[k], imp.cellW, sheet.w) : imp.slots[k];
         ops.push({ type: "image", ref, x: slot.x, y: slot.y, w: imp.cellW, h: imp.cellH });
+        sctx.imageSmoothingQuality = "high";
+        sctx.drawImage(canvas, slot.x * smm, slot.y * smm, imp.cellW * smm, imp.cellH * smm);
         done++;
         o.onProgress(done, total, `Creating cards ${done}/${total}`);
         if (done % 3 === 0) await tick();
       }
       const mx = (x: number) => (side === "back" ? sheet.w - x : x);
-      for (const l of marks.lines) ops.push({ type: "line", x1: mx(l.x1), y1: l.y1, x2: mx(l.x2), y2: l.y2, width: 0.2 });
-      if (o.print.margin >= 5) ops.push({ type: "text", x: 6, y: sheet.h - 2.5, size: 6, text: `${o.jobName} | Sheet ${s + 1} | ${side.toUpperCase()} | ${group.length} cards | ${dpi} DPI` });
+      const cutMarks = base.key === "card" ? [] : marks.lines; // a card-size page has no room for crop marks
+      for (const l of cutMarks) ops.push({ type: "line", x1: mx(l.x1), y1: l.y1, x2: mx(l.x2), y2: l.y2, width: 0.2 });
+      sctx.strokeStyle = "#000000";
+      sctx.lineWidth = Math.max(1, 0.2 * smm);
+      sctx.beginPath();
+      for (const l of cutMarks) { sctx.moveTo(mx(l.x1) * smm, l.y1 * smm); sctx.lineTo(mx(l.x2) * smm, l.y2 * smm); }
+      sctx.stroke();
+      await sheetZip.add(`Sheet ${String(s + 1).padStart(2, "0")} - ${side === "front" ? "Front" : "Back"}.jpg`, await jpegWithDpi(sheetCanvas, sheetDpi));
+      if (o.print.margin >= 5 && base.key !== "card") ops.push({ type: "text", x: 6, y: sheet.h - 2.5, size: 6, text: `${o.jobName} | Sheet ${s + 1} | ${side.toUpperCase()} | ${group.length} cards | ${dpi} DPI` });
       pdf.addPage(sheet.w, sheet.h, ops);
     }
   }
   o.onProgress(total, total, "Packing the folder…");
   const sheetName = /^\d+x\d+$/.test(base.key) ? `${base.key} in` : base.label.split(" (")[0];
-  await put(`${folder}/Print sheets (${sheetName}${o.print.landscape ? ", landscape" : ""}).pdf`, pdf.finish());
+  const sheetTitle = `Print sheets (${sheetName}${o.print.landscape ? ", landscape" : ""})`;
+  await put(`${folder}/${sheetTitle}.pdf`, pdf.finish());
+  await put(`${folder}/${sheetTitle}.zip`, sheetZip.finish());
   const header = ["S.No", "File name", ...o.columns];
   const lines = [header.map(csvCell).join(",")];
   o.rows.forEach((item, i) => lines.push([String(i + 1), names.get(item.index) ?? "", ...o.columns.map((c) => item.row[c] ?? "")].map(csvCell).join(",")));

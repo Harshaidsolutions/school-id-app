@@ -175,6 +175,44 @@ export async function activateDesktopLicense(req: Request, res: Response, next: 
   } catch (e) { next(e); }
 }
 
+/**
+ * Periodic check by the desktop app (on start and every hour when it has internet).
+ * Disabled / expired / moved licences stop the app; an active licence gets a fresh signed copy
+ * (so a changed expiry date reaches the computer).
+ */
+export async function checkDesktopLicense(req: Request, res: Response, next: NextFunction) {
+  try {
+    const key = normKey(req.body?.licenseKey);
+    const machineId = String(req.body?.machineId ?? "").trim();
+    const appVersion = text(req.body?.appVersion, 30);
+    consumeAttempt(`desktop-check:${req.ip}`, 120);
+    if (!/^MSIDC(-[A-Z0-9]{5}){4}$/.test(key) || !/^[a-f0-9]{64}$/.test(machineId)) throw new AppError("Invalid request", 400);
+    const { rows } = await pool.query<Row>("SELECT * FROM desktop_licenses WHERE license_key=$1", [key]);
+    const r = rows[0];
+    if (!r) { res.json({ status: "not_found", message: "This licence no longer exists. Contact Harsha ID Solutions." }); return; }
+    if (r.status !== "active") { res.json({ status: "disabled", message: "This licence has been disabled. Contact Harsha ID Solutions." }); return; }
+    if (r.expires_at && new Date(r.expires_at).getTime() < Date.now()) {
+      res.json({ status: "expired", message: `This licence expired on ${new Date(r.expires_at).toLocaleDateString("en-IN")}. Contact Harsha ID Solutions to renew it.` });
+      return;
+    }
+    if (r.machine_id !== machineId) { res.json({ status: "moved", message: "This licence is now used on another computer. Contact Harsha ID Solutions." }); return; }
+    await pool.query("UPDATE desktop_licenses SET last_seen_version=$2, updated_at=NOW() WHERE id=$1", [r.id, appVersion || r.last_seen_version]);
+    const payload = {
+      v: 1,
+      product: PRODUCT,
+      licenseId: r.id,
+      licenseKey: r.license_key,
+      customer: r.customer_name,
+      machineId,
+      issuedAt: new Date().toISOString(),
+      expiresAt: r.expires_at ? new Date(r.expires_at).toISOString() : null,
+    };
+    const payloadB64 = Buffer.from(JSON.stringify(payload), "utf8").toString("base64");
+    const signature = sign(null, Buffer.from(payloadB64, "utf8"), privateKey()).toString("base64");
+    res.json({ status: "active", license: { payload: payloadB64, signature } });
+  } catch (e) { next(e); }
+}
+
 /** Public key (safe to share) — fetched by the installer build so the app can verify licences offline. */
 export async function getDesktopLicensePublicKey(_req: Request, res: Response, next: NextFunction) {
   try {

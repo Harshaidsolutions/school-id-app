@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { desktop, type LicenseStatus } from "./bridge";
-import { DesktopGenerator } from "./DesktopGenerator";
+import { APP_NAME, DesktopGenerator } from "./DesktopGenerator";
 
 /** Licence gate: nothing else opens until this computer holds a valid licence. */
 export function App() {
@@ -10,12 +10,14 @@ export function App() {
   const [msg, setMsg] = useState<string | null>(null);
   const [version, setVersion] = useState("");
 
+  // A licence disabled or expired on the server locks the app straight away.
+  useEffect(() => desktop().onLicenseChanged?.((s) => setLic(s)), []);
   useEffect(() => {
     void desktop().licenseStatus().then(setLic).catch(() => setLic({ licensed: false, machineLabel: "", reason: "The licence could not be checked." }));
     void desktop().info().then((i) => setVersion(i.version)).catch(() => undefined);
   }, []);
 
-  if (!lic) return <div className="desk-splash"><img src="./logo.png" alt="My School ID Card" /></div>;
+  if (!lic) return <div className="desk-splash"><img src="./harsha-h.png" alt="Harsha ID Solutions" /></div>;
   if (lic.licensed) return <DesktopGenerator license={lic} />;
 
   async function activate(e: React.FormEvent) {
@@ -39,8 +41,8 @@ export function App() {
     <div className="desk-activate">
       <div className="desk-orb a" /><div className="desk-orb b" />
       <form className="card desk-activate-card" onSubmit={activate}>
-        <img className="desk-logo" src="./logo.png" alt="My School ID Card" />
-        <h1>ID Card Generator</h1>
+        <img className="desk-logo desk-logo-h" src="./harsha-h.png" alt="Harsha ID Solutions" />
+        <h1>{APP_NAME}</h1>
         <p className="desk-sub">Offline desktop edition</p>
         {lic.reason ? <div className="desk-alert">{lic.reason}</div> : null}
         <label className="block desk-key-label">
@@ -59,7 +61,7 @@ export function App() {
         <ol className="desk-steps">
           <li>Get your licence key from Harsha ID Solutions.</li>
           <li>Connect to the internet <b>once</b> and press Activate.</li>
-          <li>After that the app works fully offline — on this computer only.</li>
+          <li>After that the app works offline — on this computer only. Connect to the internet at least once every 30 days so the licence can be checked.</li>
         </ol>
         <p className="desk-foot">This computer: {lic.machineLabel}{version ? ` · v${version}` : ""}<br />Support: 7799881779 · harshaidsolutions@gmail.com</p>
       </form>

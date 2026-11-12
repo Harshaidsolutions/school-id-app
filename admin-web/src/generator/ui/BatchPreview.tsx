@@ -19,6 +19,8 @@ export function BatchPreview({ layout, rows, start = 0, templates, resolverFor, 
   onClose: () => void;
 }) {
   const [at, setAt] = useState(Math.min(Math.max(0, start), Math.max(0, rows.length - 1)));
+  const [zoom, setZoom] = useState(1); // 1 = fit the window
+  const imgStyle = zoom > 1 ? { maxWidth: "none", maxHeight: "none", height: `calc((100dvh - 210px) * ${zoom})` } : undefined;
   const [card, setCard] = useState<{ front: string; back: string | null; issues: RenderIssue[] } | null>(null);
   const item = rows[at];
 
@@ -30,7 +32,7 @@ export function BatchPreview({ layout, rows, start = 0, templates, resolverFor, 
     (async () => {
       const c = document.createElement("canvas");
       const media = resolverFor(item.index);
-      const d = Math.min(300, dpi);
+      const d = dpi; // same resolution as the generated cards
       const i1 = await renderCard(c, { layout, side: "front", row: item.row, dpi: d, template: templates.front, media });
       const front = URL.createObjectURL(await canvasBlob(c, "image/png"));
       made.push(front);
@@ -74,14 +76,19 @@ export function BatchPreview({ layout, rows, start = 0, templates, resolverFor, 
           <div className="idg-preview-nav">
             <button type="button" className="idg-tool" disabled={at <= 0} onClick={() => setAt((a) => a - 1)} aria-label="Previous card">‹</button>
             <button type="button" className="idg-tool" disabled={at >= rows.length - 1} onClick={() => setAt((a) => a + 1)} aria-label="Next card">›</button>
+            <span className="idg-zoom">
+              <button type="button" className="idg-tool" disabled={zoom <= 1} onClick={() => setZoom((z) => Math.max(1, z - 0.5))} aria-label="Zoom out">−</button>
+              <span>{zoom === 1 ? "Fit" : `${Math.round(zoom * 100)}%`}</span>
+              <button type="button" className="idg-tool" disabled={zoom >= 4} onClick={() => setZoom((z) => Math.min(4, z + 0.5))} aria-label="Zoom in">+</button>
+            </span>
             <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
           </div>
         </div>
         <div className={`idg-preview-cards${showBack ? " is-two" : ""}`}>
           {card ? (
             <>
-              <figure><img src={card.front} alt="Front side" /><figcaption>Front</figcaption></figure>
-              {card.back && <figure><img src={card.back} alt="Back side" /><figcaption>Back</figcaption></figure>}
+              <figure><img src={card.front} alt="Front side" style={imgStyle} /><figcaption>Front</figcaption></figure>
+              {card.back && <figure><img src={card.back} alt="Back side" style={imgStyle} /><figcaption>Back</figcaption></figure>}
             </>
           ) : (
             <div className="idg-batch-loading">Rendering the card…</div>

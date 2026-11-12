@@ -32,3 +32,9 @@ body { margin: 0; background: radial-gradient(900px 500px at 90% -10%, #e9e5ff, 
 @font-face { font-family: "Poppins"; font-weight: 400; font-style: italic; src: url("./fonts/Poppins-Italic.ttf") format("truetype"); }
 @font-face { font-family: "Poppins"; font-weight: 500 600; src: url("./fonts/Poppins-Medium.ttf") format("truetype"); }
 @font-face { font-family: "Poppins"; font-weight: 700 900; src: url("./fonts/Poppins-Bold.ttf") format("truetype"); }
+
+/* Harsha "H" logo, app name and licence line */
+.desk-logo-h { width: 96px !important; height: 96px; object-fit: contain; }
+.desk-splash img[src*="harsha-h"] { width: 140px; }
+.idg-licensed { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--muted, #6b7090); white-space: nowrap; }
+.desk-activate h1 { font-size: 22px !important; }

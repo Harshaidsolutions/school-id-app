@@ -20,6 +20,10 @@ export type DesktopBridge = {
   pickFolder(): Promise<string | null>;
   /** Write one file inside a picked folder; returns the full path. */
   writeInFolder(root: string, rel: string, data: ArrayBuffer): Promise<string>;
+  /** Full path of a picked file on this computer ("" when unknown). */
+  pathForFile?(file: File): string;
+  /** Called when the licence is disabled / expires while the app is open. Returns an unsubscribe. */
+  onLicenseChanged?(cb: (s: LicenseStatus) => void): () => void;
   info(): Promise<{ version: string }>;
 };
 

@@ -58,6 +58,16 @@ export const SHAPES: { key: PhotoShape; label: string; d: string }[] = [
   { key: "orange", label: "Orange", d: "M12 6.6a8.6 7.8 0 110 15.6 8.6 7.8 0 010-15.6zM13 5.2c.6-1.4 2-2.2 3.6-2.2-.5 1.5-2 2.3-3.6 2.2z" },
 ];
 
+/**
+ * New font size, applied so it is really visible: the smallest auto-shrink size follows it
+ * (one point smaller, e.g. 10 → 9) and a box that is too short for one line grows to fit.
+ */
+export function fontSizePatch(el: TextElement, size: number): Partial<TextElement> {
+  const lineMm = size * (25.4 / 72) * (el.lineHeight || 1.15);
+  const lines = el.multiline ? Math.max(1, Math.round(el.h / ((el.size || size) * (25.4 / 72) * (el.lineHeight || 1.15)))) : 1;
+  return { size, minSize: Math.max(3, size - 1), h: Math.max(el.h ?? 0, +(lineMm * lines + 0.2).toFixed(2)) };
+}
+
 /** Formatting toolbar above the card (text elements), like a word processor. */
 export function TextToolbar({ el, patch }: { el: TextElement | null; patch: Patch }) {
   const [busy, setBusy] = useState(false);
@@ -79,7 +89,7 @@ export function TextToolbar({ el, patch }: { el: TextElement | null; patch: Patc
       </select>
       {busy && <span className="idg-muted">Loading font…</span>}
       <span className="idg-sep" />
-      <Num value={t.size ?? 9} step={0.5} min={4} max={72} suffix="pt" onChange={(v) => patch({ size: v } as Partial<TextElement>)} />
+      <Num value={t.size ?? 8} step={0.5} min={4} max={72} suffix="pt" onChange={(v) => patch(fontSizePatch(t, v))} />
       <button type="button" className={`idg-tool${t.weight >= 700 ? " is-on" : ""}`} disabled={disabled} onClick={() => patch({ weight: t.weight >= 700 ? 400 : 700 } as Partial<TextElement>)} aria-label="Bold"><b>B</b></button>
       <button type="button" className={`idg-tool${t.italic ? " is-on" : ""}`} disabled={disabled} onClick={() => patch({ italic: !t.italic } as Partial<TextElement>)} aria-label="Italic"><i>I</i></button>
       <button type="button" className={`idg-tool${t.underline ? " is-on" : ""}`} disabled={disabled} onClick={() => patch({ underline: !t.underline } as Partial<TextElement>)} aria-label="Underline"><u>U</u></button>
@@ -101,17 +111,13 @@ export function TextToolbar({ el, patch }: { el: TextElement | null; patch: Patc
   );
 }
 
-/** Rotation control shared by every element: 360° dial buttons + manual angle + horizontal/vertical. */
+/** Rotation: turn 90° either way, or type an exact angle. */
 function Rotation({ el, patch }: { el: CardElement; patch: Patch }) {
   return (
     <div className="idg-rotate">
       <button type="button" className="idg-tool" onClick={() => patch({ rotation: (el.rotation - 90 + 360) % 360 })} aria-label="Rotate left 90°">⟲</button>
       <Num value={el.rotation} step={1} min={0} max={359} suffix="°" onChange={(v) => patch({ rotation: ((v % 360) + 360) % 360 })} />
       <button type="button" className="idg-tool" onClick={() => patch({ rotation: (el.rotation + 90) % 360 })} aria-label="Rotate right 90°">⟳</button>
-      <div className="idg-seg">
-        <button type="button" className={el.rotation % 180 === 0 ? "is-on" : ""} onClick={() => patch({ rotation: 0 })}>Horizontal</button>
-        <button type="button" className={el.rotation === 90 || el.rotation === 270 ? "is-on" : ""} onClick={() => patch({ rotation: 270, w: el.h, h: el.w, x: el.x + (el.w - el.h) / 2, y: el.y + (el.h - el.w) / 2 })}>Vertical</button>
-      </div>
     </div>
   );
 }
@@ -119,10 +125,10 @@ function Rotation({ el, patch }: { el: CardElement; patch: Patch }) {
 function Geometry({ el, patch }: { el: CardElement; patch: Patch }) {
   return (
     <div className="idg-grid4">
-      <Field label="X"><Num value={el.x} suffix="mm" onChange={(v) => patch({ x: v })} /></Field>
-      <Field label="Y"><Num value={el.y} suffix="mm" onChange={(v) => patch({ y: v })} /></Field>
-      <Field label="Width"><Num value={el.w} min={1} suffix="mm" onChange={(v) => patch({ w: v })} /></Field>
-      <Field label="Height"><Num value={el.h} min={1} suffix="mm" onChange={(v) => patch({ h: v })} /></Field>
+      <Field label="X"><Num value={el.x} step={0.1} suffix="mm" onChange={(v) => patch({ x: v })} /></Field>
+      <Field label="Y"><Num value={el.y} step={0.1} suffix="mm" onChange={(v) => patch({ y: v })} /></Field>
+      <Field label="Width"><Num value={el.w} step={0.1} min={1} suffix="mm" onChange={(v) => patch({ w: v })} /></Field>
+      <Field label="Height"><Num value={el.h} step={0.1} min={1} suffix="mm" onChange={(v) => patch({ h: v })} /></Field>
     </div>
   );
 }
@@ -156,12 +162,12 @@ function TextProps({ el, patch }: { el: TextElement; patch: Patch }) {
           </select>
         </Field>
         <Field label="Letter spacing"><Num value={el.letterSpacing} step={10} min={-100} max={600} suffix="‰" onChange={(v) => p({ letterSpacing: v })} /></Field>
-        <Field label="Line height"><Num value={el.lineHeight} step={0.05} min={0.7} max={3} suffix="×" onChange={(v) => p({ lineHeight: v })} /></Field>
       </div>
       <div className="idg-switches">
         <span><ToggleSwitch checked={el.autoShrink} onChange={() => p({ autoShrink: !el.autoShrink })} label="Auto-shrink long text" /> Auto-shrink long text</span>
-        {el.autoShrink && <Field label="Smallest size"><Num value={el.minSize} step={0.5} min={3} max={el.size} suffix="pt" onChange={(v) => p({ minSize: v })} /></Field>}
+        {el.autoShrink && <Field label="Smallest size (auto-shrink)"><Num value={el.minSize} step={0.5} min={3} max={el.size} suffix="pt" onChange={(v) => p({ minSize: v })} /></Field>}
         <span><ToggleSwitch checked={el.multiline} onChange={() => p({ multiline: !el.multiline })} label="Wrap to more lines" /> Wrap to more lines</span>
+        {el.multiline && <Field label="Space between lines"><Num value={el.lineHeight} step={0.05} min={0.8} max={3} suffix="×" onChange={(v) => p({ lineHeight: v })} /></Field>}
       </div>
       <div className="idg-grid2">
         <Field label="Outline (stroke)"><Num value={el.stroke.width} step={0.1} min={0} max={4} suffix="pt" onChange={(v) => p({ stroke: { ...el.stroke, width: v } })} /></Field>
@@ -284,13 +290,24 @@ function BarcodeProps({ el, patch, columns }: { el: BarcodeElement; patch: Patch
   );
 }
 
-export function Properties({ el, patch, columns, onDelete, onDuplicate, onLayer }: {
-  el: CardElement; patch: Patch; columns: string[]; onDelete: () => void; onDuplicate: () => void; onLayer: (dir: -1 | 1) => void;
+export function Properties({ el, patch, columns, onDelete, onLayer, onAlign, onFitBox }: {
+  el: CardElement; patch: Patch; columns: string[]; onDelete: () => void; onLayer: (dir: -1 | 1) => void;
+  /** Line up every other text field on this side with this field's left edge / width. */
+  onAlign?: (how: "left" | "width") => void;
+  /** Make the box exactly fit the text shown on the card. */
+  onFitBox?: () => void;
 }) {
   return (
     <div className="idg-props">
       <Geometry el={el} patch={patch} />
       <Rotation el={el} patch={patch} />
+      {el.kind === "text" && onAlign && (
+        <div className="idg-row-actions">
+          <button type="button" className="btn-secondary" onClick={() => onAlign("left")}>Line up all text here (left edge)</button>
+          <button type="button" className="btn-secondary" onClick={() => onAlign("width")}>Same width for all text</button>
+          {onFitBox && <button type="button" className="btn-secondary" onClick={onFitBox}>Fit box to text</button>}
+        </div>
+      )}
       {el.kind === "text" && <TextProps el={el} patch={patch} />}
       {el.kind === "image" && <ImageProps el={el} patch={patch} />}
       {el.kind === "qr" && <QrProps el={el} patch={patch} columns={columns} />}
@@ -298,7 +315,6 @@ export function Properties({ el, patch, columns, onDelete, onDuplicate, onLayer 
       <div className="idg-row-actions">
         <button type="button" className="btn-secondary" onClick={() => onLayer(-1)}>Send back</button>
         <button type="button" className="btn-secondary" onClick={() => onLayer(1)}>Bring front</button>
-        <button type="button" className="btn-secondary" onClick={onDuplicate}>Duplicate</button>
         <button type="button" className="btn-secondary idg-danger" onClick={onDelete}>Remove</button>
       </div>
     </div>

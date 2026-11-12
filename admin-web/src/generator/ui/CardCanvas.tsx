@@ -16,7 +16,38 @@ type Props = {
   onDropColumn: (column: string, xMm: number, yMm: number) => void;
 };
 
-const snap = (v: number) => Math.round(v * 2) / 2; // 0.5 mm grid
+const snap = (v: number) => Math.round(v * 10) / 10; // 0.1 mm steps
+
+type Guide = { axis: "x" | "y"; at: number };
+
+/**
+ * Alignment guides: while a field is moved, its left / centre / right (and top / middle / bottom)
+ * snap to the same lines of the other fields and of the card, and a guide line is shown.
+ */
+function snapToGuides(el: CardElement, others: CardElement[], card: { w: number; h: number }, x: number, y: number, tol: number): { x: number; y: number; guides: Guide[] } {
+  const xs = [0, card.w / 2, card.w];
+  const ys = [0, card.h / 2, card.h];
+  for (const o of others) {
+    xs.push(o.x, o.x + o.w / 2, o.x + o.w);
+    ys.push(o.y, o.y + o.h / 2, o.y + o.h);
+  }
+  const best = (pos: number, size: number, lines: number[]) => {
+    let hit: { delta: number; at: number } | null = null;
+    for (const edge of [0, size / 2, size]) {
+      for (const l of lines) {
+        const d = l - (pos + edge);
+        if (Math.abs(d) <= tol && (!hit || Math.abs(d) < Math.abs(hit.delta))) hit = { delta: d, at: l };
+      }
+    }
+    return hit;
+  };
+  const guides: Guide[] = [];
+  const hx = best(x, el.w, xs);
+  const hy = best(y, el.h, ys);
+  if (hx) { x += hx.delta; guides.push({ axis: "x", at: hx.at }); }
+  if (hy) { y += hy.delta; guides.push({ axis: "y", at: hy.at }); }
+  return { x, y, guides };
+}
 
 function label(el: CardElement): string {
   if (el.kind === "text") return el.column || "Text";
@@ -30,6 +61,7 @@ export function CardCanvas(p: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [avail, setAvail] = useState({ w: 360, h: 520 });
   const [issues, setIssues] = useState<RenderIssue[]>([]);
+  const [guides, setGuides] = useState<Guide[]>([]);
   const drag = useRef<{ id: string; mode: "move" | "resize"; sx: number; sy: number; ox: number; oy: number; ow: number; oh: number } | null>(null);
 
   useLayoutEffect(() => {
@@ -87,19 +119,28 @@ export function CardCanvas(p: Props) {
     if (!d) return;
     const dx = (e.clientX - d.sx) / scale, dy = (e.clientY - d.sy) / scale;
     if (d.mode === "move") {
-      p.onChange(d.id, { x: snap(Math.min(card.w - 1, Math.max(-d.ow + 1, d.ox + dx))), y: snap(Math.min(card.h - 1, Math.max(-d.oh + 1, d.oy + dy))) });
+      const el = p.layout.elements.find((x) => x.id === d.id);
+      let nx = snap(Math.min(card.w - 1, Math.max(-d.ow + 1, d.ox + dx)));
+      let ny = snap(Math.min(card.h - 1, Math.max(-d.oh + 1, d.oy + dy)));
+      if (el && !e.altKey) {
+        const others = p.layout.elements.filter((x) => x.side === p.side && x.id !== d.id);
+        const s = snapToGuides(el, others, card, nx, ny, 6 / scale); // 6 screen px
+        nx = +s.x.toFixed(2); ny = +s.y.toFixed(2);
+        setGuides(s.guides);
+      } else setGuides([]);
+      p.onChange(d.id, { x: nx, y: ny });
     } else {
       p.onChange(d.id, { w: snap(Math.max(2, d.ow + dx)), h: snap(Math.max(2, d.oh + dy)) });
     }
   };
-  const onPointerUp = () => { drag.current = null; };
+  const onPointerUp = () => { drag.current = null; setGuides([]); };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     const el = p.layout.elements.find((x) => x.id === p.selectedId);
     if (!el || (e.target as HTMLElement).tagName === "INPUT") return;
-    const step = e.shiftKey ? 2 : 0.5;
+    const step = e.shiftKey ? 1 : 0.1;
     const moves: Record<string, Partial<CardElement>> = {
-      ArrowLeft: { x: el.x - step }, ArrowRight: { x: el.x + step }, ArrowUp: { y: el.y - step }, ArrowDown: { y: el.y + step },
+      ArrowLeft: { x: +(el.x - step).toFixed(2) }, ArrowRight: { x: +(el.x + step).toFixed(2) }, ArrowUp: { y: +(el.y - step).toFixed(2) }, ArrowDown: { y: +(el.y + step).toFixed(2) },
     };
     if (moves[e.key]) { e.preventDefault(); p.onChange(el.id, moves[e.key]); }
     if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); p.onDelete(el.id); }
@@ -125,6 +166,14 @@ export function CardCanvas(p: Props) {
     >
       <div className="idg-card" style={{ width: cssW, height: cssH }}>
         <canvas ref={canvasRef} style={{ width: cssW, height: cssH }} aria-label="Card preview" />
+        {guides.map((g, i) => (
+          <span
+            key={i}
+            className={`idg-guide is-${g.axis}`}
+            style={g.axis === "x" ? { left: g.at * scale, top: 0, height: cssH } : { top: g.at * scale, left: 0, width: cssW }}
+            aria-hidden
+          />
+        ))}
         {p.layout.elements.filter((el) => el.side === p.side).map((el) => {
           const sel = el.id === p.selectedId;
           return (

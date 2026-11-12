@@ -1,7 +1,7 @@
 {
   "name": "msidc-desktop-generator",
-  "productName": "My School ID Card Generator",
-  "version": "1.0.4",
+  "productName": "Harsha ID Solutions - ID Card Generator",
+  "version": "1.1.0",
   "description": "Offline ID card generator by Harsha ID Solutions",
   "author": "Harsha ID Solutions",
   "private": true,
@@ -36,7 +36,7 @@
   },
   "build": {
     "appId": "in.harshaidsolutions.idcardgenerator",
-    "productName": "My School ID Card Generator",
+    "productName": "Harsha ID Solutions - ID Card Generator",
     "copyright": "\u00a9 Harsha ID Solutions",
     "directories": {
       "output": "release",
@@ -55,7 +55,7 @@
         "nsis",
         "msi"
       ],
-      "artifactName": "MySchoolIDCard-Generator-Setup-${version}.${ext}"
+      "artifactName": "Harsha-ID-Card-Generator-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -63,7 +63,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "ID Card Generator",
+      "shortcutName": "Harsha ID Card Generator",
       "license": "installer/license.txt",
       "installerIcon": "installer/icon.ico",
       "uninstallerIcon": "installer/icon.ico"

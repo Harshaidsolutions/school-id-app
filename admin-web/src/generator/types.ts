@@ -98,6 +98,8 @@ export type Layout = {
   roles: Record<string, string>; // smart mapping: role -> column
   photo: { removeBg: boolean; bg: string; face: boolean; enhance: boolean };
   cardBorder?: { width: number; color: string; radius: number; style: "solid" | "double" | "dashed" };
+  /** Print resolution of the template (and of every generated card). Card size = template pixels ÷ this. */
+  dpi?: number;
 };
 
 export type MediaStore = {

@@ -560,20 +560,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
         actions={
           menu
             ? [
-                { label: "Edit details", icon: "create-outline", onPress: () => setForm({ record: menu }) },
                 { label: "View photo", icon: "image-outline", hidden: !menu.photo_url, onPress: () => setViewer({ index: Math.max(0, photoList.findIndex((p) => p.id === menu.id)) }) },
-                { label: "View signature", icon: "create-outline", hidden: !menu.signature_url, onPress: () => setViewer({ index: 0, signatureOf: menu }) },
-                {
-                  label: "Download photo",
-                  icon: "download-outline",
-                  hidden: !menu.photo_url,
-                  onPress: () => void run("Failed to download photo.", () => downloadFile(`/admin/students/${menu.id}/photo`, `${menu.photo_id ?? menu.student_name ?? "photo"}.jpg`)),
-                },
-                {
-                  label: menu.app_visible === false ? "Show in school app" : "Hide from school app",
-                  icon: menu.app_visible === false ? "eye-outline" : "eye-off-outline",
-                  onPress: () => void changeVisibility([menu.id], menu.app_visible === false),
-                },
                 {
                   label: "Call parent",
                   icon: "call-outline",
@@ -589,16 +576,6 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
                     Alert.alert("Delete photo?", "The photo will be removed. The details stay.", [
                       { text: "Cancel", style: "cancel" },
                       { text: "Delete", style: "destructive", onPress: () => void deletePhoto(menu) },
-                    ]),
-                },
-                {
-                  label: `Delete ${noun}`,
-                  icon: "trash-outline",
-                  danger: true,
-                  onPress: () =>
-                    Alert.alert(`Delete ${noun}?`, "The details and photo will be permanently deleted.", [
-                      { text: "Cancel", style: "cancel" },
-                      { text: "Delete", style: "destructive", onPress: () => void deleteRecord(menu) },
                     ]),
                 },
               ]

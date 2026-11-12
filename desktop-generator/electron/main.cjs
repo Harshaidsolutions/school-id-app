@@ -1,4 +1,4 @@
-const { ACTIVATE_URL: LICENSE_ACTIVATE_URL } = require("./license.cjs");
+const { ACTIVATE_URL: LICENSE_ACTIVATE_URL, CHECK_URL: LICENSE_CHECK_URL } = require("./license.cjs");
 const { app, BrowserWindow, ipcMain, dialog, safeStorage, net, shell, Menu } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -6,6 +6,9 @@ const { createLicenseManager } = require("./license.cjs");
 const publicKeyPem = require("./publicKey.cjs");
 
 const isDev = !app.isPackaged && process.env.MSIDC_DEV === "1";
+const APP_NAME = "Harsha ID Solutions – ID Card Generator";
+// Keep the licence and settings where earlier versions stored them (the app was renamed).
+app.setPath("userData", path.join(app.getPath("appData"), "My School ID Card Generator"));
 let win = null;
 let license = null;
 
@@ -19,7 +22,7 @@ function createWindow() {
     height: 900,
     minWidth: 1100,
     minHeight: 700,
-    title: "My School ID Card – ID Card Generator",
+    title: APP_NAME,
     backgroundColor: "#f6f5ff",
     icon: path.join(__dirname, "..", "installer", "icon.png"),
     show: false,
@@ -37,7 +40,7 @@ function createWindow() {
   // Fully offline: block every network request from the window except local files.
   win.webContents.session.webRequest.onBeforeRequest((details, cb) => {
     // The one exception: the one-time licence activation (made by the app itself, not the page).
-    const activation = details.url.startsWith(LICENSE_ACTIVATE_URL) && details.method === "POST";
+    const activation = (details.url.startsWith(LICENSE_ACTIVATE_URL) || details.url.startsWith(LICENSE_CHECK_URL)) && details.method === "POST";
     const ok = activation || /^(file|data|blob|devtools|chrome-extension):/.test(details.url) || (isDev && details.url.startsWith("http://localhost:5174"));
     cb({ cancel: !ok });
   });
@@ -102,6 +105,17 @@ app.whenReady().then(() => {
   ipcMain.handle("app:info", () => ({ version: app.getVersion() }));
 
   createWindow();
+
+  // Licence: check online now and every hour; a disabled / expired licence locks the open app at once.
+  const recheck = async () => {
+    try {
+      const r = await license.checkOnline();
+      const s = license.status();
+      if ((r.changed || !s.licensed) && win && !win.isDestroyed()) win.webContents.send("license:changed", s);
+    } catch { /* offline or server busy: try again later */ }
+  };
+  setTimeout(() => void recheck(), 5000);
+  setInterval(() => void recheck(), 60 * 60 * 1000);
 });
 
 app.on("window-all-closed", () => app.quit());

@@ -276,15 +276,12 @@ export function OrgListScreen({ kind, back = false }: { kind: ListKind; back?: b
         actions={
           menu
             ? [
-                { label: kind === "organization" ? "Open records" : kind === "school" ? "Open students" : "Open members", icon: "people-outline", onPress: () => open(menu) },
                 { label: kind === "school" ? "School Info" : kind === "institute" ? "Institution Info" : "Organization Info", icon: "information-circle-outline", onPress: () => nav.navigate("OrgInfo", { kind, id: menu.id, name: menu.name }) },
-                { label: "Edit details & login", icon: "create-outline", onPress: () => setForm({ mode: "edit", org: menu }) },
                 {
                   label: "Copy login details",
                   icon: "copy-outline",
                   onPress: () => void Clipboard.setStringAsync(`${menu.name}\nUsername: ${menu.username ?? ""}\nPassword: ${menu.password ?? ""}`),
                 },
-                { label: `Delete ${cfg.one.toLowerCase()}`, icon: "trash-outline", danger: true, onPress: () => setDeleting(menu) },
               ]
             : []
         }

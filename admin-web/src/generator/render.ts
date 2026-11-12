@@ -251,6 +251,18 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number): string
   return out;
 }
 
+/** Box (mm) that exactly holds this text at its font size — used so the selection box matches the text. */
+export function measureTextBox(el: TextElement, text: string): { w: number; h: number } {
+  const dpi = 300;
+  const c = document.createElement("canvas").getContext("2d")!;
+  const sizePx = el.size * pxPerPt(dpi);
+  c.font = fontString(el, sizePx);
+  setSpacing(c, el, sizePx);
+  const widthPx = Math.max(...(text || " ").split(/\n/).map((l) => c.measureText(l).width));
+  const mm = pxPerMm(dpi);
+  return { w: +(widthPx / mm + 0.6).toFixed(2), h: +((el.size * (25.4 / 72) * (el.lineHeight || 1.15)) + 0.2).toFixed(2) };
+}
+
 type Fitted = { sizePx: number; lines: string[]; overflow: boolean };
 export function fitText(ctx: CanvasRenderingContext2D, el: TextElement, text: string, boxW: number, boxH: number, dpi: number): Fitted {
   const ptPx = pxPerPt(dpi);
@@ -297,10 +309,8 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, row: Row, w: n
     fill = g;
   }
   ctx.save();
-  // Clip to the box (+ a little room for strokes) so nothing crosses the card design
-  ctx.beginPath();
-  ctx.rect(-sizePx * 0.1, -sizePx * 0.1, w + sizePx * 0.2, h + sizePx * 0.2);
-  ctx.clip();
+  // Text is never cut off by its own box: if it is still too long after shrinking it shows in full
+  // and is listed in the error report, so nothing silently disappears.
   lines.forEach((line, i) => {
     const y = top + lh * (i + 0.5);
     if (el.stroke.width > 0) {
@@ -325,6 +335,21 @@ async function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, w: num
   let bmp = await media(el.media, el);
   if (!bmp) {
     issues.push({ elementId: el.id, type: "missing-media", message: `${mediaLabel(el.media)} not found` });
+    // No photo for this person: keep an empty white area in the same shape, size and outline,
+    // so a photo can be added by hand later. (Signatures simply stay empty.)
+    if (el.media === "photo") {
+      const mm = pxPerMm(dpi);
+      ctx.save();
+      shapePath(ctx, el.shape, 0, 0, w, h, el.radius * mm);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      if (el.border.width > 0) {
+        ctx.lineWidth = el.border.width * mm;
+        ctx.strokeStyle = el.border.color;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
     return;
   }
   if (el.cleanSignature) bmp = cleanInk(bmp);
@@ -500,25 +525,7 @@ export async function renderCard(canvas: HTMLCanvasElement, input: RenderInput, 
       ctx.restore();
     }
   }
-  const border = layout.cardBorder;
-  if (border && border.width > 0) {
-    const bw = border.width * mm;
-    const r = Math.max(0, border.radius * mm);
-    ctx.save();
-    ctx.strokeStyle = border.color;
-    ctx.lineWidth = bw;
-    if (border.style === "dashed") ctx.setLineDash([bw * 3, bw * 2]);
-    ctx.beginPath();
-    ctx.roundRect(bw / 2, bw / 2, W - bw, H - bw, r);
-    ctx.stroke();
-    if (border.style === "double") {
-      ctx.lineWidth = Math.max(1, bw / 2);
-      ctx.beginPath();
-      ctx.roundRect(bw * 2, bw * 2, W - bw * 4, H - bw * 4, Math.max(0, r - bw * 1.5));
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
+  // The template is printed exactly as uploaded: no extra border or rounded corners are added.
   return issues;
 }
 
