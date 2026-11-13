@@ -1197,3 +1197,36 @@ input[type="file"]::file-selector-button:hover { background: #e0e3ff; }
 /* Left-panel logo: no white box, just the logo on the dark background */
 .login-brand-logo { background: transparent !important; box-shadow: none !important; padding: 0 !important; border-radius: 0 !important; }
 .login-brand-logo img { filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.35)); }
+
+/* ── Cropping Tool on phones: photo first, settings fold away, big buttons at the bottom ── */
+.crop-settings-toggle { display: none !important; }
+@media (max-width: 760px) {
+  .crop-tool-shell > div:first-child { padding: 8px 10px !important; gap: 6px !important; flex-wrap: nowrap !important; }
+  .crop-head-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .crop-head-sub { display: none; }
+  .crop-settings-toggle { display: inline-flex !important; align-items: center; min-height: 38px; padding: 0 12px !important; font-size: 13px !important; white-space: nowrap; }
+  .crop-tool-layout { flex-direction: column !important; overflow: hidden !important; }
+  .crop-settings { display: none !important; }
+  .crop-settings.is-open { display: grid !important; width: 100% !important; max-height: 55dvh; overflow-y: auto; flex-shrink: 0; border-right: 0 !important; border-bottom: 1px solid var(--line); padding: 12px !important; }
+  .crop-settings .input-field { min-height: 44px; font-size: 15px; }
+  .crop-tool-layout > div { flex: 1 1 auto !important; min-height: 0 !important; overflow: hidden !important; }
+  .crop-tool-layout > div > .grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; padding: 10px !important; overflow-y: auto; }
+  .crop-image-area { min-height: 0 !important; flex: 1 1 auto !important; }
+  .crop-handle { width: 18px !important; height: 18px !important; border-radius: 50%; border-width: 2px !important; }
+  .crop-actions, .crop-actions-bottom { position: sticky; bottom: 0; display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px !important; padding: 8px 10px calc(8px + env(safe-area-inset-bottom)) !important; box-shadow: 0 -8px 20px -14px rgba(30, 27, 75, 0.45); }
+  .crop-actions button { min-height: 48px !important; width: 100%; padding: 0 6px !important; font-size: 14px !important; margin: 0 !important; }
+  .crop-actions .crop-save, .crop-actions .crop-ok { grid-column: span 3; font-size: 16px !important; }
+}
+
+/* Models / tags: several images per item */
+.catalog-current { padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: #fafaff; }
+.catalog-thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.catalog-thumbs figure { position: relative; margin: 0; width: 64px; }
+.catalog-thumbs figure > button:first-child { display: block; width: 64px; height: 64px; border: 1px solid var(--line); border-radius: 8px; background: #fff; overflow: hidden; cursor: zoom-in; }
+.catalog-thumbs img { width: 100%; height: 100%; object-fit: contain; }
+.catalog-thumbs figcaption { font-size: 11px; text-align: center; color: var(--muted); }
+.catalog-thumb-x { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: #e11d48; color: #fff; font-weight: 800; line-height: 1; cursor: pointer; }
+.catalog-count { position: absolute; right: 2px; bottom: 2px; padding: 0 5px; border-radius: 8px; background: #4f46e5; color: #fff; font-size: 10.5px; font-weight: 700; }
+/* Pictures in page content open in the zoom viewer when clicked */
+main img:not(button img):not(a img):not(label img):not(.idg img):not(.crop-tool-shell img),
+.msidc-embed img:not(button img):not(a img):not(label img):not(.idg img):not(.crop-tool-shell img) { cursor: zoom-in; }

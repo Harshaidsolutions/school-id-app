@@ -65,7 +65,7 @@ export function Backdrop() {
 /** Six-colour strip from the Harsha ID Solutions logo (same as the website top bar). */
 export function RainbowBar({ height = 4, style }: { height?: number; style?: StyleProp<ViewStyle> }) {
   return (
-    <View pointerEvents="none" style={[{ flexDirection: "row", height, width: "100%" }, style]}>
+    <View pointerEvents="none" style={[{ flexDirection: "row", height, alignSelf: "stretch" }, style]}>
       {RAINBOW.map((c) => (
         <View key={c} style={{ flex: 1, backgroundColor: c }} />
       ))}
@@ -81,6 +81,7 @@ export function Header({
   right,
   children,
   onBack,
+  eyebrow,
 }: {
   title: string;
   subtitle?: string;
@@ -88,6 +89,8 @@ export function Header({
   right?: ReactNode;
   children?: ReactNode;
   onBack?: () => void;
+  /** Small line above the title (e.g. "Students · 245" above the school name). */
+  eyebrow?: string;
 }) {
   const insets = useSafeAreaInsets();
   const nav = useNavigation();
@@ -103,7 +106,12 @@ export function Header({
           </Tap>
         ) : null}
         <View style={{ flex: 1 }}>
-          <Text style={st.title} numberOfLines={1}>
+          {eyebrow ? (
+            <Text style={st.eyebrow} numberOfLines={1}>
+              {eyebrow}
+            </Text>
+          ) : null}
+          <Text style={st.title} numberOfLines={eyebrow ? 2 : 1}>
             {title}
           </Text>
           {subtitle ? (
@@ -185,6 +193,7 @@ const st = StyleSheet.create({
   headerRow: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 44 },
   backBtn: { width: 38, height: 38, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.22)", alignItems: "center", justifyContent: "center" },
   title: { fontFamily: F.h, fontSize: 21, color: C.white, letterSpacing: -0.3 },
+  eyebrow: { fontFamily: F.bodySemi, fontSize: 12, color: "rgba(255,255,255,0.88)", letterSpacing: 0.3, marginBottom: 1 },
   subtitle: { fontFamily: F.bodyMed, fontSize: 13, color: "rgba(255,255,255,0.9)", marginTop: 1 },
   content: { padding: S.lg },
   max: { width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" },

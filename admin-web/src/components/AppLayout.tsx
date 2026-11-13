@@ -6,6 +6,7 @@ import { useYear } from "../context/YearContext";
 import api from "../api/client";
 import { BulkModeButtons } from "./BulkActionBar";
 import { AdminAvatar } from "./AdminAvatar";
+import { GlobalImageZoom } from "./GlobalImageZoom";
 import { OtpConfirmModal } from "./OtpConfirmModal";
 import { PasswordCell } from "./PasswordCell";
 
@@ -421,7 +422,7 @@ export function AppLayout() {
     if (!EMBED_PATHS.has(location.pathname)) {
       (window as unknown as { ReactNativeWebView?: { postMessage: (m: string) => void } }).ReactNativeWebView?.postMessage("close");
     }
-    return <div className="msidc-embed min-h-screen bg-white p-2 sm:p-4"><Outlet /></div>;
+    return <div className="msidc-embed min-h-screen bg-white p-2 sm:p-4"><Outlet /><GlobalImageZoom /></div>;
   }
   // ID Card Generator: full screen (main sidebar hidden) for a bigger design area.
   if (location.pathname === "/id-card-generator") {
@@ -836,6 +837,7 @@ export function AppLayout() {
             <Outlet />
           </div>
         </main>
+        <GlobalImageZoom />
       </div>
     </div>
   );

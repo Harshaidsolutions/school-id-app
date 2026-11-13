@@ -192,9 +192,10 @@ async function migrate() {
     SET class_section = 'UNKNOWN'
     WHERE class_section IS NULL OR TRIM(class_section) = '';
 
+    -- A blank name is allowed (the admin can clear it); only a missing value is filled.
     UPDATE students
-    SET student_name = 'UNKNOWN'
-    WHERE student_name IS NULL OR TRIM(student_name) = '';
+    SET student_name = ''
+    WHERE student_name IS NULL;
 
     ALTER TABLE students ALTER COLUMN class_section SET NOT NULL;
     ALTER TABLE students ALTER COLUMN student_name SET NOT NULL;

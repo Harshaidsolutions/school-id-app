@@ -276,7 +276,6 @@ export function OrgListScreen({ kind, back = false }: { kind: ListKind; back?: b
         actions={
           menu
             ? [
-                { label: kind === "school" ? "School Info" : kind === "institute" ? "Institution Info" : "Organization Info", icon: "information-circle-outline", onPress: () => nav.navigate("OrgInfo", { kind, id: menu.id, name: menu.name }) },
                 {
                   label: "Copy login details",
                   icon: "copy-outline",

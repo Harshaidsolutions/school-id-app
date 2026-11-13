@@ -36,8 +36,8 @@ powershell -ExecutionPolicy Bypass -File .\desktop-generator\scripts\build-windo
 ```
 
 Output in `desktop-generator\release\`:
-* `Harsha-ID-Card-Generator-Setup-1.1.0.exe` – normal installer (recommended)
-* `Harsha-ID-Card-Generator-Setup-1.1.0.msi` – for IT departments / group policy
+* `Harsha-ID-Card-Generator-Setup-1.1.1.exe` – normal installer (recommended)
+* `Harsha-ID-Card-Generator-Setup-1.1.1.msi` – for IT departments / group policy
 
 Give the customer the installer **and** their licence key (the admin page can send both instructions on WhatsApp).
 

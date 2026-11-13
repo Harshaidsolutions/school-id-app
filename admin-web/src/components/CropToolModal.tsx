@@ -703,6 +703,7 @@ export function CropToolModal({
     setBrowsing(true);
   }
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const shell = layout === "page"
     ? "crop-tool-shell flex min-h-0 flex-1 flex-col overflow-hidden"
     : "fixed inset-0 z-50 flex items-center justify-center bg-[#312E81]/35 px-3 py-4";
@@ -711,11 +712,12 @@ export function CropToolModal({
     <div className={shell} role={layout === "page" ? undefined : "dialog"} aria-modal={layout === "page" ? undefined : true} aria-label="Cropping Tool">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-white px-4 py-2 text-sm font-semibold text-text-navy">
         {layout === "page" && <HeaderBack disabled={saving || applying || rotating} onClick={() => { if (canLeaveEditor()) onClose(); }}>← Back</HeaderBack>}
-        <span>{schoolName || "Cropping Tool"}</span><span>{!browsing && student ? `Photo ${student.photo_id || "—"} · ${student.student_name || ""}` : asset === "signature" ? "Signatures" : "Photos"}</span>
+        <span className="crop-head-title">{schoolName || "Cropping Tool"}</span><span className="crop-head-sub">{!browsing && student ? `Photo ${student.photo_id || "—"} · ${student.student_name || ""}` : asset === "signature" ? "Signatures" : "Photos"}</span>
+        <button type="button" className="crop-settings-toggle btn-secondary" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((v) => !v)}>{settingsOpen ? "Hide filters" : "Filters & size"}</button>
         {layout==="modal" && <button aria-label="Close cropping tool" onClick={()=>{if(canLeaveEditor())onClose();}}>×</button>}
       </div>
       <div className={`crop-tool-layout ${layout === "page" ? "flex min-h-0 flex-1 overflow-hidden" : "flex h-[min(92vh,860px)] w-full max-w-6xl overflow-hidden rounded-2xl border border-[#E6E4F5] bg-white"}`}>
-        <aside className="crop-settings flex w-[17.5rem] shrink-0 flex-col gap-3 overflow-y-auto border-r border-[#E6E4F5] bg-white p-4">
+        <aside className={`crop-settings${settingsOpen ? " is-open" : ""} flex w-[17.5rem] shrink-0 flex-col gap-3 overflow-y-auto border-r border-[#E6E4F5] bg-white p-4`}>
           {onAssetChange ? (
             <div role="tablist" aria-label="What to crop" className="grid grid-cols-2 gap-1 rounded-xl bg-[#EEF0FF] p-1">
               {(["photo", "signature"] as const).map((item) => (
@@ -924,7 +926,7 @@ export function CropToolModal({
                         {HANDLES.map((handle) => (
                           <span
                             key={handle}
-                            className="pointer-events-none absolute h-2 w-2 border border-[#4F46E5] bg-white"
+                            className="crop-handle pointer-events-none absolute h-2 w-2 border border-[#4F46E5] bg-white"
                             style={handleStyle(handle)}
                           />
                         ))}
@@ -1276,7 +1278,9 @@ function hitTest(clientX: number, clientY: number, crop: Crop, box: DOMRect): Hi
   ];
   for (const [hit, ox, oy] of spots) {
     const world = rotatePoint(ox, oy, crop.angle);
-    const reach = hit === "rotate" ? 16 : 12;
+    // Fingers need a bigger target than a mouse pointer.
+    const touch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+    const reach = (hit === "rotate" ? 16 : 12) * (touch ? 2 : 1);
     if (Math.hypot(px - (cx + world.x), py - (cy + world.y)) <= reach) return hit;
   }
   const local = unrotatePoint(px - cx, py - cy, crop.angle);

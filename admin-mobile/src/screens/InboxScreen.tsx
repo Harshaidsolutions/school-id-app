@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import api, { authedSource, errMsg } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -8,6 +7,7 @@ import { C, F, S } from "../theme";
 import { Screen } from "../ui/Screen";
 import { Banner, Button, Card, Check, Empty, IconButton, Loading, Muted, Rise, Secret } from "../ui/kit";
 import { OtpSheet } from "../ui/Sheet";
+import { TapToZoom } from "../ui/TapToZoom";
 import { fmtDateTime } from "../lib/format";
 
 type Notice = { id: string; title: string; message: string; created_at?: string | null; audience?: string | null; read?: boolean; image_url?: string | null };
@@ -180,7 +180,7 @@ export function InboxScreen() {
                             )}
                           </View>
                         ))}
-                        {n.image_url ? <Image source={authedSource(n.image_url)} style={st.img} contentFit="cover" /> : null}
+                        {n.image_url ? <TapToZoom source={authedSource(n.image_url)} style={st.img} title={n.title} /> : null}
                       </View>
                     ) : (
                       <Muted numberOfLines={2} style={{ marginTop: 4 }}>

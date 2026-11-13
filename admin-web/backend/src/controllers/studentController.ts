@@ -728,7 +728,7 @@ export async function updateStudentAdmin(
     }
     // Fixed columns follow the edited (or emptied) Excel fields.
     const sync = canonicalSyncFromExtra(formFields, parseExtraFields(req.body.extra_fields));
-    if ("student_name" in sync && sync.student_name) studentName = sync.student_name;
+    if ("student_name" in sync) studentName = sync.student_name ?? "";
     if ("roll_no" in sync) rollNo = sync.roll_no ?? null;
     if ("parent_name" in sync) parentName = sync.parent_name ?? null;
     if ("parent_phone" in sync) parentPhone = sync.parent_phone ?? null;
@@ -736,7 +736,8 @@ export async function updateStudentAdmin(
     if ("dob" in sync) dob = sync.dob ?? null;
     if ("gender" in sync) gender = sync.gender ?? null;
     if ("blood_group" in sync) bloodGroup = sync.blood_group ?? null;
-    if (!String(studentName ?? "").trim()) throw new AppError("Name is required", 400);
+    // The admin may leave the name empty (it can be filled in later); the class stays required.
+    studentName = String(studentName ?? "").trim();
 
     const updated = await pool.query<Student>(
       `UPDATE students

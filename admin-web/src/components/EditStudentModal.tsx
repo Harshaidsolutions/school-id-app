@@ -332,8 +332,8 @@ export function EditStudentModal({
     if (key === "student_name") {
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1 block font-medium text-text-navy">{label} *</span>
-          <input required value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field" />
+          <span className="mb-1 block font-medium text-text-navy">{label}</span>
+          <input value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field" />
         </label>
       );
     }

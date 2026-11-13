@@ -9,6 +9,7 @@ import { useAuth } from "../auth/AuthContext";
 import type { DashboardSummary } from "../shared/types";
 import { C, CONTENT_MAX, F, R, S, headerGradient, softShadow } from "../theme";
 import { Backdrop, RainbowBar } from "../ui/Screen";
+import { greetingName } from "./MoreScreens";
 import Svg, { Circle } from "react-native-svg";
 import { Avatar, Banner, IconButton, Loading, Muted, Rise } from "../ui/kit";
 import { Tap } from "../ui/Pressable";
@@ -176,7 +177,7 @@ export function HomeScreen() {
   const goSchools = () => nav.navigate("Tabs", { screen: "Schools" } as never);
   const goInstitutes = () => nav.navigate("Tabs", { screen: "Institutes" } as never);
 
-  const name = user?.displayName || user?.username || "Admin";
+  const name = greetingName(user, isSuperAdmin);
   const photo = authedSource(user?.photoUrl);
   const contactRows = contacts
     ? (["phone", "whatsapp", "facebook", "instagram", "youtube"] as const).filter((k) => contacts[k])

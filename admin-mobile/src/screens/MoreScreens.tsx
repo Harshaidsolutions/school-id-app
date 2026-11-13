@@ -7,7 +7,7 @@ import api, { authedSource, errMsg } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { C, CONTENT_MAX, F, S, headerGradient } from "../theme";
 import { Backdrop, RainbowBar, Screen } from "../ui/Screen";
-import { Avatar, Banner, Button, Card, InfoRow, ListItem, Muted, Rise, Section, type IconName } from "../ui/kit";
+import { Avatar, Banner, Button, Card, Field, InfoRow, ListItem, Muted, Rise, Section, type IconName } from "../ui/kit";
 import { Tap } from "../ui/Pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { PhotoPick } from "../ui/PhotoPick";
@@ -21,7 +21,7 @@ export function MoreScreen() {
   const insets = useSafeAreaInsets();
   const { user, isSuperAdmin, logout, updateUser } = useAuth();
   const photo = authedSource(user?.photoUrl);
-  const name = user?.displayName || user?.username || "Admin";
+  const name = greetingName(user, isSuperAdmin);
   const [busy, setBusy] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
 
@@ -72,7 +72,7 @@ export function MoreScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={st.hi}>Hi,</Text>
                 <Text style={st.name} numberOfLines={1}>
-                  {user?.username || name}
+                  {name}
                 </Text>
                 <Text style={st.role}>{isSuperAdmin ? "Super Admin" : "Admin"}</Text>
               </View>
@@ -129,6 +129,20 @@ export function ProfileScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState(user?.displayName ?? (isSuperAdmin ? "Harsha ID Solutions" : ""));
+  async function saveName() {
+    setBusy(true);
+    setError(null);
+    try {
+      const { data } = await api.put<{ displayName: string }>("/admin/me/display-name", { displayName });
+      updateUser({ displayName: data.displayName });
+      setNotice("Name saved. It now shows in the greeting.");
+    } catch (e) {
+      setError(errMsg(e, "Could not save the name."));
+    } finally {
+      setBusy(false);
+    }
+  }
   async function savePhoto() {
     if (!photo || !user) return;
     setBusy(true);
@@ -157,8 +171,11 @@ export function ProfileScreen() {
           {photo ? <Button title="Save photo" icon="checkmark" loading={busy} onPress={() => void savePhoto()} /> : null}
         </Card>
       ) : null}
+      <Card style={{ marginBottom: S.lg }}>
+        <Field label="Your name (shown in the greeting)" value={displayName} onChangeText={setDisplayName} icon="person-outline" placeholder="e.g. Harsha ID Solutions" />
+        <Button title="Save name" icon="checkmark" loading={busy} disabled={!displayName.trim() || displayName.trim() === (user?.displayName ?? "")} onPress={() => void saveName()} />
+      </Card>
       <Card>
-        <InfoRow label="Name" value={user?.displayName} />
         <InfoRow label="Username" value={user?.username} />
         <InfoRow label="Email" value={user?.email} />
         <InfoRow label="Phone" value={user?.phone} />
@@ -187,3 +204,8 @@ const st = StyleSheet.create({
   email: { fontFamily: F.body, fontSize: 13, color: "rgba(255,255,255,0.9)" },
   role: { fontFamily: F.bodySemi, fontSize: 12, color: C.white, marginTop: 4, alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.22)", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, overflow: "hidden" },
 });
+
+/** The name in the greeting: the admin's own name; the super admin is "Harsha ID Solutions" until a name is set. */
+export function greetingName(user: { displayName?: string | null; username?: string | null } | null | undefined, isSuperAdmin: boolean): string {
+  return user?.displayName?.trim() || (isSuperAdmin ? "Harsha ID Solutions" : user?.username || "Admin");
+}

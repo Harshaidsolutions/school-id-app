@@ -116,6 +116,7 @@ interface TeacherModelRow {
   description: string | null;
   image_url: string | null;
   video_url: string | null;
+  extra_image_urls?: string[] | null;
   created_at: string | null;
 }
 
@@ -1223,14 +1224,14 @@ export async function listTeacherModels(
     }
     const [modelsResult, tagsResult] = await Promise.all([
       pool.query<TeacherModelRow>(
-        `SELECT id, kind, name, description, image_url, video_url, created_at
+        `SELECT id, kind, name, description, image_url, video_url, extra_image_urls, created_at
          FROM catalog_items
          WHERE kind = 'model' AND owner_admin_id = $1
          ORDER BY created_at DESC`,
         [ownerAdminId]
       ),
       pool.query<TeacherModelRow>(
-        `SELECT id, kind, name, description, image_url, video_url, created_at
+        `SELECT id, kind, name, description, image_url, video_url, extra_image_urls, created_at
          FROM catalog_items
          WHERE kind = 'tag' AND owner_admin_id = $1
          ORDER BY created_at DESC`,

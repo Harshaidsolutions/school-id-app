@@ -1,3 +1,4 @@
+import { ZoomTap } from "./ZoomTap";
 import { useEffect, useState } from "react";
 import { AppState, Image, Linking, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -31,13 +32,15 @@ function InstructionPhoto({ m }: { m: Media }) {
     );
   }
   return (
-    <Image
-      source={{ uri: m.url }}
-      resizeMode="contain"
-      onError={() => setFailed(true)}
-      accessibilityLabel={m.caption || "Instruction photo"}
-      style={{ width: "100%", aspectRatio: ratio, maxHeight: 520, backgroundColor: colors.background }}
-    />
+    <ZoomTap images={[m.url]} title={m.caption || "Instruction photo"}>
+      <Image
+        source={{ uri: m.url }}
+        resizeMode="contain"
+        onError={() => setFailed(true)}
+        accessibilityLabel={m.caption || "Instruction photo"}
+        style={{ width: "100%", aspectRatio: ratio, maxHeight: 520, backgroundColor: colors.background }}
+      />
+    </ZoomTap>
   );
 }
 

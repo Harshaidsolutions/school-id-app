@@ -367,7 +367,7 @@ function PageAllInOne({ active }: { active: boolean }) {
       <Reveal active={active} style={{ alignItems: "center" }}>
         <Eyebrow text="Everything in one app" />
         <Text style={st.headline}>
-          All in one <Text style={{ color: SKY }}>ID solution</Text>
+          From photo to <Text style={{ color: SKY }}>printed ID card</Text>
         </Text>
       </Reveal>
       <View style={{ width: "100%", gap: 10 }}>

@@ -493,3 +493,69 @@
 .idg-preview-cards { place-items: safe center; }
 .idg-preview-head .idg-zoom { margin: 0 4px; }
 .idg-lastdesign { padding: 10px 12px; border-radius: 12px; background: var(--brand-soft, #eef0ff); }
+
+/* ── Phones (Admin App): designed for one hand — card first, tools below, settings as a bottom sheet ── */
+@media (max-width: 760px) {
+  .idg.idg-full { height: auto !important; max-height: none !important; overflow: visible !important; padding: 6px 6px calc(84px + env(safe-area-inset-bottom)) !important; gap: 6px !important; }
+  .idg-full .idg-top { padding: 8px !important; gap: 6px !important; border-radius: 14px !important; }
+  .idg-full .idg-top .idg-back { min-height: 36px; padding: 0 10px; font-size: 13px; }
+  .idg-app-name { display: none; }
+  .idg-brand { width: 32px; height: 32px; }
+  .idg-top-title h2 { font-size: 15px; }
+  .idg-licensed { display: none; }
+  .idg-steps { width: 100%; display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .idg-steps button { padding: 8px 4px; font-size: 12px; white-space: normal; line-height: 1.2; }
+
+  /* Steps 1 and 2 */
+  .idg-wizard-body { grid-template-columns: 1fr !important; gap: 8px !important; }
+  .idg-wiz-card { padding: 14px !important; gap: 12px !important; border-radius: 16px !important; }
+  .idg-wiz-stats.is-four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .idg-wiz-stats b { font-size: 20px; }
+  .idg-pickrow > .btn-secondary, .idg-pickrow > .btn-primary { width: 100%; justify-content: center; min-height: 46px; }
+  .idg-path { flex-basis: 100%; }
+  .idg-grid2, .idg-mode, .idg-slots.is-two { grid-template-columns: 1fr !important; }
+  .idg-wizard-foot { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; border-radius: 16px 16px 0 0 !important; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)) !important; box-shadow: 0 -10px 24px -16px rgba(30, 27, 75, 0.5); }
+  .idg-wizard-foot .btn-primary, .idg-wizard-foot .btn-secondary { min-height: 48px; padding: 0 16px; }
+  .idg-wizard-foot > .idg-muted { font-size: 12px; }
+  .input-field { font-size: 16px; } /* no zoom-in when typing on phones */
+
+  /* Step 3: card on top */
+  .idg-full .idg-workspace, .idg-full .idg-workspace.is-panel-hidden { display: flex !important; flex-direction: column; gap: 6px !important; }
+  .idg-full .idg-center { order: 1; border-radius: 14px !important; }
+  .idg-center-bar { flex-wrap: wrap !important; padding: 6px 8px !important; gap: 6px !important; }
+  .idg-center-bar .idg-class { flex: 1 1 140px; }
+  .idg-panel-btn { display: none !important; }
+  .idg-toolbar { flex-wrap: nowrap !important; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 6px 8px !important; }
+  .idg-toolbar > * { flex: none; }
+  .idg-sides { padding: 4px !important; }
+  .idg-side .idg-stage { padding: 4px !important; max-height: 62dvh; }
+  .idg-handle { width: 24px !important; height: 24px !important; right: -12px !important; bottom: -12px !important; }
+  .idg-tool { min-width: 40px; height: 40px; }
+
+  /* Columns: tap to add (dragging is for mouse) */
+  .idg-full .idg-left { order: 2; height: auto !important; overflow: visible !important; border-radius: 14px !important; }
+  .idg-full .idg-left .idg-columns { display: flex !important; flex-wrap: wrap; gap: 6px; max-height: 38dvh !important; }
+  .idg-full .idg-left .idg-columns li { flex: 1 1 calc(50% - 6px); min-width: 0; cursor: default; }
+  .idg-grip { display: none; }
+  .idg-columns li button { width: 36px !important; height: 36px !important; }
+  .idg-full .idg-left .idg-add > * { min-height: 48px !important; }
+
+  /* Preview / Generate always at the bottom of the screen */
+  .idg-left-actions { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; margin: 0 !important; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)) !important; display: grid !important; grid-template-columns: 1fr 2fr; background: #fff; border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; box-shadow: 0 -10px 24px -16px rgba(30, 27, 75, 0.5); }
+  .idg-left-actions .idg-errors-btn { grid-column: 1 / -1; }
+  .idg-left-actions .btn-primary, .idg-left-actions .btn-secondary { min-height: 48px !important; }
+
+  /* Settings of the selected field: a bottom sheet over the tools (closes with ×) */
+  .idg-full .idg-right { display: none !important; }
+  .idg-full .idg-right.has-sel { display: block !important; position: fixed !important; left: 0; right: 0; bottom: 0; z-index: 40; height: auto !important; max-height: 55dvh !important; overflow-y: auto !important; border-radius: 18px 18px 0 0 !important; padding: 12px 14px calc(16px + env(safe-area-inset-bottom)) !important; box-shadow: 0 -16px 40px -12px rgba(30, 27, 75, 0.55); }
+  .idg-right-head { position: sticky; top: -12px; background: #fff; padding: 4px 0 8px; z-index: 1; }
+  .idg-grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .idg-row-actions { display: grid !important; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .idg-row-actions .btn-secondary { min-height: 44px; white-space: normal; }
+
+  /* Preview window */
+  .idg-preview-overlay { padding: 0 !important; }
+  .idg-preview-one { border-radius: 0 !important; max-height: 100dvh !important; height: 100dvh; padding: 10px !important; }
+  .idg-preview-cards.is-two { grid-template-columns: 1fr !important; }
+  .idg-preview-cards img { max-height: calc(100dvh - 170px); }
+}

@@ -663,3 +663,16 @@ export async function getManagedAdminOverview(
     next(error);
   }
 }
+
+/** Any admin sets their own display name (shown in the app greeting, e.g. "Harsha ID Solutions"). */
+export async function updateOwnDisplayName(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const name = String(req.body?.displayName ?? "").trim().slice(0, 120);
+    if (!name) throw new AppError("Enter a name.", 400);
+    await pool.query(`UPDATE users SET display_name = $2 WHERE id = $1`, [scope.adminUserId, name]);
+    res.json({ status: "ok", displayName: name });
+  } catch (error) {
+    next(error);
+  }
+}

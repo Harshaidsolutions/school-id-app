@@ -1,3 +1,4 @@
+import { ZoomTap } from "../components/ZoomTap";
 import { GeneratedIdCard } from "../components/GeneratedIdCard";
 import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { contentMaxStyle } from "../theme/responsive";
@@ -127,7 +128,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
         <View style={styles.photoSection}>
 
           {student.id_card_url ? (
-            <GeneratedIdCard uri={student.id_card_url} maxWidth={scale(230)} maxHeight={scale(360)} />
+            <ZoomTap images={[student.id_card_url, student.photo_url]} title={student.student_name ?? "ID card"}><GeneratedIdCard uri={student.id_card_url} maxWidth={scale(230)} maxHeight={scale(360)} /></ZoomTap>
           ) : (
           <View
 
@@ -149,17 +150,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           >
 
             {hasPhoto && student.photo_url ? (
-
-              <Image
-
-                source={{ uri: student.photo_url }}
-
-                style={styles.photo}
-
-                resizeMode="cover"
-
-              />
-
+              <ZoomTap images={[student.photo_url]} title={student.student_name ?? "Photo"} style={styles.photo}><Image source={{ uri: student.photo_url }} style={styles.photo} resizeMode="cover" /></ZoomTap>
             ) : (
 
               <Ionicons name="person" size={48} color={colors.textSubtle} />

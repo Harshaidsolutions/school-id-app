@@ -258,7 +258,7 @@ const st = StyleSheet.create({
   eyebrowText: { fontFamily: F.h, fontSize: 10, letterSpacing: 1.6, color: C.white },
   sheet: { flexGrow: 1, marginTop: -28, backgroundColor: C.white, borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: S.xl, paddingTop: S.xl + 4 },
   wrap: { width: "100%", maxWidth: 480, alignSelf: "center" },
-  title: { fontFamily: F.hX, fontSize: 27, color: C.ink, marginBottom: 2, letterSpacing: -0.6 },
+  title: { fontFamily: F.hX, fontSize: 27, color: C.primaryDeep, marginBottom: 2, letterSpacing: -0.6 },
   link: { fontFamily: F.bodySemi, color: C.primary, fontSize: 14 },
   help: { marginTop: S.lg, paddingTop: S.lg, borderTopWidth: 1, borderTopColor: C.line, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: S.sm },
   helpText: { fontFamily: F.bodyMed, fontSize: 13, color: C.muted, flexShrink: 1 },

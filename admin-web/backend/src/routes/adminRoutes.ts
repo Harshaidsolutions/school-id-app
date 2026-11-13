@@ -116,6 +116,7 @@ import {
 } from "../controllers/organizationInfoController";
 import {
   appendCatalogExtraImage,
+  removeCatalogExtraImage,
   bulkDeleteCatalogItems,
   createCatalogItem,
   deleteCatalogItem,
@@ -156,6 +157,7 @@ import {
   updateManagedAdmin,
   uploadManagedAdminPhoto,
   setManagedAdminActive,
+  updateOwnDisplayName,
   getManagedAdminOverview,
 } from "../controllers/adminUserController";
 
@@ -344,9 +346,10 @@ router.put(
 );
 router.post(
   "/catalog/:id/extra-images",
-  uploadCatalogFile.single("file"),
+  uploadCatalogFile.array("file", 20),
   appendCatalogExtraImage
 );
+router.delete("/catalog/:id/extra-images", removeCatalogExtraImage);
 router.delete("/catalog/:id", deleteCatalogItem);
 
 // Form setup (per school / institute)
@@ -358,6 +361,7 @@ router.put("/form-config", putFormConfig);
 router.post("/run-cleanup-now", runCleanupNow);
 
 // Super admin — managed admin accounts
+router.put("/me/display-name", updateOwnDisplayName);
 router.get("/managed-admins", listManagedAdmins);
 router.get("/managed-admins/:id/overview", getManagedAdminOverview);
 router.post("/managed-admins", createManagedAdmin);

@@ -7,7 +7,7 @@ import { useAuth } from "../auth/AuthContext";
 import { C, F, R, S } from "../theme";
 import { Screen } from "../ui/Screen";
 import { Banner, Button, Card, Chips, Field, Loading, Muted, Section } from "../ui/kit";
-import { Select } from "../ui/Sheet";
+import { ImageViewer, Select } from "../ui/Sheet";
 import { Tap } from "../ui/Pressable";
 import { DOC_TYPES, asFormFile, pickDocuments, pickImages, sizeOk, type PickedFile } from "../lib/files";
 import { waLink } from "../lib/format";
@@ -37,6 +37,7 @@ export function HelpScreen() {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -134,7 +135,7 @@ export function HelpScreen() {
             {media.map((m, i) => (
               <Card key={`${m.url}${i}`} style={{ marginBottom: S.sm }}>
                 <View style={{ flexDirection: "row", gap: S.md, alignItems: "center" }}>
-                  <Tap onPress={() => m.type === "video" && void Linking.openURL(mediaUrl(m.url)!)} style={st.thumb}>
+                  <Tap onPress={() => (m.type === "video" ? void Linking.openURL(mediaUrl(m.url)!) : setZoomUrl(m.url))} style={st.thumb}>
                     {m.type === "video" ? <Ionicons name="play-circle" size={34} color={C.primary} /> : <Image source={authedSource(m.url)} style={StyleSheet.absoluteFill} contentFit="cover" />}
                   </Tap>
                   <View style={{ flex: 1 }}>
@@ -187,6 +188,7 @@ export function HelpScreen() {
           </Card>
         ))
       )}
+      <ImageViewer visible={Boolean(zoomUrl)} onClose={() => setZoomUrl(null)} items={[{ title: "Image", source: authedSource(zoomUrl) }]} index={0} onIndex={() => undefined} />
     </Screen>
   );
 }

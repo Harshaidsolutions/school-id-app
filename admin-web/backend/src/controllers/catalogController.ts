@@ -257,6 +257,10 @@ export async function updateCatalogItem(
   }
 }
 
+/**
+ * POST /admin/catalog/:id/extra-images — one or more images (field "file", up to 20 at once).
+ * Each image gets its own file name, so earlier images are never replaced.
+ */
 export async function appendCatalogExtraImage(
   req: Request,
   res: Response,
@@ -266,7 +270,8 @@ export async function appendCatalogExtraImage(
     const scope = await requireAdminScope(req);
     const id = String(req.params.id ?? "").trim();
     if (!id) throw new AppError("id is required", 400);
-    if (!req.file) throw new AppError("Image file is required", 400);
+    const files = (Array.isArray(req.files) ? req.files : req.file ? [req.file] : []) as Express.Multer.File[];
+    if (!files.length) throw new AppError("Choose at least one image", 400);
 
     await assertCatalogRowOwnedByAdmin(scope, "catalog_items", id);
 
@@ -277,10 +282,11 @@ export async function appendCatalogExtraImage(
     const row = existing.rows[0];
     if (!row) throw new AppError("Item not found", 404);
 
-    const imageUrl = await uploadCatalogFile(row.kind, `${row.id}-extra`, req.file);
     const extras = parseExtraImageUrls(row.extra_image_urls);
-    if (!extras.includes(imageUrl)) {
-      extras.push(imageUrl);
+    for (const [i, file] of files.entries()) {
+      const key = `${row.id}-extra-${Date.now().toString(36)}-${i}-${Math.random().toString(36).slice(2, 7)}`;
+      const imageUrl = await uploadCatalogFile(row.kind, key, file);
+      if (!extras.includes(imageUrl)) extras.push(imageUrl);
     }
 
     const updated = await pool.query<CatalogRow>(
@@ -291,6 +297,33 @@ export async function appendCatalogExtraImage(
       [JSON.stringify(extras), id]
     );
 
+    res.status(200).json({ status: "ok", item: updated.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** DELETE /admin/catalog/:id/extra-images  body { url } — removes one of the extra images. */
+export async function removeCatalogExtraImage(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const id = String(req.params.id ?? "").trim();
+    const url = String(req.body?.url ?? req.query.url ?? "").trim();
+    if (!id || !url) throw new AppError("id and url are required", 400);
+    await assertCatalogRowOwnedByAdmin(scope, "catalog_items", id);
+    const existing = await pool.query<CatalogRow>(`SELECT id, extra_image_urls FROM catalog_items WHERE id = $1`, [id]);
+    const row = existing.rows[0];
+    if (!row) throw new AppError("Item not found", 404);
+    const extras = parseExtraImageUrls(row.extra_image_urls).filter((u) => u !== url);
+    const updated = await pool.query<CatalogRow>(
+      `UPDATE catalog_items SET extra_image_urls = $1::jsonb WHERE id = $2
+       RETURNING id, kind, name, description, image_url, video_url, extra_image_urls, file_size, created_at`,
+      [JSON.stringify(extras), id]
+    );
     res.status(200).json({ status: "ok", item: updated.rows[0] });
   } catch (error) {
     next(error);

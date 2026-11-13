@@ -128,6 +128,7 @@ export function MediaLightbox({
             setPan({ x: drag.current.px + e.clientX - drag.current.x, y: drag.current.py + e.clientY - drag.current.y });
           }}
           onPointerUp={() => { drag.current = null; }}
+          onDoubleClick={() => { if (!canZoom) return; if (zoom > 1) reset(); else setZoom(2.5); }}
           onTouchStart={(e) => {
             if (e.touches.length === 2 && canZoom) pinch.current = { d: dist(e.touches), z: zoom };
             else if (e.touches.length === 1 && zoom <= 1) swipe.current = e.touches[0].clientX;

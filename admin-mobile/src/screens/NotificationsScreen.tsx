@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
-import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import api, { authedSource, errMsg } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -9,6 +8,7 @@ import { C, F, R, S } from "../theme";
 import { Screen } from "../ui/Screen";
 import { Banner, Button, Card, Check, Chips, Empty, Field, IconButton, Loading, Muted, Pill, Rise, SearchBar } from "../ui/kit";
 import { OtpSheet, Sheet } from "../ui/Sheet";
+import { TapToZoom } from "../ui/TapToZoom";
 import { PhotoPick } from "../ui/PhotoPick";
 import { Tap } from "../ui/Pressable";
 import { asFormFile, type PickedFile } from "../lib/files";
@@ -276,7 +276,7 @@ export function NotificationsScreen({ inTab = false }: { inTab?: boolean }) {
                   <View style={{ flex: 1 }}>
                     <Text style={st.nTitle}>{n.title}</Text>
                     <Muted style={{ marginTop: 4 }}>{n.message}</Muted>
-                    {n.image_url ? <Image source={authedSource(n.image_url)} style={st.nImg} contentFit="cover" /> : null}
+                    {n.image_url ? <TapToZoom source={authedSource(n.image_url)} style={st.nImg} title={n.title} /> : null}
                     <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
                       <Pill text={to} tone="blue" icon="send" />
                       <Muted style={{ fontSize: 11 }}>{fmtDateTime(n.created_at)}</Muted>

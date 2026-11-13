@@ -447,8 +447,8 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Backdrop />
       <Header
-        title={institute ? "Members" : "Students"}
-        subtitle={name}
+        title={name}
+        eyebrow={`${institute ? "Members" : "Students"} · ${students.length}`}
         right={
           <>
             <IconButton icon="construct-outline" label="Tools" color={C.white} bg="rgba(255,255,255,0.22)" onPress={() => setToolsOpen(true)} />
@@ -659,15 +659,19 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
           "captured-pending-data": students.filter((s) => s.photo_url?.trim() && s.pending_data).length,
           "uncaptured-pending-data": students.filter((s) => !s.photo_url?.trim() && s.pending_data).length,
         }}
-        onDownload={(job) =>
-          void run("Failed to download Excel.", () =>
-            downloadFile(
-              institute ? `/admin/institutes/${orgId}/export-members` : `/admin/students/${orgId}/export`,
-              `${name}-${job.scope}.xlsx`,
-              { scope: job.scope, date: job.date, classSection: job.classSection, fieldKey: job.fieldKey }
-            )
+        onDownload={(job) => {
+          // Close the sheet straight away and show progress on the page; the save dialog follows when the file is ready.
+          setSheet(null);
+          setError(null);
+          setNotice("Preparing the Excel file…");
+          void downloadFile(
+            institute ? `/admin/institutes/${orgId}/export-members` : `/admin/students/${orgId}/export`,
+            `${name}-${job.scope}.xlsx`,
+            { scope: job.scope, date: job.date, classSection: job.classSection, fieldKey: job.fieldKey }
           )
-        }
+            .then((r) => setNotice(r === "cancel" ? null : "Excel downloaded."))
+            .catch((e) => { setNotice(null); setError(errMsg(e, "Failed to download Excel.")); });
+        }}
       />
       <PhotoDownloadSheet
         visible={sheet === "photos-down"}

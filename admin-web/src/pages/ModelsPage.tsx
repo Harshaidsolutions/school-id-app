@@ -36,7 +36,6 @@ export function ModelsPage() {
   const [name, setName] = useState("");
   const [nameFromFile, setNameFromFile] = useState(false);
   const [description, setDescription] = useState("");
-  const [file, setFile] = useState<File | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selecting, setSelecting] = useState(false);
@@ -103,16 +102,28 @@ export function ModelsPage() {
 
   const tableColSpan = (isTagsTab ? 5 : 6) + (selecting ? 1 : 0);
 
-  const previewIndex = previewItem
-    ? filtered.findIndex((item) => item.id === previewItem.id)
-    : -1;
+  /** Every image of every item in the list, so the preview steps through all of them. */
+  const gallery = useMemo(
+    () =>
+      filtered.flatMap((item) => {
+        const pics = [item.image_url, ...(item.extra_image_urls ?? [])].filter((u): u is string => Boolean(u));
+        return pics.map((src, k) => ({ item, src, k, n: pics.length }));
+      }),
+    [filtered]
+  );
+  const [previewAt, setPreviewAt] = useState(0);
+  const openPreview = (item: CatalogItem, k = 0) => {
+    const at = gallery.findIndex((g) => g.item.id === item.id && g.k === k);
+    setPreviewAt(Math.max(0, at));
+    setPreviewItem(item);
+  };
+  const shown = previewItem ? gallery[previewAt] : undefined;
 
   function resetForm() {
     setEditing(null);
     setName("");
     setNameFromFile(false);
     setDescription("");
-    setFile(null);
     setVideoFile(null);
     setTagFiles([]);
   }
@@ -130,15 +141,15 @@ export function ModelsPage() {
     }
   }
 
-  function handleFileSelect(selected: File | null) {
-    if (!selected) {
-      setFile(null);
-      return;
-    }
-    setFile(selected);
-    if (!editing) {
-      setName(nameFromFilename(selected.name));
-      setNameFromFile(true);
+  /** Removes one of the extra images of the item being edited. */
+  async function removeExtraImage(url: string) {
+    if (!editing) return;
+    try {
+      const { data } = await api.delete<{ item: CatalogItem }>(`/admin/catalog/${editing.id}/extra-images`, { data: { url } });
+      if (data.item) setEditing(data.item);
+      await load();
+    } catch {
+      setError("Could not remove the image.");
     }
   }
 
@@ -160,69 +171,39 @@ export function ModelsPage() {
     setError(null);
     setUploadProgress(null);
     try {
-      if (isTagsTab && tagFiles.length > 0) {
-        const total = tagFiles.length;
-        const primary = tagFiles[0]!;
-        const createForm = new FormData();
-        createForm.append("kind", tab);
-        createForm.append("name", name.trim());
-        createForm.append("description", "");
-        createForm.append("file", primary);
-        if (editing) {
-          setUploadProgress(
-            sequentialUploadProgressLabel(1, total, primary.name)
-          );
-          await api.put(`/admin/catalog/${editing.id}`, createForm, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
-          for (let i = 1; i < tagFiles.length; i += 1) {
-            const file = tagFiles[i]!;
-            setUploadProgress(sequentialUploadProgressLabel(i + 1, total, file.name));
-            const extraForm = new FormData();
-            extraForm.append("file", file);
-            await api.post(`/admin/catalog/${editing.id}/extra-images`, extraForm, {
-              headers: { "Content-Type": "multipart/form-data" },
-            });
-          }
-        } else {
-          setUploadProgress(
-            sequentialUploadProgressLabel(1, total, primary.name)
-          );
-          const { data } = await api.post<{ item: CatalogItem }>(
-            `/admin/catalog?kind=${encodeURIComponent(tab)}`,
-            createForm,
-            { headers: { "Content-Type": "multipart/form-data" } }
-          );
-          const itemId = data.item?.id;
-          if (itemId) {
-            for (let i = 1; i < tagFiles.length; i += 1) {
-              const file = tagFiles[i]!;
-              setUploadProgress(sequentialUploadProgressLabel(i + 1, total, file.name));
-              const extraForm = new FormData();
-              extraForm.append("file", file);
-              await api.post(`/admin/catalog/${itemId}/extra-images`, extraForm, {
-                headers: { "Content-Type": "multipart/form-data" },
-              });
-            }
-          }
+      // Several images can be chosen at once: the first is the main picture, the others are extra images.
+      const addExtras = async (itemId: string, files: File[], offset: number, total: number) => {
+        for (let i = 0; i < files.length; i += 1) {
+          const f = files[i]!;
+          setUploadProgress(sequentialUploadProgressLabel(offset + i + 1, total, f.name));
+          const extraForm = new FormData();
+          extraForm.append("file", f);
+          await api.post(`/admin/catalog/${itemId}/extra-images`, extraForm, { headers: { "Content-Type": "multipart/form-data" } });
         }
+      };
+      const total = tagFiles.length;
+      const form = new FormData();
+      form.append("kind", tab);
+      form.append("name", name.trim());
+      form.append("description", isTagsTab ? "" : description.trim());
+      if (videoFile) form.append("video", videoFile);
+      if (editing) {
+        // Editing: new images are added to the ones already there (remove old ones with × above).
+        const replaceMain = !editing.image_url && tagFiles.length > 0;
+        if (replaceMain) form.append("file", tagFiles[0]!);
+        if (total) setUploadProgress(sequentialUploadProgressLabel(1, total, tagFiles[0]!.name));
+        await api.put(`/admin/catalog/${editing.id}`, form, { headers: { "Content-Type": "multipart/form-data" } });
+        await addExtras(editing.id, replaceMain ? tagFiles.slice(1) : tagFiles, replaceMain ? 1 : 0, total);
       } else {
-        const form = new FormData();
-        form.append("kind", tab);
-        form.append("name", name.trim());
-        form.append("description", isTagsTab ? "" : description.trim());
-        if (file) form.append("file", file);
-        if (videoFile) form.append("video", videoFile);
-        if (editing) {
-          await api.put(`/admin/catalog/${editing.id}`, form, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
-        } else {
-          if (!file && !videoFile) throw new Error("Add an image or a video");
-          await api.post(`/admin/catalog?kind=${encodeURIComponent(tab)}`, form, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
+        if (!tagFiles.length && !videoFile) throw new Error("Add an image or a video");
+        if (tagFiles[0]) {
+          form.append("file", tagFiles[0]);
+          setUploadProgress(sequentialUploadProgressLabel(1, total, tagFiles[0].name));
         }
+        const { data } = await api.post<{ item: CatalogItem }>(`/admin/catalog?kind=${encodeURIComponent(tab)}`, form, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        if (data.item?.id) await addExtras(data.item.id, tagFiles.slice(1), 1, total);
       }
       resetForm();
       await load();
@@ -404,8 +385,8 @@ export function ModelsPage() {
                       {item.image_url ? (
                         <button
                           type="button"
-                          onClick={() => setPreviewItem(item)}
-                          className="overflow-hidden transition hover:opacity-90"
+                          onClick={() => openPreview(item)}
+                          className="relative overflow-hidden transition hover:opacity-90"
                           title="Click to enlarge"
                         >
                           <img
@@ -413,6 +394,7 @@ export function ModelsPage() {
                             alt={item.name}
                             className="h-16 w-14 object-contain bg-content-bg"
                           />
+                          {(item.extra_image_urls?.length ?? 0) > 0 ? <span className="catalog-count">+{item.extra_image_urls!.length}</span> : null}
                         </button>
                       ) : (
                         "—"
@@ -468,7 +450,7 @@ export function ModelsPage() {
                     </td>
                     <td className="col-actions">
                       <div className="flex flex-col gap-1 sm:flex-row sm:gap-2">
-                        {isTagsTab ? null : <button
+                        <button
                           type="button"
                           className="text-button-blue"
                           onClick={() => {
@@ -476,12 +458,12 @@ export function ModelsPage() {
                             setName(item.name);
                             setNameFromFile(false);
                             setDescription(item.description ?? "");
-                            setFile(null);
+                            setTagFiles([]);
                             setVideoFile(null);
                           }}
                         >
                           Edit
-                        </button>}
+                        </button>
                         <button
                           type="button"
                           className="text-danger"
@@ -503,31 +485,40 @@ export function ModelsPage() {
           {editing ? `Edit ${itemLabel}` : `Add New ${itemLabel}`}
         </h3>
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+          {editing && (editing.image_url || (editing.extra_image_urls?.length ?? 0) > 0) ? (
+            <div className="catalog-current">
+              <span className="mb-1.5 block text-sm font-medium">Current images ({1 + (editing.extra_image_urls?.length ?? 0)})</span>
+              <div className="catalog-thumbs">
+                {editing.image_url ? (
+                  <figure>
+                    <button type="button" onClick={() => openPreview(editing, 0)} title="View"><img src={editing.image_url} alt={`${editing.name} main`} /></button>
+                    <figcaption>Main</figcaption>
+                  </figure>
+                ) : null}
+                {(editing.extra_image_urls ?? []).map((url, k) => (
+                  <figure key={url}>
+                    <button type="button" onClick={() => openPreview(editing, k + (editing.image_url ? 1 : 0))} title="View"><img src={url} alt={`${editing.name} ${k + 2}`} /></button>
+                    <button type="button" className="catalog-thumb-x" aria-label="Remove this image" onClick={() => { if (confirm("Remove this image?")) void removeExtraImage(url); }}>×</button>
+                  </figure>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium">
-              {isTagsTab
-                ? `Upload ${itemLabel} Image(s)`
-                : `Upload ${itemLabel} Image (one at a time)`}
+              {editing ? `Add ${itemLabel} Image(s)` : `Upload ${itemLabel} Image(s)`}
             </span>
             <div className="group relative cursor-pointer rounded-lg border border-dashed border-border bg-white px-3 py-3 text-center transition-colors hover:border-button-blue/40 hover:bg-blue-soft/30">
               <div className="text-sm text-text-muted group-hover:text-button-blue">
-                {isTagsTab
-                  ? tagFiles.length > 0
-                    ? `${tagFiles.length} file${tagFiles.length === 1 ? "" : "s"} selected`
-                    : "Choose one or more image files"
-                  : file
-                    ? file.name
-                    : "Choose Image"}
+                {tagFiles.length > 0
+                  ? `${tagFiles.length} file${tagFiles.length === 1 ? "" : "s"} selected`
+                  : "Choose one or more images (hold Ctrl / Shift to pick several)"}
               </div>
               <input
                 type="file"
-                multiple={isTagsTab}
+                multiple
                 accept="image/jpeg,image/png,application/pdf"
-                onChange={(e) =>
-                  isTagsTab
-                    ? handleTagFilesSelect(e.target.files)
-                    : handleFileSelect(e.target.files?.[0] ?? null)
-                }
+                onChange={(e) => handleTagFilesSelect(e.target.files)}
                 className="absolute inset-0 cursor-pointer opacity-0"
               />
             </div>
@@ -607,7 +598,7 @@ export function ModelsPage() {
             <button
               type="button"
               className="btn-secondary flex-1"
-              disabled={saving || !(editing || file || videoFile || tagFiles.length || name || description)}
+              disabled={saving || !(editing || videoFile || tagFiles.length || name || description)}
               onClick={(e) => {
                 resetForm();
                 const form = (e.currentTarget as HTMLButtonElement).form;
@@ -621,22 +612,16 @@ export function ModelsPage() {
       </aside>
 
       <ImagePreviewModal
-        open={Boolean(previewItem)}
-        title={previewItem?.name ?? `${itemLabel} preview`}
-        imageUrl={previewItem?.image_url}
-        index={previewIndex >= 0 ? previewIndex : undefined}
-        total={filtered.length}
+        open={Boolean(previewItem && shown)}
+        title={shown ? `${shown.item.name}${shown.n > 1 ? ` (${shown.k + 1}/${shown.n})` : ""}` : `${itemLabel} preview`}
+        imageUrl={shown?.src}
+        index={shown ? previewAt : undefined}
+        total={gallery.length}
         onClose={() => setPreviewItem(null)}
-        hasPrevious={previewIndex > 0}
-        hasNext={previewIndex >= 0 && previewIndex < filtered.length - 1}
-        onPrevious={() => {
-          if (previewIndex > 0) setPreviewItem(filtered[previewIndex - 1] ?? null);
-        }}
-        onNext={() => {
-          if (previewIndex >= 0 && previewIndex < filtered.length - 1) {
-            setPreviewItem(filtered[previewIndex + 1] ?? null);
-          }
-        }}
+        hasPrevious={previewAt > 0}
+        hasNext={previewAt < gallery.length - 1}
+        onPrevious={() => setPreviewAt((i) => Math.max(0, i - 1))}
+        onNext={() => setPreviewAt((i) => Math.min(gallery.length - 1, i + 1))}
       />
 
       {descriptionPreview && (

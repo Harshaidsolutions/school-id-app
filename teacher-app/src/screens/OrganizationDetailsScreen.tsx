@@ -1,3 +1,4 @@
+import { ZoomTap } from "../components/ZoomTap";
 import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { contentMaxStyle } from "../theme/responsive";
 import { useCallback, useEffect, useMemo, useRef, useState, memo, type ReactNode } from "react";
@@ -1211,23 +1212,26 @@ const UploadRow = memo(function UploadRow({
             {hasMultiTags ? (
               <View style={styles.tagPreviewRow}>
                 {previewUris!.map((tagUri, idx) => (
-                  <Image
-                    key={`${tagUri}-${idx}`}
-                    source={{ uri: tagUri }}
-                    style={styles.tagPreviewThumb}
-                    resizeMode="contain"
-                  />
+                  <ZoomTap key={`${tagUri}-${idx}`} images={previewUris!} startAt={idx} title={label}>
+                    <Image
+                      source={{ uri: tagUri }}
+                      style={styles.tagPreviewThumb}
+                      resizeMode="contain"
+                    />
+                  </ZoomTap>
                 ))}
               </View>
             ) : uri ? (
-              <Image
-                source={{ uri }}
-                style={styles.selectionImage}
-                resizeMode="contain"
-                onError={() => {
-                  /* uri failed — row still shows header + check */
-                }}
-              />
+              <ZoomTap images={[uri]} title={label} style={{ width: "100%", alignItems: "center" }}>
+                <Image
+                  source={{ uri }}
+                  style={styles.selectionImage}
+                  resizeMode="contain"
+                  onError={() => {
+                    /* uri failed — row still shows header + check */
+                  }}
+                />
+              </ZoomTap>
             ) : sublabel ? (
               <Text style={[styles.selectionFallback, { color: colors.text }]}>
                 {sublabel}
@@ -1264,15 +1268,17 @@ const UploadRow = memo(function UploadRow({
           {busy ? (
             <ActivityIndicator size="small" color={colors.brandGreen} />
           ) : null}
-          <Image
-            key={uri}
-            source={{ uri }}
-            style={[
-              thumbSize === "large" ? styles.uploadThumbLarge : styles.uploadThumb,
-              { backgroundColor: colors.graySoft },
-            ]}
-            resizeMode="contain"
-          />
+          <ZoomTap images={[uri]} title={label}>
+            <Image
+              key={uri}
+              source={{ uri }}
+              style={[
+                thumbSize === "large" ? styles.uploadThumbLarge : styles.uploadThumb,
+                { backgroundColor: colors.graySoft },
+              ]}
+              resizeMode="contain"
+            />
+          </ZoomTap>
           <View
             style={[styles.checkBadge, { backgroundColor: colors.brandGreen }]}
           >

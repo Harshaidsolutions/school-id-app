@@ -123,6 +123,8 @@ export interface TeacherModel {
   description: string | null;
   image_url: string | null;
   video_url?: string | null;
+  /** More pictures of the same model / tag (shown after the main one in the viewer). */
+  extra_image_urls?: string[] | null;
   created_at: string | null;
 }
 

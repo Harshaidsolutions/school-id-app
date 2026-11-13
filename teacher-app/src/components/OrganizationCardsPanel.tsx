@@ -1,3 +1,4 @@
+import { FullScreenImageViewer } from "./FullScreenImageViewer";
 import { ScreenBackdrop } from "./ScreenBackdrop";
 import { contentMaxStyle, responsiveColumns } from "../theme/responsive";
 import { Ionicons } from "@expo/vector-icons";
@@ -220,7 +221,7 @@ export function OrganizationCardsPanel() {
               <Pressable disabled={viewerIndex>=visible.length-1} onPress={() => setViewerId(visible[viewerIndex+1].id)} style={{...actionStyle,flex:1,opacity:viewerIndex>=visible.length-1?.4:1}}><Text style={{color:"#fff"}}>Next →</Text></Pressable>
             </>}
           </View>
-          {viewPhoto && <Pressable accessibilityLabel="Close photo" onPress={() => setViewPhoto(null)} style={{position:"absolute",inset:0,backgroundColor:"#fff",justifyContent:"center",padding:16}}><Image source={{uri:viewPhoto}} style={{width:"100%",height:"80%"}} resizeMode="contain"/><Text style={textStyle}>Close photo</Text></Pressable>}
+          <FullScreenImageViewer visible={Boolean(viewPhoto)} images={viewPhoto ? [viewPhoto] : []} onClose={() => setViewPhoto(null)} colors={colors} showNavButtons={false} />
         </View>
       </Modal>
       <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}><Pressable onPress={() => setMenuOpen(false)} style={{flex:1,backgroundColor:"rgba(20,20,50,.4)",justifyContent:"center",padding:24}}><View style={{padding:20,gap:20,backgroundColor:colors.surface,borderRadius:20}}>

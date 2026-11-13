@@ -862,10 +862,10 @@ export function GeneratorApp() {
 
         {/* Right: settings of the selected photo / text — always in the same place, can be hidden */}
         {panelOpen && (
-          <aside className="card idg-right">
+          <aside className={`card idg-right${selected ? " has-sel" : ""}`}>
             <div className="idg-right-head">
               <h3>{selected ? (selected.kind === "text" ? (selected.column ? niceLabel(selected.column) : "Text") : selected.kind === "image" ? mediaLabel(selected.media) : selected.kind === "qr" ? "QR code" : "Barcode") : "Settings"}</h3>
-              <button type="button" className="idg-tool" onClick={() => setPanelOpen(false)} aria-label="Hide settings">×</button>
+              <button type="button" className="idg-tool" onClick={() => (window.matchMedia("(max-width: 760px)").matches ? setSelectedId(null) : setPanelOpen(false))} aria-label="Close settings">×</button>
             </div>
             {selected ? (
               <Properties

@@ -16,7 +16,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { ZoomableImage } from "./ZoomableImage";
 import { C, F, R, S } from "../theme";
 import { Tap } from "./Pressable";
 import { Banner, Button, Field, Muted, SearchBar, type IconName } from "./kit";
@@ -332,6 +333,7 @@ export function ImageViewer({
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<(typeof items)[number]>>(null);
+  const [zoomed, setZoomed] = useState(false);
   const safeIndex = Math.min(Math.max(index, 0), Math.max(items.length - 1, 0));
   const item = items[safeIndex];
   const go = (i: number) => {
@@ -341,6 +343,7 @@ export function ImageViewer({
   };
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={[st.viewer, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12 }]}>
         <View style={st.viewerHead}>
           <View style={{ flex: 1 }}>
@@ -360,6 +363,7 @@ export function ImageViewer({
             data={items}
             horizontal
             pagingEnabled
+            scrollEnabled={!zoomed}
             showsHorizontalScrollIndicator={false}
             initialScrollIndex={safeIndex}
             getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
@@ -371,7 +375,7 @@ export function ImageViewer({
             renderItem={({ item: it }) => (
               <View style={{ width, flex: 1, justifyContent: "center", paddingHorizontal: S.md }}>
                 {it.source ? (
-                  <Image source={it.source} style={{ width: "100%", height: "100%" }} contentFit="contain" transition={150} />
+                  <ZoomableImage source={it.source} onZoomChange={setZoomed} />
                 ) : (
                   <Text style={[st.viewerSub, { textAlign: "center" }]}>No image</Text>
                 )}
@@ -393,7 +397,9 @@ export function ImageViewer({
           </Tap>
         </View>
         {actions ? <View style={{ flexDirection: "row", gap: S.sm, paddingHorizontal: S.lg }}>{actions}</View> : null}
+        <Text style={st.viewerHint}>Pinch or double-tap to zoom</Text>
       </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -419,6 +425,7 @@ const st = StyleSheet.create({
   viewer: { flex: 1, backgroundColor: "#0E0C1F" },
   viewerHead: { flexDirection: "row", alignItems: "center", paddingHorizontal: S.lg, gap: S.md },
   viewerTitle: { fontFamily: F.hSemi, fontSize: 16, color: C.white },
+  viewerHint: { fontFamily: F.body, fontSize: 11, color: "rgba(255,255,255,0.6)", textAlign: "center", marginTop: 6 },
   viewerSub: { fontFamily: F.body, fontSize: 13, color: "rgba(255,255,255,0.75)" },
   viewerBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" },
   viewerCount: { fontFamily: F.hSemi, fontSize: 14, color: C.white, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" },

@@ -340,7 +340,8 @@ export function validateStudentRows(
 export function buildExportHeaders(
   formFields: FormFieldConfig[]
 ): { label: string; key: string }[] {
-  const enabled = formFields.filter((f) => f.enabled && f.key !== "signature_upload");
+  // Every column is downloaded, also fields hidden in Form Setup (hiding only affects the app and the form).
+  const enabled = formFields.filter((f) => f.key !== "signature_upload");
   const orderOf = (f: FormFieldConfig, index: number): number => {
     if (typeof f.displayOrder === "number") return f.displayOrder;
     const idx = (f as { colIndex?: number }).colIndex;

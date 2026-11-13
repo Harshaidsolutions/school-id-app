@@ -143,7 +143,8 @@ export function RecordFormSheet({
   async function save() {
     const nameField = findStudentNameField(fields);
     const classField = findClassField(fields);
-    if (nameField && !val(nameField.key).trim()) return setError(`${nameField.label} is required.`);
+    // A new record needs a name; an existing one may be left without a name (filled in later).
+    if (isNew && nameField && !val(nameField.key).trim()) return setError(`${nameField.label} is required.`);
     if (classField && !val(classField.key).trim()) return setError(`${classField.label} is required.`);
     for (const f of [photo, signature]) if (f && !sizeOk(f, 10)) return setError("Photos must be under 10 MB.");
     for (const fl of fields) {

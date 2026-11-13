@@ -18,6 +18,7 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [editing, setEditing] = useState<number | null>(null);
   const [editLabel, setEditLabel] = useState("");
   const [newLabel, setNewLabel] = useState("");
@@ -87,6 +88,24 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
     setNewLabel("");
     setError(null);
   }
+  /** Visible / Hidden takes effect at once (no separate Save needed, nothing lost by going back). */
+  async function setVisible(i: number, enabled: boolean) {
+    const next = fields.map((f, k) => (k === i ? { ...f, enabled } : f));
+    setFields(next);
+    try {
+      const payload = withSequentialDisplayOrder(next);
+      if (isOrg)
+        await api.post(`/admin/organizations/${id}/forms`, {
+          fields: payload.map((f) => ({ id: f.organizationFieldId, fieldName: f.label, fieldType: f.fieldType ?? "text", enabled: f.enabled, required: f.required !== false })),
+        });
+      else await api.put("/admin/form-config", { ...params, fields: payload });
+      setError(null);
+      setNotice(`${next[i].label}: ${enabled ? "visible" : "hidden"} in the school app and form. (Downloaded Excel still has every column.)`);
+    } catch (e) {
+      setFields(fields);
+      setError(errMsg(e, "Could not save. Check the internet and try again."));
+    }
+  }
   async function save() {
     if (!fields.length) return setError("No fields to save.");
     setSaving(true);
@@ -120,6 +139,7 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
   return (
     <Screen title="Form Setup" subtitle={name} footer={fields.length ? <Button title="Save" icon="save-outline" onPress={() => void save()} loading={saving} /> : undefined}>
       <Banner text={error} onClose={() => setError(null)} />
+      <Banner text={notice} tone="green" onClose={() => setNotice(null)} />
       {kind === "school" && parentForm !== null ? (
         <Card style={{ marginBottom: S.lg, backgroundColor: C.primarySoft }}>
           <Toggle label="Parent student form" sub="Show the parent form link on the app’s ID Cards screen." value={parentForm} onChange={(v) => void toggleParentForm(v)} />
@@ -190,7 +210,7 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
                 )}
               </View>
               <View style={{ alignItems: "center" }}>
-                <Toggle value={f.enabled} onChange={(v) => patch(i, { enabled: v })} />
+                <Toggle value={f.enabled} onChange={(v) => void setVisible(i, v)} />
                 <Text style={st.vis}>{f.enabled ? "Visible" : "Hidden"}</Text>
               </View>
             </View>

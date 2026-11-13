@@ -14,6 +14,8 @@ import {
   PanGestureHandler,
   PinchGestureHandler,
   State,
+  TapGestureHandler,
+  type TapGestureHandlerStateChangeEvent,
   type PanGestureHandlerGestureEvent,
   type PanGestureHandlerStateChangeEvent,
   type PinchGestureHandlerGestureEvent,
@@ -314,6 +316,30 @@ export function FullScreenImageViewer({
     [translateX, translateY]
   );
 
+  /** Double-tap: zoom in to 2.5×, or back to fit. */
+  const onDoubleTap = useCallback(
+    (event: TapGestureHandlerStateChangeEvent) => {
+      if (event.nativeEvent.state !== State.ACTIVE) return;
+      const next = scaleRef.current > 1.05 ? 1 : 2.5;
+      scaleRef.current = next;
+      pinchBaseScaleRef.current = next;
+      if (next === 1) {
+        panXRef.current = 0;
+        panYRef.current = 0;
+        panBaseXRef.current = 0;
+        panBaseYRef.current = 0;
+        Animated.parallel([
+          Animated.timing(scaleAnim, { toValue: 1, duration: 180, useNativeDriver: false }),
+          Animated.timing(translateX, { toValue: 0, duration: 180, useNativeDriver: false }),
+          Animated.timing(translateY, { toValue: 0, duration: 180, useNativeDriver: false }),
+        ]).start();
+      } else {
+        Animated.timing(scaleAnim, { toValue: next, duration: 180, useNativeDriver: false }).start();
+      }
+    },
+    [scaleAnim, translateX, translateY]
+  );
+
   const uri = images[index] ?? null;
   if (!visible) return null;
 
@@ -404,6 +430,8 @@ export function FullScreenImageViewer({
 
           <View style={[styles.stage, { paddingBottom: spacing.sm }]}>
             {uri ? (
+              <TapGestureHandler numberOfTaps={2} onHandlerStateChange={onDoubleTap}>
+              <Animated.View style={styles.gestureWrap}>
               <PinchGestureHandler
                 ref={pinchRef}
                 onGestureEvent={onPinchGestureEvent}
@@ -445,6 +473,8 @@ export function FullScreenImageViewer({
                   </PanGestureHandler>
                 </Animated.View>
               </PinchGestureHandler>
+              </Animated.View>
+              </TapGestureHandler>
             ) : null}
           </View>
 

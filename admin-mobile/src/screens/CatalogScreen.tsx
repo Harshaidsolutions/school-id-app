@@ -13,6 +13,7 @@ import { Banner, Button, Chips, Empty, Fab, Field, Loading, Muted, Pill, SearchB
 import { ActionSheet, ImageViewer, Sheet } from "../ui/Sheet";
 import { VideoPlayer } from "../ui/VideoPlayer";
 import { Tap } from "../ui/Pressable";
+import { TapToZoom } from "../ui/TapToZoom";
 import { DOC_TYPES, asFormFile, pickDocuments, pickImages, sizeOk, type PickedFile } from "../lib/files";
 import type { ScreenProps } from "../navigation/types";
 
@@ -226,6 +227,7 @@ function CatalogEditor({ kind, state, onClose, onDone }: { kind: Kind; state: { 
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [key, setKey] = useState("");
+  const [current, setCurrent] = useState<CatalogItem | null>(null);
   const k = state ? editing?.id ?? "new" : "";
   if (k !== key) {
     setKey(k);
@@ -235,6 +237,7 @@ function CatalogEditor({ kind, state, onClose, onDone }: { kind: Kind; state: { 
     setVideo(null);
     setError(null);
     setProgress(null);
+    setCurrent(editing);
   }
   const isBrochure = kind === "brochure";
   const isTag = kind === "tag";
@@ -261,31 +264,34 @@ function CatalogEditor({ kind, state, onClose, onDone }: { kind: Kind; state: { 
       if (!name.trim()) return setError("Enter a name.");
       if (!isTag && words(description) > MAX_WORDS) return setError(`Description must be ${MAX_WORDS} words or fewer.`);
       if (!editing && !files.length) return setError("Choose an image.");
-      if (isTag && files.length) {
-        const [primary, ...extras] = files;
-        const form = new FormData();
-        form.append("kind", kind);
-        form.append("name", name.trim());
-        form.append("description", "");
-        form.append("file", asFormFile(primary));
-        let itemId = editing?.id;
-        if (editing) await api.put(`/admin/catalog/${editing.id}`, form, { timeout: 300000 });
-        else itemId = (await api.post<{ item: CatalogItem }>(`/admin/catalog?kind=${kind}`, form, { timeout: 300000 })).data.item.id;
-        for (let i = 0; i < extras.length; i++) {
-          setProgress(`Uploading extra image ${i + 1} of ${extras.length}`);
+      // Several images at once: the first is the main picture, the rest are extra images.
+      const addExtras = async (itemId: string, list: PickedFile[], offset: number) => {
+        for (let i = 0; i < list.length; i++) {
+          setProgress(`Uploading image ${offset + i + 1} of ${files.length}`);
           const extra = new FormData();
-          extra.append("file", asFormFile(extras[i]));
+          extra.append("file", asFormFile(list[i]));
           await api.post(`/admin/catalog/${itemId}/extra-images`, extra, { timeout: 300000 });
         }
+      };
+      const form = new FormData();
+      form.append("kind", kind);
+      form.append("name", name.trim());
+      form.append("description", isTag ? "" : description.trim());
+      if (video) form.append("video", asFormFile(video));
+      if (editing) {
+        // Editing: new images are added to the ones already there.
+        const replaceMain = !current?.image_url && files.length > 0;
+        if (replaceMain) form.append("file", asFormFile(files[0]));
+        if (files.length) setProgress(`Uploading image 1 of ${files.length}`);
+        await api.put(`/admin/catalog/${editing.id}`, form, { timeout: 600000 });
+        await addExtras(editing.id, replaceMain ? files.slice(1) : files, replaceMain ? 1 : 0);
       } else {
-        const form = new FormData();
-        form.append("kind", kind);
-        form.append("name", name.trim());
-        form.append("description", isTag ? "" : description.trim());
-        if (files[0]) form.append("file", asFormFile(files[0]));
-        if (video) form.append("video", asFormFile(video));
-        if (editing) await api.put(`/admin/catalog/${editing.id}`, form, { timeout: 600000 });
-        else await api.post(`/admin/catalog?kind=${kind}`, form, { timeout: 600000 });
+        if (files[0]) {
+          form.append("file", asFormFile(files[0]));
+          setProgress(`Uploading image 1 of ${files.length}`);
+        }
+        const itemId = (await api.post<{ item: CatalogItem }>(`/admin/catalog?kind=${kind}`, form, { timeout: 600000 })).data.item.id;
+        await addExtras(itemId, files.slice(1), 1);
       }
       onDone(editing ? "Saved." : "Added.");
     } catch (e) {
@@ -337,18 +343,56 @@ function CatalogEditor({ kind, state, onClose, onDone }: { kind: Kind; state: { 
       {!isBrochure && !isTag ? (
         <Field label="Description" value={description} onChangeText={setDescription} multiline hint={`${words(description)} / ${MAX_WORDS} words`} />
       ) : null}
-{editing ? null : (
+      {current && (current.image_url || (current.extra_image_urls?.length ?? 0) > 0) ? (
+        <View style={{ marginBottom: S.md }}>
+          <Text style={st.curTitle}>Current images ({(current.image_url ? 1 : 0) + (current.extra_image_urls?.length ?? 0)})</Text>
+          <View style={st.curRow}>
+            {current.image_url && !isPdf(current.image_url) ? (
+              <View style={st.curBox}>
+                <TapToZoom source={authedSource(current.image_url)} style={st.curImg} contentFit="contain" title={`${current.name} (main)`} />
+                <Text style={st.curMain}>Main</Text>
+              </View>
+            ) : null}
+            {(current.extra_image_urls ?? []).map((url) => (
+              <View key={url} style={st.curBox}>
+                <TapToZoom source={authedSource(url)} style={st.curImg} contentFit="contain" title={current.name} />
+                <Tap
+                  style={st.curX}
+                  accessibilityLabel="Remove this image"
+                  onPress={() =>
+                    Alert.alert("Remove this image?", "", [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Remove",
+                        style: "destructive",
+                        onPress: () =>
+                          void api
+                            .delete<{ item: CatalogItem }>(`/admin/catalog/${current.id}/extra-images`, { data: { url } })
+                            .then(({ data }) => setCurrent(data.item))
+                            .catch((e) => setError(errMsg(e, "Could not remove the image."))),
+                      },
+                    ])
+                  }
+                >
+                  <Ionicons name="close" size={14} color={C.white} />
+                </Tap>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+      {(
         <>
       <View style={{ flexDirection: "row", gap: S.sm, marginBottom: S.sm }}>
         <Button title="Gallery" variant="soft" icon="images-outline" style={{ flex: 1 }} onPress={async () => {
-          const picked = await pickImages(isTag || isBrochure);
+          const picked = await pickImages(true);
           if (picked.length) {
             setFiles(picked);
-            if (!name && picked[0] && !isBrochure) setName(picked[0].name.replace(/\.[^.]+$/, ""));
+            if (!name && picked[0] && !isBrochure && !editing) setName(picked[0].name.replace(/\.[^.]+$/, ""));
           }
         }} />
         <Button title="Files / PDF" variant="soft" icon="document-outline" style={{ flex: 1 }} onPress={async () => {
-          const picked = await pickDocuments(DOC_TYPES.imageOrPdf, isTag || isBrochure);
+          const picked = await pickDocuments(DOC_TYPES.imageOrPdf, true);
           if (picked.length) {
             setFiles(picked);
             if (!name && picked[0] && !isBrochure) setName(picked[0].name.replace(/\.[^.]+$/, ""));
@@ -360,7 +404,7 @@ function CatalogEditor({ kind, state, onClose, onDone }: { kind: Kind; state: { 
           {files.length} file{files.length === 1 ? "" : "s"} selected
         </Text>
       ) : (
-        <Muted>{isTag ? "Choose one or more images. The first is the main image." : isBrochure ? "Choose one or more images or PDFs." : "Choose an image or PDF."}</Muted>
+        <Muted>{isBrochure ? "Choose one or more images or PDFs." : editing ? "Choose one or more images to add to this item." : "Choose one or more images. The first is the main image."}</Muted>
       )}
       {!isBrochure && !isTag ? (
         <View style={{ marginTop: S.lg }}>
@@ -384,5 +428,11 @@ const st = StyleSheet.create({
   video: { position: "absolute", right: 8, bottom: 8, width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" },
   foot: { flexDirection: "row", alignItems: "center", padding: S.sm, gap: 4 },
   name: { fontFamily: F.hSemi, fontSize: 13, color: C.ink },
+  curTitle: { fontFamily: F.hSemi, fontSize: 14, color: C.ink, marginBottom: S.sm },
+  curRow: { flexDirection: "row", flexWrap: "wrap", gap: S.sm },
+  curBox: { width: 76 },
+  curImg: { width: 76, height: 76, borderRadius: 10, borderWidth: 1, borderColor: C.line, backgroundColor: C.white },
+  curMain: { fontFamily: F.body, fontSize: 11, color: C.muted, textAlign: "center", marginTop: 2 },
+  curX: { position: "absolute", top: -6, right: -6, width: 24, height: 24, borderRadius: 12, backgroundColor: C.danger, alignItems: "center", justifyContent: "center" },
   selected: { fontFamily: F.hSemi, fontSize: 15, color: C.primaryDeep, textAlign: "center", paddingVertical: S.md, backgroundColor: C.primarySoft, borderRadius: R.md },
 });

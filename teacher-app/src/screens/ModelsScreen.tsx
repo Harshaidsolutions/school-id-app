@@ -241,20 +241,17 @@ export function ModelsScreen() {
     return modelVideoUrl(match ?? null);
   }
 
+  /** Every picture of every model / tag: the main one first, then its extra pictures. */
   const modelViewerItems = useMemo(
     () =>
-      modelNames
-        .map((name) => ({
-          name,
-          uri: imageFor(name),
-          description: descriptionFor(name),
-        }))
-        .filter(
-          (
-            entry
-          ): entry is { name: string; uri: string; description: string } =>
-            Boolean(entry.uri)
-        ),
+      modelNames.flatMap((name) => {
+        const main = imageFor(name);
+        const extras = (tabCatalog.find((m) => m.name === name)?.extra_image_urls ?? [])
+          .map((u) => resolveMediaUrl(u))
+          .filter((u): u is string => Boolean(u));
+        const uris = [main, ...extras].filter((u): u is string => Boolean(u));
+        return uris.map((uri, k) => ({ name, uri, description: descriptionFor(name), k, n: uris.length }));
+      }),
     [modelNames, tabCatalog, modelTab]
   );
   const previewImages = modelViewerItems.map((entry) => entry.uri);
@@ -495,7 +492,10 @@ export function ModelsScreen() {
         initialIndex={previewIndex ?? 0}
         onClose={() => setPreviewIndex(null)}
         onIndexChange={setViewerIndex}
-        title={(idx) => modelViewerItems[idx]?.name ?? null}
+        title={(idx) => {
+          const e = modelViewerItems[idx];
+          return e ? (e.n > 1 ? `${e.name} (${e.k + 1}/${e.n})` : e.name) : null;
+        }}
         caption={(idx) =>
           modelTab === "tags"
             ? null

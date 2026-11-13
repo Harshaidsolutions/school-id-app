@@ -1,7 +1,7 @@
 {
   "name": "msidc-desktop-generator",
   "productName": "Harsha ID Solutions - ID Card Generator",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Offline ID card generator by Harsha ID Solutions",
   "author": "Harsha ID Solutions",
   "private": true,

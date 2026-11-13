@@ -1,3 +1,4 @@
+import { FullScreenImageViewer } from "./FullScreenImageViewer";
 import { GeneratedIdCard } from "./GeneratedIdCard";
 import { Pressable } from "./Pressable";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -57,19 +58,6 @@ export function StudentFlowModal({
   const indexRef = useRef(index);
   const [fullscreenPhoto, setFullscreenPhoto] = useState(false);
 
-  const photoSwipeClose = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_evt, gesture) =>
-        Math.abs(gesture.dx) > 14 &&
-        Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.25,
-      onPanResponderRelease: (_evt, gesture) => {
-        if (Math.abs(gesture.dx) >= 72 && Math.abs(gesture.dy) < 64) {
-          setFullscreenPhoto(false);
-        }
-      },
-    })
-  ).current;
 
   const photoCapture = useStudentPhotoCapture(navigation, {
     fromModal: true,
@@ -311,30 +299,14 @@ export function StudentFlowModal({
         </View>
       </View>
 
-      <Modal visible={fullscreenPhoto} transparent animationType="fade">
-        <View style={styles.fullscreenBackdrop}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => setFullscreenPhoto(false)}
-          />
-          {student.id_card_url || student.photo_url ? (
-            <View style={styles.fullscreenPhotoWrap} {...photoSwipeClose.panHandlers}>
-              <Image
-                source={{ uri: (student.id_card_url || student.photo_url) as string }}
-                style={styles.fullscreenPhoto}
-                resizeMode="contain"
-              />
-            </View>
-          ) : null}
-          <Pressable
-            style={[styles.fullscreenClose, { top: insets.top + spacing.sm }]}
-            onPress={() => setFullscreenPhoto(false)}
-            hitSlop={12}
-          >
-            <Ionicons name="close" size={28} color="#FFFFFF" />
-          </Pressable>
-        </View>
-      </Modal>
+      <FullScreenImageViewer
+        visible={fullscreenPhoto}
+        images={[student.id_card_url, student.photo_url].filter((u): u is string => Boolean(u))}
+        onClose={() => setFullscreenPhoto(false)}
+        colors={colors}
+        title={student.student_name ?? undefined}
+        showNavButtons={Boolean(student.id_card_url && student.photo_url)}
+      />
 
       {photoCaptureEnabled ? (
         <PhotoSourceSheet
