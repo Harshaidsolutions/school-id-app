@@ -328,6 +328,15 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
     }
   }
 
+  /** Remove every field from the card so the admin can start on a blank card (the template picture stays). */
+  function clearCard() {
+    if (!layout.elements.length) return;
+    if (!window.confirm("Remove all fields from this card and start fresh? The template picture stays, and you add the fields you want.")) return;
+    setLayout((l) => ({ ...l, elements: [] }));
+    setSelectedId(null);
+    say("Card cleared. Add the fields you want from the left.", "info");
+  }
+
   function removeTemplate(target: Side) {
     setTemplates((t) => {
       if (t[target]) URL.revokeObjectURL(t[target]!.url);
@@ -684,6 +693,7 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
           </div>
           <div className="idg-left-actions">
             <button type="button" className="btn-secondary" disabled={!ready.length} onClick={() => setPreviewOpen(true)}>Preview</button>
+            <button type="button" className="btn-secondary idg-danger" disabled={!layout.elements.length} onClick={clearCard}>Start fresh (clear fields)</button>
             {failedIds.length > 0 && (
               <button type="button" className="btn-secondary idg-errors-btn" disabled={Boolean(busy)} onClick={() => { setOnlyFailed(true); setConfirmOpen(true); }}>
                 Regenerate errors only ({failedIds.length})
