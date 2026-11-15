@@ -15,6 +15,8 @@ export type Draft = {
   print: { sheetKey: string; landscape: boolean; gap: number; margin: number };
   className: string;
   savedAt: number;
+  /** true only when the user chose "Save" on exit. Old auto-saved drafts are undefined and are ignored. */
+  explicit?: boolean;
 };
 
 const DB = "idg-drafts";

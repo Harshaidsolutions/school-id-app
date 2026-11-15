@@ -176,9 +176,9 @@ export function GeneratorApp() {
   const [onlyFailed, setOnlyFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  const savedSnapshot = useRef<string>("");
   const restored = useRef(false);
   const leaving = useRef(false);
+  const baseline = useRef<string | null>(null);
 
   const visibleSides: Side[] = sideMode === "double" ? ["front", "back"] : ["front"];
 
@@ -407,19 +407,20 @@ export function GeneratorApp() {
     restored.current = true;
     void (async () => {
       const draft = await loadDraft(orgId);
-      if (draft) {
-        setBusy({ label: "Opening your last work for this school…", done: 0, total: 0 });
+      // Only reopen a design the admin chose to Save on exit. (Old silently-saved drafts are ignored,
+      // so a school never shows leftover fields the admin did not place and save.)
+      if (draft && draft.explicit) {
+        setBusy({ label: "Opening your saved design for this school…", done: 0, total: 0 });
         try {
-          // Reopen the template picture and settings, but never pre-place fields — the admin drags the fields they want.
-          setLayout((l) => ({ ...stripColumnLabels(draft.layout), elements: [], roles: l.roles, matchColumn: "Photo ID", matchBy: "column" }));
+          setLayout((l) => ({ ...stripColumnLabels(draft.layout), roles: l.roles, matchColumn: "Photo ID", matchBy: "column" }));
           setSideMode(draft.sideMode);
           setPrint(draft.print);
           if (draft.templates.front) await setTemplateFromBlob("front", draft.templates.front.blob, draft.templates.front.name, draft.templates.front.libraryId, false);
           if (draft.templates.back) await setTemplateFromBlob("back", draft.templates.back.blob, draft.templates.back.name, draft.templates.back.libraryId, false);
-          savedSnapshot.current = draft.savedSnapshot;
         } finally {
           setBusy(null);
         }
+        baseline.current = null; // set after load settles
         return;
       }
       const templateParam = params.get("templateId");
@@ -436,29 +437,39 @@ export function GeneratorApp() {
           setBusy(null);
         }
       }
-      savedSnapshot.current = "start";
+      baseline.current = null; // set after load settles
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, libraryLoaded, studentsLoaded]);
 
-  // Keep the work for this school in the browser so a refresh / close / app restart reopens it.
+  // Baseline snapshot of the just-opened card, so "Back" can tell whether the admin actually changed anything.
   useEffect(() => {
-    if (!orgId || !restored.current) return;
-    const t = setTimeout(() => {
-      const slot = (s: TemplateSlot) => (s ? { blob: s.blob, name: s.name, libraryId: s.libraryId } : null);
-      const draft: Draft = {
-        layout, sideMode, designId: null, print, className: "",
-        templates: { front: slot(templates.front), back: slot(templates.back) },
-        savedSnapshot: snapshot(),
-        savedAt: Date.now(),
-      };
-      void saveDraft(orgId, draft);
-    }, 700);
-    return () => clearTimeout(t);
-  }, [layout, sideMode, templates, print, orgId, snapshot]);
+    if (restored.current && !busy && baseline.current === null) baseline.current = snapshot();
+  }, [busy, snapshot]);
+
+  /** Save this school's design so it reopens next time (used by the "Save changes?" prompt on Back). */
+  async function saveDesign() {
+    if (!orgId) return;
+    const slot = (sl: TemplateSlot) => (sl ? { blob: sl.blob, name: sl.name, libraryId: sl.libraryId } : null);
+    const draft: Draft = {
+      layout, sideMode, designId: null, print, className: "",
+      templates: { front: slot(templates.front), back: slot(templates.back) },
+      savedSnapshot: snapshot(), savedAt: Date.now(), explicit: true,
+    };
+    await saveDraft(orgId, draft);
+    baseline.current = snapshot();
+  }
 
   const backTo = orgId ? (orgKind === "school" ? `/students?schoolId=${orgId}&schoolName=${encodeURIComponent(orgName)}` : `/institute-members?instituteId=${orgId}&instituteName=${encodeURIComponent(orgName)}`) : "/schools";
-  const onBack = () => { leaving.current = true; navigate(backTo); };
+  const onBack = () => {
+    const changed = baseline.current !== null && snapshot() !== baseline.current;
+    if (changed) {
+      const save = window.confirm("Save your changes to this card?\n\nOK = save (they will be here next time you open this school).\nCancel = don't save (the changes are discarded).");
+      if (save) void saveDesign();
+    }
+    leaving.current = true;
+    navigate(backTo);
+  };
 
   // Photo / signature messages belong to step 1: don't repeat them in the editor.
   useEffect(() => {
