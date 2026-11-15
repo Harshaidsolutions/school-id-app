@@ -362,20 +362,6 @@ export function GeneratorApp() {
     }
   }
 
-  /** Blank card: remove every field AND the front/back template pictures, so the admin starts clean. */
-  function clearCard() {
-    if (!layout.elements.length && !templates.front && !templates.back) return;
-    if (!window.confirm("Start fresh on a blank card? This removes the current template picture and all fields for this school. You then choose the correct template and add the fields you want.")) return;
-    setTemplates((t) => {
-      if (t.front) URL.revokeObjectURL(t.front.url);
-      if (t.back) URL.revokeObjectURL(t.back.url);
-      return { front: null, back: null };
-    });
-    setLayout((l) => ({ ...l, elements: [] }));
-    setSelectedId(null);
-    say("Blank card ready. Choose this school's template, then add the fields you want.", "info");
-  }
-
   function removeTemplate(target: Side) {
     setTemplates((t) => {
       if (t[target]) URL.revokeObjectURL(t[target]!.url);
@@ -424,7 +410,8 @@ export function GeneratorApp() {
       if (draft) {
         setBusy({ label: "Opening your last work for this school…", done: 0, total: 0 });
         try {
-          setLayout((l) => ({ ...stripColumnLabels(draft.layout), roles: l.roles, matchColumn: "Photo ID", matchBy: "column" }));
+          // Reopen the template picture and settings, but never pre-place fields — the admin drags the fields they want.
+          setLayout((l) => ({ ...stripColumnLabels(draft.layout), elements: [], roles: l.roles, matchColumn: "Photo ID", matchBy: "column" }));
           setSideMode(draft.sideMode);
           setPrint(draft.print);
           if (draft.templates.front) await setTemplateFromBlob("front", draft.templates.front.blob, draft.templates.front.name, draft.templates.front.libraryId, false);
@@ -820,7 +807,6 @@ export function GeneratorApp() {
           </div>
           <div className="idg-left-actions">
             <button type="button" className="btn-secondary" disabled={!ready.length} onClick={() => setPreviewOpen(true)}>Preview</button>
-            <button type="button" className="btn-secondary idg-danger" disabled={!layout.elements.length && !templates.front && !templates.back} onClick={clearCard}>Start fresh (blank card)</button>
             {failedIds.length > 0 && (
               <button type="button" className="btn-secondary idg-errors-btn" disabled={Boolean(busy)} onClick={() => { setOnlyFailed(true); setConfirmOpen(true); }}>
                 Regenerate errors only ({failedIds.length})
