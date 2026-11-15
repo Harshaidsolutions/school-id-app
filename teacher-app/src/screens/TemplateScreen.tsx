@@ -31,6 +31,7 @@ import { mergeOrgDetailsDraft } from "../utils/orgDetailsDraft";
 import { useToast } from "../components/Toast";
 import { ErrorRetry, LoadingBlock } from "../components/ErrorRetry";
 import { OrangeGradientHeader } from "../components/OrangeGradientHeader";
+import { SelectionLockBanner, useSelectionLock } from "../components/SelectionLockBanner";
 import { templatePreviewUrl } from "../utils/templateImage";
 import type { TemplateItem, TemplatesResponse } from "../types";
 import { TEMPLATE_TABS } from "../types";
@@ -235,6 +236,7 @@ export function TemplateScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { colors } = useTheme();
   const { showToast } = useToast();
+  const selectionLock = useSelectionLock();
   const { user } = useAuth();
   const userId = user?.id ?? "";
   const insets = useSafeAreaInsets();
@@ -315,6 +317,10 @@ export function TemplateScreen() {
 
   async function saveSelection(item: TemplateItem) {
     if (selecting) return;
+    if (selectionLock.blockedMessage) {
+      showToast(selectionLock.blockedMessage);
+      return;
+    }
     setSelecting(true);
     try {
       setSelectedId(item.id);
@@ -436,6 +442,8 @@ export function TemplateScreen() {
           pointerEvents="none"
         />
       </View>
+
+      <SelectionLockBanner lock={selectionLock} onMessage={showToast} />
 
       {loading && templates.length === 0 ? (
         <LoadingBlock label="Loading templates…" />

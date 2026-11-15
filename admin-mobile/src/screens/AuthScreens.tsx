@@ -68,7 +68,7 @@ function AuthShell({ title, subtitle, eyebrow = "Admin console", children, onBac
                 <Text style={st.eyebrowText}>{eyebrow.toUpperCase()}</Text>
               </View>
             </Rise>
-            <RainbowBar style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} />
+            <RainbowBar rounded style={{ position: "absolute", left: 22, right: 22, bottom: 3 }} />
           </LinearGradient>
 
           {/* White sheet with the form */}

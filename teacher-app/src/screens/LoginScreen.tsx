@@ -6,9 +6,10 @@ import { Entrance } from "../components/Entrance";
 import { Pressable } from "../components/Pressable";
 import { API_BASE_URL } from "../api/client";
 import axios from "axios";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
+  BackHandler,
   Easing,
   StyleSheet,
   KeyboardAvoidingView,
@@ -51,7 +52,16 @@ const REMEMBER_KEY = "teacher_remember_username";
 const REMEMBER_FLAG = "teacher_remember_me";
 
 
-export function LoginScreen(_props: Props) {
+export function LoginScreen({ navigation }: Props) {
+  // Back (button or Android back key) returns to the introduction pages.
+  const backToIntro = useCallback(() => {
+    navigation.replace("Onboarding");
+    return true;
+  }, [navigation]);
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", backToIntro);
+    return () => sub.remove();
+  }, [backToIntro]);
   const styles = useLoginStyles();
   const { colors, isDark, submitGradient } = useTheme();
   const insets = useSafeAreaInsets();
@@ -172,6 +182,9 @@ export function LoginScreen(_props: Props) {
             <LinearGradient colors={isDark ? [colors.background, colors.background] : ["#F3EDFA", "#E9F6FD", "#F6F7FC"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
             <FloatingShapes color={colors.primaryOrange} />
             <RainbowBar style={{ position: "absolute", top: 0, left: 0, right: 0 }} />
+            <Pressable onPress={backToIntro} style={[styles.introBack, { top: insets.top + 10 }]} accessibilityLabel="Back to introduction" hitSlop={10}>
+              <Ionicons name="chevron-back" size={22} color={colors.text} />
+            </Pressable>
             <Animated.View style={{ transform: [{ translateY: float.interpolate({ inputRange: [0, 1], outputRange: [4, -6] }) }] }}>
               <BrandLockup variant="hero" title={BRAND.appName} subtitle={BRAND.headerSubtitle} showTagline={false} singleLine />
             </Animated.View>
@@ -318,6 +331,7 @@ function useLoginStyles() {
       top: { width: "100%", alignItems: "center", paddingBottom: scale(54), overflow: "hidden" },
       dotsRow: { flexDirection: "row", gap: 6, marginTop: scale(10) },
       dot: { width: 7, height: 7, borderRadius: 4 },
+      introBack: { position: "absolute", left: 14, zIndex: 5, width: 40, height: 40, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.9)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#E8E9F3" },
       sheet: {
         width: "100%",
         flexGrow: 1,

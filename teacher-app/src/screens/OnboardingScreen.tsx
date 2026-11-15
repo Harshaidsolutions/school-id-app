@@ -12,6 +12,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
+import { markIntroSeen } from "../navigation/authInitialRoute";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -109,6 +110,7 @@ export function OnboardingScreen({ navigation }: Props) {
   const { colors } = useTheme();
 
   async function finish() {
+    markIntroSeen();
     await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, "1");
     navigation.replace("Login");
   }
@@ -238,10 +240,10 @@ function PageWelcome({ active }: { active: boolean }) {
       </Reveal>
       <Reveal active={active} delay={220} style={{ alignItems: "center" }}>
         <Eyebrow text="Schools & Institutes" />
-        <Text style={st.headline}>
-          Your ID card <Text style={{ color: PURPLE }}>data collector</Text>
+        <Text style={st.headline} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          Data <Text style={{ color: PURPLE }}>Collector</Text>
         </Text>
-        <Text style={st.body}>Photos and student details in one simple app — ready for printing.</Text>
+        <Text style={st.body}>Collect student details and photos — ready for printing.</Text>
       </Reveal>
     </View>
   );
@@ -273,7 +275,7 @@ function PageSteps({ active, width }: { active: boolean; width: number }) {
       <Reveal active={active} style={{ alignItems: "center" }}>
         <Eyebrow text="How it works" />
         <Text style={st.headline}>
-          Capture. Organize. <Text style={{ color: "#F26A1B" }}>Print.</Text>
+          <Text style={{ color: "#1EA0E1" }}>Capture.</Text> <Text style={{ color: "#6A2C9E" }}>Organize.</Text> <Text style={{ color: "#F26A1B" }}>Print.</Text>
         </Text>
       </Reveal>
 
@@ -367,7 +369,7 @@ function PageAllInOne({ active }: { active: boolean }) {
       <Reveal active={active} style={{ alignItems: "center" }}>
         <Eyebrow text="Everything in one app" />
         <Text style={st.headline}>
-          From photo to <Text style={{ color: SKY }}>printed ID card</Text>
+          Print-Ready <Text style={{ color: SKY }}>ID Cards</Text>
         </Text>
       </Reveal>
       <View style={{ width: "100%", gap: 10 }}>

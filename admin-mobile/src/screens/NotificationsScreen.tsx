@@ -186,7 +186,10 @@ export function NotificationsScreen({ inTab = false }: { inTab?: boolean }) {
         view === "compose" ? (
           <Button title={targets.length ? `Send to ${targets.length}` : "Send"} icon="paper-plane" onPress={() => void send()} loading={sending} />
         ) : selecting ? (
-          <Button title={`Delete ${selected.size} selected`} variant="danger" icon="trash-outline" disabled={!selected.size} onPress={() => setBulkOpen(true)} />
+          <View style={{ flexDirection: "row", gap: S.sm }}>
+            <Button title={`Delete all (${shownSent.length})`} variant="secondary" icon="trash-bin-outline" style={{ flex: 1 }} onPress={() => { setSelected(new Set(shownSent.slice(0, 200).map((n) => n.id))); setBulkOpen(true); }} />
+            <Button title={`Delete ${selected.size}`} variant="danger" icon="trash-outline" style={{ flex: 1 }} disabled={!selected.size} onPress={() => setBulkOpen(true)} />
+          </View>
         ) : undefined
       }
     >

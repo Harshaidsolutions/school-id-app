@@ -44,6 +44,27 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
   const [saved, setSaved] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [viewer, setViewer] = useState<number | null>(null);
+  // Template & Model choice in the school app (off while teachers only collect data; "final" choice protected).
+  const lockPath = `/admin/selection-lock/${isOrg ? "organizations" : kind === "institute" ? "institutes" : "schools"}/${id}`;
+  const [selection, setSelection] = useState<{ locked: boolean; finalBy: string | null; finalByName: string | null } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    api.get(lockPath).then((r) => alive && setSelection(r.data.selection)).catch(() => alive && setSelection(null));
+    return () => { alive = false; };
+  }, [lockPath]);
+  async function saveSelection(body: { locked?: boolean; clearFinal?: boolean }) {
+    setSaving(true);
+    setError(null);
+    try {
+      const r = await api.patch(lockPath, body);
+      setSelection(r.data.selection);
+      setSaved("Saved for this organisation.");
+    } catch (e) {
+      setError(errMsg(e, "Could not save settings."));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -187,6 +208,20 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
                 on: org.show_captured_section !== false,
                 set: (v: boolean) => void saveSetting({ showCaptured: v }),
               },
+              ...(selection
+                ? [
+                    {
+                      key: "selection",
+                      title: "Template & Model choice",
+                      text: selection.finalBy
+                        ? `Final choice made by ${selection.finalByName || "a user"} — only they can change it.`
+                        : "Teachers can choose a Template and Model. Turn OFF while they only collect data.",
+                      icon: "grid-outline" as const,
+                      on: !selection.locked,
+                      set: (v: boolean) => void saveSelection({ locked: !v }),
+                    },
+                  ]
+                : []),
             ].map((o) => (
               <Tap key={o.key} onPress={() => !saving && o.set(!o.on)} scaleTo={0.985} style={[st.opt, o.on && st.optOn]}>
                 <View style={[st.optIcon, o.on && { backgroundColor: C.primary }]}>
@@ -202,6 +237,11 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
                 <Toggle value={o.on} disabled={saving} onChange={o.set} />
               </Tap>
             ))}
+            {selection?.finalBy ? (
+              <Tap onPress={() => !saving && void saveSelection({ clearFinal: true })} style={{ paddingVertical: 10 }}>
+                <Text style={[st.optTitle, { color: C.primary, textDecorationLine: "underline" }]}>Clear final choice (let teachers choose again)</Text>
+              </Tap>
+            ) : null}
           </Section>
         </>
       ) : null}

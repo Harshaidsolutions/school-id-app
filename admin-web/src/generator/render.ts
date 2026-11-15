@@ -276,7 +276,8 @@ export function fitText(ctx: CanvasRenderingContext2D, el: TextElement, text: st
     const lines = el.multiline ? wrap(ctx, text, boxW) : [text];
     const widest = Math.max(0, ...lines.map((l) => ctx.measureText(l).width));
     const height = lines.length * size * el.lineHeight;
-    const fits = widest <= boxW + 0.5 && height <= boxH * 1.05 + 0.5;
+    // One line: only the width decides (the box height follows the font size and never shrinks the text).
+    const fits = widest <= boxW + 0.5 && (!el.multiline || height <= boxH * 1.05 + 0.5);
     if (fits || !el.autoShrink || size - step < min) return { sizePx: size, lines, overflow: !fits };
     size -= step;
   }

@@ -958,6 +958,16 @@ async function migrate() {
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, phone TEXT NOT NULL,
       email TEXT NOT NULL DEFAULT '', organization TEXT NOT NULL DEFAULT '', message TEXT NOT NULL DEFAULT '',
       status TEXT NOT NULL DEFAULT 'new', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    ALTER TABLE service_registrations ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'school';
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS selection_locked BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS selection_final_by UUID REFERENCES users(id) ON DELETE SET NULL;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS selection_final_at TIMESTAMPTZ;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS selection_locked BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS selection_final_by UUID REFERENCES users(id) ON DELETE SET NULL;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS selection_final_at TIMESTAMPTZ;
+    ALTER TABLE organizations ADD COLUMN IF NOT EXISTS selection_locked BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE organizations ADD COLUMN IF NOT EXISTS selection_final_by UUID REFERENCES users(id) ON DELETE SET NULL;
+    ALTER TABLE organizations ADD COLUMN IF NOT EXISTS selection_final_at TIMESTAMPTZ;
     ALTER TABLE students ADD COLUMN IF NOT EXISTS app_visible BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE students ADD COLUMN IF NOT EXISTS id_card_url TEXT;
     ALTER TABLE students ADD COLUMN IF NOT EXISTS id_card_updated_at TIMESTAMPTZ;

@@ -15,12 +15,19 @@ const LINE = "#E8E9F3";
 const CTA = ["#FF8A1F", "#F26A1B", "#E8243C"] as const;
 const COOL = ["#1EA0E1", "#4A63C4", "#6A2C9E"] as const;
 
+type Kind = "school" | "institute" | "provider";
+const KINDS: { key: Kind; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: "school", label: "School", icon: "school-outline" },
+  { key: "institute", label: "Institute / College", icon: "library-outline" },
+  { key: "provider", label: "ID card business", icon: "id-card-outline" },
+];
+
 type Key = "name" | "phone" | "email" | "organization" | "message";
 const FIELDS: { key: Key; label: string; icon: keyof typeof Ionicons.glyphMap; placeholder: string }[] = [
   { key: "name", label: "Your name *", icon: "person-outline", placeholder: "Full name" },
   { key: "phone", label: "Phone number *", icon: "call-outline", placeholder: "10-digit mobile number" },
   { key: "email", label: "Email", icon: "mail-outline", placeholder: "name@example.com" },
-  { key: "organization", label: "School / institute name", icon: "school-outline", placeholder: "e.g. Sri Vidya High School" },
+  { key: "organization", label: "School / institute / business name", icon: "business-outline", placeholder: "e.g. Sri Vidya High School" },
   { key: "message", label: "What do you need?", icon: "chatbubble-ellipses-outline", placeholder: "ID cards, photos, lanyards…" },
 ];
 
@@ -36,6 +43,7 @@ export function ServiceRegistration() {
   const [message, setMessage] = useState("");
   const [done, setDone] = useState(false);
   const [focus, setFocus] = useState<Key | null>(null);
+  const [kind, setKind] = useState<Kind>("school");
   const [form, setForm] = useState<Record<Key, string>>({ name: "", phone: "", email: "", organization: "", message: "" });
 
   // Gentle pulse on the school icon.
@@ -59,7 +67,7 @@ export function ServiceRegistration() {
     setBusy(true);
     setMessage("");
     try {
-      const r = await api.post("/public/service-registration", form);
+      const r = await api.post("/public/service-registration", { ...form, kind });
       setMessage(r.data?.message ?? "Thank you! We will call you soon.");
       setDone(true);
     } catch (e) {
@@ -76,6 +84,7 @@ export function ServiceRegistration() {
       setDone(false);
       setMessage("");
       setForm({ name: "", phone: "", email: "", organization: "", message: "" });
+      setKind("school");
     }
   };
 
@@ -89,7 +98,7 @@ export function ServiceRegistration() {
         </LinearGradient>
         <View style={{ flex: 1 }}>
           <Text style={[st.cardTitle, isDark && { color: colors.textPrimary }]}>Register your interest</Text>
-          <Text style={st.cardText}>New school or institute? We will call you.</Text>
+          <Text style={st.cardText}>School, institute or ID card business? We will call you.</Text>
         </View>
         <View style={st.cardBtn}>
           <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
@@ -100,16 +109,16 @@ export function ServiceRegistration() {
         <View style={{ flex: 1, backgroundColor: isDark ? colors.background : "#F6F7FC" }}>
           <LinearGradient colors={[...COOL]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.head, { paddingTop: insets.top + 14 }]}>
             <View style={st.headRow}>
-              <View style={st.headIcon}>
-                <Ionicons name="school" size={22} color="#FFFFFF" />
-              </View>
+              <Pressable onPress={close} style={st.headIcon} accessibilityRole="button" accessibilityLabel="Back" hitSlop={8}>
+                <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+              </Pressable>
               <Pressable onPress={close} style={st.closeBtn} accessibilityLabel="Close" hitSlop={8}>
                 <Ionicons name="close" size={22} color="#FFFFFF" />
               </Pressable>
             </View>
             <Text style={st.headTitle}>Register your interest</Text>
             <Text style={st.headText}>Share your details and our team will contact you. This does not create a login.</Text>
-            <RainbowBar style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} />
+            <RainbowBar rounded style={{ position: "absolute", left: 26, right: 26, bottom: 3 }} />
           </LinearGradient>
 
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -123,7 +132,22 @@ export function ServiceRegistration() {
                   <Text style={st.doneText}>{message || "We have your details and will call you soon."}</Text>
                 </View>
               ) : (
-                FIELDS.map((f) => (
+                <>
+                <View>
+                  <Text style={st.label}>I am registering for *</Text>
+                  <View style={st.kinds}>
+                    {KINDS.map((k) => {
+                      const on = kind === k.key;
+                      return (
+                        <Pressable key={k.key} disabled={busy} onPress={() => setKind(k.key)} accessibilityRole="radio" accessibilityState={{ selected: on }} style={[st.kind, on && st.kindOn]}>
+                          <Ionicons name={k.icon} size={18} color={on ? "#FFFFFF" : "#1EA0E1"} />
+                          <Text style={[st.kindText, on && { color: "#FFFFFF" }]} numberOfLines={2}>{k.label}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+                {FIELDS.map((f) => (
                   <View key={f.key}>
                     <Text style={st.label}>{f.label}</Text>
                     <View style={[st.field, focus === f.key && st.fieldOn, f.key === "message" && { alignItems: "flex-start", paddingTop: 12 }]}>
@@ -145,7 +169,8 @@ export function ServiceRegistration() {
                       />
                     </View>
                   </View>
-                ))
+                ))}
+                </>
               )}
 
               {!done && message ? (
@@ -188,6 +213,10 @@ const st = StyleSheet.create({
   headTitle: { fontFamily: fonts.headingExtraBold, fontSize: 25, color: "#FFFFFF", letterSpacing: -0.5 },
   headText: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: "rgba(255,255,255,0.9)", marginTop: 4 },
 
+  kinds: { flexDirection: "row", gap: 8 },
+  kind: { flex: 1, minHeight: 64, borderRadius: 14, borderWidth: 1.5, borderColor: "#BFE3F6", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", paddingHorizontal: 6, paddingVertical: 8, gap: 4 },
+  kindOn: { backgroundColor: "#1EA0E1", borderColor: "#1EA0E1" },
+  kindText: { fontFamily: fonts.headingSemiBold, fontSize: 12, color: INK, textAlign: "center" },
   label: { fontFamily: fonts.headingSemiBold, fontSize: 13.5, color: INK, marginBottom: 6 },
   field: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 52, paddingHorizontal: 14, borderRadius: 16, borderWidth: 1.5, borderColor: LINE, backgroundColor: "#FFFFFF" },
   fieldOn: { borderColor: "#1EA0E1" },

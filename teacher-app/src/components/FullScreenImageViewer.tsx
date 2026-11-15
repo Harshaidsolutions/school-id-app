@@ -4,6 +4,7 @@ import {
   Animated,
   Image,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -482,9 +483,10 @@ export function FullScreenImageViewer({
             const captionText = typeof caption === "function" ? caption(index) : caption;
             if (!captionText) return null;
             return (
-              <Text style={styles.modelCaption} numberOfLines={4}>
-                {captionText}
-              </Text>
+              // The whole description is shown; long text scrolls instead of being cut off.
+              <ScrollView style={{ maxHeight: height * 0.26, flexGrow: 0 }} contentContainerStyle={{ paddingBottom: 4 }}>
+                <Text style={styles.modelCaption}>{captionText}</Text>
+              </ScrollView>
             );
           })()}
 
@@ -579,9 +581,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     textAlign: "center",
-    marginTop: 16,
-    marginBottom: 8,
-    paddingHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingHorizontal: 16,
+    lineHeight: 20,
   },
   gestureWrap: {
     alignItems: "center",

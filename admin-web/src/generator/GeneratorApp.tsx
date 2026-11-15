@@ -4,7 +4,7 @@ import api from "../api/client";
 import type { Student, Template } from "../types";
 import { authenticatedStudentPhotoUrl, authenticatedStudentSignatureUrl } from "../utils/studentPhotoSrc";
 import { detectRoles } from "./columns";
-import { blankLayout, customCard, DEFAULT_DPI, fitLayoutToTemplate, isLayout, newImage, newText, nextTextSpot, sizeText, stripColumnLabels } from "./defaults";
+import { blankLayout, customCard, DEFAULT_DPI, fitLayoutToTemplate, textBoxHeight, isLayout, newImage, newText, nextTextSpot, sizeText, stripColumnLabels } from "./defaults";
 import { clearFolder, loadDraft, loadFolder, saveDraft, saveFolder, type Draft } from "./draftStore";
 import { exportBundle, type CardProblem, type ExportFile, type OutputFolder } from "./exporter";
 import { ensureFonts, restoreCustomFonts } from "./fonts";
@@ -297,12 +297,11 @@ export function GeneratorApp() {
   }, []);
   /** A column on the card shows only its value; + puts it under the last field, a drop puts it where it was dropped. */
   const columnText = (s: Side, column: string, at?: Partial<TextElement>) => {
-    const el = newText(s, column, { ...textStyle.current, prefix: "", ...(at ?? nextTextSpot(layout, s)) });
-    // The box fits the text it shows (so the selection box matches the text on the card).
-    const shown = textValue(el, previewRow);
-    if (!shown) return el;
-    const box = measureTextBox(el, shown);
-    return { ...el, w: Math.max(5, Math.min(box.w, layout.card.w - el.x)), h: box.h };
+    // Every new field starts the same size: 32 mm wide, height from the font size.
+    const style = { ...textStyle.current };
+    const spot = at ?? nextTextSpot(layout, s);
+    const el = newText(s, column, { ...style, prefix: "", ...spot, w: 32, h: textBoxHeight(style.size ?? 8, 1) });
+    return { ...el, w: Math.min(32, Math.max(5, layout.card.w - el.x)) };
   };
   const fitBox = (id: string) => {
     const el = layout.elements.find((e) => e.id === id);

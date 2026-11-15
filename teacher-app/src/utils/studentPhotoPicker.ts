@@ -39,6 +39,8 @@ export async function pickStudentPhotoFromGallery(): Promise<string | null> {
 
   const result = await ImagePicker.launchImageLibraryAsync({
     ...PICKER_OPTIONS,
+    // Below 1 makes the phone hand back a normal JPG (not HEIC / huge originals).
+    quality: 0.92,
     selectionLimit: 1,
   });
 

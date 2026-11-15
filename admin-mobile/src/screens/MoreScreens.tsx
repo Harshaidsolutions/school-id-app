@@ -78,7 +78,7 @@ export function MoreScreen() {
               </View>
             </View>
           </Rise>
-          <RainbowBar style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} />
+          <RainbowBar rounded style={{ position: "absolute", left: 22, right: 22, bottom: 3 }} />
         </LinearGradient>
         <View style={{ padding: S.lg, maxWidth: CONTENT_MAX, alignSelf: "center", width: "100%" }}>
           <View style={st.navCard}>

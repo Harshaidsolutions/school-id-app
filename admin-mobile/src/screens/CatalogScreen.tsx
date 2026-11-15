@@ -159,7 +159,7 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
                   <Text style={st.name} numberOfLines={1}>
                     {item.name}
                   </Text>
-                  {item.description ? <Muted numberOfLines={2} style={{ fontSize: 11 }}>{item.description}</Muted> : null}
+                  {item.description ? <Muted style={{ fontSize: 11 }}>{item.description}</Muted> : null}
                 </View>
                 <Tap onPress={() => setMenu(item)} hitSlop={8} accessibilityLabel="More">
                   <Ionicons name="ellipsis-vertical" size={18} color={C.muted} />

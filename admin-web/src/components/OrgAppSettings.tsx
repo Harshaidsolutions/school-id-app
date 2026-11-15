@@ -25,6 +25,27 @@ export function OrgAppSettings({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  // Template & Model choice in the school app (admin can turn it off; a "final" choice is protected).
+  const lockPath = `/admin/selection-lock/${organization ? "organizations" : institute ? "institutes" : "schools"}/${orgId}`;
+  const [selection, setSelection] = useState<{ locked: boolean; finalByName: string | null; finalBy: string | null } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    api.get(lockPath).then((r) => { if (alive) setSelection(r.data.selection); }).catch(() => { if (alive) setSelection(null); });
+    return () => { alive = false; };
+  }, [lockPath]);
+  async function saveSelection(body: { locked?: boolean; clearFinal?: boolean }) {
+    setSaving(true); setError(null); setSaved(null);
+    try {
+      const r = await api.patch(lockPath, body);
+      setSelection(r.data.selection);
+      setSaved("Saved for this organization.");
+    } catch (err) {
+      const msg = axios.isAxiosError(err) ? (err.response?.data as ApiErrorBody | undefined)?.message : undefined;
+      setError(msg ?? "Could not save settings.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   useEffect(() => {
     setAllowNumberEdit(initialAllowNumberEdit);
@@ -95,6 +116,25 @@ export function OrgAppSettings({
       },
     },
   ];
+  if (selection) {
+    options.push({
+      key: "selection",
+      title: "Template & Model choice",
+      description: selection.finalBy
+        ? `Teachers can choose designs. Final choice made by ${selection.finalByName || "a user"} — only they can change it.`
+        : "Teachers can choose a Template and Model. Turn OFF while they only collect data.",
+      on: !selection.locked,
+      icon: (
+        <>
+          <rect x="4" y="4" width="7" height="7" rx="1.5" />
+          <rect x="13" y="4" width="7" height="7" rx="1.5" />
+          <rect x="4" y="13" width="7" height="7" rx="1.5" />
+          <path d="M14 17l2 2 4-4" />
+        </>
+      ),
+      toggle: () => void saveSelection({ locked: !selection.locked }),
+    });
+  }
 
   return (
     <section className="centered-page-card org-settings mt-6 overflow-hidden">
@@ -143,6 +183,11 @@ export function OrgAppSettings({
                 </span>
               </div>
               <p className="mt-1 text-xs leading-relaxed text-text-muted">{option.description}</p>
+              {option.key === "selection" && selection?.finalBy ? (
+                <button type="button" className="mt-2 text-xs font-bold text-[#4F46E5] underline" disabled={saving} onClick={() => void saveSelection({ clearFinal: true })}>
+                  Clear final choice (let teachers choose again)
+                </button>
+              ) : null}
             </div>
             <ToggleSwitch checked={option.on} disabled={saving} onChange={option.toggle} label={option.title} />
           </div>

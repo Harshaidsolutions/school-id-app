@@ -7,6 +7,7 @@ import {
   getTeacherOrgId,
   isInstituteStaff,
 } from "../utils/teacherOrgScope";
+import { assertCanChangeSelection } from "./selectionLockController";
 import type { InstituteRow, SchoolRow, TemplateRow } from "../types/admin";
 
 function orgFiles(req: Request): {
@@ -172,6 +173,10 @@ export async function updateTeacherOrganization(
           ? String(req.body.template_id ?? req.body.templateId).trim() || null
           : institute.template_id ?? null;
 
+      if (model !== (institute.model ?? null) || tags !== (institute.tags ?? null) || templateId !== (institute.template_id ?? null)) {
+        await assertCanChangeSelection(req.user);
+      }
+
       if (templateId) {
         const ownerAdminId = await loadOrgOwnerAdminId("institutes", orgId);
         const tpl = await pool.query(
@@ -292,6 +297,10 @@ export async function updateTeacherOrganization(
       req.body.template_id !== undefined || req.body.templateId !== undefined
         ? String(req.body.template_id ?? req.body.templateId).trim() || null
         : school.template_id;
+
+    if (model !== (school.model ?? null) || tags !== (school.tags ?? null) || (templateId ?? null) !== (school.template_id ?? null)) {
+      await assertCanChangeSelection(req.user);
+    }
 
     if (templateId) {
       const ownerAdminId = await loadOrgOwnerAdminId(schoolTable, orgId);

@@ -18,6 +18,21 @@ type Props = {
 
 const snap = (v: number) => Math.round(v * 10) / 10; // 0.1 mm steps
 
+/** Corner handles change width and height; side handles only the width; top / bottom only the height. */
+type Handle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+type Mode = "move" | Handle;
+const HANDLES: Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+const HANDLE_POS: Record<Handle, { left: string; top: string; cursor: string }> = {
+  nw: { left: "0%", top: "0%", cursor: "nwse-resize" },
+  n: { left: "50%", top: "0%", cursor: "ns-resize" },
+  ne: { left: "100%", top: "0%", cursor: "nesw-resize" },
+  e: { left: "100%", top: "50%", cursor: "ew-resize" },
+  se: { left: "100%", top: "100%", cursor: "nwse-resize" },
+  s: { left: "50%", top: "100%", cursor: "ns-resize" },
+  sw: { left: "0%", top: "100%", cursor: "nesw-resize" },
+  w: { left: "0%", top: "50%", cursor: "ew-resize" },
+};
+
 type Guide = { axis: "x" | "y"; at: number };
 
 /**
@@ -62,7 +77,7 @@ export function CardCanvas(p: Props) {
   const [avail, setAvail] = useState({ w: 360, h: 520 });
   const [issues, setIssues] = useState<RenderIssue[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
-  const drag = useRef<{ id: string; mode: "move" | "resize"; sx: number; sy: number; ox: number; oy: number; ow: number; oh: number } | null>(null);
+  const drag = useRef<{ id: string; mode: Mode; sx: number; sy: number; ox: number; oy: number; ow: number; oh: number } | null>(null);
 
   useLayoutEffect(() => {
     const el = wrapRef.current;
@@ -107,7 +122,7 @@ export function CardCanvas(p: Props) {
     return () => clearTimeout(t);
   }, [p.layout, p.side, p.row, p.template, p.media, scale]);
 
-  const onPointerDown = (e: React.PointerEvent, el: CardElement, mode: "move" | "resize") => {
+  const onPointerDown = (e: React.PointerEvent, el: CardElement, mode: Mode) => {
     e.stopPropagation();
     e.preventDefault();
     p.onSelect(el.id);
@@ -130,7 +145,14 @@ export function CardCanvas(p: Props) {
       } else setGuides([]);
       p.onChange(d.id, { x: nx, y: ny });
     } else {
-      p.onChange(d.id, { w: snap(Math.max(2, d.ow + dx)), h: snap(Math.max(2, d.oh + dy)) });
+      const h = d.mode;
+      const MIN = 1;
+      let x = d.ox, y = d.oy, w = d.ow, hh = d.oh;
+      if (h.includes("e")) w = Math.max(MIN, d.ow + dx);
+      if (h.includes("w")) { w = Math.max(MIN, d.ow - dx); x = d.ox + (d.ow - w); }
+      if (h.includes("s")) hh = Math.max(MIN, d.oh + dy);
+      if (h.includes("n")) { hh = Math.max(MIN, d.oh - dy); y = d.oy + (d.oh - hh); }
+      p.onChange(d.id, { x: snap(x), y: snap(y), w: snap(w), h: snap(hh) });
     }
   };
   const onPointerUp = () => { drag.current = null; setGuides([]); };
@@ -187,15 +209,18 @@ export function CardCanvas(p: Props) {
               title={issues.filter((i) => i.elementId === el.id).map((i) => i.message).join("\n") || undefined}
               aria-label={label(el)}
             >
-              {sel && (
-                <span
-                  className="idg-handle"
-                  onPointerDown={(e) => onPointerDown(e, el, "resize")}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={onPointerUp}
-                  aria-label="Resize"
-                />
-              )}
+              {sel &&
+                HANDLES.map((hd) => (
+                  <span
+                    key={hd}
+                    className={`idg-handle is-${hd}`}
+                    style={{ left: HANDLE_POS[hd].left, top: HANDLE_POS[hd].top, cursor: HANDLE_POS[hd].cursor }}
+                    onPointerDown={(e) => onPointerDown(e, el, hd)}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={onPointerUp}
+                    aria-label={`Resize ${hd}`}
+                  />
+                ))}
             </div>
           );
         })}

@@ -3,10 +3,16 @@ import type { BarcodeElement, CardElement, CardSize, ImageElement, Layout, Media
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
+/** Box height (mm) for text of this size: one line = the font size itself (8 pt ≈ 2.8 mm). */
+export function textBoxHeight(sizePt: number, lines = 1, lineHeight = 1.15): number {
+  const pt = 25.4 / 72;
+  return +(lines <= 1 ? sizePt * pt : sizePt * pt * lineHeight * lines).toFixed(2);
+}
+
 export function newText(side: Side, column: string, at: Partial<TextElement> = {}): TextElement {
   return {
-    // Defaults asked for by the admin: Arial 8 pt black, at X 18 mm, Y 55 mm, 30 × 3.5 mm.
-    id: uid(), kind: "text", side, x: 18, y: 55, w: 30, h: 3.5, rotation: 0, required: Boolean(column),
+    // Defaults: Arial 8 pt black at X 18 mm, Y 55 mm; every new field 32 mm wide, height from the font size.
+    id: uid(), kind: "text", side, x: 18, y: 55, w: 32, h: textBoxHeight(at.size ?? 8, at.multiline ? 2 : 1, at.lineHeight ?? 1.15), rotation: 0, required: Boolean(column),
     column, prefix: "", suffix: "", staticText: column ? "" : "Text",
     font: "Arial", weight: 400, italic: false, underline: false, size: 8, minSize: 7, autoShrink: true, multiline: false,
     textCase: "none", align: "left", vAlign: "middle", letterSpacing: 0, lineHeight: 1.15,

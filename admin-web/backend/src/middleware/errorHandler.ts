@@ -24,7 +24,7 @@ export function errorHandler(
   if (err instanceof multer.MulterError) {
     const message =
       err.code === "LIMIT_FILE_SIZE"
-        ? "File too large"
+        ? "This file is too large (maximum 25 MB). Please choose a smaller photo."
         : err.message;
     res.status(400).json({ status: "error", message });
     return;

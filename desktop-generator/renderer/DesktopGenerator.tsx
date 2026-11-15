@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { niceLabel } from "@admin/utils/formFieldHelpers";
 import { detectRoles } from "@gen/columns";
-import { blankLayout, customCard, DEFAULT_DPI, fitLayoutToTemplate, newImage, newText, nextTextSpot, sizeText } from "@gen/defaults";
+import { blankLayout, customCard, DEFAULT_DPI, fitLayoutToTemplate, textBoxHeight, newImage, newText, nextTextSpot, sizeText } from "@gen/defaults";
 import { exportBundle, type CardProblem, type OutputFolder } from "@gen/exporter";
 import { ensureFonts, restoreCustomFonts } from "@gen/fonts";
 import { SHEET_SIZES } from "@gen/impose";
@@ -15,7 +15,7 @@ import { CardCanvas } from "@gen/ui/CardCanvas";
 import { Field, Num, Properties, TextToolbar } from "@gen/ui/Inspector";
 import { desktop, type LicenseStatus } from "./bridge";
 import { pdfToImage } from "./pdfTemplate";
-import { readSheet } from "./sheet";
+import { listSheets, readSheet } from "./sheet";
 
 export const APP_NAME = "Harsha ID Solutions – ID Card Generator";
 
@@ -23,7 +23,6 @@ type TemplateSlot = { bitmap: Bitmap; url: string; name: string; blob: Blob; dpi
 type SideMode = "single" | "double";
 type Stage = "input" | "output" | "editor";
 
-const ROW_NUMBER = "__row";
 /** The design used for the last Generate: offered (never applied automatically) on the next start. */
 const LAST_DESIGN = "desktop-last-design";
 const baseName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() ?? p;
@@ -88,6 +87,9 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
   const [stage, setStage] = useState<Stage>("input");
   const [jobName, setJobName] = useState("");
   const [sheetPath, setSheetPath] = useState("");
+  const [sheetFile, setSheetFile] = useState<File | null>(null);
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [sheetName, setSheetName] = useState("");
   const [columns, setColumns] = useState<string[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [classCol, setClassCol] = useState("");
@@ -115,6 +117,15 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
   const [onlyFailed, setOnlyFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
+  /** Licence validity shown next to the holder's name. */
+  const expiry = license.expiresAt ? new Date(license.expiresAt) : null;
+  const daysLeft = expiry ? Math.ceil((expiry.getTime() - Date.now()) / 86400000) : null;
+  const licenceSoon = daysLeft !== null && daysLeft <= 30;
+  const licenceText = expiry
+    ? `Valid till ${expiry.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}${daysLeft !== null ? ` · ${Math.max(0, daysLeft)} day${daysLeft === 1 ? "" : "s"} left` : ""}`
+    : "No expiry date";
+  /** Batch name = Excel file name (+ worksheet when the file has several). */
+  const batchName = `${jobName || "ID cards"}${sheetNames.length > 1 && sheetName ? ` - ${sheetName}` : ""}`;
   const visibleSides: Side[] = sideMode === "double" ? ["front", "back"] : ["front"];
   const matchColumn = layout.matchColumn;
   const byRow = layout.matchBy === "rownumber";
@@ -149,24 +160,54 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
   }
 
   // ---------- Excel / CSV ----------
-  async function importSheet(file: File) {
+  /**
+   * The column whose values match the photo file names best (e.g. "Photo ID" = 1023 ↔ 1023.jpg).
+   * Chosen again for every worksheet and whenever photos are added, so each sheet matches its own photos.
+   */
+  function bestMatchColumn(cols: string[], data: Row[], roles: Record<string, string>): string {
+    const byName = cols.find((c) => /photo\s*(id|no|number)/i.test(c)) || roles.admission || cols[0] || "";
+    if (!media.photo.size || !data.length) return byName;
+    let best = byName;
+    let bestHits = data.filter((r, i) => findMedia(media.photo, r, byName, i, "column")).length;
+    for (const c of cols) {
+      const hits = data.filter((r, i) => findMedia(media.photo, r, c, i, "column")).length;
+      if (hits > bestHits) { best = c; bestHits = hits; }
+    }
+    return best;
+  }
+
+  /** Loads one worksheet: everything (counts, columns, photo matching, Generate) uses this sheet only. */
+  async function loadWorksheet(file: File, name: string) {
     setBusy({ label: "Reading Excel…", done: 0, total: 0 });
     try {
-      const sheet = await readSheet(file);
+      const sheet = await readSheet(file, name || undefined);
       const roles = detectRoles(sheet.columns);
-      const match = sheet.columns.find((c) => /photo\s*(id|no|number)/i.test(c)) || roles.admission || sheet.columns[0] || "";
+      const match = bestMatchColumn(sheet.columns, sheet.rows, roles);
       setColumns(sheet.columns);
       setRows(sheet.rows);
-      setSheetPath(pickedPath([file]));
-      if (!jobName) setJobName(file.name.replace(/\.[^.]+$/, ""));
+      setSheetName(name);
       setClassCol(roles.classSection || roles.class || "");
       setClassName("");
+      setFailedIds([]);
       setLayout((l) => ({ ...l, roles, matchColumn: match, matchBy: "column" }));
-      say(`${sheet.rows.length} records and ${sheet.columns.length} columns loaded from “${file.name}”. Photos are matched by “${match}”.`, "ok");
+      say(`${sheet.rows.length} records in “${name || file.name}”. Photos are matched by “${match}”.`, "ok");
     } catch (e) {
-      say(e instanceof Error ? e.message : "The file could not be read.", "error");
+      say(e instanceof Error ? e.message : "The worksheet could not be read.", "error");
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function importSheet(file: File) {
+    try {
+      const names = await listSheets(file);
+      setSheetFile(file);
+      setSheetNames(names);
+      setSheetPath(pickedPath([file]));
+      setJobName(file.name.replace(/\.[^.]+$/, ""));
+      await loadWorksheet(file, names[0] ?? "");
+    } catch (e) {
+      say(e instanceof Error ? e.message : "The file could not be read.", "error");
     }
   }
 
@@ -230,12 +271,11 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
   }, []);
   /** A column on the card shows only its value; + puts it under the last field, a drop puts it where it was dropped. */
   const columnText = (s: Side, column: string, at?: Partial<TextElement>) => {
-    const el = newText(s, column, { ...textStyle.current, prefix: "", ...(at ?? nextTextSpot(layout, s)) });
-    // The box fits the text it shows (so the selection box matches the text on the card).
-    const shown = textValue(el, previewRow);
-    if (!shown) return el;
-    const box = measureTextBox(el, shown);
-    return { ...el, w: Math.max(5, Math.min(box.w, layout.card.w - el.x)), h: box.h };
+    // Every new field starts the same size: 32 mm wide, height from the font size.
+    const style = { ...textStyle.current };
+    const spot = at ?? nextTextSpot(layout, s);
+    const el = newText(s, column, { ...style, prefix: "", ...spot, w: 32, h: textBoxHeight(style.size ?? 8, 1) });
+    return { ...el, w: Math.min(32, Math.max(5, layout.card.w - el.x)) };
   };
   const fitBox = (id: string) => {
     const el = layout.elements.find((e) => e.id === id);
@@ -315,10 +355,15 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
       setMedia(media);
       setMediaVersion((v) => v + 1);
       if (kind === "photo") setPhotoPath(pickedPath(picked)); else setSignPath(pickedPath(picked));
+      if (kind === "photo" && rows.length) {
+        const match = bestMatchColumn(columns, rows, layout.roles);
+        if (match !== matchColumn) setLayout((l) => ({ ...l, matchColumn: match, matchBy: "column" }));
+      }
       const count = kind === "photo" ? summary.photos : summary.parentSigns;
       const map = kind === "photo" ? media.photo : media.parentSign;
-      const matched = rows.filter((r, i) => findMedia(map, r, matchColumn, i, layout.matchBy)).length;
-      say(`${count} ${kind === "photo" ? "photos" : "signatures"} added — ${matched} of ${rows.length} records matched by ${byRow ? "row number" : `“${matchColumn}”`}.`, matched || !rows.length ? "ok" : "info");
+      const col = kind === "photo" && rows.length ? bestMatchColumn(columns, rows, layout.roles) : matchColumn;
+      const matched = rows.filter((r, i) => findMedia(map, r, col, i, layout.matchBy)).length;
+      say(`${count} ${kind === "photo" ? "photos" : "signatures"} added — ${matched} of ${rows.length} records matched by ${byRow ? "row number" : `“${col}”`}.`, matched || !rows.length ? "ok" : "info");
       if (kind === "parentSign" && !layout.elements.some((e) => e.kind === "image" && e.media === "parentSign")) {
         addEl(newImage("front", "parentSign", { x: 30, y: 76, w: 20, h: 7 }));
       }
@@ -364,7 +409,7 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
         templates: genTemplates,
         media: resolverFor,
         fileNamePattern: byRow ? "{#}" : `{${idCol}}`,
-        jobName: `${jobName || "ID cards"}${className ? ` - ${className}` : ""}${onlyFailed ? " - corrected" : ""}`,
+        jobName: `${batchName}${className ? ` - ${className}` : ""}${onlyFailed ? " - corrected" : ""}`,
         print: { sheet, landscape: print.landscape, gap: print.gap, margin: print.margin },
         idColumn: idCol,
         nameColumn: nameCol,
@@ -471,7 +516,7 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
         <img className="idg-brand" src="./harsha-h.png" alt="Harsha ID Solutions" />
         <div>
           <small className="idg-app-name">{APP_NAME}</small>
-          <h2>{jobName || "New batch"}</h2>
+          <h2>{rows.length ? batchName : "New batch"}</h2>
         </div>
       </div>
       <nav className="idg-steps" aria-label="Steps">
@@ -479,7 +524,10 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
           <button key={s.key} type="button" className={stage === s.key ? "is-on" : ""} onClick={() => setStage(s.key)} disabled={i > 0 && !inputReady}>{s.label}</button>
         ))}
       </nav>
-      <span className="idg-licensed">Licensed to {license.customer}</span>
+      <span className="idg-licensed">
+        Licensed to <b>{license.customer}</b>
+        <small className={licenceSoon ? "is-soon" : ""}>{licenceText}</small>
+      </span>
     </section>
   );
 
@@ -498,52 +546,46 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
               <div className="is-ok"><b>{withPhotoAll}</b><span>Records with photo</span></div>
               <div className="is-warn"><b>{Math.max(0, rows.length - withPhotoAll)}</b><span>Records without photo</span></div>
             </div>
-            <div className="idg-pickrow">
-              <label className={rows.length ? "btn-secondary" : "btn-primary"}>
-                <input type="file" accept=".xlsx,.xls,.csv" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void importSheet(f); }} />
-                {rows.length ? "Change Excel / CSV" : "Import Excel / CSV *"}
-              </label>
-              <span className="idg-path">{sheetPath ? <><b>{baseName(sheetPath)}</b> — {sheetPath}</> : "Required"}</span>
-            </div>
-            <div className="idg-pickrow">
-              <label className="btn-secondary">
-                <input type="file" multiple hidden {...({ webkitdirectory: "" } as Record<string, string>)} onChange={(e) => { if (e.target.files?.length) void addBulk(e.target.files, "photo"); e.target.value = ""; }} />
-                Photos folder
-              </label>
-              <label className="btn-secondary">
-                <input type="file" accept=".zip,image/*" multiple hidden onChange={(e) => { if (e.target.files?.length) void addBulk(e.target.files, "photo"); e.target.value = ""; }} />
-                Photos ZIP / images
-              </label>
-              <span className="idg-path">{photoPath || "Optional — cards without a photo get an empty photo area"}</span>
-            </div>
-            <div className="idg-pickrow">
-              <label className="btn-secondary">
-                <input type="file" accept=".zip,image/*" multiple hidden onChange={(e) => { if (e.target.files?.length) void addBulk(e.target.files, "parentSign"); e.target.value = ""; }} />
-                Signatures
-              </label>
-              <span className="idg-path">{signPath || "Optional"}</span>
-            </div>
-            <div className="idg-pickrow">
-              <button type="button" className={outFolder ? "btn-secondary" : "btn-primary"} onClick={() => void chooseFolder()}>{outFolder ? "Change output folder" : "Choose output folder *"}</button>
-              <span className="idg-path">{outFolder ? <><b>{outFolder}</b> — Front and Back folders are made inside it</> : "Required — you can also make a new folder in the window that opens"}</span>
-            </div>
-            <div className="idg-grid2">
-              <Field label="School / batch name">
-                <input className="input-field" value={jobName} placeholder="e.g. Sri Vidya High School" onChange={(e) => setJobName(e.target.value)} />
-              </Field>
-              <Field label="Photo file names match">
-                <select className="input-field" value={byRow ? ROW_NUMBER : matchColumn} disabled={!columns.length} onChange={(e) => setLayout((l) => (e.target.value === ROW_NUMBER ? { ...l, matchBy: "rownumber" } : { ...l, matchBy: "column", matchColumn: e.target.value }))}>
-                  {!columns.length && <option value="">Import Excel first</option>}
-                  {columns.map((c) => <option key={c} value={c}>{c}</option>)}
-                  {columns.length > 0 && <option value={ROW_NUMBER}>Row number (1.jpg, 2.jpg…)</option>}
-                </select>
-              </Field>
-              <Field label="Class column (for class-wise generation)">
-                <select className="input-field" value={classCol} disabled={!columns.length} onChange={(e) => { setClassCol(e.target.value); setClassName(""); }}>
-                  <option value="">None</option>
-                  {columns.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </Field>
+            <div className="desk-inputs">
+              <div className={`desk-input${rows.length ? " is-done" : ""}`}>
+                <label className="desk-input-btn">
+                  <input type="file" accept=".xlsx,.xls,.csv" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void importSheet(f); }} />
+                  <span className="desk-input-ic" aria-hidden>{rows.length ? "✓" : "1"}</span>
+                  <span className="desk-input-text"><b>Excel *</b><small>{rows.length ? "Change file" : "Choose file"}</small></span>
+                </label>
+                <span className="desk-input-path">{sheetPath ? <><b>{baseName(sheetPath)}</b>{sheetPath}</> : "Required — .xlsx or .csv"}</span>
+                {sheetNames.length > 1 && sheetFile ? (
+                  <label className="desk-input-sheet">
+                    <span>Worksheet</span>
+                    <select className="input-field" value={sheetName} onChange={(e) => void loadWorksheet(sheetFile, e.target.value)}>
+                      {sheetNames.map((n) => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </label>
+                ) : null}
+              </div>
+              <div className={`desk-input${media.photo.size ? " is-done" : ""}`}>
+                <label className="desk-input-btn">
+                  <input type="file" multiple hidden {...({ webkitdirectory: "" } as Record<string, string>)} onChange={(e) => { if (e.target.files?.length) void addBulk(e.target.files, "photo"); e.target.value = ""; }} />
+                  <span className="desk-input-ic" aria-hidden>{media.photo.size ? "✓" : "2"}</span>
+                  <span className="desk-input-text"><b>Photos folder</b><small>{media.photo.size ? `${media.photo.size} photos` : "Choose folder"}</small></span>
+                </label>
+                <span className="desk-input-path">{photoPath || "Optional — cards without a photo get an empty photo area"}</span>
+              </div>
+              <div className={`desk-input${media.parentSign.size ? " is-done" : ""}`}>
+                <label className="desk-input-btn">
+                  <input type="file" multiple hidden {...({ webkitdirectory: "" } as Record<string, string>)} onChange={(e) => { if (e.target.files?.length) void addBulk(e.target.files, "parentSign"); e.target.value = ""; }} />
+                  <span className="desk-input-ic" aria-hidden>{media.parentSign.size ? "✓" : "3"}</span>
+                  <span className="desk-input-text"><b>Signatures folder</b><small>{media.parentSign.size ? `${media.parentSign.size} signatures` : "Choose folder"}</small></span>
+                </label>
+                <span className="desk-input-path">{signPath || "Optional"}</span>
+              </div>
+              <div className={`desk-input${outFolder ? " is-done" : ""}`}>
+                <button type="button" className="desk-input-btn" onClick={() => void chooseFolder()}>
+                  <span className="desk-input-ic" aria-hidden>{outFolder ? "✓" : "4"}</span>
+                  <span className="desk-input-text"><b>Output folder *</b><small>{outFolder ? "Change folder" : "Choose folder"}</small></span>
+                </button>
+                <span className="desk-input-path">{outFolder ? <><b>{baseName(outFolder)}</b>{outFolder} — Front and Back folders are made inside it</> : "Required — you can also make a new folder in the window that opens"}</span>
+              </div>
             </div>
           </section>
           <section className="card idg-wiz-card">
@@ -638,7 +680,7 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
           <h3 className="idg-add-title">Add field</h3>
           <div className="idg-add">
             <button type="button" onClick={() => addEl(newImage(side, "photo"))}><b>☺</b>Import photo</button>
-            <button type="button" onClick={() => addEl(newImage(side, "parentSign", { x: 30, y: 76, w: 20, h: 7 }))}><b>✎</b>Signature</button>
+            <button type="button" disabled={!media.parentSign.size} title={media.parentSign.size ? undefined : "Choose a signatures folder in step 1 first"} onClick={() => { if (media.parentSign.size) addEl(newImage(side, "parentSign", { x: 30, y: 76, w: 20, h: 7 })); }}><b>✎</b>Signature</button>
           </div>
           <div className="idg-left-actions">
             <button type="button" className="btn-secondary" disabled={!ready.length} onClick={() => setPreviewOpen(true)}>Preview</button>
@@ -724,7 +766,7 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
           <div className="card workflow-dialog" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-text-navy">{onlyFailed ? `Regenerate ${ready.length} corrected ID cards?` : `Generate ${ready.length} ID cards?`}</h3>
             <p className="text-sm text-text-muted">
-              {jobName || "ID cards"}{className ? ` · ${className}` : " · all classes"}. Saved into “{outFolder ? baseName(outFolder) : ""}” with a <b>Front</b> folder{sideMode === "double" ? " and a Back folder" : ""} (JPG files named by {byRow ? "row number" : idCol}, {cardInfo}),
+              {batchName}{className ? ` · ${className}` : " · all classes"}. Saved into “{outFolder ? baseName(outFolder) : ""}” with a <b>Front</b> folder{sideMode === "double" ? " and a Back folder" : ""} (JPG files named by {byRow ? "row number" : idCol}, {cardInfo}),
               print sheets on {sheetLabel}{print.landscape ? " (horizontal)" : ""} as a PDF and a ZIP of images, and a details sheet.
               {noPhotoInBatch > 0 ? ` ${noPhotoInBatch} without a photo get an empty photo area.` : ""}
             </p>

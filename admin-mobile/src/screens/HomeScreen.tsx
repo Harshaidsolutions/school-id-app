@@ -210,7 +210,7 @@ export function HomeScreen() {
           </View>
           <Text style={st.role}>{isSuperAdmin ? "Super Admin" : "Admin"}</Text>
         </View>
-        <RainbowBar style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} />
+        <RainbowBar rounded style={{ position: "absolute", left: 22, right: 22, bottom: 3 }} />
       </LinearGradient>
 
       <ScrollView

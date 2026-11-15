@@ -1230,3 +1230,5 @@ input[type="file"]::file-selector-button:hover { background: #e0e3ff; }
 /* Pictures in page content open in the zoom viewer when clicked */
 main img:not(button img):not(a img):not(label img):not(.idg img):not(.crop-tool-shell img),
 .msidc-embed img:not(button img):not(a img):not(label img):not(.idg img):not(.crop-tool-shell img) { cursor: zoom-in; }
+/* Model descriptions: the whole text, wrapped (never cut off) */
+.table-description-full { display: block; text-align: left; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; font-size: 13px; color: var(--ink-2, #3d3a6b); background: none; border: 0; padding: 0; cursor: zoom-in; }

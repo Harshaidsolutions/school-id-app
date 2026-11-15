@@ -1,3 +1,4 @@
+import { assertCanChangeSelection } from "./selectionLockController";
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
@@ -358,6 +359,7 @@ export async function selectTeacherTemplate(
 
     const { id } = req.params;
     if (!id) throw new AppError("Template id is required", 400);
+    await assertCanChangeSelection(req.user);
 
     const orgId = getTeacherOrgId(req.user);
     const orgTable = req.user.role === "organization_staff" ? "organizations" : isInstituteStaff(req.user) ? "institutes" : "schools";

@@ -72,9 +72,9 @@ export function OrangeGradientHeader({
         <View style={styles.titleWrap}>
           <Text
             style={styles.title}
-            numberOfLines={2}
+            numberOfLines={1}
             adjustsFontSizeToFit
-            minimumFontScale={0.72}
+            minimumFontScale={0.6}
           >
             {title}
           </Text>
@@ -103,7 +103,7 @@ export function OrangeGradientHeader({
           <View style={[styles.iconSlot, { width: iconSize, height: iconSize }]} />
         )}
       </View>
-      <RainbowBar style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} />
+      <RainbowBar rounded style={{ position: "absolute", left: radius.xl, right: radius.xl, bottom: 3 }} />
     </LinearGradient>
   );
 }

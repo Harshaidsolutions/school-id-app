@@ -38,6 +38,7 @@ import {
 } from "../controllers/organizationController";
 import { getLatestTeacherBrochure, listTeacherBrochures } from "../controllers/catalogController";
 import { getTeacherBranding } from "../controllers/customerBrandController";
+import { getTeacherSelection, setTeacherSelectionFinal } from "../controllers/selectionLockController";
 
 const router = Router();
 
@@ -48,6 +49,8 @@ router.put("/organization", ...sharedAccess, optionalUploadSchoolAssets, updateT
 router.get("/models", ...sharedAccess, listTeacherModels);
 router.get("/templates", ...sharedAccess, listTeacherTemplates);
 router.post("/templates/:id/select", ...sharedAccess, selectTeacherTemplate);
+router.get("/selection", ...sharedAccess, getTeacherSelection);
+router.post("/selection/final", ...sharedAccess, setTeacherSelectionFinal);
 
 router.get("/notifications", ...sharedAccess, listTeacherNotifications);
 router.post("/notifications/delete-all", ...sharedAccess, deleteAllTeacherNotifications);

@@ -423,7 +423,7 @@ export function ModelsPage() {
                         {item.description?.trim() ? (
                           <button
                             type="button"
-                            className="table-description-clamp w-full"
+                            className="table-description-full w-full"
                             title="View full description"
                             onClick={() =>
                               setDescriptionPreview({

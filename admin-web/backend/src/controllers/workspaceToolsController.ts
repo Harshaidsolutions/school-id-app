@@ -42,7 +42,18 @@ export async function registerServiceInterest(req:Request,res:Response,next:Next
  const name=text(req.body.name,120),phone=text(req.body.phone,30),email=text(req.body.email,160),organization=text(req.body.organization,200),message=text(req.body.message,2000);
  if(!name||phone.replace(/\D/g,'').length<10||phone.replace(/\D/g,'').length>15)throw new AppError('Enter your name and valid phone number',400);
  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new AppError('Enter a valid email',400);
- await pool.query('INSERT INTO service_registrations(name,phone,email,organization,message) VALUES($1,$2,$3,$4,$5)',[name,phone,email,organization,message]);res.status(201).json({message:'Your details are registered. Our admin will contact you. This does not create a login account.'});
+ const KINDS:Record<string,string>={school:'School',institute:'Institute / College',provider:'ID card business / provider'};
+ const kind=KINDS[String(req.body.kind??'school')]?String(req.body.kind??'school'):'school';
+ await pool.query('INSERT INTO service_registrations(name,phone,email,organization,message,kind) VALUES($1,$2,$3,$4,$5,$6)',[name,phone,email,organization,message,kind]);
+ // Tell the Super Admin straight away (bell + Notifications in the website and the Admin App).
+ try{
+  const lines=['Type:',KINDS[kind],'','Name:',name,'','Phone:',phone];
+  if(organization)lines.push('','Organization:',organization);
+  if(email)lines.push('','Email:',email);
+  if(message)lines.push('','Message:',message);
+  await pool.query(`INSERT INTO notifications(title,message,audience) VALUES($1,$2,'super_admin')`,['New registration: '+(organization||name),lines.join('\n')]);
+ }catch(e){console.error('[service-registration] admin notification failed',e);}
+ res.status(201).json({message:'Your details are registered. Our admin will contact you. This does not create a login account.'});
 }catch(e){next(e);}}
 export async function registrations(req:Request,res:Response,next:NextFunction){try{
  await requireSuperAdmin(req);

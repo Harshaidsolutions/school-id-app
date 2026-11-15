@@ -33,7 +33,7 @@ export function IdCardsGreenHeader({ children, style }: Props) {
     >
       <FloatingShapes />
       <View style={styles.inner}>{children}</View>
-      <RainbowBar style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} />
+      <RainbowBar rounded style={{ position: "absolute", left: radius.xl, right: radius.xl, bottom: 3 }} />
     </LinearGradient>
   );
 }

@@ -2,6 +2,7 @@ import { createDesktopLicense, deleteDesktopLicense, listDesktopLicenses, update
 import { generatedCardUpload, uploadStudentIdCard } from "../controllers/generatedCardController";
 import {photoArchiveUpload,importPhotos} from "../controllers/photoImportController";
 import {photoChunkBody,receivePhotoChunk,finishPhotoUpload,photoImportJobStatus} from "../controllers/photoImportJobs";
+import { adminSelectionLock } from "../controllers/selectionLockController";
 import {uploadInstructionMedia,messageTemplates,instructionContent,registrations,setCandidateVisibility} from "../controllers/workspaceToolsController";
 import {getSchoolParentLink, setSchoolParentFormEnabled,createSchoolParentLink} from "../controllers/schoolParentFormController";
 import {
@@ -176,6 +177,8 @@ router.delete('/message-templates/:id',messageTemplates);
 router.post('/app-instructions/media',uploadCatalogMedia.single('file'),uploadInstructionMedia);
 router.get('/app-instructions',instructionContent);
 router.put('/app-instructions',instructionContent);
+router.get('/selection-lock/:kind/:id',adminSelectionLock);
+router.patch('/selection-lock/:kind/:id',adminSelectionLock);
 router.get('/service-registrations',registrations);
 router.patch('/service-registrations/:id',registrations);
 router.patch('/students/visibility',setCandidateVisibility);

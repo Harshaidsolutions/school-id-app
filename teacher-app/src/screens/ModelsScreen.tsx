@@ -31,6 +31,7 @@ import { OrangeGradientHeader } from "../components/OrangeGradientHeader";
 import { PRODUCT_MODELS, MODEL_TABS, MODEL_CATEGORY, type TeacherModel } from "../types";
 import { FullScreenImageViewer } from "../components/FullScreenImageViewer";
 import { SelectConfirmModal } from "../components/SelectConfirmModal";
+import { SelectionLockBanner, useSelectionLock } from "../components/SelectionLockBanner";
 import type { RootStackParamList, MainTabParamList } from "../navigation/types";
 import { cardShadow, radius, spacing } from "../theme/colors";
 import { fonts, textStyles, type as typeScale } from "../theme/typography";
@@ -73,6 +74,7 @@ export function ModelsScreen() {
   const route = useRoute<RouteProp<MainTabParamList, "Models">>();
   const { colors } = useTheme();
   const { showToast } = useToast();
+  const selectionLock = useSelectionLock();
   const { user } = useAuth();
   const userId = user?.id ?? "";
   const { width } = useWindowDimensions();
@@ -144,6 +146,10 @@ export function ModelsScreen() {
 
   async function saveSelection(name: string) {
     if (saving) return;
+    if (selectionLock.blockedMessage) {
+      showToast(selectionLock.blockedMessage);
+      return;
+    }
     setPreviewIndex(null);
     const fromOrgDetails = route.params?.returnToOrgDetails === true;
     const previewUrl = modelImageUrl(
@@ -295,6 +301,8 @@ export function ModelsScreen() {
           })}
         </View>
       </View>
+
+      <SelectionLockBanner lock={selectionLock} onMessage={showToast} />
 
       <FlatList
         key={`${modelTab}-${modelCols}`}

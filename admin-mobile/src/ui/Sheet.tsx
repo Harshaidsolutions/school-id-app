@@ -350,7 +350,7 @@ export function ImageViewer({
             <Text style={st.viewerTitle} numberOfLines={1}>
               {item?.title ?? ""}
             </Text>
-            {item?.sub ? <Text style={st.viewerSub} numberOfLines={1}>{item.sub}</Text> : null}
+
           </View>
           <Tap onPress={onClose} hitSlop={10} accessibilityLabel="Close" style={st.viewerBtn}>
             <Ionicons name="close" size={22} color={C.white} />
@@ -385,6 +385,12 @@ export function ImageViewer({
         ) : (
           <View style={{ flex: 1 }} />
         )}
+        {item?.sub ? (
+          // Full description below the picture (scrolls when long; never cut off).
+          <ScrollView style={{ maxHeight: 140, flexGrow: 0, marginTop: 6 }} contentContainerStyle={{ paddingHorizontal: S.lg }}>
+            <Text style={[st.viewerSub, { lineHeight: 19 }]}>{item.sub}</Text>
+          </ScrollView>
+        ) : null}
         <View style={st.viewerFoot}>
           <Tap onPress={() => go(safeIndex - 1)} disabled={safeIndex <= 0} style={[st.viewerBtn, safeIndex <= 0 && { opacity: 0.35 }]} accessibilityLabel="Previous">
             <Ionicons name="chevron-back" size={24} color={C.white} />

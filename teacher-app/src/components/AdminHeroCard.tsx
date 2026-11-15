@@ -23,6 +23,7 @@ export function AdminHeroCard({ adminName, photoUrl, loading }: Props) {
   const { headerGradient, colors } = useTheme();
   const { scale } = useResponsiveLayout();
   const avatar = scale(64);
+  const isHarsha = /harsha\s*id/i.test(adminName);
 
   if (loading) {
     return <View style={[styles.card, { minHeight: scale(132), backgroundColor: colors.track }]} />;
@@ -44,12 +45,18 @@ export function AdminHeroCard({ adminName, photoUrl, loading }: Props) {
             <Ionicons name="shield-checkmark" size={scale(12)} color="#FFFFFF" />
             <Text style={[styles.chipText, { fontSize: scale(11) }]}>Your ID card partner</Text>
           </View>
-          <Text style={[styles.name, { fontSize: scale(24), lineHeight: scale(30) }]} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.6}>
+          {/* Harsha ID Solutions stays on one line; any other admin name wraps when it is long. */}
+          <Text
+            style={[styles.name, { fontSize: scale(24), lineHeight: scale(30) }]}
+            numberOfLines={isHarsha ? 1 : 3}
+            adjustsFontSizeToFit={isHarsha}
+            minimumFontScale={0.7}
+          >
             {adminName}
           </Text>
-          {/* Full text on every phone (no "…" truncation). */}
-          <Text style={[styles.sub, { fontSize: scale(12.5), lineHeight: scale(17) }]}>My School ID Card</Text>
-          <Text style={[styles.sub, { fontSize: scale(12.5), lineHeight: scale(17), marginTop: 0 }]}>Get Your Identity Here...</Text>
+          {isHarsha ? <Text style={[styles.harshaSub, { fontSize: scale(12.5), lineHeight: scale(16) }]}>A Complete ID World</Text> : null}
+          <Text style={[styles.brand, { fontSize: scale(16), lineHeight: scale(21) }]}>My School ID Card</Text>
+          <Text style={[styles.sub, { fontSize: scale(13.5), lineHeight: scale(18), marginTop: 0 }]}>Get Your Identity Here...</Text>
         </View>
       </View>
     </LinearGradient>
@@ -77,6 +84,8 @@ const styles = StyleSheet.create({
   },
   initials: { fontFamily: fonts.headingBold, color: "#1F2937", letterSpacing: 0.5 },
   textCol: { flex: 1, minWidth: 0 },
+  harshaSub: { fontFamily: fonts.bodyMedium, color: "rgba(255,255,255,0.92)", letterSpacing: 0.4, marginTop: -2, marginBottom: 2 },
+  brand: { fontFamily: fonts.headingBold, color: "#FFFFFF", marginTop: 4 },
   chip: {
     alignSelf: "flex-start",
     flexDirection: "row",

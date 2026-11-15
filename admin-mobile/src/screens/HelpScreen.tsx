@@ -24,7 +24,8 @@ const ADMIN_GUIDE = [
 ];
 
 type Media = { type: string; url: string; caption: string };
-type Lead = { id: string; name: string; organization: string; phone: string; email: string; message: string; status: string };
+type Lead = { id: string; name: string; organization: string; phone: string; email: string; message: string; status: string; kind?: string };
+const KIND_LABEL: Record<string, string> = { school: "School", institute: "Institute / College", provider: "ID card business / provider" };
 
 export function HelpScreen() {
   const { isSuperAdmin } = useAuth();
@@ -161,7 +162,7 @@ export function HelpScreen() {
         leads.map((l) => (
           <Card key={l.id} style={{ marginBottom: S.md }}>
             <Text style={st.name}>{l.name}</Text>
-            <Muted>{l.organization}</Muted>
+            <Muted>{KIND_LABEL[l.kind ?? "school"] ?? "School"}{l.organization ? ` · ${l.organization}` : ""}</Muted>
             {l.message ? <Text style={st.msg}>{l.message}</Text> : null}
             <View style={{ flexDirection: "row", gap: S.sm, marginVertical: S.sm }}>
               {l.phone ? <Button small variant="soft" icon="call-outline" title="Call" onPress={() => void Linking.openURL(`tel:${l.phone}`)} /> : null}

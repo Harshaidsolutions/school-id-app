@@ -5,6 +5,7 @@ import { CONTENT_MAX_WIDTH, contentMaxStyle } from "../theme/responsive";
 import {ManagedInstructions} from "../components/ManagedInstructions";
 import { Entrance } from "../components/Entrance";
 import { useCallback, useRef, useState } from "react";
+import { RingingBell } from "../components/RingingBell";
 import {
   Image,
   Alert,
@@ -34,7 +35,7 @@ import { icons } from "../theme/responsive";
 import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
 import { ABOUT_US_PARAS } from "../constants/about";
-import { InfoParagraph } from "../components/InfoModal";
+import { RAINBOW } from "../theme/brandTheme";
 import {
   missingContact,
   openBrandWhatsApp,
@@ -120,11 +121,17 @@ export function HomeScreen() {
     }
   }, [reloadBrand]);
 
+  // Keep the latest loader in a ref: when the login details settle a moment after sign-in,
+  // the loader changes — that must not re-run the focus effect (it jumped the page back to
+  // the top while the user was scrolling, so scrolling felt stuck).
+  const loadRef = useRef(load);
+  loadRef.current = load;
+
   useFocusEffect(
     useCallback(() => {
-      void load();
+      void loadRef.current();
       const unsub = subscribeNotificationBadgeRefresh(() => {
-        void load();
+        void loadRef.current();
       });
       if (route.params?.scrollTo === "instructions") {
         requestAnimationFrame(() => {
@@ -137,7 +144,7 @@ export function HomeScreen() {
         scrollRef.current?.scrollTo({ y: 0, animated: false });
       }
       return unsub;
-    }, [load, route.params?.scrollTo])
+    }, [route.params?.scrollTo])
   );
 
   async function bookProduct() {
@@ -199,11 +206,7 @@ export function HomeScreen() {
           accessibilityLabel="Notifications"
           onPress={() => navigation.navigate("Notifications")}
         >
-          <Ionicons
-            name="notifications-outline"
-            size={icons.xl}
-            color={colors.primaryOrange}
-          />
+          <RingingBell size={icons.xl} color={colors.primaryOrange} unread={unread} />
           {unread > 0 ? (
             <View style={[styles.badge, { backgroundColor: colors.brandOrange, borderColor: colors.surface }]}>
               <Text style={[styles.badgeText, { color: colors.onAccent }]}>
@@ -287,9 +290,13 @@ export function HomeScreen() {
 
         {!ready || childBrand ? null : (
           <>
-            {ABOUT_US_PARAS.map((para) => (
-              <InfoParagraph key={para.slice(0, 24)} text={para} colors={colors} />
-            ))}
+            {/* About Us and Our Strength: same headings as the other sections, short text */}
+            <SectionTitle title="ABOUT US" accent={colors.primaryOrange} />
+            <Text style={[styles.about, { color: colors.textBody }]}>{ABOUT_US_PARAS[1]}</Text>
+            <Text style={[styles.about, { color: colors.textBody }]}>{ABOUT_US_PARAS[2]}</Text>
+            <SectionTitle title="OUR STRENGTH" accent={colors.primaryOrange} />
+            <Text style={[styles.about, { color: colors.textBody }]}>{ABOUT_US_PARAS[4]}</Text>
+            <Text style={[styles.motto, { color: colors.primaryOrange }]}>{ABOUT_US_PARAS[6]}</Text>
             <SectionEnd accent={colors.primaryOrange} />
           </>
         )}
@@ -366,7 +373,7 @@ export function HomeScreen() {
           }}
           accessibilityLabel="WhatsApp support"
         >
-          <Ionicons name="logo-whatsapp" size={icons.lg} color="#FFFFFF" />
+          <Ionicons name="logo-whatsapp" size={Math.round(icons.lg * 1.08)} color="#FFFFFF" />
         </Pressable>
         <Pressable
           style={[styles.fab, { backgroundColor: colors.primaryOrange }]}
@@ -381,7 +388,7 @@ export function HomeScreen() {
           }}
           accessibilityLabel="Call support"
         >
-          <Ionicons name="call" size={icons.lg} color="#FFFFFF" />
+          <Ionicons name="call" size={Math.round(icons.lg * 1.08)} color="#FFFFFF" />
         </Pressable>
       </View>
 
@@ -451,7 +458,11 @@ function SectionTitle({ title, accent }: { title: string; accent: string }) {
   return (
     <View style={styles.sectionTitleRow}>
       <LinearGradient colors={[accent, colors.headerYellowEnd]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.sectionTitleBar} />
-      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{title}</Text>
+      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]} numberOfLines={1}>{title}</Text>
+      <View style={[styles.sectionTitleLine, { backgroundColor: accent }]} />
+      <View style={styles.sectionTitleDots}>
+        {RAINBOW.slice(0, 3).map((c) => <View key={c} style={[styles.sectionTitleDot, { backgroundColor: c }]} />)}
+      </View>
     </View>
   );
 }
@@ -542,9 +553,9 @@ function useHomeStyles() {
     position: "absolute",
     top: spacing.xxs / 2,
     right: 0,
-    minWidth: scale(16),
-    height: scale(16),
-    borderRadius: scale(8),
+    minWidth: scale(20),
+    height: scale(20),
+    borderRadius: scale(10),
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.xxs - 1,
@@ -552,7 +563,7 @@ function useHomeStyles() {
   },
   badgeText: {
     color: "#FFFFFF",
-    fontSize: typeScale.xs,
+    fontSize: typeScale.xs + 2,
     fontFamily: fonts.bold,
   },
   scroll: { flex: 1 },
@@ -566,9 +577,13 @@ function useHomeStyles() {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    paddingTop: spacing.md,
-    marginBottom: spacing.sm,
+    paddingTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
+  sectionTitleLine: { flex: 1, height: scale(2), borderRadius: 2, opacity: 0.35, marginLeft: spacing.xs },
+  sectionTitleDots: { flexDirection: "row", gap: 4 },
+  sectionTitleDot: { width: scale(6), height: scale(6), borderRadius: scale(3) },
+  motto: { fontFamily: fonts.bold, fontSize: typeScale.sm, textAlign: "center", letterSpacing: 0.3, marginTop: spacing.xs },
   sectionTitleBar: {
     width: scale(6),
     height: scale(22),
@@ -588,8 +603,8 @@ function useHomeStyles() {
   sectionEnd: {
     height: scale(1),
     width: "100%",
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
+    marginTop: spacing.sm,
+    marginBottom: 2,
     opacity: 0.12,
   },
   stars: {
@@ -645,25 +660,24 @@ function useHomeStyles() {
     alignItems: "center",
     borderWidth: 1,
     borderRadius: radius.card,
-    paddingHorizontal: spacing.xs,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.sm,
+    paddingHorizontal: 4,
+    paddingTop: 4,
+    paddingBottom: spacing.xs,
     overflow: "hidden",
     ...cardShadow,
   },
   productWell: {
     width: "100%",
     borderRadius: radius.lg,
-    padding: spacing.xs,
+    padding: 2,
   },
   productImage: {
     width: "100%",
     borderRadius: radius.sm,
   },
   productText: {
-    minHeight: typeScale.sm * 2.8,
-    lineHeight: typeScale.sm * 1.4,
-    marginTop: spacing.xs,
+    lineHeight: typeScale.sm * 1.35,
+    marginTop: 4,
     fontFamily: fonts.semiBold,
     fontSize: typeScale.sm,
     textAlign: "center",
@@ -675,9 +689,9 @@ function useHomeStyles() {
     zIndex: 20,
   },
   fab: {
-    width: scale(48),
-    height: scale(48),
-    borderRadius: scale(24),
+    width: scale(52),
+    height: scale(52),
+    borderRadius: scale(26),
     alignItems: "center",
     justifyContent: "center",
     elevation: 8,

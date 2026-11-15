@@ -22,7 +22,7 @@ export const APP_LOGO_TRANSPARENT: ImageSourcePropType = IN_APP_LOGO;
 export const APP_LOGO_WIDTH = 1419;
 export const APP_LOGO_HEIGHT = 276;
 
-export const BRAND_LOGO_ASPECT = 320 / 1419;
+export const BRAND_LOGO_ASPECT = 336 / 1419;
 
 export function brandLogoSource(): ImageSourcePropType {
   const resolved = Image.resolveAssetSource(BRAND_LOGO);

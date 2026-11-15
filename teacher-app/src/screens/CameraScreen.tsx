@@ -87,7 +87,8 @@ export function CameraScreen({ navigation, route }: Props) {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
-        quality: 1,
+        // Below 1 makes the phone hand back a normal JPG (not HEIC / huge originals).
+        quality: 0.92,
         allowsEditing: false,
         exif: false,
         selectionLimit: 1,

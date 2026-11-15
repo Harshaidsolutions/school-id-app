@@ -114,7 +114,10 @@ export function InboxScreen() {
       }
       footer={
         selecting ? (
-          <Button title={`Delete ${selected.size} selected`} variant="danger" icon="trash-outline" disabled={!selected.size} onPress={() => setOtp(true)} />
+          <View style={{ flexDirection: "row", gap: S.sm }}>
+            <Button title={`Delete all (${items.length})`} variant="secondary" icon="trash-bin-outline" style={{ flex: 1 }} onPress={() => { setSelected(new Set(items.slice(0, 200).map((n) => n.id))); setOtp(true); }} />
+            <Button title={`Delete ${selected.size}`} variant="danger" icon="trash-outline" style={{ flex: 1 }} disabled={!selected.size} onPress={() => setOtp(true)} />
+          </View>
         ) : items.some((n) => !n.read) ? (
           <Button
             title="Mark all as read"

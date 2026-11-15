@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ToggleSwitch } from "../../components/ui/ToggleSwitch";
 import { GOOGLE_FONTS, SYSTEM_FONTS, loadGoogleFont } from "../fonts";
+import { textBoxHeight } from "../defaults";
 import { fileToDataUrl } from "../imageData";
 import type { BarcodeElement, CardElement, ImageElement, PhotoShape, QrElement, TextElement } from "../types";
 
@@ -63,9 +64,9 @@ export const SHAPES: { key: PhotoShape; label: string; d: string }[] = [
  * (one point smaller, e.g. 10 → 9) and a box that is too short for one line grows to fit.
  */
 export function fontSizePatch(el: TextElement, size: number): Partial<TextElement> {
-  const lineMm = size * (25.4 / 72) * (el.lineHeight || 1.15);
-  const lines = el.multiline ? Math.max(1, Math.round(el.h / ((el.size || size) * (25.4 / 72) * (el.lineHeight || 1.15)))) : 1;
-  return { size, minSize: Math.max(3, size - 1), h: Math.max(el.h ?? 0, +(lineMm * lines + 0.2).toFixed(2)) };
+  // The height follows the font size (one line = font height; wrapped text keeps its number of lines).
+  const lines = el.multiline ? Math.max(1, Math.round(el.h / textBoxHeight(el.size || size, 1, 1) / (el.lineHeight || 1.15))) : 1;
+  return { size, minSize: Math.max(3, size - 1), h: textBoxHeight(size, lines, el.lineHeight || 1.15) };
 }
 
 /** Formatting toolbar above the card (text elements), like a word processor. */
@@ -166,8 +167,8 @@ function TextProps({ el, patch }: { el: TextElement; patch: Patch }) {
       <div className="idg-switches">
         <span><ToggleSwitch checked={el.autoShrink} onChange={() => p({ autoShrink: !el.autoShrink })} label="Auto-shrink long text" /> Auto-shrink long text</span>
         {el.autoShrink && <Field label="Smallest size (auto-shrink)"><Num value={el.minSize} step={0.5} min={3} max={el.size} suffix="pt" onChange={(v) => p({ minSize: v })} /></Field>}
-        <span><ToggleSwitch checked={el.multiline} onChange={() => p({ multiline: !el.multiline })} label="Wrap to more lines" /> Wrap to more lines</span>
-        {el.multiline && <Field label="Space between lines"><Num value={el.lineHeight} step={0.05} min={0.8} max={3} suffix="×" onChange={(v) => p({ lineHeight: v })} /></Field>}
+        <span><ToggleSwitch checked={el.multiline} onChange={() => p({ multiline: !el.multiline, h: textBoxHeight(el.size, el.multiline ? 1 : 2, el.lineHeight || 1.15) })} label="Wrap to more lines" /> Wrap to more lines</span>
+        {el.multiline && <Field label="Space between lines"><Num value={el.lineHeight} step={0.05} min={0.8} max={3} suffix="×" onChange={(v) => p({ lineHeight: v, h: textBoxHeight(el.size, Math.max(1, Math.round(el.h / textBoxHeight(el.size, 1, 1) / (el.lineHeight || 1.15))), v) })} /></Field>}
       </div>
       <div className="idg-grid2">
         <Field label="Outline (stroke)"><Num value={el.stroke.width} step={0.1} min={0} max={4} suffix="pt" onChange={(v) => p({ stroke: { ...el.stroke, width: v } })} /></Field>

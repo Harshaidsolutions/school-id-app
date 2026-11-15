@@ -63,9 +63,9 @@ export function Backdrop() {
 }
 
 /** Six-colour strip from the Harsha ID Solutions logo (same as the website top bar). */
-export function RainbowBar({ height = 4, style }: { height?: number; style?: StyleProp<ViewStyle> }) {
+export function RainbowBar({ height = 4, style, rounded }: { height?: number; style?: StyleProp<ViewStyle>; rounded?: boolean }) {
   return (
-    <View pointerEvents="none" style={[{ flexDirection: "row", height, alignSelf: "stretch" }, style]}>
+    <View pointerEvents="none" style={[{ flexDirection: "row", height, alignSelf: "stretch" }, rounded && { borderRadius: height / 2, overflow: "hidden" }, style]}>
       {RAINBOW.map((c) => (
         <View key={c} style={{ flex: 1, backgroundColor: c }} />
       ))}
@@ -123,7 +123,7 @@ export function Header({
         {right ? <View style={{ flexDirection: "row", gap: 8 }}>{right}</View> : null}
       </View>
       {children ? <View style={{ maxWidth: CONTENT_MAX, alignSelf: "center", width: "100%", marginTop: S.md }}>{children}</View> : null}
-      <RainbowBar style={st.rainbow} />
+      <RainbowBar rounded style={st.rainbow} />
     </LinearGradient>
   );
 }
@@ -187,7 +187,8 @@ export function Screen({
 
 const st = StyleSheet.create({
   header: { paddingHorizontal: S.lg, paddingBottom: S.lg, borderBottomLeftRadius: 22, borderBottomRightRadius: 22, overflow: "hidden" },
-  rainbow: { position: "absolute", left: 0, right: 0, bottom: 0 },
+  // Ends set in by the header's corner radius so both ends finish the same, clean way.
+  rainbow: { position: "absolute", left: 22, right: 22, bottom: 3 },
   bubbleA: { position: "absolute", width: 180, height: 180, borderRadius: 90, backgroundColor: "rgba(255,255,255,0.12)", top: -60, right: -40 },
   bubbleB: { position: "absolute", width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(255,255,255,0.08)", bottom: -50, left: 30 },
   headerRow: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 44 },

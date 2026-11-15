@@ -3,11 +3,23 @@ import type { Row } from "@gen/types";
 
 export type Sheet = { columns: string[]; rows: Row[] };
 
-/** Reads the first sheet of an .xlsx file, or a .csv file — fully offline. */
-export async function readSheet(file: File): Promise<Sheet> {
-  if (/\.csv$/i.test(file.name) || file.type === "text/csv") return tableToSheet(parseCsv(await file.text()));
+const isCsv = (file: File) => /\.csv$/i.test(file.name) || file.type === "text/csv";
+const checkXls = (file: File) => {
   if (/\.xls$/i.test(file.name)) throw new Error("Old .xls files are not supported. In Excel choose File → Save As → Excel Workbook (.xlsx) or CSV.");
-  return tableToSheet(await parseXlsx(file));
+};
+
+/** Names of the worksheets in an .xlsx file (a CSV has one: "Sheet1"). */
+export async function listSheets(file: File): Promise<string[]> {
+  if (isCsv(file)) return ["Sheet1"];
+  checkXls(file);
+  return (await workbookSheets(file)).map((s) => s.name);
+}
+
+/** Reads one worksheet (by name; the first one when not given) of an .xlsx file, or a .csv file — fully offline. */
+export async function readSheet(file: File, sheetName?: string): Promise<Sheet> {
+  if (isCsv(file)) return tableToSheet(parseCsv(await file.text()));
+  checkXls(file);
+  return tableToSheet(await parseXlsx(file, sheetName));
 }
 
 /* ---------- CSV ---------- */
@@ -51,23 +63,39 @@ function excelDate(serial: number): string {
   return `${dd}-${mm}-${d.getUTCFullYear()}`;
 }
 
-export async function parseXlsx(file: Blob): Promise<string[][]> {
+type Book = { get: (name: string) => Promise<string | null> };
+async function openBook(file: Blob): Promise<Book> {
   const entries = await readZip(file);
-  const get = async (name: string) => {
-    const e = entries.find((x) => x.name.replace(/^\/+/, "").toLowerCase() === name.toLowerCase());
-    return e ? await (await e.read()).text() : null;
+  return {
+    get: async (name: string) => {
+      const e = entries.find((x) => x.name.replace(/^\/+/, "").toLowerCase() === name.toLowerCase());
+      return e ? await (await e.read()).text() : null;
+    },
   };
-  const workbook = await get("xl/workbook.xml");
+}
+
+/** Every worksheet with its file inside the workbook, in Excel's tab order. */
+async function workbookSheets(file: Blob, book?: Book): Promise<{ name: string; path: string }[]> {
+  const b = book ?? (await openBook(file));
+  const workbook = await b.get("xl/workbook.xml");
   if (!workbook) throw new Error("This file is not an Excel workbook (.xlsx).");
-  const firstSheet = byLocal(xml(workbook), "sheet")[0];
-  const relId = firstSheet?.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") ?? firstSheet?.getAttribute("r:id");
-  let sheetPath = "xl/worksheets/sheet1.xml";
-  const rels = await get("xl/_rels/workbook.xml.rels");
-  if (rels && relId) {
-    const rel = byLocal(xml(rels), "Relationship").find((r) => r.getAttribute("Id") === relId);
-    const target = rel?.getAttribute("Target");
-    if (target) sheetPath = target.startsWith("/") ? target.slice(1) : `xl/${target.replace(/^\.\//, "")}`;
-  }
+  const rels = await b.get("xl/_rels/workbook.xml.rels");
+  const relList = rels ? byLocal(xml(rels), "Relationship") : [];
+  return byLocal(xml(workbook), "sheet").map((sh, i) => {
+    const relId = sh.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") ?? sh.getAttribute("r:id");
+    const target = relList.find((r) => r.getAttribute("Id") === relId)?.getAttribute("Target");
+    const path = target ? (target.startsWith("/") ? target.slice(1) : `xl/${target.replace(/^\.\//, "")}`) : `xl/worksheets/sheet${i + 1}.xml`;
+    return { name: sh.getAttribute("name") ?? `Sheet${i + 1}`, path };
+  });
+}
+
+export async function parseXlsx(file: Blob, sheetName?: string): Promise<string[][]> {
+  const book = await openBook(file);
+  const get = book.get;
+  const sheets = await workbookSheets(file, book);
+  if (!sheets.length) throw new Error("This workbook has no worksheets.");
+  const chosen = (sheetName && sheets.find((s) => s.name === sheetName)) || sheets[0];
+  const sheetPath = chosen.path;
   const shared: string[] = [];
   const ss = await get("xl/sharedStrings.xml");
   if (ss) for (const si of byLocal(xml(ss), "si")) shared.push(byLocal(si, "t").map((t) => t.textContent ?? "").join(""));
@@ -86,7 +114,7 @@ export async function parseXlsx(file: Blob): Promise<string[][]> {
   }
 
   const sheetXml = await get(sheetPath);
-  if (!sheetXml) throw new Error("The first sheet of the workbook could not be read.");
+  if (!sheetXml) throw new Error(`The worksheet “${chosen.name}” could not be read.`);
   const table: string[][] = [];
   for (const r of byLocal(xml(sheetXml), "row")) {
     const ri = Number(r.getAttribute("r") ?? table.length + 1) - 1;
