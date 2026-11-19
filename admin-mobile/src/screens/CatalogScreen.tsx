@@ -88,6 +88,11 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
   /** Every image of every item in the list, so Next / Previous moves through all of them. */
   const allPics = list.flatMap((item) => pics(item).map((url) => ({ item, url })));
   const openViewer = (item: CatalogItem) => setViewer({ item, index: Math.max(0, allPics.findIndex((x) => x.item.id === item.id)) });
+  const openViewerAt = (item: CatalogItem, url: string | null) => setViewer({ item, index: Math.max(0, allPics.findIndex((x) => x.item.id === item.id && x.url === url)) });
+  // Tags: show every image as its own tile (no "+N"); models/brochures: one tile per item.
+  const gridData = kind === "tag"
+    ? list.flatMap((item) => pics(item).map((url, i) => ({ item, url, imgIndex: i, key: `${item.id}:${i}` })))
+    : list.map((item) => ({ item, url: item.image_url, imgIndex: 0, key: item.id }));
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -115,9 +120,9 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
       ) : (
         <FlatList
           key={`${cols}-${kind}`}
-          data={list}
+          data={gridData}
           numColumns={cols}
-          keyExtractor={(i) => i.id}
+          keyExtractor={(t) => t.key}
           columnWrapperStyle={{ gap: S.md }}
           contentContainerStyle={{ padding: S.lg, paddingBottom: insets.bottom + 120, width: "100%", maxWidth: CONTENT_MAX, alignSelf: "center" }}
           refreshControl={<RefreshControl refreshing={refreshing} colors={[C.primary]} onRefresh={async () => {
@@ -132,32 +137,36 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
             </>
           }
           ListEmptyComponent={<Empty icon="pricetags-outline" title="Nothing here yet" text="Tap the button below to add the first one." />}
-          renderItem={({ item }) => (
+          renderItem={({ item: tile }) => {
+            const item = tile.item;
+            const url = tile.url;
+            const tagCount = kind === "tag" ? pics(item).length : 0;
+            return (
             <Tap
               style={[st.tile, { width: tileW }]}
-              onPress={() => (isPdf(item.image_url) ? void Linking.openURL(mediaUrl(item.image_url)!) : openViewer(item))}
+              onPress={() => (isPdf(url) ? void Linking.openURL(mediaUrl(url)!) : openViewerAt(item, url))}
               onLongPress={() => setMenu(item)}
             >
               <View style={st.img}>
-                {isPdf(item.image_url) ? (
+                {isPdf(url) ? (
                   <View style={st.pdfBox}>
                     <Ionicons name="document-text" size={40} color={C.danger} />
                     <Text style={st.pdfText}>PDF</Text>
                   </View>
                 ) : (
-                  <Image source={authedSource(item.image_url)} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+                  <Image source={authedSource(url)} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
                 )}
-                {item.video_url ? (
+                {item.video_url && tile.imgIndex === 0 ? (
                   <Tap style={st.video} onPress={() => setPlaying(item)} hitSlop={10} accessibilityLabel="Play video">
                     <Ionicons name="play" size={14} color={C.white} />
                   </Tap>
                 ) : null}
-                {(item.extra_image_urls?.length ?? 0) > 0 ? <Pill text={`+${item.extra_image_urls!.length}`} tone="blue" style={{ position: "absolute", top: 8, left: 8 }} /> : null}
+                {kind !== "tag" && (item.extra_image_urls?.length ?? 0) > 0 ? <Pill text={`+${item.extra_image_urls!.length}`} tone="blue" style={{ position: "absolute", top: 8, left: 8 }} /> : null}
               </View>
               <View style={st.foot}>
                 <View style={{ flex: 1 }}>
                   <Text style={st.name} numberOfLines={1}>
-                    {item.name}
+                    {item.name}{tagCount > 1 ? ` (${tile.imgIndex + 1}/${tagCount})` : ""}
                   </Text>
                   {item.description ? <Muted style={{ fontSize: 11 }}>{item.description}</Muted> : null}
                 </View>
@@ -166,7 +175,8 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
                 </Tap>
               </View>
             </Tap>
-          )}
+            );
+          }}
         />
       )}
       <Fab label={isBrochure ? "Upload" : kind === "tag" ? "Add tag" : "Add model"} icon="add" onPress={() => setEditor({ item: null })} />

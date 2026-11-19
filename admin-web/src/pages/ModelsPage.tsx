@@ -382,23 +382,28 @@ export function ModelsPage() {
                     ) : null}
                     <td className="col-sno">{index + 1}</td>
                     <td className="col-image">
-                      {item.image_url ? (
-                        <button
-                          type="button"
-                          onClick={() => openPreview(item)}
-                          className="relative overflow-hidden transition hover:opacity-90"
-                          title="Click to enlarge"
-                        >
-                          <img
-                            src={item.image_url}
-                            alt={item.name}
-                            className="h-16 w-14 object-contain bg-content-bg"
-                          />
-                          {(item.extra_image_urls?.length ?? 0) > 0 ? <span className="catalog-count">+{item.extra_image_urls!.length}</span> : null}
-                        </button>
-                      ) : (
-                        "—"
-                      )}
+                      {(() => {
+                        const pics = [item.image_url, ...(item.extra_image_urls ?? [])].filter((u): u is string => Boolean(u));
+                        if (!pics.length) return "—";
+                        // Tags: show every image (no "+N"); models keep a single thumbnail.
+                        const shownPics = isTagsTab ? pics : pics.slice(0, 1);
+                        return (
+                          <div className="catalog-thumbs">
+                            {shownPics.map((url, k) => (
+                              <button
+                                key={k}
+                                type="button"
+                                onClick={() => openPreview(item, k)}
+                                className="relative overflow-hidden transition hover:opacity-90"
+                                title="Click to enlarge"
+                              >
+                                <img src={url} alt={`${item.name} ${k + 1}`} className="h-16 w-14 object-contain bg-content-bg" />
+                                {!isTagsTab && pics.length > 1 ? <span className="catalog-count">+{pics.length - 1}</span> : null}
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
                       {item.video_url ? (
                         <video
                           src={item.video_url}

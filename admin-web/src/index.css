@@ -1227,6 +1227,8 @@ input[type="file"]::file-selector-button:hover { background: #e0e3ff; }
 .catalog-thumbs figcaption { font-size: 11px; text-align: center; color: var(--muted); }
 .catalog-thumb-x { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: #e11d48; color: #fff; font-weight: 800; line-height: 1; cursor: pointer; }
 .catalog-count { position: absolute; right: 2px; bottom: 2px; padding: 0 5px; border-radius: 8px; background: #4f46e5; color: #fff; font-size: 10.5px; font-weight: 700; }
+.catalog-thumbs { display: flex; flex-wrap: wrap; gap: 4px; max-width: 220px; }
+.catalog-thumbs button img { border-radius: 6px; border: 1px solid var(--line, #e5e7eb); }
 /* Pictures in page content open in the zoom viewer when clicked */
 main img:not(button img):not(a img):not(label img):not(.idg img):not(.crop-tool-shell img),
 .msidc-embed img:not(button img):not(a img):not(label img):not(.idg img):not(.crop-tool-shell img) { cursor: zoom-in; }
