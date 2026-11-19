@@ -310,7 +310,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
   /** Same buttons, order and names as the website's records toolbar. */
   const tools: Tool[] = [
     { label: "Form Setup", icon: "list-outline", sub: batchCount ? "Fields, order and visibility" : "Upload Excel first", onPress: () => (batchCount ? navigation.navigate("FormSetup", { kind, id: orgId, name }) : setError("Upload an Excel file first, then use Form Setup.")) },
-    { label: "Upload Excel", icon: "document-attach-outline", sub: "Import or replace the list", onPress: () => setSheet("excel-up") },
+    { label: "Upload Excel", icon: "document-attach-outline", onPress: () => setSheet("excel-up") },
     { label: "Upload Photos", icon: "images-outline", sub: "ZIP named by photo number", onPress: () => setSheet("photos-up") },
     { label: "Download Excel", icon: "download-outline", sub: "All, captured, pending, date-wise…", onPress: () => setSheet("excel-down") },
     {
@@ -332,8 +332,8 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
         setSheet("delete");
       },
     },
-    { label: "Cropping Tool", icon: "crop-outline", feature: true, sub: "Crop and straighten photos", onPress: () => navigation.navigate("WebTool", { title: "Cropping Tool", path: `/crop-tool?${orgQuery}` }) },
-    { label: "ID Card Generator", icon: "card-outline", feature: true, sub: "Generate and print ID cards", onPress: () => navigation.navigate("WebTool", { title: "ID Card Generator", path: `/id-card-generator?${orgQuery}` }) },
+    { label: "Cropping Tool", icon: "crop-outline", feature: true, onPress: () => navigation.navigate("WebTool", { title: "Cropping Tool", path: `/crop-tool?${orgQuery}` }) },
+    { label: "ID Card Generator", icon: "card-outline", feature: true, onPress: () => navigation.navigate("WebTool", { title: "ID Card Generator", path: `/id-card-generator?${orgQuery}` }) },
     { label: "Link", icon: "link-outline", sub: "Parent form link", hidden: institute, onPress: () => setSheet("link") },
   ];
 
