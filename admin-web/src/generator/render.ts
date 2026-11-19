@@ -302,9 +302,16 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, row: Row, w: n
   const ax = el.align === "left" ? 0 : el.align === "right" ? w : w / 2;
   let fill: string | CanvasGradient = el.color;
   if (el.gradient.on) {
+    // Span the gradient across the actual text block (widest line x the line height), not the box,
+    // so the two colours show on the letters themselves wherever the text sits.
+    let textW = 0;
+    for (const line of lines) textW = Math.max(textW, ctx.measureText(line).width);
+    textW = Math.max(1, textW);
+    const left = el.align === "left" ? 0 : el.align === "right" ? w - textW : (w - textW) / 2;
+    const cx = left + textW / 2, cy = top + blockH / 2;
     const a = (el.gradient.angle * Math.PI) / 180;
-    const dx = Math.cos(a) * w / 2, dy = Math.sin(a) * h / 2;
-    const g = ctx.createLinearGradient(w / 2 - dx, h / 2 - dy, w / 2 + dx, h / 2 + dy);
+    const dx = Math.cos(a) * textW / 2, dy = Math.sin(a) * blockH / 2;
+    const g = ctx.createLinearGradient(cx - dx, cy - dy, cx + dx, cy + dy);
     g.addColorStop(0, el.color);
     g.addColorStop(1, el.gradient.color2);
     fill = g;
@@ -366,21 +373,25 @@ async function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, w: num
   const dx = bx + (bw - dw) / 2;
   const dy = by + (el.fit === "cover" && el.media === "photo" ? Math.min(0, (bh - dh) * 0.2) : (bh - dh) / 2);
   ctx.save();
+  // Build the fitted, shape-clipped picture on its own layer. The drop shadow is then cast from the
+  // picture's real outline (no white "paper" box behind it), and it works for photos and signatures alike.
+  const layer = document.createElement("canvas");
+  layer.width = Math.max(1, Math.round(w));
+  layer.height = Math.max(1, Math.round(h));
+  const lctx = layer.getContext("2d")!;
+  lctx.save();
+  shapePath(lctx, shape, 0, 0, w, h, el.radius * mm);
+  lctx.clip();
+  lctx.imageSmoothingQuality = "high";
+  lctx.drawImage(bmp, dx, dy, dw, dh);
+  lctx.restore();
+  ctx.save();
   if (el.shadow.on) {
-    ctx.save();
     ctx.shadowColor = el.shadow.color;
     ctx.shadowBlur = el.shadow.blur * mm;
     ctx.shadowOffsetY = el.shadow.blur * mm * 0.35;
-    shapePath(ctx, shape, 0, 0, w, h, el.radius * mm);
-    ctx.fillStyle = "#ffffff";
-    ctx.fill();
-    ctx.restore();
   }
-  ctx.save();
-  shapePath(ctx, shape, 0, 0, w, h, el.radius * mm);
-  ctx.clip();
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(bmp, dx, dy, dw, dh);
+  ctx.drawImage(layer, 0, 0);
   ctx.restore();
   if (el.border.width > 0) {
     shapePath(ctx, shape, 0, 0, w, h, el.radius * mm);

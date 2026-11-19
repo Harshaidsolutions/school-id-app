@@ -563,9 +563,9 @@
 }
 
 /* Eight resize handles: corners (width + height), sides (width), top / bottom (height) */
-.idg-handle { right: auto !important; bottom: auto !important; width: 10px !important; height: 10px !important; transform: translate(-50%, -50%); border-radius: 2px !important; z-index: 2; }
-.idg-handle.is-n, .idg-handle.is-s { width: 14px !important; height: 7px !important; }
-.idg-handle.is-e, .idg-handle.is-w { width: 7px !important; height: 14px !important; }
+.idg-handle { right: auto !important; bottom: auto !important; width: 7px !important; height: 7px !important; transform: translate(-50%, -50%); border-radius: 2px !important; z-index: 2; }
+.idg-handle.is-n, .idg-handle.is-s { width: 10px !important; height: 5px !important; }
+.idg-handle.is-e, .idg-handle.is-w { width: 5px !important; height: 10px !important; }
 @media (max-width: 760px) {
   .idg-handle { width: 18px !important; height: 18px !important; right: auto !important; bottom: auto !important; }
   .idg-handle.is-n, .idg-handle.is-s { width: 22px !important; height: 12px !important; }
