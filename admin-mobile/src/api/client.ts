@@ -53,14 +53,21 @@ api.interceptors.response.use(
 );
 
 /** Friendly error text from any failed request. */
+
+/** Hide developer/technical wording from users; show a clean message instead. */
+const TECHNICAL = /request failed|status code|network error|xhr|econn|etimedout|timeout of|cannot read|is not a function|undefined|null|\bnan\b|\[object|[{}]|<\/?[a-z]|https?:\/\/|:\d{2,5}\b|axios|fetch failed|load failed|\bcache\b|internal server error|unexpected token|parse|stack/i;
+function friendly(message?: string | null): string | null {
+  const m = (message ?? "").trim();
+  if (!m || m.length > 160 || TECHNICAL.test(m)) return null;
+  return m;
+}
 export function errMsg(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
-    if (!error.response) return "No internet connection. Please check your network and try again.";
+    if (!error.response) return "Couldn't connect. Please check your internet and try again.";
     const data = error.response.data as { message?: string } | undefined;
-    if (data && typeof data === "object" && data.message) return data.message;
-    return fallback;
+    return friendly(data?.message) ?? fallback;
   }
-  if (error instanceof Error && error.message) return error.message;
+  if (error instanceof Error) return friendly(error.message) ?? fallback;
   return fallback;
 }
 

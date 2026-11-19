@@ -81,8 +81,12 @@ function download(file: ExportFile) {
 }
 
 function apiError(e: unknown, fallback: string): string {
-  const msg = (e as { response?: { data?: { message?: string } } })?.response?.data;
-  return msg?.message || fallback;
+  const err = e as { response?: { data?: { message?: string } } };
+  if (err && !err.response) return "Couldn't connect. Please check your internet and try again.";
+  const m = (err?.response?.data?.message ?? "").trim();
+  // Don't show technical wording to users.
+  if (!m || m.length > 160 || /request failed|status code|network error|undefined|null|[{}]|https?:\/\/|axios|internal server error|unexpected token|stack|cache/i.test(m)) return fallback;
+  return m;
 }
 
 /** Text formatting that new text fields copy from the last text the admin styled (not the position). */

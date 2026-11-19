@@ -32,7 +32,7 @@ export function errorHandler(
 
   const statusCode = err instanceof AppError ? err.statusCode : 500;
   const message =
-    err instanceof AppError ? err.message : "Internal server error";
+    err instanceof AppError ? err.message : "Something went wrong on our side. Please try again in a moment.";
 
   if (statusCode >= 500) {
     console.error(err);

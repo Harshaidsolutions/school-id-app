@@ -52,17 +52,21 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+
+/** Hide developer/technical wording from users; show a clean message instead. */
+const TECHNICAL = /request failed|status code|network error|xhr|econn|etimedout|timeout of|cannot read|is not a function|undefined|null|\bnan\b|\[object|[{}]|<\/?[a-z]|https?:\/\/|:\d{2,5}\b|axios|fetch failed|load failed|\bcache\b|internal server error|unexpected token|parse|stack/i;
+function friendly(message?: string | null): string | null {
+  const m = (message ?? "").trim();
+  if (!m || m.length > 160 || TECHNICAL.test(m)) return null;
+  return m;
+}
 export function getErrorMessage(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
     const ax = error as AxiosError<ApiErrorBody>;
-    if (!ax.response) {
-      return "Network error. Check that the backend is running and reachable.";
-    }
-    return ax.response.data?.message ?? fallback;
+    if (!ax.response) return "Couldn't connect. Please check your internet and try again.";
+    return friendly(ax.response.data?.message) ?? fallback;
   }
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
+  if (error instanceof Error) return friendly(error.message) ?? fallback;
   return fallback;
 }
 
