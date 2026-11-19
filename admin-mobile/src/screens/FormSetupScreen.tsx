@@ -10,6 +10,37 @@ import { Banner, Button, Card, Empty, Field, Loading, Muted, Pill, Toggle } from
 import { Tap } from "../ui/Pressable";
 import type { ScreenProps } from "../navigation/types";
 
+function OptionsEditor({ options, onChange }: { options: string[]; onChange: (next: string[]) => void }) {
+  const [draft, setDraft] = useState("");
+  const add = () => {
+    const v = draft.trim();
+    if (v && !options.includes(v)) onChange([...options, v]);
+    setDraft("");
+  };
+  return (
+    <View style={{ marginTop: 8 }}>
+      {options.length > 0 ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+          {options.map((o, i) => (
+            <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.card, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+              <Text style={{ fontFamily: F.body, fontSize: 13, color: C.ink }}>{o}</Text>
+              <Tap onPress={() => onChange(options.filter((_, j) => j !== i))}>
+                <Text style={{ color: C.danger, fontSize: 15, fontWeight: "700" }}>×</Text>
+              </Tap>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <TextInput style={[st.optionsInput, { flex: 1, marginTop: 0 }]} placeholder="Add option" placeholderTextColor={C.faint} value={draft} onChangeText={setDraft} onSubmitEditing={add} returnKeyType="done" />
+        <Tap onPress={add} style={{ justifyContent: "center", paddingHorizontal: 14, backgroundColor: C.primary, borderRadius: 10 }}>
+          <Text style={{ color: C.white, fontFamily: F.body, fontSize: 14, fontWeight: "600" }}>Add</Text>
+        </Tap>
+      </View>
+    </View>
+  );
+}
+
 export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">) {
   const { kind, id, name } = route.params;
   const isOrg = kind === "organization";
@@ -192,13 +223,7 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
                         </>
                     </View>
                     {f.fieldType === "dropdown" ? (
-                      <TextInput
-                        style={st.optionsInput}
-                        placeholder="Options, comma separated (e.g. Class 1, Class 2)"
-                        placeholderTextColor={C.faint}
-                        defaultValue={(f.options ?? []).join(", ")}
-                        onEndEditing={(e) => patch(i, { options: e.nativeEvent.text.split(",").map((o) => o.trim()).filter(Boolean) })}
-                      />
+                      <OptionsEditor options={f.options ?? []} onChange={(next) => patch(i, { options: next })} />
                     ) : null}
                     {f.fieldType === "dropdown" ? (
                       <Tap onPress={() => patch(i, { isGroup: !f.isGroup })} style={{ marginTop: 6, alignSelf: "flex-start" }}>
@@ -212,11 +237,9 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
                       }}>
                         <Text style={st.link}>Rename</Text>
                       </Tap>
-                      {isManualFormField(f) && f.key !== "signature_upload" && !f.organizationFieldId ? (
-                        <Tap onPress={() => setFields(withSequentialDisplayOrder(fields.filter((_, k) => k !== i)))}>
-                          <Text style={[st.link, { color: C.danger }]}>Delete</Text>
-                        </Tap>
-                      ) : null}
+                      <Tap onPress={() => setFields(withSequentialDisplayOrder(fields.filter((_, k) => k !== i)))}>
+                        <Text style={[st.link, { color: C.danger }]}>Delete</Text>
+                      </Tap>
                     </View>
                   </>
                 )}

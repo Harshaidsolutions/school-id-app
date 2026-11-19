@@ -24,7 +24,6 @@ import { ToggleSwitch } from "../components/ui/ToggleSwitch";
 import type { FormFieldConfig } from "../constants/formFields";
 import {
   formFieldRowId,
-  isManualFormField,
   sortFormFields,
   withSequentialDisplayOrder,
 } from "../constants/formFields";
@@ -88,6 +87,33 @@ function DragHandleIcon() {
       <circle cx="5" cy="12" r="1.25" />
       <circle cx="11" cy="12" r="1.25" />
     </svg>
+  );
+}
+
+function DropdownOptionsEditor({ options, onChange }: { options: string[]; onChange: (next: string[]) => void }) {
+  const [draft, setDraft] = useState("");
+  const add = () => {
+    const v = draft.trim();
+    if (v && !options.includes(v)) onChange([...options, v]);
+    setDraft("");
+  };
+  return (
+    <div className="flex flex-col gap-1.5">
+      {options.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {options.map((o, i) => (
+            <span key={i} className="inline-flex items-center gap-1 rounded-full bg-blue-soft px-2.5 py-1 text-xs font-medium text-text-navy">
+              {o}
+              <button type="button" aria-label={`Remove ${o}`} className="text-danger" onClick={() => onChange(options.filter((_, j) => j !== i))}>×</button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <div className="flex gap-1.5">
+        <input className="input-field w-40" placeholder="Add option" value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+        <button type="button" className="btn-secondary px-3 py-1 text-xs" onClick={add}>Add</button>
+      </div>
+    </div>
   );
 }
 
@@ -173,22 +199,20 @@ function SortableFieldRow({
             >
               Edit
             </button>
-            {isManualFormField(field) && field.key !== "signature_upload" && (
-              <button
-                type="button"
-                onClick={() => onRemove(rowId)}
-                className="ml-2 text-xs font-medium text-danger hover:underline"
-              >
-                Delete
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => onRemove(rowId)}
+              className="ml-2 text-xs font-medium text-danger hover:underline"
+            >
+              Delete
+            </button>
           </div>
         )}
       </div>
       {onConfigure ? <div className="flex items-center gap-3">
         <select aria-label={`${field.label} type`} className="input-field w-auto" value={field.fieldType ?? "text"} disabled={Boolean(field.organizationFieldId) || field.key === "photo_id" || field.key === "signature_upload"} onChange={e => onConfigure(rowId, {fieldType:e.target.value as "text"|"photo"|"dropdown"})}><option value="text">Text / Data</option><option value="photo">Image / Photo</option><option value="dropdown">Dropdown</option></select>
         <select aria-label={`${field.label} requirement`} className="input-field w-auto" value={field.required !== false ? "required" : "optional"} onChange={e => onConfigure(rowId, { required: e.target.value === "required" })}><option value="required">Required</option><option value="optional">Optional</option></select>
-        {field.fieldType === "dropdown" ? <input aria-label={`${field.label} options`} className="input-field w-full sm:w-64" placeholder="Options, comma separated (e.g. Class 1, Class 2)" value={(field.options ?? []).join(", ")} onChange={e => onConfigure(rowId, { options: e.target.value.split(",").map(o => o.trim()).filter(Boolean) })} /> : null}
+        {field.fieldType === "dropdown" ? <DropdownOptionsEditor options={field.options ?? []} onChange={(next) => onConfigure(rowId, { options: next })} /> : null}
         {field.fieldType === "dropdown" ? <label className="flex items-center gap-1.5 text-xs font-medium text-text-navy whitespace-nowrap"><input type="checkbox" checked={field.isGroup === true} onChange={e => onConfigure(rowId, { isGroup: e.target.checked })} />Group by this</label> : null}
       </div> : null}
       <label className="form-field-visibility flex items-center gap-2 text-sm">Visible<ToggleSwitch
@@ -308,8 +332,6 @@ export function FormSetupPage() {
   function removeField(rowId: string) {
     const idx = indexForRowId(fields, rowId);
     if (idx < 0) return;
-    const target = fields[idx];
-    if (target && (!isManualFormField(target) || target.key === "signature_upload")) return;
     reorderFields(fields.filter((_, i) => i !== idx));
     setEditingKey((current) => (current === rowId ? null : current));
   }
