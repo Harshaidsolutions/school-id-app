@@ -81,9 +81,9 @@ export function PublicOrgFormPage({ school = false }: {school?:boolean}) {
                     className="input-field"
                     onChange={(event) => setFiles((current) => ({ ...current, [field.id]: event.target.files?.[0] ?? null }))}
                   />
-                ) : field.fieldType === "select" ? (
+                ) : field.fieldType === "select" || field.fieldType === "dropdown" ? (
                   <select required={field.required} className="input-field" value={values[field.id] ?? ""} onChange={event=>setValues(current=>({...current,[field.id]:event.target.value}))}>
-                    <option value="">{field.options?.length ? "Choose class" : "Classes not configured — contact your school"}</option>
+                    <option value="">{field.options?.length ? `Choose ${field.fieldName}` : "Options not configured — contact your admin"}</option>
                     {(field.options ?? []).map(option=><option key={option} value={option}>{option}</option>)}
                   </select>
                 ) : (

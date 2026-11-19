@@ -39,8 +39,8 @@ async function loadFormFieldsForOrg(options: {
 }): Promise<FormFieldConfig[]> {
   const { schoolId, instituteId, organizationId } = options;
   if (organizationId) {
-    const { data } = await api.get<{form: {fields: Array<{id:string;field_name:string;field_type:"text"|"photo";enabled:boolean;required:boolean}>} | null}>(`/admin/organizations/${organizationId}`);
-    return (data.form?.fields ?? []).map((f,i) => ({key:f.id, organizationFieldId:f.id, label:f.field_name, fieldType:f.field_type, enabled:f.enabled !== false, required:f.required !== false, source:"manual", displayOrder:i}));
+    const { data } = await api.get<{form: {fields: Array<{id:string;field_name:string;field_type:"text"|"photo"|"dropdown";enabled:boolean;required:boolean;field_options?:string[]|null}>} | null}>(`/admin/organizations/${organizationId}`);
+    return (data.form?.fields ?? []).map((f,i) => ({key:f.id, organizationFieldId:f.id, label:f.field_name, fieldType:f.field_type, options:f.field_options ?? [], enabled:f.enabled !== false, required:f.required !== false, source:"manual", displayOrder:i}));
   }
   const orgParams = schoolId ? { schoolId } : { instituteId };
 
@@ -186,8 +186,9 @@ function SortableFieldRow({
         )}
       </div>
       {onConfigure ? <div className="flex items-center gap-3">
-        <select aria-label={`${field.label} type`} className="input-field w-auto" value={field.fieldType ?? "text"} disabled={Boolean(field.organizationFieldId)} onChange={e => onConfigure(rowId, {fieldType:e.target.value as "text"|"photo"})}><option value="text">Text / Data</option><option value="photo">Image / Photo</option></select>
+        <select aria-label={`${field.label} type`} className="input-field w-auto" value={field.fieldType ?? "text"} disabled={Boolean(field.organizationFieldId)} onChange={e => onConfigure(rowId, {fieldType:e.target.value as "text"|"photo"|"dropdown"})}><option value="text">Text / Data</option><option value="photo">Image / Photo</option><option value="dropdown">Dropdown</option></select>
         <select aria-label={`${field.label} requirement`} className="input-field w-auto" value={field.required !== false ? "required" : "optional"} onChange={e => onConfigure(rowId, { required: e.target.value === "required" })}><option value="required">Required</option><option value="optional">Optional</option></select>
+        {field.fieldType === "dropdown" ? <input aria-label={`${field.label} options`} className="input-field w-full sm:w-64" placeholder="Options, comma separated (e.g. Class 1, Class 2)" value={(field.options ?? []).join(", ")} onChange={e => onConfigure(rowId, { options: e.target.value.split(",").map(o => o.trim()).filter(Boolean) })} /> : null}
       </div> : null}
       <label className="form-field-visibility flex items-center gap-2 text-sm">Visible<ToggleSwitch
         checked={field.enabled}
@@ -360,7 +361,7 @@ export function FormSetupPage() {
     try {
       const payload = withSequentialDisplayOrder(fields);
       if (organizationId) {
-        await api.post(`/admin/organizations/${organizationId}/forms`, {fields:payload.map(f => ({id:f.organizationFieldId,fieldName:f.label,fieldType:f.fieldType ?? "text",enabled:f.enabled,required:f.required !== false}))});
+        await api.post(`/admin/organizations/${organizationId}/forms`, {fields:payload.map(f => ({id:f.organizationFieldId,fieldName:f.label,fieldType:f.fieldType ?? "text",options:f.options ?? [],enabled:f.enabled,required:f.required !== false}))});
       } else await api.put("/admin/form-config", {
         schoolId: schoolId || undefined,
         instituteId: instituteId || undefined,

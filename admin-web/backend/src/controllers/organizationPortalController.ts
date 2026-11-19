@@ -35,6 +35,7 @@ type FormField = {
   field_order: number;
   required: boolean;
   enabled: boolean;
+  field_options: string[] | null;
 };
 
 function enabledFields(fields: FormField[]): FormField[] {
@@ -146,7 +147,7 @@ async function reattachOrganizationSubmissions(organizationId: string, activeFor
 
 async function loadFields(formId: string): Promise<FormField[]> {
   const result = await pool.query<FormField>(
-    `SELECT id, field_name, field_type, field_order, required, COALESCE(enabled, true) AS enabled
+    `SELECT id, field_name, field_type, field_order, required, COALESCE(enabled, true) AS enabled, field_options
      FROM organization_form_fields
      WHERE form_id = $1
      ORDER BY field_order ASC, created_at ASC`,
@@ -315,19 +316,23 @@ export async function createOrganizationForm(req: Request, res: Response, next: 
     await assertOrganizationOwned(scope, organizationId);
     const rawFields = Array.isArray(req.body.fields) ? req.body.fields : [];
     const fields = rawFields
-      .map((field: { id?: string; fieldName?: string; fieldType?: string; name?: string; type?: string; enabled?: boolean; required?: boolean }, index: number) => ({
+      .map((field: { id?: string; fieldName?: string; fieldType?: string; name?: string; type?: string; enabled?: boolean; required?: boolean; options?: unknown }, index: number) => ({
         id: typeof field.id === "string" ? field.id : "",
         name: String(field.fieldName ?? field.name ?? "").trim(),
         type: String(field.fieldType ?? field.type ?? "").trim().toLowerCase(),
         enabled: field.enabled !== false,
         required: field.required !== false,
+        options: Array.isArray(field.options) ? field.options.map((o) => String(o).trim()).filter(Boolean).slice(0, 100) : [],
         order: index,
       }))
       .filter((field: { name: string; type: string }) => field.name);
     if (fields.length === 0) throw new AppError("Add at least one field", 400);
     for (const field of fields) {
-      if (field.type !== "text" && field.type !== "photo") {
-        throw new AppError("Field type must be Text/Data or Image/Photo", 400);
+      if (field.type !== "text" && field.type !== "photo" && field.type !== "dropdown") {
+        throw new AppError("Field type must be Text, Photo or Dropdown", 400);
+      }
+      if (field.type === "dropdown" && field.options.length === 0) {
+        throw new AppError(`Add at least one option for the dropdown field "${field.name}"`, 400);
       }
     }
     await client.query("BEGIN");
@@ -362,15 +367,15 @@ export async function createOrganizationForm(req: Request, res: Response, next: 
         kept.add(match.id);
         await client.query(
           `UPDATE organization_form_fields
-           SET field_name = $1, field_type = $2, field_order = $3, required = $4, enabled = $5
-           WHERE id = $6`,
-          [field.name, field.type, field.order, field.required, field.enabled, match.id]
+           SET field_name = $1, field_type = $2, field_order = $3, required = $4, enabled = $5, field_options = $6::jsonb
+           WHERE id = $7`,
+          [field.name, field.type, field.order, field.required, field.enabled, field.type === "dropdown" ? JSON.stringify(field.options) : null, match.id]
         );
       } else {
         await client.query(
-          `INSERT INTO organization_form_fields (form_id, field_name, field_type, field_order, required, enabled)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [form.id, field.name, field.type, field.order, field.required, field.enabled]
+          `INSERT INTO organization_form_fields (form_id, field_name, field_type, field_order, required, enabled, field_options)
+           VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+          [form.id, field.name, field.type, field.order, field.required, field.enabled, field.type === "dropdown" ? JSON.stringify(field.options) : null]
         );
       }
     }
@@ -435,6 +440,7 @@ export async function getPublicOrganizationForm(req: Request, res: Response, nex
         fieldName: field.field_name,
         fieldType: field.field_type,
         required: field.required,
+        options: field.field_options ?? [],
       })),
     });
   } catch (error) {

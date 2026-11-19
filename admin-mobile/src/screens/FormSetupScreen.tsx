@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import api, { errMsg } from "../api/client";
 import type { StudentsResponse } from "../shared/types";
@@ -30,8 +30,8 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
       try {
         let next: FormFieldConfig[] = [];
         if (isOrg) {
-          const { data } = await api.get<{ form: { fields: Array<{ id: string; field_name: string; field_type: "text" | "photo"; enabled: boolean; required: boolean }> } | null }>(`/admin/organizations/${id}`);
-          next = (data.form?.fields ?? []).map((f, i) => ({ key: f.id, organizationFieldId: f.id, label: f.field_name, fieldType: f.field_type, enabled: f.enabled !== false, required: f.required !== false, source: "manual", displayOrder: i }));
+          const { data } = await api.get<{ form: { fields: Array<{ id: string; field_name: string; field_type: "text" | "photo" | "dropdown"; enabled: boolean; required: boolean; field_options?: string[] | null }> } | null }>(`/admin/organizations/${id}`);
+          next = (data.form?.fields ?? []).map((f, i) => ({ key: f.id, organizationFieldId: f.id, label: f.field_name, fieldType: f.field_type, options: f.field_options ?? [], enabled: f.enabled !== false, required: f.required !== false, source: "manual", displayOrder: i }));
         } else {
           const { data } = await api.get<{ fields: FormFieldConfig[]; studentCount?: number; importBatchCount?: number }>("/admin/form-config", { params });
           next = Array.isArray(data.fields) ? sortFormFields(data.fields) : [];
@@ -96,7 +96,7 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
       const payload = withSequentialDisplayOrder(next);
       if (isOrg)
         await api.post(`/admin/organizations/${id}/forms`, {
-          fields: payload.map((f) => ({ id: f.organizationFieldId, fieldName: f.label, fieldType: f.fieldType ?? "text", enabled: f.enabled, required: f.required !== false })),
+          fields: payload.map((f) => ({ id: f.organizationFieldId, fieldName: f.label, fieldType: f.fieldType ?? "text", options: f.options ?? [], enabled: f.enabled, required: f.required !== false })),
         });
       else await api.put("/admin/form-config", { ...params, fields: payload });
       setError(null);
@@ -114,7 +114,7 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
       const payload = withSequentialDisplayOrder(fields);
       if (isOrg)
         await api.post(`/admin/organizations/${id}/forms`, {
-          fields: payload.map((f) => ({ id: f.organizationFieldId, fieldName: f.label, fieldType: f.fieldType ?? "text", enabled: f.enabled, required: f.required !== false })),
+          fields: payload.map((f) => ({ id: f.organizationFieldId, fieldName: f.label, fieldType: f.fieldType ?? "text", options: f.options ?? [], enabled: f.enabled, required: f.required !== false })),
         });
       else await api.put("/admin/form-config", { ...params, fields: payload });
       navigation.goBack();
@@ -184,8 +184,8 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
                       <Pill text={isManualFormField(f) ? "Added" : "Excel"} tone={isManualFormField(f) ? "purple" : "blue"} />
                       {isOrg ? (
                         <>
-                          <Tap disabled={Boolean(f.organizationFieldId)} onPress={() => patch(i, { fieldType: f.fieldType === "photo" ? "text" : "photo" })}>
-                            <Pill text={f.fieldType === "photo" ? "Photo" : "Text"} tone="teal" icon={f.fieldType === "photo" ? "camera" : "text"} />
+                          <Tap disabled={Boolean(f.organizationFieldId)} onPress={() => patch(i, { fieldType: f.fieldType === "text" ? "photo" : f.fieldType === "photo" ? "dropdown" : "text" })}>
+                            <Pill text={f.fieldType === "photo" ? "Photo" : f.fieldType === "dropdown" ? "Dropdown" : "Text"} tone="teal" icon={f.fieldType === "photo" ? "camera" : f.fieldType === "dropdown" ? "list" : "text"} />
                           </Tap>
                           <Tap onPress={() => patch(i, { required: f.required === false })}>
                             <Pill text={f.required !== false ? "Required" : "Optional"} tone={f.required !== false ? "orange" : "grey"} />
@@ -193,6 +193,15 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
                         </>
                       ) : null}
                     </View>
+                    {isOrg && f.fieldType === "dropdown" ? (
+                      <TextInput
+                        style={st.optionsInput}
+                        placeholder="Options, comma separated (e.g. Class 1, Class 2)"
+                        placeholderTextColor={C.faint}
+                        defaultValue={(f.options ?? []).join(", ")}
+                        onEndEditing={(e) => patch(i, { options: e.nativeEvent.text.split(",").map((o) => o.trim()).filter(Boolean) })}
+                      />
+                    ) : null}
                     <View style={{ flexDirection: "row", gap: S.md, marginTop: 8 }}>
                       <Tap onPress={() => {
                         setEditing(i);
@@ -231,6 +240,7 @@ const st = StyleSheet.create({
   order: { alignItems: "center", width: 28 },
   idx: { fontFamily: F.bodySemi, fontSize: 12, color: C.muted },
   label: { fontFamily: F.hSemi, fontSize: 15, color: C.ink },
+  optionsInput: { marginTop: 8, borderWidth: 1, borderColor: C.line, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontFamily: F.body, fontSize: 14, color: C.ink, backgroundColor: C.white },
   link: { fontFamily: F.bodySemi, fontSize: 13, color: C.accentDeep },
   vis: { fontFamily: F.bodyMed, fontSize: 10, color: C.muted },
   addTitle: { fontFamily: F.hSemi, fontSize: 15, color: C.ink, marginBottom: S.sm },

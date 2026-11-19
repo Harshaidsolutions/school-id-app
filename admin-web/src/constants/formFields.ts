@@ -2,7 +2,8 @@ export type FormFieldSource = "excel" | "manual";
 
 export interface FormFieldConfig {
   organizationFieldId?: string;
-  fieldType?: "text" | "photo";
+  fieldType?: "text" | "photo" | "dropdown";
+  options?: string[];
   required?: boolean;
   key: string;
   label: string;
