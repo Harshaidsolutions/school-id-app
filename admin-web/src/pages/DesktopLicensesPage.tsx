@@ -166,7 +166,7 @@ export function DesktopLicensesPage() {
                   <td>{l.machineBound ? (l.machineLabel || "Activated PC") : <span className="text-text-muted">Not activated yet</span>}</td>
                   <td>{fmt(l.activatedAt)}{l.appVersion ? <span className="text-xs text-text-muted"> · v{l.appVersion}</span> : null}</td>
                   <td>
-                    <span className={`license-pill ${l.status === "active" ? "is-on" : "is-off"}`}>{l.status === "active" ? "Active" : "Disabled"}</span>
+                    <span className={`license-pill ${l.status === "active" ? "is-on" : "is-off"}`}>{l.status === "active" ? "Active" : l.status === "expired" ? "Expired" : "Disabled"}</span>
                     {l.expiresAt ? <span className="text-xs text-text-muted"> until {new Date(l.expiresAt).toLocaleDateString("en-IN")}</span> : null}
                   </td>
                   <td>

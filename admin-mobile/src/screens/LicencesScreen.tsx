@@ -127,7 +127,7 @@ export function LicencesScreen() {
                 <Text style={st.name} numberOfLines={1}>
                   {l.customerName}
                 </Text>
-                <Pill text={l.status === "active" ? "Active" : "Disabled"} tone={l.status === "active" ? "green" : "red"} />
+                <Pill text={l.status === "active" ? "Active" : l.status === "expired" ? "Expired" : "Disabled"} tone={l.status === "active" ? "green" : l.status === "expired" ? "amber" : "red"} />
               </View>
               <Text style={st.key} selectable>
                 {l.licenseKey}

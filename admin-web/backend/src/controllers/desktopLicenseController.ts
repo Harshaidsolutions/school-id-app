@@ -56,10 +56,14 @@ type Row = {
 };
 
 function publicRow(r: Row) {
+  // A key past its expiry date is shown as "expired" even if its stored status is still "active",
+  // so the admin list never shows an expired licence as active.
+  const expired = Boolean(r.expires_at && new Date(r.expires_at).getTime() < Date.now());
+  const effectiveStatus = r.status === "active" && expired ? "expired" : r.status;
   return {
     id: r.id, licenseKey: r.license_key, customerName: r.customer_name, phone: r.phone, notes: r.notes,
     machineBound: Boolean(r.machine_id), machineLabel: r.machine_label, activatedAt: r.activated_at,
-    appVersion: r.last_seen_version, status: r.status, expiresAt: r.expires_at, createdAt: r.created_at,
+    appVersion: r.last_seen_version, status: effectiveStatus, expired, expiresAt: r.expires_at, createdAt: r.created_at,
   };
 }
 
