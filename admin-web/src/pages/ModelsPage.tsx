@@ -184,6 +184,21 @@ export function ModelsPage() {
         }
       };
       const total = tagFiles.length;
+      // Tags: each uploaded image becomes its own independent tag, numbered in sequence.
+      if (!editing && isTagsTab && tagFiles.length) {
+        const base = items.length;
+        for (let i = 0; i < tagFiles.length; i++) {
+          setUploadProgress(sequentialUploadProgressLabel(i + 1, total, tagFiles[i]!.name));
+          const one = new FormData();
+          one.append("kind", tab);
+          one.append("name", String(base + i + 1));
+          one.append("file", tagFiles[i]!);
+          await api.post(`/admin/catalog?kind=${encodeURIComponent(tab)}`, one, { headers: { "Content-Type": "multipart/form-data" } });
+        }
+        resetForm();
+        await load();
+        return;
+      }
       const form = new FormData();
       form.append("kind", tab);
       form.append("name", (editing ? name.trim() : autoName) || name.trim());

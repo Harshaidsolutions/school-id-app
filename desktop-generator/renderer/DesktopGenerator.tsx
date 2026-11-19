@@ -497,9 +497,7 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
           );
         })}
       </div>
-      {templates.front ? (
-        <p className="idg-muted">Card size from the template: <b>{cardInfo}</b>. Generated cards keep exactly this size and resolution.</p>
-      ) : (
+      {templates.front ? null : (
         <div className="idg-grid2">
           <Field label="Card width (mm)"><Num value={layout.card.w} step={0.1} min={10} max={600} onChange={(v) => setLayout((l) => ({ ...l, card: customCard(v, l.card.h) }))} /></Field>
           <Field label="Card height (mm)"><Num value={layout.card.h} step={0.1} min={10} max={600} onChange={(v) => setLayout((l) => ({ ...l, card: customCard(l.card.w, v) }))} /></Field>

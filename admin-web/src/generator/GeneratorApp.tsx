@@ -651,9 +651,7 @@ export function GeneratorApp() {
           );
         })}
       </div>
-      {templates.front ? (
-        <p className="idg-muted">Card size from the template: <b>{cardInfo}</b>. Generated cards keep exactly this size and resolution.</p>
-      ) : (
+      {templates.front ? null : (
         <div className="idg-grid2">
           <Field label="Card width (mm)"><Num value={layout.card.w} step={0.1} min={10} max={600} onChange={(v) => setLayout((l) => ({ ...l, card: customCard(v, l.card.h) }))} /></Field>
           <Field label="Card height (mm)"><Num value={layout.card.h} step={0.1} min={10} max={600} onChange={(v) => setLayout((l) => ({ ...l, card: customCard(l.card.w, v) }))} /></Field>
@@ -737,7 +735,6 @@ export function GeneratorApp() {
               {!outFolder && !zipChosen && <button type="button" className={canPickFolder ? "btn-secondary" : "btn-primary"} onClick={resetToDownloads}>Download as ZIP *</button>}
               {(outFolder || zipChosen) && <button type="button" className="idg-linkbtn" onClick={() => { if (outFolder) resetToDownloads(); else setZipChosen(false); }}>{outFolder ? "Download as ZIP instead" : "Change"}</button>}
             </div>
-            <p className="idg-muted">Every record gets a card. Where a photo is missing, the photo area is left empty (white) so a photo can be added later.</p>
           </section>
           <section className="card idg-wiz-card">
             <div className="idg-wiz-head"><span className="idg-wiz-num">2</span><div><h3>Template</h3><p className="idg-muted">Optional — one side, or front and back</p></div></div>

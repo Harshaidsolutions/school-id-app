@@ -215,6 +215,7 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
       />
       <CatalogEditor
         kind={kind}
+        count={counts[kind] ?? 0}
         state={editor}
         onClose={() => setEditor(null)}
         onDone={(msg) => {
@@ -227,7 +228,7 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
   );
 }
 
-function CatalogEditor({ kind, state, onClose, onDone }: { kind: Kind; state: { item: CatalogItem | null } | null; onClose: () => void; onDone: (msg: string) => void }) {
+function CatalogEditor({ kind, count, state, onClose, onDone }: { kind: Kind; count: number; state: { item: CatalogItem | null } | null; onClose: () => void; onDone: (msg: string) => void }) {
   const editing = state?.item ?? null;
   const [name, setName] = useState("");
   const nameFromFileName = (f: string) => f.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "Item";
@@ -295,6 +296,17 @@ function CatalogEditor({ kind, state, onClose, onDone }: { kind: Kind; state: { 
         if (files.length) setProgress(`Uploading image 1 of ${files.length}`);
         await api.put(`/admin/catalog/${editing.id}`, form, { timeout: 600000 });
         await addExtras(editing.id, replaceMain ? files.slice(1) : files, replaceMain ? 1 : 0);
+      } else if (isTag && files.length) {
+        // Tags: each image becomes its own independent tag, numbered in sequence.
+        for (let i = 0; i < files.length; i++) {
+          setProgress(`Uploading ${i + 1} of ${files.length}`);
+          const one = new FormData();
+          one.append("kind", kind);
+          one.append("name", String(count + i + 1));
+          one.append("description", "");
+          one.append("file", asFormFile(files[i]));
+          await api.post(`/admin/catalog?kind=${kind}`, one, { timeout: 600000 });
+        }
       } else {
         if (files[0]) {
           form.append("file", asFormFile(files[0]));
