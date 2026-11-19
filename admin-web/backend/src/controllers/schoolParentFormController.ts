@@ -44,14 +44,18 @@ export function parentFormFields(config: FormFieldConfig[]) {
       "Enable Student Name in Form Setup before sharing the parent form.",
       400,
     );
-  const classField = enabled.find(
-    (f) =>
-      f.key === "class_section" ||
-      inferSemanticKey(normalizeHeaderForMatch(f.label)) === "class_section",
-  );
+  // The grouping/filter field: whatever the admin marked "Group by this"
+  // (any dropdown, e.g. Class, Section, Grade), else the Class column.
+  const classField =
+    enabled.find((f) => f.isGroup === true) ??
+    enabled.find(
+      (f) =>
+        f.key === "class_section" ||
+        inferSemanticKey(normalizeHeaderForMatch(f.label)) === "class_section",
+    );
   if (!classField)
     throw new AppError(
-      "Enable Class in Form Setup before sharing the parent form.",
+      "Set a grouping field (e.g. mark a dropdown as \"Group by this\", like Class) in Form Setup before sharing the parent form.",
       400,
     );
   // PHOTO/PHOTO_ID from Excel is a generated identifier, never parent-entered data.
@@ -79,7 +83,30 @@ export function parentFormFields(config: FormFieldConfig[]) {
     ],
     nameKey: name.key,
     classKey: classField.key,
+    classField,
   };
+}
+
+const isClassSectionField = (f: FormFieldConfig) =>
+  f.key === "class_section" ||
+  inferSemanticKey(normalizeHeaderForMatch(f.label)) === "class_section";
+
+// Choices for the grouping field: configured dropdown options first,
+// then distinct Class values, then distinct values of a custom field.
+async function schoolGroupChoices(
+  schoolId: string,
+  classField: FormFieldConfig,
+): Promise<string[]> {
+  const opts = (classField.options ?? [])
+    .map((o) => String(o).trim())
+    .filter(Boolean);
+  if (opts.length) return [...new Set(opts)];
+  if (isClassSectionField(classField)) return schoolParentClasses(schoolId);
+  const r = await pool.query<{ v: string }>(
+    "SELECT DISTINCT extra_fields->>$2 AS v FROM students WHERE school_id=$1 AND NULLIF(TRIM(extra_fields->>$2),'') IS NOT NULL ORDER BY 1",
+    [schoolId, classField.key],
+  );
+  return r.rows.map((x) => x.v);
 }
 export async function schoolParentClasses(schoolId: string): Promise<string[]> {
   const classes = await pool.query<{ class_section: string }>(
@@ -143,13 +170,22 @@ export async function getSchoolParentLink(
       [schoolId],
     );
     const enabled = enabledResult.rows[0]?.parent_form_enabled === true;
+    let classes: string[];
+    try {
+      const { classField } = parentFormFields(
+        await loadFormConfigForOrg({ schoolId }),
+      );
+      classes = await schoolGroupChoices(schoolId, classField);
+    } catch {
+      classes = await schoolParentClasses(schoolId);
+    }
     res.json({
       enabled,
       link:
         token && (req.user?.role !== "teacher" || enabled)
           ? `${origin()}/school-form/${token}`
           : null,
-      classes: await schoolParentClasses(schoolId),
+      classes,
     });
   } catch (e) {
     next(e);
@@ -163,8 +199,10 @@ export async function createSchoolParentLink(
   try {
     const id = routeParam(req.params.id);
     await assertSchoolOwnedByAdmin(await requireAdminScope(req), id);
-    parentFormFields(await loadFormConfigForOrg({ schoolId: id }));
-    const classes = parseClasses(await schoolParentClasses(id));
+    const { classField } = parentFormFields(
+      await loadFormConfigForOrg({ schoolId: id }),
+    );
+    const classes = parseClasses(await schoolGroupChoices(id, classField));
     const result = await pool.query<{ parent_form_token: string }>(
       `UPDATE schools SET parent_form_token=COALESCE(parent_form_token,$2),parent_form_classes=$3::jsonb WHERE id=$1 AND COALESCE(is_active,true)=true RETURNING parent_form_token`,
       [id, randomBytes(24).toString("hex"), JSON.stringify(classes)],
@@ -185,10 +223,10 @@ export async function getSchoolParentForm(
 ) {
   try {
     const school = await schoolForToken(routeParam(req.params.token));
-    const { fields, classKey } = parentFormFields(
+    const { fields, classKey, classField } = parentFormFields(
       await loadFormConfigForOrg({ schoolId: school.id }),
     );
-    const classes = await schoolParentClasses(school.id);
+    const classes = await schoolGroupChoices(school.id, classField);
     res.json({
       organizationName: school.name,
       fields: fields.map((f) =>
@@ -225,7 +263,7 @@ export async function submitSchoolParentForm(
   try {
     const school = await schoolForToken(routeParam(req.params.token));
     const config = await loadFormConfigForOrg({ schoolId: school.id });
-    const { fields, nameKey, classKey } = parentFormFields(config);
+    const { fields, nameKey, classKey, classField } = parentFormFields(config);
     const files = Array.isArray(req.files)
       ? req.files
       : Object.values(req.files ?? {}).flat();
@@ -241,9 +279,9 @@ export async function submitSchoolParentForm(
         throw new AppError(`${f.fieldName} is required`, 400);
       extra[f.id] = value || null;
     }
-    const classes = await schoolParentClasses(school.id);
+    const classes = await schoolGroupChoices(school.id, classField);
     if (!classes.includes(extra[classKey] ?? ""))
-      throw new AppError("Choose a class from the available options.", 400);
+      throw new AppError("Choose an option from the available list.", 400);
     const signature = fields.some((f) => f.id === "signature_upload")
       ? files.find((f) => f.fieldname === "signature_upload")
       : undefined;
