@@ -22,7 +22,7 @@ function initials(name: string): string {
 export function AdminHeroCard({ adminName, photoUrl, loading }: Props) {
   const { headerGradient, colors } = useTheme();
   const { scale } = useResponsiveLayout();
-  const avatar = scale(64);
+  const avatar = scale(76);
   const isHarsha = /harsha\s*id/i.test(adminName);
 
   if (loading) {
@@ -54,9 +54,9 @@ export function AdminHeroCard({ adminName, photoUrl, loading }: Props) {
           >
             {adminName}
           </Text>
-          {isHarsha ? <Text style={[styles.harshaSub, { fontSize: scale(12.5), lineHeight: scale(16) }]}>A Complete ID World</Text> : null}
-          <Text style={[styles.brand, { fontSize: scale(16), lineHeight: scale(21) }]}>My School ID Card</Text>
-          <Text style={[styles.sub, { fontSize: scale(13.5), lineHeight: scale(18), marginTop: 0 }]}>Get Your Identity Here...</Text>
+          {isHarsha ? <Text style={[styles.harshaSub, { fontSize: scale(13), lineHeight: scale(17) }]}>A Complete ID World...</Text> : null}
+          <Text style={[styles.brand, { fontSize: scale(24), lineHeight: scale(30) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>My School ID Card</Text>
+          <Text style={[styles.sub, { fontSize: scale(13), lineHeight: scale(17), marginTop: 2 }]}>Get your identity here...</Text>
         </View>
       </View>
     </LinearGradient>
@@ -84,8 +84,8 @@ const styles = StyleSheet.create({
   },
   initials: { fontFamily: fonts.headingBold, color: "#1F2937", letterSpacing: 0.5 },
   textCol: { flex: 1, minWidth: 0 },
-  harshaSub: { fontFamily: fonts.bodyMedium, color: "rgba(255,255,255,0.92)", letterSpacing: 0.4, marginTop: -2, marginBottom: 2 },
-  brand: { fontFamily: fonts.headingBold, color: "#FFFFFF", marginTop: 4 },
+  harshaSub: { fontFamily: fonts.bodyMedium, color: "rgba(255,255,255,0.92)", letterSpacing: 0.4, marginTop: -2, marginBottom: 2, textAlign: "right" },
+  brand: { fontFamily: fonts.headingBold, color: "#FFFFFF", marginTop: 4, letterSpacing: 0.2 },
   chip: {
     alignSelf: "flex-start",
     flexDirection: "row",
@@ -99,5 +99,5 @@ const styles = StyleSheet.create({
   },
   chipText: { fontFamily: fonts.bodySemiBold, color: "#FFFFFF" },
   name: { fontFamily: fonts.headingBold, color: "#FFFFFF" },
-  sub: { fontFamily: fonts.bodyMedium, color: "rgba(255,255,255,0.88)", marginTop: 4 },
+  sub: { fontFamily: fonts.bodyMedium, color: "rgba(255,255,255,0.92)", letterSpacing: 0.4, marginTop: 4, textAlign: "right" },
 });

@@ -258,8 +258,8 @@ export function TemplateScreen() {
   );
   const listRef = useRef<FlatList<TemplateItem>>(null);
 
-  const gap = spacing.cardGap;
-  const pad = spacing.md;
+  const gap = spacing.sm;
+  const pad = spacing.sm;
   const columns = responsiveColumns(width, tab.includes("both") ? 1 : 2);
   const cardWidth =
     columns === 1 ? width - pad * 2 : gridItemWidth(columns, pad, gap, width);
@@ -746,7 +746,7 @@ function useTemplateStyles() {
       lineHeight: typeScale.xs * 1.2,
     },
     grid: {
-      paddingHorizontal: spacing.md,
+      paddingHorizontal: spacing.sm,
       paddingTop: spacing.sm + 2,
       paddingBottom: spacing.xl + 4,
     },
