@@ -708,32 +708,34 @@ export function GeneratorApp() {
               <div className="is-ok"><b>{withSignAll}</b><span>Matched signatures</span></div>
               <div className="is-warn"><b>{Math.max(0, rows.length - withSignAll)}</b><span>Unmatched signatures</span></div>
             </div>
-            <Field label="Photo file names match">
-              <input className="input-field" value="Photo ID" readOnly />
-            </Field>
-            <div className="idg-pickrow">
-              <label className="btn-secondary">
-                <input type="file" accept=".zip,image/*" multiple hidden onChange={(e) => { if (e.target.files?.length) void addBulk(e.target.files, "photo"); e.target.value = ""; }} />
-                Upload photos (ZIP / images)
-              </label>
-              <span className="idg-path">{photoFiles || "Optional — photos captured in the app are used automatically"}</span>
-            </div>
-            <div className="idg-pickrow">
-              <label className="btn-secondary">
-                <input type="file" accept=".zip,image/*" multiple hidden onChange={(e) => { if (e.target.files?.length) void addBulk(e.target.files, "parentSign"); e.target.value = ""; }} />
-                Upload signatures
-              </label>
-              <span className="idg-path">{signFiles || "Optional"}</span>
-            </div>
-            <div className="idg-pickrow">
-              {canPickFolder ? (
-                <button type="button" className={outFolder ? "btn-secondary" : "btn-primary"} onClick={() => void chooseFolder()}>{outFolder ? "Change output folder" : "Choose output folder *"}</button>
-              ) : null}
-              <span className="idg-path">
-                {outFolder ? <>Output: <b>{outFolder.name}</b> — Front and Back folders are made inside it</> : zipChosen ? <>Output: <b>one ZIP file</b> in Downloads, with Front and Back folders inside</> : canPickFolder ? "Required — choose a folder (you can create a new one in the window) or download as ZIP" : "Required — the cards download as one ZIP file"}
-              </span>
-              {!outFolder && !zipChosen && <button type="button" className={canPickFolder ? "btn-secondary" : "btn-primary"} onClick={resetToDownloads}>Download as ZIP *</button>}
-              {(outFolder || zipChosen) && <button type="button" className="idg-linkbtn" onClick={() => { if (outFolder) resetToDownloads(); else setZipChosen(false); }}>{outFolder ? "Download as ZIP instead" : "Change"}</button>}
+            <div className="desk-inputs">
+              <div className={`desk-input${photoFiles ? " is-done" : ""}`}>
+                <label className="desk-input-btn">
+                  <input type="file" accept=".zip,image/*" multiple hidden onChange={(e) => { if (e.target.files?.length) void addBulk(e.target.files, "photo"); e.target.value = ""; }} />
+                  <span className="desk-input-ic" aria-hidden>{photoFiles ? "✓" : "1"}</span>
+                  <span className="desk-input-text"><b>Photos</b><small>{photoFiles ? "Change" : "Upload ZIP / images"}</small></span>
+                </label>
+                <span className="desk-input-path">{photoFiles || "Optional — photos captured in the app are used automatically"}</span>
+              </div>
+              <div className={`desk-input${signFiles ? " is-done" : ""}`}>
+                <label className="desk-input-btn">
+                  <input type="file" accept=".zip,image/*" multiple hidden onChange={(e) => { if (e.target.files?.length) void addBulk(e.target.files, "parentSign"); e.target.value = ""; }} />
+                  <span className="desk-input-ic" aria-hidden>{signFiles ? "✓" : "2"}</span>
+                  <span className="desk-input-text"><b>Signatures</b><small>{signFiles ? "Change" : "Upload (optional)"}</small></span>
+                </label>
+                <span className="desk-input-path">{signFiles || "Optional"}</span>
+              </div>
+              <div className={`desk-input${outFolder || zipChosen ? " is-done" : ""}`}>
+                <button type="button" className="desk-input-btn" onClick={() => (canPickFolder ? void chooseFolder() : resetToDownloads())}>
+                  <span className="desk-input-ic" aria-hidden>{outFolder || zipChosen ? "✓" : "3"}</span>
+                  <span className="desk-input-text"><b>Output *</b><small>{outFolder ? "Change folder" : zipChosen ? "ZIP in Downloads" : canPickFolder ? "Choose folder" : "Download as ZIP"}</small></span>
+                </button>
+                <span className="desk-input-path">
+                  {outFolder ? <><b>{outFolder.name}</b>Front and Back folders are made inside it</> : zipChosen ? <><b>One ZIP file</b>in Downloads, Front and Back folders inside</> : canPickFolder ? "Choose a folder (or make a new one), or download as ZIP" : "The cards download as one ZIP file"}
+                  {!outFolder && !zipChosen && canPickFolder ? <> · <button type="button" className="idg-linkbtn" onClick={resetToDownloads}>Download as ZIP</button></> : null}
+                  {outFolder || zipChosen ? <> · <button type="button" className="idg-linkbtn" onClick={() => { if (outFolder) resetToDownloads(); else setZipChosen(false); }}>{outFolder ? "Download as ZIP instead" : "Change"}</button></> : null}
+                </span>
+              </div>
             </div>
           </section>
           <section className="card idg-wiz-card">

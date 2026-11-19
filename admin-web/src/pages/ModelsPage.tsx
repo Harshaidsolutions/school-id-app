@@ -355,6 +355,7 @@ export function ModelsPage() {
                 ) : null}
                 <th className="col-sno">S.NO.</th>
                 <th className="col-image">{itemLabel} Image</th>
+                <th className="col-name">Image Name</th>
                 {!isTagsTab && <th className="col-description">Description</th>}
                 <th className="col-date">Date Added</th>
                 <th className="col-actions">Actions</th>
@@ -430,6 +431,9 @@ export function ModelsPage() {
                           className="mt-2 h-16 w-24 bg-[#EEF0FF]"
                         />
                       ) : null}
+                    </td>
+                    <td className="col-name">
+                      <div className="truncate font-medium text-text-navy" title={item.name}>{item.name}</div>
                     </td>
                     {!isTagsTab && (
                       <td className="col-description">
