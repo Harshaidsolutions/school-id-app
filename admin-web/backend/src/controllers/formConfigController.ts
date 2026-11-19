@@ -25,6 +25,18 @@ import {
 export type { FormFieldConfig };
 export { DEFAULT_FORM_FIELDS };
 
+/** Reads the optional field metadata (type, required, dropdown options, group) from any shape. */
+function pickFieldMeta(o: Record<string, unknown>): Partial<FormFieldConfig> {
+  const meta: Partial<FormFieldConfig> = {};
+  const ft = String(o.fieldType ?? o.field_type ?? "").trim().toLowerCase();
+  if (ft === "text" || ft === "photo" || ft === "dropdown") meta.fieldType = ft;
+  if (o.required !== undefined) meta.required = Boolean(o.required);
+  const opts = (o.options ?? o.field_options) as unknown;
+  if (Array.isArray(opts)) meta.options = opts.map((x) => String(x).trim()).filter(Boolean).slice(0, 100);
+  if (o.isGroup === true || o.is_group === true) meta.isGroup = true;
+  return meta;
+}
+
 function normalizeSavedFields(raw: unknown): FormFieldConfig[] {
   if (typeof raw === "string") {
     try {
@@ -66,6 +78,7 @@ function normalizeSavedFields(raw: unknown): FormFieldConfig[] {
         ...(colIndex !== undefined ? { colIndex } : {}),
         ...(displayOrder !== undefined ? { displayOrder } : {}),
         ...(source ? { source } : {}),
+        ...pickFieldMeta(row),
       };
     })
     .filter((f): f is FormFieldConfig => Boolean(f));
@@ -237,6 +250,7 @@ function mergeExcelSchemaWithSavedFields(
           enabled: savedField.enabled ?? excelField.enabled,
           displayOrder: savedField.displayOrder,
           ...(typeof colIndex === "number" ? { colIndex } : {}),
+          ...pickFieldMeta(savedField as unknown as Record<string, unknown>),
         })
       );
       processedExcelKeys.add(excelField.key);
@@ -623,6 +637,7 @@ export async function putFormConfig(
             ...(typeof colIndex === "number" ? { colIndex } : {}),
             ...(typeof displayOrder === "number" ? { displayOrder } : {}),
             ...(source ? { source } : {}),
+            ...pickFieldMeta(f as unknown as Record<string, unknown>),
           };
         })
         .filter((f) => f.key && f.label && isKnownFieldKey(f.key))

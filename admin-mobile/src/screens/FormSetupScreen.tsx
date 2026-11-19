@@ -182,18 +182,16 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
                     <Text style={st.label}>{f.label}</Text>
                     <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
                       <Pill text={isManualFormField(f) ? "Added" : "Excel"} tone={isManualFormField(f) ? "purple" : "blue"} />
-                      {isOrg ? (
-                        <>
-                          <Tap disabled={Boolean(f.organizationFieldId)} onPress={() => patch(i, { fieldType: f.fieldType === "text" ? "photo" : f.fieldType === "photo" ? "dropdown" : "text" })}>
+                      <>
+                          <Tap disabled={Boolean(f.organizationFieldId) || f.key === "photo_id" || f.key === "signature_upload"} onPress={() => patch(i, { fieldType: f.fieldType === "text" ? "photo" : f.fieldType === "photo" ? "dropdown" : "text" })}>
                             <Pill text={f.fieldType === "photo" ? "Photo" : f.fieldType === "dropdown" ? "Dropdown" : "Text"} tone="teal" icon={f.fieldType === "photo" ? "camera" : f.fieldType === "dropdown" ? "list" : "text"} />
                           </Tap>
                           <Tap onPress={() => patch(i, { required: f.required === false })}>
                             <Pill text={f.required !== false ? "Required" : "Optional"} tone={f.required !== false ? "orange" : "grey"} />
                           </Tap>
                         </>
-                      ) : null}
                     </View>
-                    {isOrg && f.fieldType === "dropdown" ? (
+                    {f.fieldType === "dropdown" ? (
                       <TextInput
                         style={st.optionsInput}
                         placeholder="Options, comma separated (e.g. Class 1, Class 2)"
@@ -202,7 +200,7 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
                         onEndEditing={(e) => patch(i, { options: e.nativeEvent.text.split(",").map((o) => o.trim()).filter(Boolean) })}
                       />
                     ) : null}
-                    {isOrg && f.fieldType === "dropdown" ? (
+                    {f.fieldType === "dropdown" ? (
                       <Tap onPress={() => patch(i, { isGroup: !f.isGroup })} style={{ marginTop: 6, alignSelf: "flex-start" }}>
                         <Pill text={f.isGroup ? "Grouping by this ✓" : "Use for grouping"} tone={f.isGroup ? "green" : "grey"} icon="funnel" />
                       </Tap>

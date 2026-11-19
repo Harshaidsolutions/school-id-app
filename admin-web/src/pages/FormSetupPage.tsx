@@ -186,7 +186,7 @@ function SortableFieldRow({
         )}
       </div>
       {onConfigure ? <div className="flex items-center gap-3">
-        <select aria-label={`${field.label} type`} className="input-field w-auto" value={field.fieldType ?? "text"} disabled={Boolean(field.organizationFieldId)} onChange={e => onConfigure(rowId, {fieldType:e.target.value as "text"|"photo"|"dropdown"})}><option value="text">Text / Data</option><option value="photo">Image / Photo</option><option value="dropdown">Dropdown</option></select>
+        <select aria-label={`${field.label} type`} className="input-field w-auto" value={field.fieldType ?? "text"} disabled={Boolean(field.organizationFieldId) || field.key === "photo_id" || field.key === "signature_upload"} onChange={e => onConfigure(rowId, {fieldType:e.target.value as "text"|"photo"|"dropdown"})}><option value="text">Text / Data</option><option value="photo">Image / Photo</option><option value="dropdown">Dropdown</option></select>
         <select aria-label={`${field.label} requirement`} className="input-field w-auto" value={field.required !== false ? "required" : "optional"} onChange={e => onConfigure(rowId, { required: e.target.value === "required" })}><option value="required">Required</option><option value="optional">Optional</option></select>
         {field.fieldType === "dropdown" ? <input aria-label={`${field.label} options`} className="input-field w-full sm:w-64" placeholder="Options, comma separated (e.g. Class 1, Class 2)" value={(field.options ?? []).join(", ")} onChange={e => onConfigure(rowId, { options: e.target.value.split(",").map(o => o.trim()).filter(Boolean) })} /> : null}
         {field.fieldType === "dropdown" ? <label className="flex items-center gap-1.5 text-xs font-medium text-text-navy whitespace-nowrap"><input type="checkbox" checked={field.isGroup === true} onChange={e => onConfigure(rowId, { isGroup: e.target.checked })} />Group by this</label> : null}
@@ -430,7 +430,7 @@ export function FormSetupPage() {
                     onCancelEdit={() => setEditingKey(null)}
                     onRemove={removeField}
                     onToggle={toggleField}
-                    onConfigure={organizationId ? (id, patch) => setFields(current => current.map((f,i) => formFieldRowId(f,i) === id ? {...f,...patch} : f)) : undefined}
+                    onConfigure={(id, patch) => setFields(current => current.map((f,i) => formFieldRowId(f,i) === id ? {...f,...patch} : f))}
                   />
                   );
                 })}

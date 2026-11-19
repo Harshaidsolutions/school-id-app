@@ -9,6 +9,13 @@ export interface FormFieldConfig {
   colIndex?: number;
   /** Admin-defined display order (Form Setup drag-and-drop). */
   displayOrder?: number;
+  /** Input control for this field. */
+  fieldType?: "text" | "photo" | "dropdown";
+  required?: boolean;
+  /** Options for a dropdown field. */
+  options?: string[];
+  /** When true, this field groups/filters the records (one per org). */
+  isGroup?: boolean;
 }
 
 /** Legacy defaults — only used when no Excel has been uploaded yet. */
