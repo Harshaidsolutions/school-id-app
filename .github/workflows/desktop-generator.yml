@@ -2,6 +2,9 @@ name: Build Windows ID Card Generator
 
 # Builds the .exe and .msi on GitHub's Windows computers — no Windows PC needed.
 # Run it: GitHub → Actions → "Build Windows ID Card Generator" → Run workflow.
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
   push:
@@ -44,3 +47,20 @@ jobs:
             desktop-generator/release/*.exe
             desktop-generator/release/*.msi
           if-no-files-found: warn
+      - name: Read app version
+        id: ver
+        shell: bash
+        run: echo "v=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Publish downloadable GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: generator-v${{ steps.ver.outputs.v }}
+          name: ID Card Generator v${{ steps.ver.outputs.v }}
+          body: |
+            Harsha ID Solutions - ID Card Generator for Windows.
+            Download the .exe (recommended) or .msi below and install it on a Windows PC,
+            then activate it with the customer's licence key.
+          files: |
+            desktop-generator/release/*.exe
+            desktop-generator/release/*.msi
+          fail_on_unmatched_files: false
