@@ -375,3 +375,22 @@ h3{font-size:16px;font-weight:600}
 .product-card:hover img{transform:none!important}
 .product-card h3{min-height:2.6em;align-items:flex-start}
 @media(min-width:1500px){.product-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+
+/* Home: our apps showcase */
+.app-grid{display:grid;gap:22px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.app-card{background:#fff;border:1px solid var(--line,#ececf4);border-radius:24px;padding:28px;box-shadow:var(--shadow-sm,0 6px 20px rgba(20,20,60,.06));display:flex;flex-direction:column;gap:12px}
+.app-card-icon{width:54px;height:54px;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;background:var(--grad-cool,#4f46e5);color:#fff}
+.app-card-icon svg{width:28px;height:28px}
+.app-card h3{margin:0}
+.app-card>p{margin:0;color:var(--muted,#5b6079)}
+.app-feats{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+.app-feats li{position:relative;padding-left:26px;color:var(--ink,#1c1c3a);font-weight:500}
+.app-feats li::before{content:'✓';position:absolute;left:0;top:1px;width:18px;height:18px;border-radius:50%;background:var(--grad-cool,#4f46e5);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center}
+.app-contact{margin-top:26px;border-radius:24px;padding:26px 30px;background:var(--grad-cool,#4f46e5);color:#fff;display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between;box-shadow:var(--shadow-lg)}
+.app-contact-text{display:flex;flex-direction:column;gap:4px}
+.app-contact-text b{font-size:18px}
+.app-contact-text span{color:rgba(255,255,255,.85)}
+.app-contact-actions{display:flex;gap:12px;flex-wrap:wrap}
+.app-contact .button{background:#fff;color:var(--purple,#4f46e5)}
+.app-contact .button.outline{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.6)}
+@media(max-width:760px){.app-grid{grid-template-columns:1fr}.app-contact{flex-direction:column;align-items:flex-start}}

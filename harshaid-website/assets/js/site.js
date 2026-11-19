@@ -8,9 +8,8 @@
     ["about", "/about-us", "About Us"],
     ["brochures", "/brochures", "Brochures"],
     ["videos", "/videos", "Videos"],
-    ["buy", "/buy-now", "Order Now"],
     ["touch", "/get-in-touch", "Get in Touch"],
-    ["app", "/my-app", "My App"],
+    ["app", "/my-app", "Our Apps"],
   ];
 
   function escapeHtml(value) {
