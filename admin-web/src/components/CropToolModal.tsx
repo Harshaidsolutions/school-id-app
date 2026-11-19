@@ -111,6 +111,9 @@ export function CropToolModal({
 
   const [sizeHydrated, setSizeHydrated] = useState(false);
   const [viewZoom,setViewZoom] = useState({scale:1,x:0,y:0});
+  const viewZoomRef = useRef(viewZoom);
+  viewZoomRef.current = viewZoom;
+  const pinchRef = useRef<{ d: number; scale: number } | null>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -277,6 +280,27 @@ export function CropToolModal({
     };
     workspace.addEventListener("wheel",wheel,{passive:false});
     return ()=>workspace.removeEventListener("wheel",wheel);
+  },[phase,browsing,student?.id,src]);
+
+  // Pinch-to-zoom with two fingers (mobile): the photo zooms like a normal mobile crop tool.
+  useEffect(() => {
+    const workspace=workspaceRef.current;
+    if(!workspace || phase!=="edit" || browsing)return;
+    const dist=(t:TouchList)=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+    const start=(e:TouchEvent)=>{ if(e.touches.length===2){ dragRef.current=null; pinchRef.current={d:dist(e.touches)||1,scale:viewZoomRef.current.scale}; } };
+    const move=(e:TouchEvent)=>{
+      if(e.touches.length!==2||!pinchRef.current)return;
+      e.preventDefault();
+      const image=imageRef.current; if(!image)return;
+      const scale=Math.min(5,Math.max(1,pinchRef.current.scale*(dist(e.touches)/pinchRef.current.d)));
+      setViewZoom(old=>{ if(scale<=1.001)return {scale:1,x:0,y:0}; const maxX=image.offsetWidth*(scale-1)/2,maxY=image.offsetHeight*(scale-1)/2; return {scale,x:Math.max(-maxX,Math.min(maxX,old.x)),y:Math.max(-maxY,Math.min(maxY,old.y))}; });
+    };
+    const end=(e:TouchEvent)=>{ if(e.touches.length<2)pinchRef.current=null; };
+    workspace.addEventListener("touchstart",start,{passive:false});
+    workspace.addEventListener("touchmove",move,{passive:false});
+    workspace.addEventListener("touchend",end);
+    workspace.addEventListener("touchcancel",end);
+    return ()=>{ workspace.removeEventListener("touchstart",start); workspace.removeEventListener("touchmove",move); workspace.removeEventListener("touchend",end); workspace.removeEventListener("touchcancel",end); };
   },[phase,browsing,student?.id,src]);
 
   function markDirty(studentId: string) {
@@ -517,6 +541,7 @@ export function CropToolModal({
   }
 
   function onPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (pinchRef.current) return;
     const box = stageRef.current?.getBoundingClientRect();
     const drag = dragRef.current;
     if (!box) return;
@@ -895,7 +920,7 @@ export function CropToolModal({
                     style={{ maxWidth: frameLimit.width, maxHeight: frameLimit.height, filter: toneFilter(toneRef.current.brightness,toneRef.current.contrast) }}
                   />
                 ) : src && student ? (
-                  <div ref={stageRef} className="relative inline-block max-h-full max-w-full touch-none" style={{transform:`translate(${viewZoom.x}px, ${viewZoom.y}px) scale(${viewZoom.scale})`,transformOrigin:"center"}} title="Scroll over the photo to zoom in or out">
+                  <div ref={stageRef} className="relative inline-block max-h-full max-w-full touch-none" style={{transform:`translate(${viewZoom.x}px, ${viewZoom.y}px) scale(${viewZoom.scale})`,transformOrigin:"center"}} title="Pinch or scroll to zoom; drag the corners to crop">
                     <img
                       ref={imageRef}
                       src={src}
@@ -926,7 +951,7 @@ export function CropToolModal({
                         {HANDLES.map((handle) => (
                           <span
                             key={handle}
-                            className="crop-handle pointer-events-none absolute h-2 w-2 border border-[#4F46E5] bg-white"
+                            className="crop-handle pointer-events-none absolute border border-[#4F46E5] bg-white"
                             style={handleStyle(handle)}
                           />
                         ))}
