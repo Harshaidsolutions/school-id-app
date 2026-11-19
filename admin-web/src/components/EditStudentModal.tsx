@@ -406,7 +406,7 @@ export function EditStudentModal({
                   No photo
                 </div>
               )}
-              <label className="btn-secondary relative inline-block cursor-pointer">
+              <label className="btn-secondary relative inline-flex items-center justify-center gap-2 cursor-pointer">
                 {uploadingPhoto ? "Uploading…" : photoPreview ? "Replace Photo" : "Upload Photo"}
                 <input
                   type="file"
