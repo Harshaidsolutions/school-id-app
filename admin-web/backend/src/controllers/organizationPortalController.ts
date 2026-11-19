@@ -36,6 +36,7 @@ type FormField = {
   required: boolean;
   enabled: boolean;
   field_options: string[] | null;
+  is_group: boolean;
 };
 
 function enabledFields(fields: FormField[]): FormField[] {
@@ -147,7 +148,7 @@ async function reattachOrganizationSubmissions(organizationId: string, activeFor
 
 async function loadFields(formId: string): Promise<FormField[]> {
   const result = await pool.query<FormField>(
-    `SELECT id, field_name, field_type, field_order, required, COALESCE(enabled, true) AS enabled, field_options
+    `SELECT id, field_name, field_type, field_order, required, COALESCE(enabled, true) AS enabled, field_options, COALESCE(is_group, false) AS is_group
      FROM organization_form_fields
      WHERE form_id = $1
      ORDER BY field_order ASC, created_at ASC`,
@@ -316,13 +317,14 @@ export async function createOrganizationForm(req: Request, res: Response, next: 
     await assertOrganizationOwned(scope, organizationId);
     const rawFields = Array.isArray(req.body.fields) ? req.body.fields : [];
     const fields = rawFields
-      .map((field: { id?: string; fieldName?: string; fieldType?: string; name?: string; type?: string; enabled?: boolean; required?: boolean; options?: unknown }, index: number) => ({
+      .map((field: { id?: string; fieldName?: string; fieldType?: string; name?: string; type?: string; enabled?: boolean; required?: boolean; options?: unknown; isGroup?: boolean }, index: number) => ({
         id: typeof field.id === "string" ? field.id : "",
         name: String(field.fieldName ?? field.name ?? "").trim(),
         type: String(field.fieldType ?? field.type ?? "").trim().toLowerCase(),
         enabled: field.enabled !== false,
         required: field.required !== false,
         options: Array.isArray(field.options) ? field.options.map((o) => String(o).trim()).filter(Boolean).slice(0, 100) : [],
+        isGroup: field.isGroup === true,
         order: index,
       }))
       .filter((field: { name: string; type: string }) => field.name);
@@ -334,6 +336,13 @@ export async function createOrganizationForm(req: Request, res: Response, next: 
       if (field.type === "dropdown" && field.options.length === 0) {
         throw new AppError(`Add at least one option for the dropdown field "${field.name}"`, 400);
       }
+    }
+    // Only a dropdown field can be the group field, and at most one per form.
+    let groupSet = false;
+    for (const field of fields) {
+      const wantsGroup = field.isGroup && field.type === "dropdown" && !groupSet;
+      field.isGroup = wantsGroup;
+      if (wantsGroup) groupSet = true;
     }
     await client.query("BEGIN");
     const existing = await client.query<{ id: string; public_token: string; is_active: boolean }>(
@@ -367,15 +376,15 @@ export async function createOrganizationForm(req: Request, res: Response, next: 
         kept.add(match.id);
         await client.query(
           `UPDATE organization_form_fields
-           SET field_name = $1, field_type = $2, field_order = $3, required = $4, enabled = $5, field_options = $6::jsonb
-           WHERE id = $7`,
-          [field.name, field.type, field.order, field.required, field.enabled, field.type === "dropdown" ? JSON.stringify(field.options) : null, match.id]
+           SET field_name = $1, field_type = $2, field_order = $3, required = $4, enabled = $5, field_options = $6::jsonb, is_group = $7
+           WHERE id = $8`,
+          [field.name, field.type, field.order, field.required, field.enabled, field.type === "dropdown" ? JSON.stringify(field.options) : null, field.isGroup, match.id]
         );
       } else {
         await client.query(
-          `INSERT INTO organization_form_fields (form_id, field_name, field_type, field_order, required, enabled, field_options)
-           VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
-          [form.id, field.name, field.type, field.order, field.required, field.enabled, field.type === "dropdown" ? JSON.stringify(field.options) : null]
+          `INSERT INTO organization_form_fields (form_id, field_name, field_type, field_order, required, enabled, field_options, is_group)
+           VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
+          [form.id, field.name, field.type, field.order, field.required, field.enabled, field.type === "dropdown" ? JSON.stringify(field.options) : null, field.isGroup]
         );
       }
     }
@@ -441,6 +450,7 @@ export async function getPublicOrganizationForm(req: Request, res: Response, nex
         fieldType: field.field_type,
         required: field.required,
         options: field.field_options ?? [],
+        isGroup: field.is_group === true,
       })),
     });
   } catch (error) {

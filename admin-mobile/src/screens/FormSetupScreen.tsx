@@ -30,8 +30,8 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
       try {
         let next: FormFieldConfig[] = [];
         if (isOrg) {
-          const { data } = await api.get<{ form: { fields: Array<{ id: string; field_name: string; field_type: "text" | "photo" | "dropdown"; enabled: boolean; required: boolean; field_options?: string[] | null }> } | null }>(`/admin/organizations/${id}`);
-          next = (data.form?.fields ?? []).map((f, i) => ({ key: f.id, organizationFieldId: f.id, label: f.field_name, fieldType: f.field_type, options: f.field_options ?? [], enabled: f.enabled !== false, required: f.required !== false, source: "manual", displayOrder: i }));
+          const { data } = await api.get<{ form: { fields: Array<{ id: string; field_name: string; field_type: "text" | "photo" | "dropdown"; enabled: boolean; required: boolean; field_options?: string[] | null; is_group?: boolean }> } | null }>(`/admin/organizations/${id}`);
+          next = (data.form?.fields ?? []).map((f, i) => ({ key: f.id, organizationFieldId: f.id, label: f.field_name, fieldType: f.field_type, options: f.field_options ?? [], isGroup: f.is_group === true, enabled: f.enabled !== false, required: f.required !== false, source: "manual", displayOrder: i }));
         } else {
           const { data } = await api.get<{ fields: FormFieldConfig[]; studentCount?: number; importBatchCount?: number }>("/admin/form-config", { params });
           next = Array.isArray(data.fields) ? sortFormFields(data.fields) : [];
@@ -96,7 +96,7 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
       const payload = withSequentialDisplayOrder(next);
       if (isOrg)
         await api.post(`/admin/organizations/${id}/forms`, {
-          fields: payload.map((f) => ({ id: f.organizationFieldId, fieldName: f.label, fieldType: f.fieldType ?? "text", options: f.options ?? [], enabled: f.enabled, required: f.required !== false })),
+          fields: payload.map((f) => ({ id: f.organizationFieldId, fieldName: f.label, fieldType: f.fieldType ?? "text", options: f.options ?? [], isGroup: f.isGroup === true, enabled: f.enabled, required: f.required !== false })),
         });
       else await api.put("/admin/form-config", { ...params, fields: payload });
       setError(null);
@@ -114,7 +114,7 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
       const payload = withSequentialDisplayOrder(fields);
       if (isOrg)
         await api.post(`/admin/organizations/${id}/forms`, {
-          fields: payload.map((f) => ({ id: f.organizationFieldId, fieldName: f.label, fieldType: f.fieldType ?? "text", options: f.options ?? [], enabled: f.enabled, required: f.required !== false })),
+          fields: payload.map((f) => ({ id: f.organizationFieldId, fieldName: f.label, fieldType: f.fieldType ?? "text", options: f.options ?? [], isGroup: f.isGroup === true, enabled: f.enabled, required: f.required !== false })),
         });
       else await api.put("/admin/form-config", { ...params, fields: payload });
       navigation.goBack();
@@ -201,6 +201,11 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
                         defaultValue={(f.options ?? []).join(", ")}
                         onEndEditing={(e) => patch(i, { options: e.nativeEvent.text.split(",").map((o) => o.trim()).filter(Boolean) })}
                       />
+                    ) : null}
+                    {isOrg && f.fieldType === "dropdown" ? (
+                      <Tap onPress={() => patch(i, { isGroup: !f.isGroup })} style={{ marginTop: 6, alignSelf: "flex-start" }}>
+                        <Pill text={f.isGroup ? "Grouping by this ✓" : "Use for grouping"} tone={f.isGroup ? "green" : "grey"} icon="funnel" />
+                      </Tap>
                     ) : null}
                     <View style={{ flexDirection: "row", gap: S.md, marginTop: 8 }}>
                       <Tap onPress={() => {

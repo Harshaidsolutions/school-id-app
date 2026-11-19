@@ -4,6 +4,7 @@ export interface FormFieldConfig {
   organizationFieldId?: string;
   fieldType?: "text" | "photo" | "dropdown";
   options?: string[];
+  isGroup?: boolean;
   required?: boolean;
   key: string;
   label: string;
