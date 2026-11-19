@@ -112,7 +112,7 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const textStyle = useRef<TextStyle>({});
-  const [print, setPrint] = useState({ sheetKey: "a4", landscape: false, gap: 3, margin: 8 });
+  const [print, setPrint] = useState({ sheetKey: "a4", landscape: false, gap: 3, gapX: 3, gapY: 3, margin: 8 });
   const [failedIds, setFailedIds] = useState<string[]>([]);
   const [onlyFailed, setOnlyFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -144,7 +144,7 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
     try {
       setLayout((l) => ({ ...lastDesign.layout, roles: l.roles, matchColumn: l.matchColumn || lastDesign.layout.matchColumn, matchBy: l.matchColumn ? l.matchBy : lastDesign.layout.matchBy }));
       setSideMode(lastDesign.sideMode);
-      setPrint(lastDesign.print);
+      setPrint((p) => ({ ...p, ...lastDesign.print, gapX: lastDesign.print.gapX ?? 3, gapY: lastDesign.print.gapY ?? 3 }));
       setTemplates({ front: null, back: null });
       if (lastDesign.templates.front) await setTemplateFromBlob("front", lastDesign.templates.front.blob, lastDesign.templates.front.name, false);
       if (lastDesign.templates.back) await setTemplateFromBlob("back", lastDesign.templates.back.blob, lastDesign.templates.back.name, false);
@@ -420,7 +420,7 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
         media: resolverFor,
         fileNamePattern: byRow ? "{#}" : `{${idCol}}`,
         jobName: `${batchName}${className ? ` - ${className}` : ""}${onlyFailed ? " - corrected" : ""}`,
-        print: { sheet, landscape: print.landscape, gap: print.gap, margin: print.margin },
+        print: { sheet, landscape: print.landscape, gap: print.gap, gapX: print.gapX, gapY: print.gapY, margin: print.margin },
         idColumn: idCol,
         nameColumn: nameCol,
         dpi: outputDpi,
@@ -641,8 +641,11 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
                   <option value="landscape">Horizontal (landscape)</option>
                 </select>
               </Field>
-              <Field label="Gap between cards (mm)">
-                <input className="input-field" type="number" min={0} max={30} step={0.5} value={print.gap} onChange={(e) => setPrint((p) => ({ ...p, gap: Math.max(0, Math.min(30, Number(e.target.value) || 0)) }))} />
+              <Field label="Horizontal gap — card to card (mm)">
+                <input className="input-field" type="number" min={0} max={30} step={0.5} value={print.gapX} onChange={(e) => setPrint((p) => ({ ...p, gapX: Math.max(0, Math.min(30, Number(e.target.value) || 0)) }))} />
+              </Field>
+              <Field label="Vertical gap — row to row (mm)">
+                <input className="input-field" type="number" min={0} max={30} step={0.5} value={print.gapY} onChange={(e) => setPrint((p) => ({ ...p, gapY: Math.max(0, Math.min(30, Number(e.target.value) || 0)) }))} />
               </Field>
               <Field label="Sheet margin (mm)">
                 <input className="input-field" type="number" min={0} max={30} step={0.5} value={print.margin} onChange={(e) => setPrint((p) => ({ ...p, margin: Math.max(0, Math.min(30, Number(e.target.value) || 0)) }))} />

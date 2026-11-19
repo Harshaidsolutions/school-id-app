@@ -171,7 +171,7 @@ export function GeneratorApp() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const textStyle = useRef<TextStyle>({});
-  const [print, setPrint] = useState({ sheetKey: "a4", landscape: false, gap: 3, margin: 8 });
+  const [print, setPrint] = useState({ sheetKey: "a4", landscape: false, gap: 3, gapX: 3, gapY: 3, margin: 8 });
   const [failedIds, setFailedIds] = useState<string[]>([]);
   const [onlyFailed, setOnlyFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -420,7 +420,7 @@ export function GeneratorApp() {
         try {
           setLayout((l) => ({ ...stripColumnLabels(draft.layout), roles: l.roles, matchColumn: "Photo ID", matchBy: "column" }));
           setSideMode(draft.sideMode);
-          setPrint(draft.print);
+          setPrint((p) => ({ ...p, ...draft.print, gapX: draft.print.gapX ?? 3, gapY: draft.print.gapY ?? 3 }));
           if (draft.templates.front) await setTemplateFromBlob("front", draft.templates.front.blob, draft.templates.front.name, draft.templates.front.libraryId, false);
           if (draft.templates.back) await setTemplateFromBlob("back", draft.templates.back.blob, draft.templates.back.name, draft.templates.back.libraryId, false);
         } finally {
@@ -542,7 +542,7 @@ export function GeneratorApp() {
         media: resolverFor,
         fileNamePattern: "{Photo ID}",
         jobName: `${orgName || "ID cards"}${className ? ` - ${className}` : ""}${onlyFailed ? " - corrected" : ""}`,
-        print: { sheet, landscape: print.landscape, gap: print.gap, margin: print.margin },
+        print: { sheet, landscape: print.landscape, gap: print.gap, gapX: print.gapX, gapY: print.gapY, margin: print.margin },
         idColumn: "Photo ID",
         nameColumn: "Name",
         dpi: outputDpi,
@@ -769,8 +769,11 @@ export function GeneratorApp() {
                   <option value="landscape">Horizontal (landscape)</option>
                 </select>
               </Field>
-              <Field label="Gap between cards (mm)">
-                <input className="input-field" type="number" min={0} max={30} step={0.5} value={print.gap} onChange={(e) => setPrint((p) => ({ ...p, gap: Math.max(0, Math.min(30, Number(e.target.value) || 0)) }))} />
+              <Field label="Horizontal gap — card to card (mm)">
+                <input className="input-field" type="number" min={0} max={30} step={0.5} value={print.gapX} onChange={(e) => setPrint((p) => ({ ...p, gapX: Math.max(0, Math.min(30, Number(e.target.value) || 0)) }))} />
+              </Field>
+              <Field label="Vertical gap — row to row (mm)">
+                <input className="input-field" type="number" min={0} max={30} step={0.5} value={print.gapY} onChange={(e) => setPrint((p) => ({ ...p, gapY: Math.max(0, Math.min(30, Number(e.target.value) || 0)) }))} />
               </Field>
               <Field label="Sheet margin (mm)">
                 <input className="input-field" type="number" min={0} max={30} step={0.5} value={print.margin} onChange={(e) => setPrint((p) => ({ ...p, margin: Math.max(0, Math.min(30, Number(e.target.value) || 0)) }))} />

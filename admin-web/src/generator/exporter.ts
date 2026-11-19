@@ -171,7 +171,9 @@ export async function exportCards(o: ExportOptions): Promise<ExportFile[]> {
 export type PrintSettings = {
   sheet: SheetSize; // paper, e.g. A4 or 12 × 18 in
   landscape: boolean; // horizontal sheet
-  gap: number; // mm between cards
+  gap: number; // mm between cards (fallback)
+  gapX?: number; // mm between columns
+  gapY?: number; // mm between rows
   margin: number; // mm, room for crop marks
 };
 
@@ -197,7 +199,7 @@ export type BundleOptions = {
 };
 
 /** A card whose text is cut off / runs outside the card: listed in the error report. */
-export type CardProblem = { index: number; id: string; name: string; side: Side; message: string };
+export type CardProblem = { index: number; id: string; name: string; side: Side; field: string; value: string; message: string; fix: string };
 /** A folder the admin picked on the computer (browser "choose folder"). Minimal shape we use. */
 export type OutputFolder = {
   name: string;
@@ -249,19 +251,22 @@ function csvCell(v: string): string {
 }
 
 /** Text that does not fit its box, or a text box that sticks out of the card. */
-function textProblems(layout: Layout, side: Side, row: Row, issues: RenderIssue[]): string[] {
-  const out: string[] = [];
+type TextProblem = { field: string; value: string; message: string; fix: string };
+function textProblems(layout: Layout, side: Side, row: Row, issues: RenderIssue[]): TextProblem[] {
+  const out: TextProblem[] = [];
   for (const issue of issues) {
     if (issue.type !== "overflow") continue;
     const el = layout.elements.find((e) => e.id === issue.elementId);
-    const what = el && el.kind === "text" ? el.column || "Text" : "Text";
-    out.push(`${what}: text is too long and is cut off`);
+    const field = el && el.kind === "text" ? el.column || "Text" : "Text";
+    const value = el && el.kind === "text" ? textValue(el, row) : "";
+    out.push({ field, value, message: "Text is too long — it does not fit and is cut off", fix: "Shorten this value in Excel, or make the text box wider/taller, then Regenerate errors." });
   }
   for (const el of layout.elements) {
     if (el.side !== side || el.kind !== "text") continue;
-    if (!textValue(el, row)) continue;
+    const value = textValue(el, row);
+    if (!value) continue;
     const outside = el.x < -0.2 || el.y < -0.2 || el.x + el.w > layout.card.w + 0.2 || el.y + el.h > layout.card.h + 0.2;
-    if (outside) out.push(`${el.column || "Text"}: text goes outside the ID card`);
+    if (outside) out.push({ field: el.column || "Text", value, message: "Text box sits outside the card edge", fix: "Move the box fully inside the card, then Regenerate errors." });
   }
   return out;
 }
@@ -289,7 +294,7 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
     ? { ...base, w: Math.max(base.w, base.h), h: Math.min(base.w, base.h) }
     : { ...base, w: Math.min(base.w, base.h), h: Math.max(base.w, base.h) };
   const card = { w: o.layout.card.w, h: o.layout.card.h };
-  let imp = impose({ sheet, card, margin: o.print.margin, gap: o.print.gap, perSheet: 0, allowRotate: false });
+  let imp = impose({ sheet, card, margin: o.print.margin, gap: o.print.gap, gapX: o.print.gapX, gapY: o.print.gapY, perSheet: 0, allowRotate: false });
   if (!imp.capacity) {
     // Large designs (e.g. an A4 template): the card does not fit on the chosen paper with these margins,
     // so each print page is the card itself — the cards are still all generated.
@@ -334,8 +339,8 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
           names.set(item.index, fileBase);
         }
         const issues = await renderCard(canvas, { layout: o.layout, side, row: item.row, dpi, template: o.templates[side], media: o.media(item.index) });
-        for (const message of textProblems(o.layout, side, item.row, issues)) {
-          problems.push({ index: item.index, id: item.row[o.idColumn] ?? "", name: item.row[o.nameColumn] ?? "", side, message });
+        for (const tp of textProblems(o.layout, side, item.row, issues)) {
+          problems.push({ index: item.index, id: item.row[o.idColumn] ?? "", name: item.row[o.nameColumn] ?? "", side, field: tp.field, value: tp.value, message: tp.message, fix: tp.fix });
         }
         // Same pixel size as the uploaded template, saved as JPG (with the print DPI in the file).
         const out = atTemplateSize(canvas, o.templates[side], scaled);
@@ -373,9 +378,9 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
   o.rows.forEach((item, i) => lines.push([String(i + 1), names.get(item.index) ?? "", ...o.columns.map((c) => item.row[c] ?? "")].map(csvCell).join(",")));
   await put(`${folder}/Card details.csv`, new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv" }));
   if (problems.length) {
-    const report = [["S.No", "Photo ID", "Name", "Side", "Problem", "What to do"].join(",")];
+    const report = [["S.No", "Photo ID", "Name", "Side", "Field", "Current value (wrong)", "What is wrong", "How to correct it"].join(",")];
     problems.forEach((p, i) =>
-      report.push([String(i + 1), p.id, p.name, p.side === "front" ? "Front" : "Back", p.message, "Correct the text (or make the text box bigger), then use Regenerate errors"].map(csvCell).join(","))
+      report.push([String(i + 1), p.id, p.name, p.side === "front" ? "Front" : "Back", p.field, p.value, p.message, p.fix].map(csvCell).join(","))
     );
     await put(`${folder}/ERRORS - cards to correct.csv`, new Blob(["\ufeff" + report.join("\r\n")], { type: "text/csv" }));
   }

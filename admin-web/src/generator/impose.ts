@@ -24,7 +24,9 @@ export type ImposeOptions = {
   sheet: SheetSize;
   card: { w: number; h: number };
   margin: number; // mm, room for crop marks
-  gap: number; // mm between cards
+  gap: number; // mm between cards (fallback for both directions)
+  gapX?: number; // mm between columns (horizontal)
+  gapY?: number; // mm between rows (vertical)
   perSheet: number; // 0 = as many as fit
   allowRotate: boolean; // turn cards 90° on the sheet when more fit
 };
@@ -44,13 +46,15 @@ function fit(len: number, cell: number, gap: number): number {
 }
 
 export function impose(o: ImposeOptions): Imposition {
+  const gapX = o.gapX ?? o.gap;
+  const gapY = o.gapY ?? o.gap;
   const usableW = o.sheet.w - 2 * o.margin;
   const usableH = o.sheet.h - 2 * o.margin;
   const options = [false, ...(o.allowRotate ? [true] : [])].map((rotated) => {
     const cw = rotated ? o.card.h : o.card.w;
     const ch = rotated ? o.card.w : o.card.h;
-    const cols = fit(usableW, cw, o.gap);
-    const rows = fit(usableH, ch, o.gap);
+    const cols = fit(usableW, cw, gapX);
+    const rows = fit(usableH, ch, gapY);
     return { rotated, cw, ch, cols, rows, n: cols * rows };
   });
   const best = options.reduce((a, b) => (b.n > a.n ? b : a));
@@ -61,14 +65,14 @@ export function impose(o: ImposeOptions): Imposition {
   // Smallest block that holds `want` cards: keep full columns, trim rows
   const cols = Math.min(best.cols, want);
   const rows = Math.ceil(want / cols);
-  const blockW = cols * best.cw + (cols - 1) * o.gap;
-  const blockH = rows * best.ch + (rows - 1) * o.gap;
+  const blockW = cols * best.cw + (cols - 1) * gapX;
+  const blockH = rows * best.ch + (rows - 1) * gapY;
   const x0 = (o.sheet.w - blockW) / 2;
   const y0 = (o.sheet.h - blockH) / 2;
   const slots: { x: number; y: number }[] = [];
   for (let r = 0; r < rows && slots.length < want; r++) {
     for (let c = 0; c < cols && slots.length < want; c++) {
-      slots.push({ x: x0 + c * (best.cw + o.gap), y: y0 + r * (best.ch + o.gap) });
+      slots.push({ x: x0 + c * (best.cw + gapX), y: y0 + r * (best.ch + gapY) });
     }
   }
   return { cols, rows, rotated: best.rotated, cellW: best.cw, cellH: best.ch, slots, capacity: want };
