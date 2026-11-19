@@ -230,6 +230,7 @@ export function CatalogScreen({ route, navigation }: ScreenProps<"Catalog">) {
 function CatalogEditor({ kind, state, onClose, onDone }: { kind: Kind; state: { item: CatalogItem | null } | null; onClose: () => void; onDone: (msg: string) => void }) {
   const editing = state?.item ?? null;
   const [name, setName] = useState("");
+  const nameFromFileName = (f: string) => f.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "Item";
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [video, setVideo] = useState<PickedFile | null>(null);
@@ -271,7 +272,6 @@ function CatalogEditor({ kind, state, onClose, onDone }: { kind: Kind; state: { 
         onDone(`${files.length} brochure(s) uploaded.`);
         return;
       }
-      if (!name.trim()) return setError("Enter a name.");
       if (!isTag && words(description) > MAX_WORDS) return setError(`Description must be ${MAX_WORDS} words or fewer.`);
       if (!editing && !files.length) return setError("Choose an image.");
       // Several images at once: the first is the main picture, the rest are extra images.
@@ -285,7 +285,7 @@ function CatalogEditor({ kind, state, onClose, onDone }: { kind: Kind; state: { 
       };
       const form = new FormData();
       form.append("kind", kind);
-      form.append("name", name.trim());
+      form.append("name", editing ? name.trim() : (name.trim() || nameFromFileName(files[0]?.name ?? "Item")));
       form.append("description", isTag ? "" : description.trim());
       if (video) form.append("video", asFormFile(video));
       if (editing) {
@@ -338,18 +338,6 @@ function CatalogEditor({ kind, state, onClose, onDone }: { kind: Kind; state: { 
     >
       <Banner text={error} />
       {progress ? <Banner text={progress} tone="blue" /> : null}
-      {!isBrochure ? (
-        <Field
-          label="Name"
-          required
-          value={name}
-          onChangeText={setName}
-          editable={!editing}
-          icon={editing ? "lock-closed-outline" : undefined}
-          hint={editing ? "The image name cannot be changed." : undefined}
-          style={editing ? { color: C.muted } : undefined}
-        />
-      ) : null}
       {!isBrochure && !isTag ? (
         <Field label="Description" value={description} onChangeText={setDescription} multiline hint={`${words(description)} / ${MAX_WORDS} words`} />
       ) : null}

@@ -3,7 +3,6 @@ import axios from "axios";
 import api from "../api/client";
 import { ImagePreviewModal } from "../components/ImagePreviewModal";
 import { SearchInput } from "../components/ui/SearchInput";
-import { formatFileSize } from "./CatalogPages";
 import { BulkActionBar, BulkModeButtons, bulkDeleteMessage } from "../components/BulkActionBar";
 import type { ApiErrorBody, CatalogItem } from "../types";
 import { sequentialUploadProgressLabel } from "../utils/sequentialUploadProgress";
@@ -34,7 +33,7 @@ export function ModelsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
-  const [nameFromFile, setNameFromFile] = useState(false);
+  const [, setNameFromFile] = useState(false);
   const [description, setDescription] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -167,6 +166,9 @@ export function ModelsPage() {
       setError(`Description must be ${MAX_DESCRIPTION_WORDS} words or fewer.`);
       return;
     }
+    // The name field was removed from the form: name the item after its first image file.
+    const autoName = name.trim() || (tagFiles[0] ? nameFromFilename(tagFiles[0].name) : "");
+    if (!editing && !autoName && tagFiles.length) setName(autoName);
     setSaving(true);
     setError(null);
     setUploadProgress(null);
@@ -184,7 +186,7 @@ export function ModelsPage() {
       const total = tagFiles.length;
       const form = new FormData();
       form.append("kind", tab);
-      form.append("name", name.trim());
+      form.append("name", (editing ? name.trim() : autoName) || name.trim());
       form.append("description", isTagsTab ? "" : description.trim());
       if (videoFile) form.append("video", videoFile);
       if (editing) {
@@ -338,7 +340,6 @@ export function ModelsPage() {
                 ) : null}
                 <th className="col-sno">S.NO.</th>
                 <th className="col-image">{itemLabel} Image</th>
-                <th className="col-name">Image Name</th>
                 {!isTagsTab && <th className="col-description">Description</th>}
                 <th className="col-date">Date Added</th>
                 <th className="col-actions">Actions</th>
@@ -413,14 +414,6 @@ export function ModelsPage() {
                           controlsList="nodownload"
                           className="mt-2 h-16 w-24 bg-[#EEF0FF]"
                         />
-                      ) : null}
-                    </td>
-                    <td className="col-name">
-                      <div className="truncate font-medium text-text-navy" title={item.name}>
-                        {item.name}
-                      </div>
-                      {item.file_size ? (
-                        <div className="text-[11px] text-text-muted">{formatFileSize(item.file_size)}</div>
                       ) : null}
                     </td>
                     {!isTagsTab && (
@@ -552,26 +545,6 @@ export function ModelsPage() {
               )}
             </label>
           ) : null}
-          <label className="block text-sm">
-            <span className="mb-1.5 block font-medium">Image Name *</span>
-            <input
-              required
-              value={name}
-              readOnly={Boolean(editing)}
-              disabled={Boolean(editing)}
-              title={editing ? "The image name cannot be changed" : undefined}
-              onChange={(e) => {
-                setName(e.target.value);
-                setNameFromFile(false);
-              }}
-              className={`input-field ${editing ? "cursor-not-allowed bg-content-bg text-text-muted" : ""}`}
-            />
-            {nameFromFile && !editing && (
-              <span className="mt-1 block text-xs text-text-muted">
-                Auto-filled from filename
-              </span>
-            )}
-          </label>
           {!isTagsTab && (
             <label className="block text-sm">
               <span className="mb-1.5 flex items-center justify-between font-medium">
