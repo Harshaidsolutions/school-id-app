@@ -296,14 +296,14 @@ function CatalogEditor({ kind, count, state, onClose, onDone }: { kind: Kind; co
         if (files.length) setProgress(`Uploading image 1 of ${files.length}`);
         await api.put(`/admin/catalog/${editing.id}`, form, { timeout: 600000 });
         await addExtras(editing.id, replaceMain ? files.slice(1) : files, replaceMain ? 1 : 0);
-      } else if (isTag && files.length) {
-        // Tags: each image becomes its own independent tag, numbered in sequence.
+      } else if ((isTag || files.length > 1) && files.length) {
+        // Bulk upload: each image becomes its own independent item (tag or model), numbered in sequence.
         for (let i = 0; i < files.length; i++) {
           setProgress(`Uploading ${i + 1} of ${files.length}`);
           const one = new FormData();
           one.append("kind", kind);
           one.append("name", String(count + i + 1));
-          one.append("description", "");
+          one.append("description", isTag ? "" : description.trim());
           one.append("file", asFormFile(files[i]));
           await api.post(`/admin/catalog?kind=${kind}`, one, { timeout: 600000 });
         }

@@ -184,14 +184,15 @@ export function ModelsPage() {
         }
       };
       const total = tagFiles.length;
-      // Tags: each uploaded image becomes its own independent tag, numbered in sequence.
-      if (!editing && isTagsTab && tagFiles.length) {
+      // Bulk upload: each image becomes its own independent item (tag or model), numbered in sequence.
+      if (!editing && (isTagsTab || tagFiles.length > 1) && tagFiles.length) {
         const base = items.length;
         for (let i = 0; i < tagFiles.length; i++) {
           setUploadProgress(sequentialUploadProgressLabel(i + 1, total, tagFiles[i]!.name));
           const one = new FormData();
           one.append("kind", tab);
           one.append("name", String(base + i + 1));
+          one.append("description", isTagsTab ? "" : description.trim());
           one.append("file", tagFiles[i]!);
           await api.post(`/admin/catalog?kind=${encodeURIComponent(tab)}`, one, { headers: { "Content-Type": "multipart/form-data" } });
         }
