@@ -39,6 +39,8 @@ type FormField = {
   field_type: string;
   enabled?: boolean;
   required?: boolean;
+  is_group?: boolean;
+  field_options?: string[] | null;
 };
 
 type SubmissionRow = {
