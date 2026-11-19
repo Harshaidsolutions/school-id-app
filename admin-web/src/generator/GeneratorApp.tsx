@@ -266,6 +266,12 @@ export function GeneratorApp() {
   // ---------- records: every record gets a card (a missing photo leaves an empty photo area) ----------
   const allRows = useMemo(() => rows.map((row, index) => ({ row, index })), [rows]);
   const withPhotoAll = useMemo(() => allRows.filter(({ index }) => hasPhoto(index)).length, [allRows, hasPhoto]);
+  const hasSign = useCallback((index: number) => {
+    const row = rows[index];
+    return Boolean(row && (findMedia(media.parentSign, row, "Photo ID", index, "column") || students[index]?.signature_url));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, media, mediaVersion, students]);
+  const withSignAll = useMemo(() => allRows.filter(({ index }) => hasSign(index)).length, [allRows, hasSign]);
   const classes = useMemo(() => Array.from(new Set(rows.map((r) => r.Class).filter(Boolean))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [rows]);
   const inClass = useMemo(() => allRows.filter(({ row }) => !className || row.Class === className), [allRows, className]);
   const readyAll = inClass;
@@ -693,11 +699,12 @@ export function GeneratorApp() {
         <div className="idg-wizard-body">
           <section className="card idg-wiz-card">
             <div className="idg-wiz-head"><span className="idg-wiz-num">1</span><div><h3>Records &amp; photos</h3><p className="idg-muted">From {orgName || "this organisation"}</p></div></div>
-            <div className="idg-wiz-stats is-four">
+            <div className="idg-wiz-stats is-five">
               <div><b>{rows.length}</b><span>Total records</span></div>
-              <div><b>{media.photo.size}</b><span>Photos uploaded</span></div>
-              <div className="is-ok"><b>{withPhotoAll}</b><span>Records with photo</span></div>
-              <div className="is-warn"><b>{Math.max(0, rows.length - withPhotoAll)}</b><span>Records without photo</span></div>
+              <div className="is-ok"><b>{withPhotoAll}</b><span>Matched photos</span></div>
+              <div className="is-warn"><b>{Math.max(0, rows.length - withPhotoAll)}</b><span>Unmatched photos</span></div>
+              <div className="is-ok"><b>{withSignAll}</b><span>Matched signatures</span></div>
+              <div className="is-warn"><b>{Math.max(0, rows.length - withSignAll)}</b><span>Unmatched signatures</span></div>
             </div>
             <Field label="Photo file names match">
               <input className="input-field" value="Photo ID" readOnly />

@@ -120,7 +120,8 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
   /** Licence validity shown next to the holder's name. */
   const expiry = license.expiresAt ? new Date(license.expiresAt) : null;
   const daysLeft = expiry ? Math.ceil((expiry.getTime() - Date.now()) / 86400000) : null;
-  const licenceSoon = daysLeft !== null && daysLeft <= 30;
+  // Green normally; red only on the last day or after expiry, with a renewal note.
+  const licenceSoon = daysLeft !== null && daysLeft <= 1;
   const licenceText = expiry
     ? `Valid till ${expiry.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}${daysLeft !== null ? ` · ${Math.max(0, daysLeft)} day${daysLeft === 1 ? "" : "s"} left` : ""}`
     : "No expiry date";
@@ -240,6 +241,12 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
   // ---------- records: every Excel record gets a card (a missing photo leaves an empty photo area) ----------
   const allRows = useMemo(() => rows.map((row, index) => ({ row, index })), [rows]);
   const withPhotoAll = useMemo(() => allRows.filter(({ index }) => hasPhoto(index)).length, [allRows, hasPhoto]);
+  const hasSign = useCallback((index: number) => {
+    const row = rows[index];
+    return Boolean(row && findMedia(media.parentSign, row, matchColumn, index, layout.matchBy));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, media, mediaVersion, matchColumn, layout.matchBy]);
+  const withSignAll = useMemo(() => allRows.filter(({ index }) => hasSign(index)).length, [allRows, hasSign]);
   const classes = useMemo(() => (classCol ? Array.from(new Set(rows.map((r) => r[classCol]).filter(Boolean))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : []), [rows, classCol]);
   const inClass = useMemo(() => allRows.filter(({ row }) => !className || row[classCol] === className), [allRows, className, classCol]);
   const readyAll = inClass;
@@ -378,7 +385,9 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
   // ---------- output folder (chosen once in step 1, used for every Generate) ----------
   async function chooseFolder() {
     try {
-      const picked = await desktop().pickFolder();
+      // Start the picker at the folder that holds the Photos folder, so a new output folder is made right there.
+      const near = photoPath && !/\sfiles\b/.test(photoPath) ? photoPath.replace(/[\\/][^\\/]+$/, "") : undefined;
+      const picked = await desktop().pickFolder(near || undefined);
       if (picked) setOutFolder(picked);
     } catch (e) {
       say(e instanceof Error ? e.message : "That folder could not be opened.", "error");
@@ -528,6 +537,7 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
       <span className="idg-licensed">
         Licensed to <b>{license.customer}</b>
         <small className={licenceSoon ? "is-soon" : ""}>{licenceText}</small>
+        {licenceSoon && <small className="is-soon">Renew now — contact admin: 7799881779</small>}
       </span>
     </section>
   );
@@ -541,11 +551,12 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
         <div className="idg-wizard-body">
           <section className="card idg-wiz-card">
             <div className="idg-wiz-head"><span className="idg-wiz-num">1</span><div><h3>Records, photos &amp; output</h3><p className="idg-muted">Fields marked * are required</p></div></div>
-            <div className="idg-wiz-stats is-four">
+            <div className="idg-wiz-stats is-five">
               <div><b>{rows.length}</b><span>Total records</span></div>
-              <div><b>{media.photo.size}</b><span>Photos uploaded</span></div>
-              <div className="is-ok"><b>{withPhotoAll}</b><span>Records with photo</span></div>
-              <div className="is-warn"><b>{Math.max(0, rows.length - withPhotoAll)}</b><span>Records without photo</span></div>
+              <div className="is-ok"><b>{withPhotoAll}</b><span>Matched photos</span></div>
+              <div className="is-warn"><b>{Math.max(0, rows.length - withPhotoAll)}</b><span>Unmatched photos</span></div>
+              <div className="is-ok"><b>{withSignAll}</b><span>Matched signatures</span></div>
+              <div className="is-warn"><b>{Math.max(0, rows.length - withSignAll)}</b><span>Unmatched signatures</span></div>
             </div>
             <div className="desk-inputs">
               <div className={`desk-input${rows.length ? " is-done" : ""}`}>

@@ -85,8 +85,11 @@ app.whenReady().then(() => {
   // Output folder: the user picks it once; the app may then write the generated cards inside it (and only there).
   const foldersFile = path.join(app.getPath("userData"), "folders.json");
   const allowed = new Set((() => { try { return JSON.parse(fs.readFileSync(foldersFile, "utf8")); } catch { return []; } })());
-  ipcMain.handle("folder:pick", guard(async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog(win, { properties: ["openDirectory", "createDirectory"], defaultPath: app.getPath("documents") });
+  ipcMain.handle("folder:pick", guard(async (_e, startDir) => {
+    // Open the folder picker where the photos were chosen from, so the user makes the output folder right there.
+    let defaultPath = app.getPath("documents");
+    try { if (typeof startDir === "string" && startDir && fs.statSync(startDir).isDirectory()) defaultPath = path.resolve(startDir); } catch { /* fall back to Documents */ }
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, { properties: ["openDirectory", "createDirectory"], defaultPath });
     if (canceled || !filePaths[0]) return null;
     const root = path.resolve(filePaths[0]);
     allowed.add(root);

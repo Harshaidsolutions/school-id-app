@@ -7,7 +7,7 @@ contextBridge.exposeInMainWorld("desktop", {
   saveFile: (defaultName, data, filters) => ipcRenderer.invoke("file:save", { defaultName, data, filters }),
   openFile: (filters) => ipcRenderer.invoke("file:open", { filters }),
   reveal: (filePath) => ipcRenderer.invoke("file:reveal", filePath),
-  pickFolder: () => ipcRenderer.invoke("folder:pick"),
+  pickFolder: (defaultPath) => ipcRenderer.invoke("folder:pick", defaultPath),
   pathForFile: (file) => { try { return webUtils.getPathForFile(file); } catch { return ""; } },
   onLicenseChanged: (cb) => { const h = (_e, s) => cb(s); ipcRenderer.on("license:changed", h); return () => ipcRenderer.removeListener("license:changed", h); },
   writeInFolder: (root, rel, data) => ipcRenderer.invoke("folder:write", { root, rel, data }),
