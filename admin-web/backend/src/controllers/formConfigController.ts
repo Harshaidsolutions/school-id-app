@@ -369,6 +369,20 @@ export async function clearFormConfigForOrg(options: {
   }
 }
 
+export async function groupFieldKeyForOrg(opts: { schoolId?: string; instituteId?: string }): Promise<string | null> {
+  const { schoolId, instituteId } = opts;
+  if (!schoolId && !instituteId) return null;
+  const r = await pool.query<{ fields: unknown }>(
+    schoolId
+      ? `SELECT fields FROM form_configs WHERE school_id = $1::uuid LIMIT 1`
+      : `SELECT fields FROM form_configs WHERE institute_id = $1::uuid LIMIT 1`,
+    [schoolId ?? instituteId]
+  );
+  const fields = normalizeSavedFields(r.rows[0]?.fields);
+  const group = fields.find((f) => f.isGroup === true && f.enabled !== false);
+  return group?.key ?? null;
+}
+
 export async function persistFormConfigFields(
   options: { schoolId?: string; instituteId?: string },
   fields: FormFieldConfig[],

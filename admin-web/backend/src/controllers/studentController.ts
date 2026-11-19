@@ -26,7 +26,7 @@ import {
   parseBulkIds,
   requireAdminEmail,
 } from "../utils/bulkIds";
-import { syncFormConfigFromExcelFields } from "./formConfigController";
+import { syncFormConfigFromExcelFields, groupFieldKeyForOrg } from "./formConfigController";
 import {
   buildFieldLabelsFromConfig,
   mergeExtraFieldsForSave,
@@ -54,6 +54,7 @@ import {
 import { Student, StudentRowInput } from "../types/student";
 import {
   collectRecordFacets,
+  extraFieldByKey,
   extraFieldValue,
   hasAllRequiredFieldData,
   loadRequiredDataContext,
@@ -925,7 +926,8 @@ export async function listStudentsAdmin(
     const department =
       typeof req.query.department === "string" ? req.query.department.trim() : "";
     const flagged = await withPendingFlags(result.rows);
-    const facets = collectRecordFacets(flagged);
+    const groupKey = await groupFieldKeyForOrg({ schoolId: schoolId || undefined, instituteId: instituteId || undefined });
+    const facets = collectRecordFacets(groupKey, flagged);
     let students = flagged;
     if (photoFilter === "captured") {
       students = students.filter((row) => Boolean(row.photo_url?.trim()));
@@ -945,7 +947,7 @@ export async function listStudentsAdmin(
       students = students.filter((row) => (row.class_section ?? "") === category);
     }
     if (group) {
-      students = students.filter((row) => extraFieldValue(row, "group") === group);
+      students = students.filter((row) => (groupKey ? extraFieldByKey(row, groupKey) : extraFieldValue(row, "group")) === group);
     }
     if (designation) {
       students = students.filter((row) => extraFieldValue(row, "designation") === designation);

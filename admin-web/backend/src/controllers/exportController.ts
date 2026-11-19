@@ -444,7 +444,7 @@ async function listPhotoCaptureCounts(
        WHERE ${whereOrg} AND app_visible = true`,
       [orgId]
     );
-    const facets = collectRecordFacets(await withPendingFlags(facetRows.rows));
+    const facets = collectRecordFacets(null, await withPendingFlags(facetRows.rows));
     const signatureDates = await pool.query<{ capture_date: string; photo_count: number }>(
       `SELECT to_char((updated_at AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS capture_date,
               COUNT(*)::int AS photo_count

@@ -42,6 +42,8 @@ export type ConfiguredCategoryField = {
 
 /** Class, group, or designation fields that this organization actually configured. */
 export function configuredCategoryFields(fields: FormFieldConfig[]): ConfiguredCategoryField[] {
+  const marked = fields.find((f) => f.enabled !== false && f.isGroup === true);
+  if (marked) return [{ kind: "group", key: marked.key, label: marked.label }];
   const out: ConfiguredCategoryField[] = [];
   for (const field of fields) {
     if (field.enabled === false) continue;

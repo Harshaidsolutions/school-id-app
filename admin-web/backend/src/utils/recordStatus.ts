@@ -337,6 +337,7 @@ function asRecord(value: unknown): Record<string, unknown> {
 type Bucket = { count: number; total: number; pendingData: number; key: string };
 
 export function collectRecordFacets(
+  groupFieldKey: string | null,
   rows: Array<{
     class_section?: string | null;
     extra_fields?: unknown;
@@ -379,7 +380,7 @@ export function collectRecordFacets(
     // the Excel CLASS column, which used to count every captured photo twice.
     const counted = new Set<string>();
     for (const item of values) {
-      const kind = fieldKind(item.key, item.label);
+      const kind = groupFieldKey && item.key === groupFieldKey ? "group" : fieldKind(item.key, item.label);
       if (!kind) continue;
       const once = `${kind}\u0000${item.value}`;
       if (counted.has(once)) continue;
@@ -410,6 +411,18 @@ export function collectRecordFacets(
       .map(([name, count]) => ({ name, count, key: "capture_date", total: count, pendingData: 0 }))
       .sort((a, b) => b.name.localeCompare(a.name)),
   };
+}
+
+/** Read a record's value for a specific field key (handles the fixed Class column). */
+export function extraFieldByKey(
+  row: { class_section?: string | null; extra_fields?: unknown },
+  key: string
+): string | null {
+  if (key === "class_section") return row.class_section?.trim() || null;
+  const extras = asRecord(row.extra_fields);
+  const raw = extras[key];
+  const value = raw == null ? "" : String(raw).trim();
+  return value || null;
 }
 
 export function extraFieldValue(
