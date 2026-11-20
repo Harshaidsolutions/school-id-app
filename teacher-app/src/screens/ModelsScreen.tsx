@@ -302,7 +302,7 @@ export function ModelsScreen() {
         </View>
       </View>
 
-      <SelectionLockBanner lock={selectionLock} onMessage={showToast} />
+      <SelectionLockBanner lock={selectionLock} />
 
       <FlatList
         key={`${modelTab}-${modelCols}`}

@@ -443,7 +443,7 @@ export function TemplateScreen() {
         />
       </View>
 
-      <SelectionLockBanner lock={selectionLock} onMessage={showToast} />
+      <SelectionLockBanner lock={selectionLock} />
 
       {loading && templates.length === 0 ? (
         <LoadingBlock label="Loading templates…" />
