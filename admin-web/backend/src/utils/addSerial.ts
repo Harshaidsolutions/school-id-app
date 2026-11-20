@@ -43,7 +43,7 @@ export function smallestAddSerial(texts: string[]): string {
 const ADD_PHOTO_ID = /^ADD_(\d+)$/i;
 
 /**
- * Next manual Photo Number for this organization: ADD_000, ADD_001, ADD_002.
+ * Next manual Photo Number for this organization: ADD_001, ADD_002, ADD_003.
  * Existing numbers stay as they are. A deleted number is not issued again.
  */
 export async function allocateReusableAddSerial(
@@ -80,7 +80,7 @@ export async function allocateReusableAddSerial(
     if (Number.isFinite(serial)) highest = Math.max(highest, serial);
   }
   const current = org.rows[0]?.photo_capture_seq ?? 0;
-  const issued = current === 0 && highest < 0 ? 0 : Math.max(current, highest) + 1;
+  const issued = current === 0 && highest < 0 ? 1 : Math.max(current, highest) + 1;
 
   await client.query(
     `UPDATE ${table}
@@ -92,7 +92,7 @@ export async function allocateReusableAddSerial(
   return `ADD_${String(issued).padStart(3, "0")}`;
 }
 
-/** Next organization record number: ADD_000, ADD_001. Deleted numbers are not reused. */
+/** Next organization record number: ADD_001, ADD_002. Deleted numbers are not reused. */
 export async function allocateOrganizationAddSerial(
   client: PoolClient,
   organizationId: string
@@ -116,7 +116,7 @@ export async function allocateOrganizationAddSerial(
     if (Number.isFinite(serial)) highest = Math.max(highest, serial);
   }
   const current = org.rows[0]?.photo_capture_seq ?? 0;
-  const issued = current === 0 && highest < 0 ? 0 : Math.max(current, highest) + 1;
+  const issued = current === 0 && highest < 0 ? 1 : Math.max(current, highest) + 1;
   await client.query(
     `UPDATE organizations SET photo_capture_seq = $2 WHERE id = $1::uuid`,
     [organizationId, issued]

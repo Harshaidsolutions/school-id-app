@@ -159,6 +159,14 @@ function toStudentJson(row: TeacherStudentRow, ctx?: RequiredDataContext) {
       )
     : Boolean(row.student_name?.trim()) &&
       (institute || Boolean(row.class_section?.trim()));
+  // When the form collects a per-member signature, a missing signature means
+  // the record is not fully captured yet (counts as pending).
+  const signatureRequired = Boolean(
+    ctx?.fields?.some(
+      (f) => f.key === "signature_upload" && f.enabled !== false
+    )
+  );
+  const signatureOk = !signatureRequired || Boolean(row.signature_url?.trim());
   const fieldLabels =
     row.field_labels && typeof row.field_labels === "object"
       ? row.field_labels
@@ -185,8 +193,8 @@ function toStudentJson(row: TeacherStudentRow, ctx?: RequiredDataContext) {
     extra_fields: Object.keys(extraFields).length ? extraFields : null,
     field_labels: fieldLabels,
     pending_photo: !hasCapturedPhoto(row.photo_url),
-    pending_data: !dataComplete,
-    fully_captured: hasCapturedPhoto(row.photo_url) && dataComplete,
+    pending_data: !dataComplete || !signatureOk,
+    fully_captured: hasCapturedPhoto(row.photo_url) && dataComplete && signatureOk,
   };
 }
 
