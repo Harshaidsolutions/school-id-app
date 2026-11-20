@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   },
   initials: { fontFamily: fonts.headingBold, color: "#1F2937", letterSpacing: 0.5 },
   textCol: { flex: 1, minWidth: 0 },
-  harshaSub: { fontFamily: fonts.bodyMedium, color: "rgba(255,255,255,0.92)", letterSpacing: 0.4, marginTop: -2, marginBottom: 2, textAlign: "right" },
+  harshaSub: { fontFamily: fonts.bodyMedium, color: "rgba(255,255,255,0.92)", letterSpacing: 0.4, marginTop: 0, marginBottom: 2, textAlign: "left" },
   brand: { fontFamily: fonts.headingBold, color: "#FFFFFF", marginTop: 4, letterSpacing: 0.2 },
   chip: {
     alignSelf: "flex-start",
@@ -99,5 +99,5 @@ const styles = StyleSheet.create({
   },
   chipText: { fontFamily: fonts.bodySemiBold, color: "#FFFFFF" },
   name: { fontFamily: fonts.headingBold, color: "#FFFFFF" },
-  sub: { fontFamily: fonts.bodyMedium, color: "rgba(255,255,255,0.92)", letterSpacing: 0.4, marginTop: 4, textAlign: "right" },
+  sub: { fontFamily: fonts.bodyMedium, color: "rgba(255,255,255,0.92)", letterSpacing: 0.4, marginTop: 2, textAlign: "left" },
 });

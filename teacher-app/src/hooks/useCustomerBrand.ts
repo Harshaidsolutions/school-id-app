@@ -67,7 +67,7 @@ export function useCustomerBrand() {
       if(sequence!==requestSequence.current)return;
       const next = data.branding ?? {};
       if (next.source !== "child") {
-        setBrand({...emptyBrand(),whatsapp:next.whatsapp || null,phone:next.phone || null});
+        setBrand({...emptyBrand(),photoUrl:next.photoUrl || null,whatsapp:next.whatsapp || null,phone:next.phone || null});
       } else {
         setBrand({
           source: "child",

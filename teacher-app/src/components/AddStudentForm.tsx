@@ -338,7 +338,7 @@ export function AddStudentForm({
             {signatureUri ? (
               <Image
                 source={{ uri: signatureUri }}
-                style={styles.photoPreview}
+                style={styles.signaturePreview}
                 resizeMode="contain"
               />
             ) : (
@@ -573,9 +573,13 @@ const styles = StyleSheet.create({
   signatureArea: {
     alignSelf: "stretch",
     width: "100%",
-    minHeight: 88,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    height: 120,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  signaturePreview: {
+    width: "100%",
+    height: "100%",
   },
   signatureHint: {
     fontFamily: fonts.regular,

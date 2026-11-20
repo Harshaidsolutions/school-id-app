@@ -243,7 +243,7 @@ export function HomeScreen() {
           <AdminHeroCard
             loading={!ready}
             adminName={childBrand ? brand.adminName : "Harsha ID Solutions"}
-            photoUrl={childBrand ? brand.photoUrl : null}
+            photoUrl={brand.photoUrl}
           />
         </Entrance>
         {brandError && !ready ? (

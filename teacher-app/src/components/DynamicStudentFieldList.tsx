@@ -293,6 +293,41 @@ export function DynamicStudentFieldList({
           return null;
         }
 
+        if (
+          field.fieldType === "dropdown" &&
+          (field.options?.length ?? 0) > 0 &&
+          (kind === "generic" || /^fld_\d+$/.test(field.key) || field.key.startsWith("dyn_"))
+        ) {
+          const current = extraValues[field.key] ?? "";
+          return (
+            <Field key={field.key} label={label} colors={colors}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {(field.options ?? []).map((opt) => {
+                  const active = current === opt;
+                  return (
+                    <Pressable
+                      key={opt}
+                      onPress={() => onExtraChange?.(field.key, opt)}
+                      style={{
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 999,
+                        borderWidth: 1.5,
+                        borderColor: active ? colors.brandGreen : colors.border,
+                        backgroundColor: active ? colors.brandGreen : colors.surface,
+                      }}
+                    >
+                      <Text style={{ color: active ? "#FFFFFF" : colors.text, fontWeight: "600" }}>
+                        {opt}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </Field>
+          );
+        }
+
         if (kind === "student_name") {
           if (lockIdentityFields) return null;
           // One "Name" field that follows the configured label (single NAME column),

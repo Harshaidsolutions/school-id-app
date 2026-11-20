@@ -176,6 +176,8 @@ export function LoginScreen({ navigation }: Props) {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
+          scrollEnabled={false}
+          bounces={false}
         >
           {/* Top: the same "My School ID Card" logo as the splash screen, gently floating */}
           <View style={[styles.top, { paddingTop: insets.top + spacing.md }]}>

@@ -4,6 +4,10 @@ export interface FormFieldConfig {
   enabled: boolean;
   colIndex?: number;
   displayOrder?: number;
+  fieldType?: "text" | "photo" | "dropdown";
+  options?: string[];
+  required?: boolean;
+  isGroup?: boolean;
 }
 
 function orderValue(field: FormFieldConfig, fallbackIndex: number): number {

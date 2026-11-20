@@ -59,7 +59,7 @@ export async function getTeacherBranding(
 
     res.set("Cache-Control", "no-store");
     if (!childOwned) {
-      res.status(200).json({ status: "ok", branding: { source: "platform",whatsapp:row?.whatsapp || null,phone:row?.phone || null } });
+      res.status(200).json({ status: "ok", branding: { source: "platform", photoUrl: row?.photo_url || null, adminName: row?.display_name?.trim() || null, whatsapp:row?.whatsapp || null, phone:row?.phone || null } });
       return;
     }
 
