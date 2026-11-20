@@ -481,7 +481,7 @@ export function AdminManagementPage() {
               <th className="px-3 py-2 text-left">Email</th>
               <th className="px-3 py-2 text-left">Phone</th>
               <th className="px-3 py-2 text-left">Status</th>
-              <th className="px-3 py-2 text-right">Actions</th>
+              <th className="px-3 py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -528,8 +528,8 @@ export function AdminManagementPage() {
                       />
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-right">
-                    <div className="flex justify-end gap-2">
+                  <td className="px-3 py-2 text-left">
+                    <div className="flex gap-3">
                       <button
                         type="button"
                         className="text-sm text-button-blue hover:underline"

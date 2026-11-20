@@ -44,18 +44,24 @@ export function parentFormFields(config: FormFieldConfig[]) {
       "Enable Student Name in Form Setup before sharing the parent form.",
       400,
     );
-  // The grouping/filter field: whatever the admin marked "Group by this"
-  // (any dropdown, e.g. Class, Section, Grade), else the Class column.
+  // The grouping/filter field, in priority order:
+  //  1. whatever the admin explicitly marked "Group by this" (any dropdown),
+  //  2. a Class column (schools group by Class by nature),
+  //  3. the only dropdown field on the form (that dropdown IS the grouping, e.g. Designation).
+  const dropdowns = enabled.filter((f) => f.fieldType === "dropdown");
   const classField =
     enabled.find((f) => f.isGroup === true) ??
     enabled.find(
       (f) =>
         f.key === "class_section" ||
         inferSemanticKey(normalizeHeaderForMatch(f.label)) === "class_section",
-    );
+    ) ??
+    (dropdowns.length === 1 ? dropdowns[0] : undefined);
   if (!classField)
     throw new AppError(
-      "Set a grouping field (e.g. mark a dropdown as \"Group by this\", like Class) in Form Setup before sharing the parent form.",
+      dropdowns.length > 1
+        ? "You have more than one dropdown. Tick \"Group by this\" on the one to group by (e.g. Class) in Form Setup before sharing the parent form."
+        : "Add a Class field, or add a dropdown and tick \"Group by this\", in Form Setup before sharing the parent form.",
       400,
     );
   // PHOTO/PHOTO_ID from Excel is a generated identifier, never parent-entered data.
