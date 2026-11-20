@@ -107,6 +107,8 @@ interface TeacherStudentRow {
   custom_3: string | null;
   extra_fields: Record<string, string | null> | null;
   field_labels: Record<string, string> | null;
+  id_card_url: string | null;
+  id_card_updated_at: string | null;
 }
 
 interface TeacherModelRow {
@@ -192,6 +194,8 @@ function toStudentJson(row: TeacherStudentRow, ctx?: RequiredDataContext) {
     custom_3: row.custom_3,
     extra_fields: Object.keys(extraFields).length ? extraFields : null,
     field_labels: fieldLabels,
+    id_card_url: row.id_card_url,
+    id_card_updated_at: row.id_card_updated_at,
     pending_photo: !hasCapturedPhoto(row.photo_url),
     pending_data: !dataComplete || !signatureOk,
     fully_captured: hasCapturedPhoto(row.photo_url) && dataComplete && signatureOk,
