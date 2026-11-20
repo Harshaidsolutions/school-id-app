@@ -2,7 +2,7 @@
   "expo": {
     "name": "My School ID Admin",
     "slug": "my-school-id-admin",
-    "version": "2.0.9",
+    "version": "2.0.10",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "com.schoolid.admin",
-      "versionCode": 19,
+      "versionCode": 20,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
         "backgroundImage": "./assets/adaptive-icon-background.png",
