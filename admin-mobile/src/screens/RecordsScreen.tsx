@@ -279,6 +279,16 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
     }
   }
 
+  async function deleteSignature(s: Student) {
+    try {
+      const { data } = await api.delete<{ student: Student }>(`/admin/students/${s.id}/signature`);
+      setStudents((p) => p.map((x) => (x.id === s.id ? { ...x, ...data.student } : x)));
+      setNotice("Signature deleted.");
+    } catch (e) {
+      setError(errMsg(e, "Failed to delete signature."));
+    }
+  }
+
   async function deleteRecord(s: Student) {
     try {
       await api.delete(`/admin/students/${s.id}`);
@@ -349,8 +359,9 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
   function askDelete(item: Student) {
     const buttons: { text: string; style?: "cancel" | "destructive"; onPress?: () => void }[] = [{ text: "Cancel", style: "cancel" }];
     if (item.photo_url) buttons.push({ text: "Delete photo", style: "destructive", onPress: () => void deletePhoto(item) });
+    if (item.signature_url) buttons.push({ text: "Delete signature", style: "destructive", onPress: () => void deleteSignature(item) });
     buttons.push({ text: "Delete data", style: "destructive", onPress: () => void deleteRecord(item) });
-    Alert.alert(`Delete ${noun}`, `${item.student_name ?? ""}\nDelete only the photo, or the full record (details and photo)?`, buttons);
+    Alert.alert(`Delete ${noun}`, `${item.student_name ?? ""}\nChoose what to delete.`, buttons);
   }
 
   /** One record = one card. Every column the website table shows is listed as “label: value”. */

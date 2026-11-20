@@ -36,6 +36,7 @@ import {
   bulkDeleteStudents,
   deleteStudentAdmin,
   deleteStudentPhotoAdmin,
+  deleteStudentSignatureAdmin,
   requestStudentBulkDeleteOtp,
   uploadStudentPhotoAdmin,
   uploadStudentSignatureAdmin,
@@ -317,6 +318,7 @@ router.post(
   uploadStudentSignatureAdmin
 );
 router.delete("/students/:id/photo", deleteStudentPhotoAdmin);
+router.delete("/students/:id/signature", deleteStudentSignatureAdmin);
 router.delete("/students/:id", deleteStudentAdmin);
 router.get("/students/:studentId/photo", downloadStudentPhoto);
 router.get("/students/:studentId/signature", downloadStudentSignature);

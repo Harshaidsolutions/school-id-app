@@ -303,6 +303,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [signatureStudent, setSignatureStudent] = useState<Student | null>(null);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [deleteChoiceStudent, setDeleteChoiceStudent] = useState<Student | null>(null);
+  const [confirmDeleteSignatureStudent, setConfirmDeleteSignatureStudent] = useState<Student | null>(null);
   const [confirmDeletePhotoStudent, setConfirmDeletePhotoStudent] =
     useState<Student | null>(null);
   const [confirmDeleteDataStudent, setConfirmDeleteDataStudent] =
@@ -611,6 +612,27 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       captured,
     };
   }, [students, isInstitute, visibilityView, enabledFields]);
+
+  async function handleDeleteSignature(student: Student) {
+    setConfirmDeleteSignatureStudent(null);
+    setDeletingId(student.id);
+    setError(null);
+    try {
+      const { data } = await api.delete<{ student: Student }>(
+        `/admin/students/${student.id}/signature`
+      );
+      setStudents((prev) =>
+        prev.map((s) => (s.id === student.id ? { ...s, ...data.student } : s))
+      );
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const body = err.response?.data as ApiErrorBody | undefined;
+        setError(body?.message ?? "Failed to delete signature.");
+      } else setError("Failed to delete signature.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   async function handleDeleteImage(student: Student) {
     setConfirmDeletePhotoStudent(null);
@@ -1426,9 +1448,15 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
       {deleteChoiceStudent && (
         <DeleteStudentChoiceModal
           studentName={deleteChoiceStudent.student_name ?? "Student"}
+          hasImage={Boolean(deleteChoiceStudent.photo_url)}
+          hasSignature={Boolean(deleteChoiceStudent.signature_url)}
           onClose={() => setDeleteChoiceStudent(null)}
           onDeleteImage={() => {
             setConfirmDeletePhotoStudent(deleteChoiceStudent);
+            setDeleteChoiceStudent(null);
+          }}
+          onDeleteSignature={() => {
+            setConfirmDeleteSignatureStudent(deleteChoiceStudent);
             setDeleteChoiceStudent(null);
           }}
           onDeleteData={() => {
@@ -1438,6 +1466,13 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         />
       )}
 
+      {confirmDeleteSignatureStudent && (
+        <ConfirmDeleteModal
+          confirming={deletingId === confirmDeleteSignatureStudent.id}
+          onClose={() => setConfirmDeleteSignatureStudent(null)}
+          onConfirm={() => void handleDeleteSignature(confirmDeleteSignatureStudent)}
+        />
+      )}
       {confirmDeletePhotoStudent && (
         <ConfirmDeleteModal
           confirming={deletingId === confirmDeletePhotoStudent.id}

@@ -1106,6 +1106,43 @@ export async function uploadStudentSignatureAdmin(
   }
 }
 
+/** DELETE /admin/students/:id/signature — no OTP */
+export async function deleteStudentSignatureAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const studentId = routeParam(req.params.id);
+    if (!studentId) throw new AppError("Student id is required", 400);
+    const studentResult = await pool.query<Student>(
+      `SELECT ${STUDENT_SELECT} FROM students WHERE id = $1 LIMIT 1`,
+      [studentId]
+    );
+    const student = studentResult.rows[0];
+    if (!student) throw new AppError("Student not found", 404);
+    await assertStudentOwnedByAdmin(await requireAdminScope(req), student);
+    const orgId = student.school_id ?? student.institute_id;
+    if (student.signature_url && orgId) {
+      await Promise.allSettled([
+        deleteFromBucket(STUDENT_PHOTOS_BUCKET, `${orgId}/signatures/${student.id}.jpg`),
+        deleteFromBucket(STUDENT_PHOTOS_BUCKET, `${orgId}/signatures/${student.id}.png`),
+      ]);
+    }
+    const updated = await pool.query<Student>(
+      `UPDATE students
+       SET signature_url = NULL, signature_cropped = false, updated_at = NOW()
+       WHERE id = $1
+       RETURNING ${STUDENT_SELECT}`,
+      [studentId]
+    );
+    res.status(200).json({ status: "ok", student: updated.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+}
+
 /** DELETE /admin/students/:id/photo — no OTP */
 export async function deleteStudentPhotoAdmin(
   req: Request,
