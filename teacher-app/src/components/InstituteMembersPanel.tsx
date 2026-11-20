@@ -192,7 +192,6 @@ export function InstituteMembersPanel({
   async function handlePendingPhoto(source: PhotoSource) {
     if (!pendingPhotoStudent || photoBusy) return;
     const student = pendingPhotoStudent;
-    setPendingPhotoStudent(null);
     setPhotoBusy(true);
     skipFocusReloadRef.current = true;
     try {
@@ -221,6 +220,7 @@ export function InstituteMembersPanel({
       showToast(getErrorMessage(err, "Failed to capture photo."));
     } finally {
       setPhotoBusy(false);
+      setPendingPhotoStudent(null);
     }
   }
 
@@ -260,10 +260,11 @@ export function InstituteMembersPanel({
             <Pressable
               style={[
                 styles.addMemberBtn,
-                { backgroundColor: colors.primaryOrange },
+                { backgroundColor: colors.primaryOrange, flexDirection: "row", gap: 6 },
               ]}
               onPress={() => setAddModalVisible(true)}
             >
+              <Ionicons name="add" size={18} color="#FFFFFF" />
               <Text style={styles.addMemberBtnText} numberOfLines={1}>
                 Add Member
               </Text>
@@ -449,6 +450,8 @@ export function InstituteMembersPanel({
       <PendingPhotoSheet
         visible={Boolean(pendingPhotoStudent)}
         studentName={pendingPhotoStudent?.student_name ?? ""}
+        subtitle="Add a member photo"
+        busy={photoBusy}
         colors={colors}
         onClose={() => {
           if (photoBusy) return;

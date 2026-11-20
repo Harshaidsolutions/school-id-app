@@ -152,7 +152,7 @@ export function LoginScreen({ navigation }: Props) {
   }
 
   function handleWhatsAppPress() {
-    void openWhatsApp("I need help with My School ID Card.");
+    void openWhatsApp("");
   }
 
   function openCall() {

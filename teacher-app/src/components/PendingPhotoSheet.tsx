@@ -1,4 +1,4 @@
-import { Modal, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Modal, StyleSheet, Text, View } from "react-native";
 import { AppPressable } from "./AppPressable";
 import { Ionicons } from "@expo/vector-icons";
 import { radius, spacing } from "../theme/colors";
@@ -12,6 +12,10 @@ type Props = {
   colors: AppColors;
   onClose: () => void;
   onPick: (source: PhotoSource) => void;
+  /** e.g. "Add a member photo" / "Add a signature". */
+  subtitle?: string;
+  /** Show a spinner and block taps while the image is being picked/processed. */
+  busy?: boolean;
 };
 
 /** Popup for pending students — Take Photo / Gallery without leaving the grid. */
@@ -21,6 +25,8 @@ export function PendingPhotoSheet({
   colors,
   onClose,
   onPick,
+  subtitle = "Add a photo",
+  busy = false,
 }: Props) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -32,25 +38,33 @@ export function PendingPhotoSheet({
             {studentName}
           </Text>
           <Text style={[styles.sub, { color: colors.textMuted }]}>
-            Add a student photo
+            {busy ? "Processing image…" : subtitle}
           </Text>
-          <AppPressable
-            style={[styles.btn, { backgroundColor: colors.primaryOrange }]}
-            onPress={() => onPick("camera")}
-          >
-            <Ionicons name="camera" size={20} color="#FFFFFF" />
-            <Text style={styles.btnText}>Take Photo</Text>
-          </AppPressable>
-          <AppPressable
-            style={[styles.btn, { backgroundColor: colors.brandGreen }]}
-            onPress={() => onPick("gallery")}
-          >
-            <Ionicons name="images" size={20} color="#FFFFFF" />
-            <Text style={styles.btnText}>Choose from Gallery</Text>
-          </AppPressable>
-          <AppPressable onPress={onClose} style={styles.cancelHit}>
-            <Text style={[styles.cancel, { color: colors.textMuted }]}>Cancel</Text>
-          </AppPressable>
+          {busy ? (
+            <View style={styles.busyBox}>
+              <ActivityIndicator size="large" color={colors.primaryOrange} />
+            </View>
+          ) : (
+            <>
+              <AppPressable
+                style={[styles.btn, { backgroundColor: colors.primaryOrange }]}
+                onPress={() => onPick("camera")}
+              >
+                <Ionicons name="camera" size={20} color="#FFFFFF" />
+                <Text style={styles.btnText}>Take Photo</Text>
+              </AppPressable>
+              <AppPressable
+                style={[styles.btn, { backgroundColor: colors.brandGreen }]}
+                onPress={() => onPick("gallery")}
+              >
+                <Ionicons name="images" size={20} color="#FFFFFF" />
+                <Text style={styles.btnText}>Choose from Gallery</Text>
+              </AppPressable>
+              <AppPressable onPress={onClose} style={styles.cancelHit}>
+                <Text style={[styles.cancel, { color: colors.textMuted }]}>Cancel</Text>
+              </AppPressable>
+            </>
+          )}
         </View>
       </AppPressable>
     </Modal>
@@ -96,6 +110,7 @@ const styles = StyleSheet.create({
     fontSize: typeScale.body,
     color: "#FFFFFF",
   },
+  busyBox: { alignItems: "center", justifyContent: "center", paddingVertical: spacing.lg },
   cancelHit: { alignItems: "center", paddingTop: spacing.xs },
   cancel: {
     fontFamily: fonts.medium,

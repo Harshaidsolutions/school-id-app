@@ -507,7 +507,9 @@ export function AddStudentForm({
 
       <PendingPhotoSheet
         visible={photoSheetOpen}
-        studentName={studentName || "New student"}
+        studentName={studentName || (instituteMode ? "New member" : "New student")}
+        subtitle={instituteMode ? "Add a member photo" : "Add a student photo"}
+        busy={photoBusy}
         colors={colors}
         onClose={() => {
           if (photoBusy) return;
@@ -518,6 +520,8 @@ export function AddStudentForm({
       <PendingPhotoSheet
         visible={signatureSheetOpen}
         studentName="Signature"
+        subtitle="Add a signature"
+        busy={photoBusy}
         colors={colors}
         onClose={() => {
           if (photoBusy) return;

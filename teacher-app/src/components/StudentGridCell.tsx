@@ -76,7 +76,7 @@ export const StudentGridCell = memo(function StudentGridCell({
             style={[styles.statusDot, { backgroundColor: captured ? colors.statusCaptured : colors.brandOrange, borderColor: colors.surface }]}
             accessibilityLabel={captured ? "Captured" : "Pending"}
           >
-            <Ionicons name="camera" size={12} color="#FFFFFF" />
+            <Ionicons name={captured ? "checkmark" : "camera"} size={12} color="#FFFFFF" />
           </View>
         </View>
         {captured && formatCapturedAt(item.photo_captured_at) ? (
