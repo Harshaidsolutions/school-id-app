@@ -33,9 +33,9 @@ export function AdminHeroCard({ adminName, photoUrl, loading }: Props) {
     <LinearGradient colors={[...headerGradient]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.card, { padding: scale(18), borderRadius: scale(28) }]}>
       <FloatingShapes />
       <View style={styles.row}>
-        <View style={[styles.avatar, { width: avatar, height: avatar, borderRadius: avatar / 2 }]}>
+        <View style={[styles.avatar, { width: avatar, height: avatar, borderRadius: scale(16) }]}>
           {photoUrl ? (
-            <Image source={{ uri: photoUrl }} style={{ width: avatar - 8, height: avatar - 8, borderRadius: (avatar - 8) / 2 }} resizeMode="contain" accessibilityLabel={`${adminName} logo`} />
+            <Image source={{ uri: photoUrl }} style={{ width: avatar - 8, height: avatar - 8, borderRadius: scale(12) }} resizeMode="contain" accessibilityLabel={`${adminName} logo`} />
           ) : (
             <Text style={[styles.initials, { fontSize: scale(22) }]}>{initials(adminName)}</Text>
           )}
@@ -47,15 +47,15 @@ export function AdminHeroCard({ adminName, photoUrl, loading }: Props) {
           </View>
           {/* Harsha ID Solutions stays on one line; any other admin name wraps when it is long. */}
           <Text
-            style={[styles.name, { fontSize: scale(24), lineHeight: scale(30) }]}
-            numberOfLines={isHarsha ? 1 : 3}
-            adjustsFontSizeToFit={isHarsha}
-            minimumFontScale={0.7}
+            style={[styles.name, { fontSize: scale(20), lineHeight: scale(26) }]}
+            numberOfLines={isHarsha ? 1 : 2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
           >
             {adminName}
           </Text>
           {isHarsha ? <Text style={[styles.harshaSub, { fontSize: scale(13), lineHeight: scale(17) }]}>A Complete ID World...</Text> : null}
-          <Text style={[styles.brand, { fontSize: scale(24), lineHeight: scale(30) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>My School ID Card</Text>
+          <Text style={[styles.brand, { fontSize: scale(20), lineHeight: scale(26) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>My School ID Card</Text>
           <Text style={[styles.sub, { fontSize: scale(13), lineHeight: scale(17), marginTop: 2 }]}>Get your identity here...</Text>
         </View>
       </View>

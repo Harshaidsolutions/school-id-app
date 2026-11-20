@@ -172,13 +172,13 @@ export function LoginScreen({ navigation }: Props) {
       <ScreenBackdrop />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing.md }]}
+          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing.lg }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {/* Top: the same "My School ID Card" logo as the splash screen, gently floating */}
-          <View style={[styles.top, { paddingTop: insets.top + spacing.xl }]}>
+          <View style={[styles.top, { paddingTop: insets.top + spacing.md }]}>
             <LinearGradient colors={isDark ? [colors.background, colors.background] : ["#F3EDFA", "#E9F6FD", "#F6F7FC"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
             <FloatingShapes color={colors.primaryOrange} />
             <RainbowBar style={{ position: "absolute", top: 0, left: 0, right: 0 }} />
@@ -201,7 +201,7 @@ export function LoginScreen({ navigation }: Props) {
           {/* Login form (plain View — no animated layer over the inputs) */}
           <View style={styles.authPanel}>
             <Text style={styles.title} accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-              Welcome <Text style={{ color: colors.primaryOrange }}>Back!</Text>
+              <Text style={{ color: SKY }}>Welcome</Text> <Text style={{ color: colors.primaryOrange }}>Back!</Text>
             </Text>
             <Text style={styles.subtitle}>Login with the username and password from your school.</Text>
 
@@ -304,7 +304,7 @@ export function LoginScreen({ navigation }: Props) {
                   <Ionicons name="globe-outline" size={21} color="#FFFFFF" />
                 </Pressable>
               </View>
-              <Text style={styles.contactText} numberOfLines={1}>
+              <Text style={[styles.contactText, { textAlign: "center" }]} numberOfLines={2}>
                 www.harshaidsolutions.in · {SUPPORT_EMAIL}
               </Text>
             </View>
@@ -328,14 +328,14 @@ function useLoginStyles() {
       safe: { flex: 1 },
       flex: { flex: 1 },
       scroll: { flexGrow: 1, alignItems: "center" },
-      top: { width: "100%", alignItems: "center", paddingBottom: scale(54), overflow: "hidden" },
+      top: { width: "100%", alignItems: "center", paddingBottom: scale(40), overflow: "hidden" },
       dotsRow: { flexDirection: "row", gap: 6, marginTop: scale(10) },
       dot: { width: 7, height: 7, borderRadius: 4 },
       introBack: { position: "absolute", left: 14, zIndex: 5, width: 40, height: 40, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.9)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#E8E9F3" },
       sheet: {
         width: "100%",
         flexGrow: 1,
-        marginTop: -scale(30),
+        marginTop: -scale(24),
         zIndex: 2,
         backgroundColor: card,
         borderTopLeftRadius: scale(32),
@@ -351,8 +351,8 @@ function useLoginStyles() {
       sheetInner: { width: formW },
       authPanel: { width: "100%" },
       title: {
-        fontSize: scale(30),
-        lineHeight: scale(42),
+        fontSize: scale(29),
+        lineHeight: scale(38),
         paddingTop: scale(2),
         includeFontPadding: true,
         letterSpacing: -0.6,

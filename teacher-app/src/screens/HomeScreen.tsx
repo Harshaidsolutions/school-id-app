@@ -181,7 +181,7 @@ export function HomeScreen() {
         ]}
       >
         <View style={styles.headerLogoWrap}>
-          <AppIcon size={Math.min(screenW * .48,220)} variant="header" />
+          <AppIcon size={Math.min(screenW * .58,264)} variant="header" />
         </View>
         <View style={styles.headerTextWrap}>
           <Text
@@ -551,20 +551,23 @@ function useHomeStyles() {
   },
   badge: {
     position: "absolute",
-    top: spacing.xxs / 2,
-    right: 0,
-    minWidth: scale(20),
-    height: scale(20),
-    borderRadius: scale(10),
+    top: -scale(2),
+    right: -scale(2),
+    minWidth: scale(22),
+    height: scale(22),
+    borderRadius: scale(11),
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: spacing.xxs - 1,
+    paddingHorizontal: scale(4),
     borderWidth: 2,
   },
   badgeText: {
     color: "#FFFFFF",
-    fontSize: typeScale.xs + 2,
+    fontSize: typeScale.xs,
+    lineHeight: typeScale.xs + 2,
     fontFamily: fonts.bold,
+    textAlign: "center",
+    includeFontPadding: false,
   },
   scroll: { flex: 1 },
   content: { paddingHorizontal: spacing.pagePad, paddingTop: 0, paddingBottom: spacing.pagePad + scale(120) },

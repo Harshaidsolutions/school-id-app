@@ -241,7 +241,7 @@ function PageWelcome({ active }: { active: boolean }) {
       <Reveal active={active} delay={220} style={{ alignItems: "center" }}>
         <Eyebrow text="Schools & Institutes" />
         <Text style={st.headline} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-          Data <Text style={{ color: PURPLE }}>Collector</Text>
+          <Text style={{ color: SKY }}>Data</Text> <Text style={{ color: PURPLE }}>Collector</Text>
         </Text>
         <Text style={st.body}>Collect student details and photos — ready for printing.</Text>
       </Reveal>
@@ -252,9 +252,9 @@ function PageWelcome({ active }: { active: boolean }) {
 /* ───────────── page 2: capture → organize → print (animated photos) ───────────── */
 
 const STEPS: { title: string; text: string; icon: keyof typeof Ionicons.glyphMap; color: string; img: ImageSourcePropType }[] = [
+  { title: "Enter", text: "Enter the student details", icon: "create", color: "#6A2C9E", img: require("../../assets/onboarding/enter.jpg") },
   { title: "Capture", text: "Take each student's photo", icon: "camera", color: "#1EA0E1", img: require("../../assets/onboarding/capture.jpg") },
-  { title: "Organize", text: "Details sorted by class", icon: "folder-open", color: "#6A2C9E", img: require("../../assets/onboarding/organize.jpg") },
-  { title: "Print", text: "Ready-to-print ID cards", icon: "print", color: "#F26A1B", img: require("../../assets/onboarding/print.jpg") },
+  { title: "Submit", text: "Submit, ready for printing", icon: "checkmark-done", color: "#16A34A", img: require("../../assets/onboarding/submit.jpg") },
 ];
 
 function PageSteps({ active, width }: { active: boolean; width: number }) {
@@ -275,7 +275,7 @@ function PageSteps({ active, width }: { active: boolean; width: number }) {
       <Reveal active={active} style={{ alignItems: "center" }}>
         <Eyebrow text="How it works" />
         <Text style={st.headline}>
-          <Text style={{ color: "#1EA0E1" }}>Capture.</Text> <Text style={{ color: "#6A2C9E" }}>Organize.</Text> <Text style={{ color: "#F26A1B" }}>Print.</Text>
+          <Text style={{ color: "#6A2C9E" }}>Enter.</Text> <Text style={{ color: "#1EA0E1" }}>Capture.</Text> <Text style={{ color: "#16A34A" }}>Submit.</Text>
         </Text>
       </Reveal>
 
@@ -369,7 +369,7 @@ function PageAllInOne({ active }: { active: boolean }) {
       <Reveal active={active} style={{ alignItems: "center" }}>
         <Eyebrow text="Everything in one app" />
         <Text style={st.headline}>
-          Print-Ready <Text style={{ color: SKY }}>ID Cards</Text>
+          <Text style={{ color: "#F26A1B" }}>Smart</Text> <Text style={{ color: SKY }}>Id Card Maker</Text>
         </Text>
       </Reveal>
       <View style={{ width: "100%", gap: 10 }}>

@@ -51,8 +51,8 @@ export function OfferMarqueeBanner({
     outputRange: [0, -segW],
   });
 
-  const color = textColor ?? colors.offerOrange;
-  const bg = backgroundColor ?? colors.orangeSoft;
+  const color = textColor ?? "#FFFFFF";
+  const bg = backgroundColor ?? colors.primaryOrange;
   const segment = (
     <Text style={[styles.text, { color }]} numberOfLines={1}>
       {OFFER}
