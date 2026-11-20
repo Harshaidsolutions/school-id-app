@@ -25,7 +25,21 @@ export function resolveFieldLabelKind(field: FormFieldConfig): ResolvedFieldKind
   const key = field.key;
   const n = normalizeLabel(field.label);
   if (key === "photo_id" || (n.includes("photo") && !n.includes("url"))) return "photo";
-  if (key === "student_name" || n === "name" || n.includes("studentname") || n.includes("membername")) {
+  if (
+    key === "student_name" ||
+    n === "name" ||
+    n.includes("studentname") ||
+    n.includes("membername") ||
+    n.includes("employeename") ||
+    n.includes("staffname") ||
+    n.includes("teachername") ||
+    n.includes("personname") ||
+    n.includes("candidatename") ||
+    n.includes("applicantname") ||
+    n.includes("officialname") ||
+    n.includes("holdername") ||
+    n.includes("fullname")
+  ) {
     return "student_name";
   }
   if (
@@ -73,7 +87,21 @@ export function resolveFieldKind(field: FormFieldConfig): ResolvedFieldKind {
   const n = normalizeLabel(field.label);
 
   if (key === "photo_id" || (n.includes("photo") && !n.includes("url"))) return "photo";
-  if (key === "student_name" || n === "name" || n.includes("studentname") || n.includes("membername")) {
+  if (
+    key === "student_name" ||
+    n === "name" ||
+    n.includes("studentname") ||
+    n.includes("membername") ||
+    n.includes("employeename") ||
+    n.includes("staffname") ||
+    n.includes("teachername") ||
+    n.includes("personname") ||
+    n.includes("candidatename") ||
+    n.includes("applicantname") ||
+    n.includes("officialname") ||
+    n.includes("holdername") ||
+    n.includes("fullname")
+  ) {
     return "student_name";
   }
   if (

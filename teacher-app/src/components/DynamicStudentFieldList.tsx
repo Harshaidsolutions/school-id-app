@@ -295,31 +295,22 @@ export function DynamicStudentFieldList({
 
         if (kind === "student_name") {
           if (lockIdentityFields) return null;
+          // One "Name" field that follows the configured label (single NAME column),
+          // instead of separate First/Last inputs.
           return (
-            <View key={field.key}>
-              <Field label="First Name" colors={colors} required={nameRequired && !lockIdentityFields}>
-                <TextInput
-                  style={inputStyle}
-                  value={firstName}
-                  onChangeText={lockIdentityFields ? undefined : onFirstNameChange}
-                  editable={!lockIdentityFields}
-                  placeholderTextColor={colors.textSubtle}
-                  autoCapitalize="words"
-                  {...(lockIdentityFields ? {} : focus)}
-                />
-              </Field>
-              <Field label="Last Name" colors={colors}>
-                <TextInput
-                  style={inputStyle}
-                  value={lastName}
-                  onChangeText={lockIdentityFields ? undefined : onLastNameChange}
-                  editable={!lockIdentityFields}
-                  placeholderTextColor={colors.textSubtle}
-                  autoCapitalize="words"
-                  {...(lockIdentityFields ? {} : focus)}
-                />
-              </Field>
-            </View>
+            <Field key={field.key} label={label} colors={colors} required={nameRequired}>
+              <TextInput
+                style={inputStyle}
+                value={[firstName, lastName].filter(Boolean).join(" ")}
+                onChangeText={(value) => {
+                  onFirstNameChange(value);
+                  onLastNameChange("");
+                }}
+                placeholderTextColor={colors.textSubtle}
+                autoCapitalize="words"
+                {...focus}
+              />
+            </Field>
           );
         }
 
