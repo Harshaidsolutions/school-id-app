@@ -94,7 +94,7 @@ export function HelpScreen() {
 
   return (
     <Screen
-      title="Instructions & enquiries"
+      title="Instructions & Enquiries"
       headerExtra={
         isSuperAdmin ? (
           <Chips<typeof view>
