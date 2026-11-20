@@ -27,13 +27,13 @@ export function OrgAppSettings({
   const [saved, setSaved] = useState<string | null>(null);
   // Template & Model choice in the school app (admin can turn it off; a "final" choice is protected).
   const lockPath = `/admin/selection-lock/${organization ? "organizations" : institute ? "institutes" : "schools"}/${orgId}`;
-  const [selection, setSelection] = useState<{ locked: boolean; finalByName: string | null; finalBy: string | null } | null>(null);
+  const [selection, setSelection] = useState<{ locked: boolean; templateLocked: boolean; modelLocked: boolean; finalByName: string | null; finalBy: string | null } | null>(null);
   useEffect(() => {
     let alive = true;
     api.get(lockPath).then((r) => { if (alive) setSelection(r.data.selection); }).catch(() => { if (alive) setSelection(null); });
     return () => { alive = false; };
   }, [lockPath]);
-  async function saveSelection(body: { locked?: boolean; clearFinal?: boolean }) {
+  async function saveSelection(body: { locked?: boolean; templateLocked?: boolean; modelLocked?: boolean; clearFinal?: boolean }) {
     setSaving(true); setError(null); setSaved(null);
     try {
       const r = await api.patch(lockPath, body);
@@ -118,21 +118,30 @@ export function OrgAppSettings({
   ];
   if (selection) {
     options.push({
-      key: "selection",
-      title: "Template & Model choice",
-      description: selection.finalBy
-        ? `Teachers can choose designs. Final choice made by ${selection.finalByName || "a user"} — only they can change it.`
-        : "Teachers can choose a Template and Model. Turn OFF while they only collect data.",
-      on: !selection.locked,
+      key: "selection_template",
+      title: "Template choice",
+      description: "Teachers can choose a Template. Turn OFF while they only collect data.",
+      on: !selection.templateLocked,
       icon: (
         <>
-          <rect x="4" y="4" width="7" height="7" rx="1.5" />
-          <rect x="13" y="4" width="7" height="7" rx="1.5" />
-          <rect x="4" y="13" width="7" height="7" rx="1.5" />
-          <path d="M14 17l2 2 4-4" />
+          <rect x="4" y="4" width="16" height="16" rx="2" />
+          <path d="M8 9h8M8 13h5" />
         </>
       ),
-      toggle: () => void saveSelection({ locked: !selection.locked }),
+      toggle: () => void saveSelection({ templateLocked: !selection.templateLocked }),
+    });
+    options.push({
+      key: "selection_model",
+      title: "Model choice",
+      description: "Teachers can choose a Model (card, tag, lanyard…). Turn OFF while they only collect data.",
+      on: !selection.modelLocked,
+      icon: (
+        <>
+          <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" />
+          <path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" />
+        </>
+      ),
+      toggle: () => void saveSelection({ modelLocked: !selection.modelLocked }),
     });
   }
 

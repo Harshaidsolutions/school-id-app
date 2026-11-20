@@ -74,7 +74,7 @@ export function ModelsScreen() {
   const route = useRoute<RouteProp<MainTabParamList, "Models">>();
   const { colors } = useTheme();
   const { showToast } = useToast();
-  const selectionLock = useSelectionLock();
+  const selectionLock = useSelectionLock("model");
   const { user } = useAuth();
   const userId = user?.id ?? "";
   const { width } = useWindowDimensions();

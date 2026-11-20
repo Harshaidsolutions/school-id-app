@@ -972,6 +972,13 @@ async function migrate() {
     ALTER TABLE organizations ADD COLUMN IF NOT EXISTS selection_locked BOOLEAN NOT NULL DEFAULT false;
     ALTER TABLE organizations ADD COLUMN IF NOT EXISTS selection_final_by UUID REFERENCES users(id) ON DELETE SET NULL;
     ALTER TABLE organizations ADD COLUMN IF NOT EXISTS selection_final_at TIMESTAMPTZ;
+    -- Separate Template choice vs Model choice (nullable: fall back to the combined selection_locked).
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS selection_locked_template BOOLEAN;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS selection_locked_model BOOLEAN;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS selection_locked_template BOOLEAN;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS selection_locked_model BOOLEAN;
+    ALTER TABLE organizations ADD COLUMN IF NOT EXISTS selection_locked_template BOOLEAN;
+    ALTER TABLE organizations ADD COLUMN IF NOT EXISTS selection_locked_model BOOLEAN;
     ALTER TABLE students ADD COLUMN IF NOT EXISTS app_visible BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE students ADD COLUMN IF NOT EXISTS id_card_url TEXT;
     ALTER TABLE students ADD COLUMN IF NOT EXISTS id_card_updated_at TIMESTAMPTZ;

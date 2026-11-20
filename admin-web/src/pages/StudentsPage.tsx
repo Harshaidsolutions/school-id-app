@@ -994,7 +994,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
             </button>
 
             <div className="detail-toolbar-row2-actions">
-              <select aria-label="Record visibility" className="input-field" value={visibilityView} onChange={e=>{setVisibilityView(e.target.value);setSelectedIds(new Set());}}><option value="all">All records</option><option value="visible">Visible</option><option value="hidden">Hidden</option></select>
+              <select aria-label="Record visibility" className="input-field" value={visibilityView} onChange={e=>{setVisibilityView(e.target.value);setSelectedIds(new Set());}}><option value="all">All records ({students.length})</option><option value="visible">Visible ({students.filter(s=>s.app_visible!==false).length})</option><option value="hidden">Hidden ({students.filter(s=>s.app_visible===false).length})</option></select>
               {selecting ? (
                 <button
                   type="button"

@@ -46,13 +46,13 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
   const [viewer, setViewer] = useState<number | null>(null);
   // Template & Model choice in the school app (off while teachers only collect data; "final" choice protected).
   const lockPath = `/admin/selection-lock/${isOrg ? "organizations" : kind === "institute" ? "institutes" : "schools"}/${id}`;
-  const [selection, setSelection] = useState<{ locked: boolean; finalBy: string | null; finalByName: string | null } | null>(null);
+  const [selection, setSelection] = useState<{ locked: boolean; templateLocked: boolean; modelLocked: boolean; finalBy: string | null; finalByName: string | null } | null>(null);
   useEffect(() => {
     let alive = true;
     api.get(lockPath).then((r) => alive && setSelection(r.data.selection)).catch(() => alive && setSelection(null));
     return () => { alive = false; };
   }, [lockPath]);
-  async function saveSelection(body: { locked?: boolean; clearFinal?: boolean }) {
+  async function saveSelection(body: { locked?: boolean; templateLocked?: boolean; modelLocked?: boolean; clearFinal?: boolean }) {
     setSaving(true);
     setError(null);
     try {
@@ -211,14 +211,20 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
               ...(selection
                 ? [
                     {
-                      key: "selection",
-                      title: "Template & Model choice",
-                      text: selection.finalBy
-                        ? `Final choice made by ${selection.finalByName || "a user"} — only they can change it.`
-                        : "Teachers can choose a Template and Model. Turn OFF while they only collect data.",
+                      key: "selection_template",
+                      title: "Template choice",
+                      text: "Teachers can choose a Template. Turn OFF while they only collect data.",
                       icon: "grid-outline" as const,
-                      on: !selection.locked,
-                      set: (v: boolean) => void saveSelection({ locked: !v }),
+                      on: !selection.templateLocked,
+                      set: (v: boolean) => void saveSelection({ templateLocked: !v }),
+                    },
+                    {
+                      key: "selection_model",
+                      title: "Model choice",
+                      text: "Teachers can choose a Model (card, tag, lanyard…). Turn OFF while they only collect data.",
+                      icon: "cube-outline" as const,
+                      on: !selection.modelLocked,
+                      set: (v: boolean) => void saveSelection({ modelLocked: !v }),
                     },
                   ]
                 : []),

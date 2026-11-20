@@ -6,19 +6,25 @@ import api, { getErrorMessage } from "../api/client";
 import { fonts } from "../theme/typography";
 import { useTheme } from "../theme/ThemeContext";
 
+export type SelectionKind = "template" | "model";
+
 export type SelectionState = {
   locked: boolean;
+  templateLocked: boolean;
+  modelLocked: boolean;
   finalBy: string | null;
   finalByName: string | null;
   mine: boolean;
   canChange: boolean;
+  canChangeTemplate: boolean;
+  canChangeModel: boolean;
 };
 
 /**
  * Who may choose the Template / Model: the admin can turn the choice off, and one person
  * (for example the principal) can mark the choice as final so other teachers cannot change it.
  */
-export function useSelectionLock() {
+export function useSelectionLock(kind: SelectionKind) {
   const [state, setState] = useState<SelectionState | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -50,12 +56,14 @@ export function useSelectionLock() {
     }
   }, []);
 
-  /** Message to show when the admin has turned selection off, else null. */
-  const blockedMessage = state && state.locked
-    ? "Template and Model selection is turned off by your admin right now."
-    : null;
+  /** Message to show when the admin has turned THIS choice off, else null. */
+  const blockedMessage = !state
+    ? null
+    : kind === "model"
+      ? (state.modelLocked ? "Model selection is turned off by your admin right now." : null)
+      : (state.templateLocked ? "Template selection is turned off by your admin right now." : null);
 
-  return { state, busy, refresh, setFinal, blockedMessage };
+  return { state, busy, refresh, setFinal, blockedMessage, kind };
 }
 
 export function SelectionLockBanner({
@@ -64,17 +72,17 @@ export function SelectionLockBanner({
   lock: ReturnType<typeof useSelectionLock>;
 }) {
   const { colors } = useTheme();
-  const s = lock.state;
   // Selection is controlled only by the admin. Show a notice ONLY when the admin
-  // has turned selection off; otherwise no banner and no lock/unlock buttons.
-  if (!s || !s.locked) return null;
+  // has turned THIS choice off; otherwise no banner and no lock/unlock buttons.
+  if (!lock.blockedMessage) return null;
 
   const tone = "#E8243C";
+  const noun = lock.kind === "model" ? "Model" : "Template";
   return (
     <View style={[st.box, { borderColor: tone, backgroundColor: colors.surface }]}>
       <Ionicons name="lock-closed" size={20} color={tone} />
       <Text style={[st.text, { color: colors.text }]}>
-        Template and Model selection is turned off by your admin. You can still look at the designs.
+        {noun} selection is turned off by your admin. You can still look at the designs.
       </Text>
     </View>
   );

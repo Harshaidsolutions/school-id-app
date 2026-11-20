@@ -236,7 +236,7 @@ export function TemplateScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { colors } = useTheme();
   const { showToast } = useToast();
-  const selectionLock = useSelectionLock();
+  const selectionLock = useSelectionLock("template");
   const { user } = useAuth();
   const userId = user?.id ?? "";
   const insets = useSafeAreaInsets();

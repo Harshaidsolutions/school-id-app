@@ -4,7 +4,7 @@ import api from "../api/client";
 import type { Student, Template } from "../types";
 import { authenticatedStudentPhotoUrl, authenticatedStudentSignatureUrl } from "../utils/studentPhotoSrc";
 import { detectRoles } from "./columns";
-import { blankLayout, customCard, DEFAULT_DPI, fitLayoutToTemplate, textBoxHeight, isLayout, newImage, newText, nextTextSpot, sizeText, stripColumnLabels } from "./defaults";
+import { blankLayout, DEFAULT_DPI, fitLayoutToTemplate, textBoxHeight, isLayout, newImage, newText, nextTextSpot, sizeText, stripColumnLabels } from "./defaults";
 import { clearFolder, loadDraft, loadFolder, saveDraft, saveFolder, type Draft } from "./draftStore";
 import { exportBundle, type CardProblem, type ExportFile, type OutputFolder } from "./exporter";
 import { ensureFonts, restoreCustomFonts } from "./fonts";
@@ -15,7 +15,7 @@ import { blobToBitmap, measureTextBox, mediaLabel, textValue, type Bitmap, type 
 import type { CardElement, Layout, MediaStore, Row, Side, TextElement } from "./types";
 import { BatchPreview } from "./ui/BatchPreview";
 import { CardCanvas } from "./ui/CardCanvas";
-import { Field, Num, Properties, TextToolbar } from "./ui/Inspector";
+import { Field, Properties, TextToolbar } from "./ui/Inspector";
 import { niceLabel } from "../utils/formFieldHelpers";
 
 export const APP_NAME = "Harsha ID Solutions – ID Card Generator";
@@ -653,8 +653,6 @@ export function GeneratorApp() {
       </div>
       {templates.front ? null : (
         <div className="idg-grid2">
-          <Field label="Card width (mm)"><Num value={layout.card.w} step={0.1} min={10} max={600} onChange={(v) => setLayout((l) => ({ ...l, card: customCard(v, l.card.h) }))} /></Field>
-          <Field label="Card height (mm)"><Num value={layout.card.h} step={0.1} min={10} max={600} onChange={(v) => setLayout((l) => ({ ...l, card: customCard(l.card.w, v) }))} /></Field>
         </div>
       )}
     </div>

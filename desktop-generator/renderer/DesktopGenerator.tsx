@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { niceLabel } from "@admin/utils/formFieldHelpers";
 import { detectRoles } from "@gen/columns";
-import { blankLayout, customCard, DEFAULT_DPI, fitLayoutToTemplate, textBoxHeight, newImage, newText, nextTextSpot, sizeText } from "@gen/defaults";
+import { blankLayout, DEFAULT_DPI, fitLayoutToTemplate, textBoxHeight, newImage, newText, nextTextSpot, sizeText } from "@gen/defaults";
 import { exportBundle, type CardProblem, type OutputFolder } from "@gen/exporter";
 import { ensureFonts, restoreCustomFonts } from "@gen/fonts";
 import { SHEET_SIZES } from "@gen/impose";
@@ -12,7 +12,7 @@ import { blobToBitmap, measureTextBox, mediaLabel, textValue, type Bitmap, type 
 import type { CardElement, Layout, MediaStore, Row, Side, TextElement } from "@gen/types";
 import { BatchPreview } from "@gen/ui/BatchPreview";
 import { CardCanvas } from "@gen/ui/CardCanvas";
-import { Field, Num, Properties, TextToolbar } from "@gen/ui/Inspector";
+import { Field, Properties, TextToolbar } from "@gen/ui/Inspector";
 import { desktop, type LicenseStatus } from "./bridge";
 import { pdfToImage } from "./pdfTemplate";
 import { listSheets, readSheet } from "./sheet";
@@ -499,8 +499,6 @@ export function DesktopGenerator({ license }: { license: LicenseStatus }) {
       </div>
       {templates.front ? null : (
         <div className="idg-grid2">
-          <Field label="Card width (mm)"><Num value={layout.card.w} step={0.1} min={10} max={600} onChange={(v) => setLayout((l) => ({ ...l, card: customCard(v, l.card.h) }))} /></Field>
-          <Field label="Card height (mm)"><Num value={layout.card.h} step={0.1} min={10} max={600} onChange={(v) => setLayout((l) => ({ ...l, card: customCard(l.card.w, v) }))} /></Field>
         </div>
       )}
     </div>

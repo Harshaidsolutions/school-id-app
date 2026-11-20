@@ -177,8 +177,12 @@ export async function updateTeacherOrganization(
           ? String(req.body.template_id ?? req.body.templateId).trim() || null
           : institute.template_id ?? null;
 
-      if (model !== (institute.model ?? null) || tags !== (institute.tags ?? null) || templateId !== (institute.template_id ?? null)) {
-        await assertCanChangeSelection(req.user);
+      {
+        const templateChanged = (templateId ?? null) !== (institute.template_id ?? null);
+        const modelChanged = model !== (institute.model ?? null) || tags !== (institute.tags ?? null);
+        if (templateChanged || modelChanged) {
+          await assertCanChangeSelection(req.user, { template: templateChanged, model: modelChanged });
+        }
       }
 
       if (templateId) {
@@ -304,8 +308,12 @@ export async function updateTeacherOrganization(
         ? String(req.body.template_id ?? req.body.templateId).trim() || null
         : school.template_id;
 
-    if (model !== (school.model ?? null) || tags !== (school.tags ?? null) || (templateId ?? null) !== (school.template_id ?? null)) {
-      await assertCanChangeSelection(req.user);
+    {
+      const templateChanged = (templateId ?? null) !== (school.template_id ?? null);
+      const modelChanged = model !== (school.model ?? null) || tags !== (school.tags ?? null);
+      if (templateChanged || modelChanged) {
+        await assertCanChangeSelection(req.user, { template: templateChanged, model: modelChanged });
+      }
     }
 
     if (templateId) {

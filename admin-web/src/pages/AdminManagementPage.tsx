@@ -499,7 +499,7 @@ export function AdminManagementPage() {
               </tr>
             ) : (
               admins.map((a) => (
-                <tr key={a.id} className="border-t border-border align-top">
+                <tr key={a.id} className="border-t border-border align-middle">
                   <td className="px-3 py-2">
                     <Link
                       className="font-semibold text-button-blue hover:underline"
