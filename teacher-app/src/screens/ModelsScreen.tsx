@@ -5,7 +5,6 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Image,
-  Linking,
   RefreshControl,
   StyleSheet,
   Text,
@@ -26,6 +25,7 @@ import { useAuth } from "../auth/AuthContext";
 import { mergeOrgDetailsDraft } from "../utils/orgDetailsDraft";
 import { resolveMediaUrl } from "../utils/mediaUrl";
 import { modelImageUrl, modelVideoUrl } from "../utils/modelImage";
+import { VideoModal } from "../components/VideoModal";
 import { useToast } from "../components/Toast";
 import { OrangeGradientHeader } from "../components/OrangeGradientHeader";
 import { PRODUCT_MODELS, MODEL_TABS, MODEL_CATEGORY, type TeacherModel } from "../types";
@@ -89,6 +89,7 @@ export function ModelsScreen() {
   const [viewerIndex, setViewerIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [selectConfirmOpen, setSelectConfirmOpen] = useState(false);
+  const [videoUri, setVideoUri] = useState<string | null>(null);
   const [pendingSelectName, setPendingSelectName] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [catalogModels, setCatalogModels] = useState<TeacherModel[]>([]);
@@ -431,7 +432,7 @@ export function ModelsScreen() {
               ]}
               onPress={() => {
                 if (videoUrl && !imageUrl) {
-                  void Linking.openURL(videoUrl);
+                  setVideoUri(videoUrl);
                   return;
                 }
                 const uri = imageFor(item);
@@ -522,6 +523,8 @@ export function ModelsScreen() {
         }}
         imageLayout={modelTab === "tags" ? "rotatePortrait" : "default"}
       />
+
+      {videoUri ? <VideoModal uri={videoUri} onClose={() => setVideoUri(null)} /> : null}
 
       <SelectConfirmModal
         visible={selectConfirmOpen}
