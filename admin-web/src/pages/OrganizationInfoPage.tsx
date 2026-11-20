@@ -41,6 +41,7 @@ type SchoolOrganization = OrganizationSelections & {
 };
 
 type InstituteOrganization = OrganizationSelections & {
+  phone2?: string | null;
   id: string;
   name: string;
   year: string | null;
@@ -476,6 +477,7 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
               />
               <InfoRow label="Year" value={institute.year} control={detailSwitch("detail_year")} />
               <InfoRow label="Phone" secret="phone number" value={institute.phone} control={detailSwitch("detail_phone")} />
+              <InfoRow label="Secondary Phone" secret="phone number" value={institute.phone2} control={detailSwitch("detail_phone2")} />
               <InfoRow label="Institute Code" value={institute.institute_code} control={detailSwitch("detail_code")} />
               <InfoRow label="Address" value={institute.address} control={detailSwitch("detail_address")} />
               <InfoRow label="Instructions" value={institute.instructions} control={detailSwitch("detail_instructions")} />

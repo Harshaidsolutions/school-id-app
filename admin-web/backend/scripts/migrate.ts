@@ -118,6 +118,7 @@ async function migrate() {
 
     -- Institute organization selections (same shape as schools)
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS model TEXT;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS phone2 TEXT;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS tags TEXT;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS template_id UUID REFERENCES templates(id);
 
@@ -745,6 +746,7 @@ async function migrate() {
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS details_separated BOOLEAN NOT NULL DEFAULT false;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS detail_year TEXT;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS detail_phone TEXT;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS detail_phone2 TEXT;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS detail_code TEXT;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS detail_address TEXT;
     ALTER TABLE institutes ADD COLUMN IF NOT EXISTS detail_instructions TEXT;

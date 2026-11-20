@@ -44,6 +44,7 @@ export interface SchoolRow {
 }
 
 export interface InstituteRow {
+  phone2?: string | null;
   id: string;
   name: string;
   year: string | null;

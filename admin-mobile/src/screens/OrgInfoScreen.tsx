@@ -151,7 +151,7 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
               <InfoRow label="Name" value={org.name} />
               <InfoRow label="Year" value={org.year} right={sw("detail_year")} />
               <InfoRow label="Phone" secret="phone number" value={org.phone} right={sw("detail_phone")} />
-              {kind !== "institute" ? <InfoRow label="Secondary phone" secret="phone number" value={org.phone2} right={sw("detail_phone2")} /> : null}
+              <InfoRow label="Secondary phone" secret="phone number" value={org.phone2} right={sw("detail_phone2")} />
               <InfoRow label={kind === "institute" ? "Institute code" : kind === "school" ? "School code" : "Organisation code"} value={org.school_code ?? org.institute_code} right={sw("detail_code")} />
               <InfoRow label="Address" value={org.address} right={sw("detail_address")} />
               <InfoRow label="Instructions" value={org.instructions} right={sw("detail_instructions")} />

@@ -41,7 +41,7 @@ export async function getTeacherOrganization(
     const row = isInstituteStaff(req.user)
       ? (
           await pool.query<InstituteRow>(
-            `SELECT id, name, detail_year AS year, detail_phone AS phone, detail_code AS institute_code, detail_code AS school_code,
+            `SELECT id, name, detail_year AS year, detail_phone AS phone, detail_phone2 AS phone2, detail_code AS institute_code, detail_code AS school_code,
                     detail_address AS address, detail_instructions AS instructions,
                     logo_url, signature_url, organization_photo_url, model, tags,
                     template_id, created_at,
@@ -123,7 +123,7 @@ export async function updateTeacherOrganization(
 
     if (instituteUser) {
       const existing = await pool.query<InstituteRow>(
-        `SELECT id, name, detail_year AS year, detail_phone AS phone, detail_code AS institute_code, detail_code AS school_code,
+        `SELECT id, name, detail_year AS year, detail_phone AS phone, detail_phone2 AS phone2, detail_code AS institute_code, detail_code AS school_code,
                 detail_address AS address, detail_instructions AS instructions,
                 logo_url, signature_url, organization_photo_url, model, tags, template_id
          FROM institutes WHERE id = $1 LIMIT 1`,
@@ -136,6 +136,10 @@ export async function updateTeacherOrganization(
         req.body.phone !== undefined
           ? String(req.body.phone).trim() || null
           : institute.phone;
+      const phone2 =
+        req.body.phone2 !== undefined
+          ? String(req.body.phone2).trim() || null
+          : institute.phone2 ?? null;
       const instituteCode =
         req.body.institute_code !== undefined ||
         req.body.instituteCode !== undefined ||
@@ -211,6 +215,7 @@ export async function updateTeacherOrganization(
       const updated = await pool.query<InstituteRow>(
         `UPDATE institutes
          SET detail_phone = $1,
+             detail_phone2 = $13,
              detail_code = $2,
              detail_address = $3,
              detail_instructions = $4,
@@ -223,7 +228,7 @@ export async function updateTeacherOrganization(
              detail_year = $11,
              details_separated = true
          WHERE id = $12
-         RETURNING id, name, detail_year AS year, detail_phone AS phone, detail_code AS institute_code, detail_code AS school_code,
+         RETURNING id, name, detail_year AS year, detail_phone AS phone, detail_phone2 AS phone2, detail_code AS institute_code, detail_code AS school_code,
                    detail_address AS address, detail_instructions AS instructions,
                    logo_url, signature_url, organization_photo_url, model, tags,
                    template_id, created_at`,
@@ -240,6 +245,7 @@ export async function updateTeacherOrganization(
           organizationPhotoUrl,
           year,
           orgId,
+          phone2,
         ]
       );
 
