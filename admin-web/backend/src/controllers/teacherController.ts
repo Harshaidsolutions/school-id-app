@@ -279,16 +279,32 @@ export async function listTeacherStudents(
       throw new AppError("Authentication required", 401);
     }
 
+    const groupValue =
+      typeof req.query.groupValue === "string" ? req.query.groupValue : undefined;
+
     if (isInstituteStaff(req.user)) {
       const instituteId = getTeacherOrgId(req.user);
+      const params: unknown[] = [instituteId];
+      let filterSql = "";
+      if (groupValue !== undefined) {
+        const fields = await loadFormConfigForOrg({ instituteId });
+        const gf = resolveGroupField(fields, "institute");
+        params.push(gf.key);
+        const expr = groupValueExpr(gf.column, params.length);
+        if (groupValue.trim() === "") {
+          filterSql = ` AND (${expr}) IS NULL`;
+        } else {
+          params.push(groupValue);
+          filterSql = ` AND (${expr}) = $${params.length}`;
+        }
+      }
       const result = await pool.query<TeacherStudentRow>(
         `SELECT ${TEACHER_STUDENT_SELECT}
          FROM students
-         WHERE app_visible = true AND institute_id = $1
+         WHERE app_visible = true AND institute_id = $1${filterSql}
          ORDER BY student_name ASC, roll_no ASC NULLS LAST`,
-        [instituteId]
+        params
       );
-
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
       res.status(200).json({
         status: "ok",
@@ -303,45 +319,44 @@ export async function listTeacherStudents(
     );
 
     let schoolId: string;
-    let classSection: string;
-
+    let scopedClass: string | null = null;
     if (isSchoolWideTeacher(req.user)) {
       schoolId = getTeacherSchoolId(req.user);
-      if (!queryClassSection) {
-        const result = await pool.query<TeacherStudentRow>(
-          `SELECT ${TEACHER_STUDENT_SELECT}
-           FROM students
-           WHERE app_visible = true AND school_id = $1
-           ORDER BY class_section ASC, roll_no ASC NULLS LAST, student_name ASC`,
-          [schoolId]
-        );
-
-        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-        res.status(200).json({
-          status: "ok",
-          count: result.rows.length,
-          students: await presentStudents(result.rows),
-        });
-        return;
-      }
-      classSection = queryClassSection;
     } else {
       const filter = getTeacherDataFilter(req.user);
       schoolId = filter.schoolId;
-      classSection = queryClassSection || filter.classSection;
-      assertTeacherScope(req.user, {
-        schoolId,
-        classSection,
-      });
+      scopedClass = filter.classSection;
+    }
+
+    const params: unknown[] = [schoolId];
+    let filterSql = "";
+    if (scopedClass) {
+      params.push(scopedClass);
+      filterSql += ` AND class_section = $${params.length}`;
+      assertTeacherScope(req.user, { schoolId, classSection: scopedClass });
+    }
+    if (groupValue !== undefined) {
+      const fields = await loadFormConfigForOrg({ schoolId });
+      const gf = resolveGroupField(fields, "school");
+      params.push(gf.key);
+      const expr = groupValueExpr(gf.column, params.length);
+      if (groupValue.trim() === "") {
+        filterSql += ` AND (${expr}) IS NULL`;
+      } else {
+        params.push(groupValue);
+        filterSql += ` AND (${expr}) = $${params.length}`;
+      }
+    } else if (queryClassSection) {
+      params.push(queryClassSection);
+      filterSql += ` AND class_section = $${params.length}`;
     }
 
     const result = await pool.query<TeacherStudentRow>(
       `SELECT ${TEACHER_STUDENT_SELECT}
        FROM students
-       WHERE app_visible = true AND school_id = $1
-         AND class_section = $2
-       ORDER BY roll_no ASC NULLS LAST, student_name ASC`,
-      [schoolId, classSection]
+       WHERE app_visible = true AND school_id = $1${filterSql}
+       ORDER BY class_section ASC, roll_no ASC NULLS LAST, student_name ASC`,
+      params
     );
 
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
@@ -1184,6 +1199,38 @@ export async function getTeacherProgress(
 /**
  * School Mode home: school header + Sections & Classes list with photo progress.
  */
+type GroupFieldInfo = { key: string; label: string; column: string | null };
+
+/** The form's configured grouping field ("Group by this"), else Class/Group. */
+function resolveGroupField(
+  fields: { key: string; label: string; enabled?: boolean; isGroup?: boolean }[],
+  orgType: "school" | "institute"
+): GroupFieldInfo {
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const canonicalColumn = (label: string, key: string): string | null => {
+    const n = normalize(label);
+    if (key === "class_section" || n.includes("class") || n.includes("standard") || n.includes("section") || n.includes("grade") || n === "std") return "class_section";
+    if (n.includes("blood")) return "blood_group";
+    if (n === "gender" || n.includes("gender") || n.includes("sex")) return "gender";
+    return null;
+  };
+  const group = fields.find((ff) => ff.enabled !== false && ff.isGroup === true);
+  if (group) {
+    return { key: group.key, label: (group.label || "Group").trim(), column: canonicalColumn(group.label, group.key) };
+  }
+  return { key: "class_section", label: orgType === "institute" ? "Group" : "Class", column: "class_section" };
+}
+
+/** SQL expression yielding the group value; $keyParam binds the field key for the extra_fields lookup. */
+function groupValueExpr(column: string | null, keyParam: number): string {
+  const extra = `NULLIF(btrim(extra_fields->>$${keyParam}), '')`;
+  if (column === "class_section") return `COALESCE(NULLIF(btrim(class_section), ''), ${extra})`;
+  if (column === "blood_group") return `COALESCE(NULLIF(btrim(blood_group), ''), ${extra})`;
+  if (column === "gender") return `COALESCE(NULLIF(btrim(gender), ''), ${extra})`;
+  return extra;
+}
+
+
 export async function getTeacherHome(
   req: Request,
   res: Response,
@@ -1192,87 +1239,62 @@ export async function getTeacherHome(
   try {
     if (!req.user) throw new AppError("Authentication required", 401);
 
-    if (isInstituteStaff(req.user)) {
-      const instituteId = getTeacherOrgId(req.user);
-      const institute = await pool.query<{
-        name: string;
-        logo_url: string | null;
-      }>(`SELECT name, logo_url FROM institutes WHERE id = $1`, [instituteId]);
+    const instituteMode = isInstituteStaff(req.user);
+    const orgType: "school" | "institute" = instituteMode ? "institute" : "school";
+    const orgCol = instituteMode ? "institute_id" : "school_id";
+    const orgId = instituteMode ? getTeacherOrgId(req.user) : getTeacherSchoolId(req.user);
 
-      const counts = await pool.query<{
-        total_students: string;
-        captured: string;
-        uncaptured: string;
-      }>(
-        `SELECT
-           COUNT(*)::text AS total_students,
-           COUNT(*) FILTER (WHERE photo_url IS NOT NULL AND btrim(photo_url) <> '')::text AS captured,
-           COUNT(*) FILTER (WHERE photo_url IS NULL OR btrim(photo_url) = '')::text AS uncaptured
-         FROM students
-         WHERE app_visible = true AND institute_id = $1`,
-        [instituteId]
-      );
+    const orgRow = instituteMode
+      ? (await pool.query<{ name: string; logo_url: string | null }>(
+          `SELECT name, logo_url FROM institutes WHERE id = $1`,
+          [orgId]
+        )).rows[0]
+      : (await pool.query<{ name: string; logo_url: string | null }>(
+          `SELECT name, logo_url FROM schools WHERE id = $1`,
+          [orgId]
+        )).rows[0];
 
-      const row = counts.rows[0];
-      const totalStudents = Number(row?.total_students ?? 0);
-      const captured = Number(row?.captured ?? 0);
-      const uncaptured = Number(row?.uncaptured ?? 0);
+    const fields = await loadFormConfigForOrg(
+      instituteMode ? { instituteId: orgId } : { schoolId: orgId }
+    );
+    const groupField = resolveGroupField(fields, orgType);
+    const groupExpr = groupValueExpr(groupField.column, 2);
 
-      res.status(200).json({
-        status: "ok",
-        orgType: "institute",
-        schoolName: institute.rows[0]?.name ?? "Your Institute",
-        schoolLogoUrl: institute.rows[0]?.logo_url ?? null,
-        overall: { totalStudents, captured, uncaptured },
-        classes: [],
-      });
-      return;
-    }
-
-    const schoolId = getTeacherSchoolId(req.user);
-    const schoolWide = isSchoolWideTeacher(req.user);
-
-    const school = await pool.query<{
-      name: string;
-      logo_url: string | null;
-    }>(`SELECT name, logo_url FROM schools WHERE id = $1`, [schoolId]);
-
-    const values: unknown[] = [schoolId];
+    const schoolWide = instituteMode ? true : isSchoolWideTeacher(req.user);
+    const params: unknown[] = [orgId, groupField.key];
     let scopeSql = "";
-    if (!schoolWide) {
+    if (!instituteMode && !schoolWide) {
       const filter = getTeacherDataFilter(req.user);
-      values.push(filter.classSection);
-      scopeSql = `AND class_section = $2`;
+      params.push(filter.classSection);
+      scopeSql = `AND class_section = $3`;
     }
 
-    const classRows = await pool.query<{
-      class_section: string;
+    const rows = await pool.query<{
+      group_value: string | null;
       total_students: string;
       captured: string;
       uncaptured: string;
     }>(
-      `SELECT
-         class_section,
+      `SELECT ${groupExpr} AS group_value,
          COUNT(*)::text AS total_students,
          COUNT(*) FILTER (WHERE photo_url IS NOT NULL AND btrim(photo_url) <> '')::text AS captured,
          COUNT(*) FILTER (WHERE photo_url IS NULL OR btrim(photo_url) = '')::text AS uncaptured
        FROM students
-       WHERE app_visible = true AND school_id = $1
-         ${scopeSql}
-       GROUP BY class_section
-       ORDER BY class_section ASC`,
-      values
+       WHERE app_visible = true AND ${orgCol} = $1 ${scopeSql}
+       GROUP BY ${groupExpr}
+       ORDER BY group_value ASC NULLS LAST`,
+      params
     );
 
-    const classes = classRows.rows.map((row) => {
-      const totalStudents = Number(row.total_students);
-      const captured = Number(row.captured);
-      const uncaptured = Number(row.uncaptured);
+    const classes = rows.rows.map((r) => {
+      const value = (r.group_value ?? "").trim();
       return {
-        class_section: row.class_section,
-        totalStudents,
-        captured,
-        uncaptured,
+        class_section: value,
+        value,
+        label: value || "Unassigned",
+        totalStudents: Number(r.total_students),
+        captured: Number(r.captured),
+        uncaptured: Number(r.uncaptured),
       };
     });
 
@@ -1288,9 +1310,11 @@ export async function getTeacherHome(
 
     res.status(200).json({
       status: "ok",
-      orgType: "school",
-      schoolName: school.rows[0]?.name ?? "Your School",
-      schoolLogoUrl: school.rows[0]?.logo_url ?? null,
+      orgType,
+      schoolName: orgRow?.name ?? (instituteMode ? "Your Institute" : "Your School"),
+      schoolLogoUrl: orgRow?.logo_url ?? null,
+      groupKey: groupField.key,
+      groupLabel: groupField.label,
       overall,
       classes,
     });

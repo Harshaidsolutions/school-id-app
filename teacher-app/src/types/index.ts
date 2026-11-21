@@ -67,8 +67,15 @@ export interface TeacherHomeResponse {
   schoolName: string;
   schoolLogoUrl?: string | null;
   overall: ProgressResponse;
+  /** Key of the configured grouping field (e.g. class_section, or an Excel/extra key). */
+  groupKey?: string;
+  /** Human label for the grouping field, e.g. "Class" or "Designation". */
+  groupLabel?: string;
   classes: {
     class_section: string;
+    /** Group value (same as class_section; kept for the drill-down). */
+    value?: string;
+    label?: string;
     totalStudents: number;
     captured: number;
     uncaptured: number;

@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { getErrorMessage } from "../api/client";
 import { AddStudentForm } from "./AddStudentForm";
+import { studentFieldValueForForm } from "../utils/studentFields";
 import { KeyboardAwareFormScrollView } from "./KeyboardAwareFormScrollView";
 import { ErrorRetry, LoadingBlock } from "./ErrorRetry";
 import { PendingPhotoSheet } from "./PendingPhotoSheet";
@@ -71,7 +72,7 @@ export function InstituteMembersPanel({
 
   const [students, setStudents] = useState<TeacherStudent[]>([]);
   const [tab, setTab] = useState<TabKey>("all");
-  const { showCapturedSection } = useFormConfig();
+  const { showCapturedSection, fields: formFields } = useFormConfig();
   useEffect(() => {
     if (!showCapturedSection && tab === "captured") setTab("all");
   }, [showCapturedSection, tab]);
@@ -124,20 +125,53 @@ export function InstituteMembersPanel({
     }, [loadMembers, photoBusy])
   );
 
+  // Group members by the admin-configured "Group by this" field (e.g. Designation).
+  const groupField = useMemo(
+    () => formFields.find((ff) => ff.enabled !== false && ff.isGroup === true) ?? null,
+    [formFields]
+  );
+  const groupLabel = (groupField?.label ?? "Group").trim();
+  const memberGroupValue = useCallback(
+    (s: TeacherStudent) =>
+      groupField ? studentFieldValueForForm(s, groupField, s.class_section ?? undefined).trim() : "",
+    [groupField]
+  );
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const groups = useMemo(() => {
+    if (!groupField) return [] as { value: string; total: number; captured: number }[];
+    const map = new Map<string, { value: string; total: number; captured: number }>();
+    for (const s of students) {
+      const v = memberGroupValue(s) || "Unassigned";
+      const e = map.get(v) ?? { value: v, total: 0, captured: 0 };
+      e.total += 1;
+      if (studentHasPhoto(s)) e.captured += 1;
+      map.set(v, e);
+    }
+    return [...map.values()].sort((a, b) => a.value.localeCompare(b.value));
+  }, [students, groupField, memberGroupValue]);
+  const scopedStudents = useMemo(
+    () =>
+      groupField && selectedGroup !== null
+        ? students.filter((s) => (memberGroupValue(s) || "Unassigned") === selectedGroup)
+        : students,
+    [students, groupField, selectedGroup, memberGroupValue]
+  );
+  const showGroupList = Boolean(groupField) && selectedGroup === null;
+
   const pendingPhotoCount = useMemo(
-    () => students.filter((s) => !studentHasPhoto(s)).length,
+    () => scopedStudents.filter((s) => !studentHasPhoto(s)).length,
     [students]
   );
   const pendingDataCount = useMemo(
-    () => students.filter((s) => studentPendingData(s, true)).length,
+    () => scopedStudents.filter((s) => studentPendingData(s, true)).length,
     [students]
   );
   const capturedCount = useMemo(
-    () => students.filter((s) => studentHasPhoto(s)).length,
+    () => scopedStudents.filter((s) => studentHasPhoto(s)).length,
     [students]
   );
   const tabs: { key: TabKey; label: string; color: string; count: number }[] = [
-    { key: "all", label: "All", color: colors.brandGreen, count: students.length },
+    { key: "all", label: "All", color: colors.brandGreen, count: scopedStudents.length },
     {
       key: "pending-photos",
       label: "Pending",
@@ -158,13 +192,13 @@ export function InstituteMembersPanel({
 
   const filtered = useMemo(() => {
     if (tab === "pending-photos") {
-      return students.filter((s) => !studentHasPhoto(s));
+      return scopedStudents.filter((s) => !studentHasPhoto(s));
     }
     if (tab === "pending-data") {
-      return students.filter((s) => studentPendingData(s, true));
+      return scopedStudents.filter((s) => studentPendingData(s, true));
     }
     if (tab === "captured" && showCapturedSection) {
-      return students
+      return scopedStudents
         .filter((s) => studentHasPhoto(s))
         .sort((a, b) => {
           const aTs = Date.parse(a.photo_captured_at ?? "") || 0;
@@ -173,8 +207,8 @@ export function InstituteMembersPanel({
           return (a.student_name ?? "").localeCompare(b.student_name ?? "");
         });
     }
-    return students;
-  }, [students, tab, showCapturedSection]);
+    return scopedStudents;
+  }, [scopedStudents, tab, showCapturedSection]);
 
   const openMember = useCallback(
     (student: TeacherStudent) => {
@@ -244,7 +278,7 @@ export function InstituteMembersPanel({
     return <ErrorRetry message={error} onRetry={() => void loadMembers()} />;
   }
 
-  const photoCaption = `${capturedCount}/${students.length} photos captured`;
+  const photoCaption = `${capturedCount}/${scopedStudents.length} photos captured`;
 
   return (
     <View style={styles.container}>
@@ -272,6 +306,14 @@ export function InstituteMembersPanel({
           ) : null}
         </View>
 
+        {selectedGroup !== null ? (
+          <Pressable onPress={() => setSelectedGroup(null)} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: spacing.md, paddingBottom: spacing.sm }}>
+            <Ionicons name="chevron-back" size={18} color={colors.brandGreen} />
+            <Text style={{ color: colors.brandGreen, fontFamily: fonts.semiBold, fontSize: 14 }} numberOfLines={1}>All {groupLabel} · {selectedGroup}</Text>
+          </Pressable>
+        ) : null}
+        {!showGroupList ? (
+        <>
         <View style={styles.tabs}>
           {tabs.map((t) => {
             const active = tab === t.key;
@@ -345,8 +387,41 @@ export function InstituteMembersPanel({
             </Pressable>
           </View>
         ) : null}
+        </>
+        ) : null}
       </View>
 
+      {showGroupList ? (
+        <>
+        <Text style={{ fontFamily: fonts.bold, fontSize: 16, color: colors.brandGreen, paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 4 }}>
+          Select {groupLabel}
+        </Text>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: spacing.xxl + insets.bottom, gap: 10 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void loadMembers(true)} tintColor={colors.brandGreen} />}>
+          {groups.length === 0 ? (
+            <View style={{ padding: spacing.md, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
+              <Text style={{ fontFamily: fonts.semiBold, fontSize: 14, color: colors.text }}>No {groupLabel.toLowerCase()} yet</Text>
+              <Text style={{ fontFamily: fonts.regular, fontSize: 12.5, color: colors.textBody, marginTop: 4 }}>Members will appear here grouped by {groupLabel.toLowerCase()} once the admin adds them or uploads an Excel.</Text>
+            </View>
+          ) : (
+            groups.map((g) => {
+              const ratio = g.total === 0 ? 0 : Math.min(1, g.captured / g.total);
+              return (
+                <Pressable key={g.value} style={{ backgroundColor: colors.surface, borderColor: colors.greenSoft, borderWidth: 1, borderRadius: 14, padding: 14, gap: 8 }} onPress={() => { setSelectedGroup(g.value); setTab("all"); }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Text style={{ fontFamily: fonts.bold, fontSize: 15, color: colors.text }} numberOfLines={1}>{g.value}</Text>
+                    <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.textMuted }}>{g.total} members</Text>
+                  </View>
+                  <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.graySoft, overflow: "hidden" }}>
+                    <View style={{ height: "100%", width: `${Math.round(ratio * 100)}%`, backgroundColor: colors.brandGreen }} />
+                  </View>
+                  <Text style={{ fontFamily: fonts.regular, fontSize: 11, color: colors.textMuted }}>{g.captured} / {g.total} photos</Text>
+                </Pressable>
+              );
+            })
+          )}
+        </ScrollView>
+        </>
+      ) : (
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
@@ -384,6 +459,7 @@ export function InstituteMembersPanel({
         }
         renderItem={renderMember}
       />
+      )}
 
       <StudentFlowModal
         visible={flowVisible}

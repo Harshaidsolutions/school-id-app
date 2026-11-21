@@ -59,7 +59,7 @@ const PHONE_COLS = 2;
 
 export function StudentListScreen({ navigation, route }: Props) {
   const styles = useStudentListStyles();
-  const { classSection, openStudentId, patchStudent } = route.params;
+  const { classSection, groupValue, openStudentId, patchStudent } = route.params;
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { colors } = useTheme();
@@ -105,7 +105,7 @@ export function StudentListScreen({ navigation, route }: Props) {
       setError(null);
       try {
         const { data } = await api.get<StudentsResponse>("/teacher/students", {
-          params: { classSection },
+          params: groupValue !== undefined ? { groupValue } : { classSection },
         });
         setStudents(data.students);
         setCachedStudents(classSection, data.students);
@@ -118,7 +118,7 @@ export function StudentListScreen({ navigation, route }: Props) {
         setRefreshing(false);
       }
     },
-    [classSection]
+    [classSection, groupValue]
   );
 
   useFocusEffect(

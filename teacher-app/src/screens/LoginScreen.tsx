@@ -357,7 +357,7 @@ function useLoginStyles() {
         elevation: 10,
         alignItems: "center",
       },
-      sheetInner: { width: formW },
+      sheetInner: { width: formW, flex: 1 },
       authPanel: { width: "100%" },
       title: {
         fontSize: scale(29),
@@ -410,7 +410,7 @@ function useLoginStyles() {
       loginArrow: { width: scale(28), height: scale(28), borderRadius: scale(14), backgroundColor: "rgba(255,255,255,0.22)", alignItems: "center", justifyContent: "center" },
       loginBtnDisabled: { opacity: 0.65 },
       loginBtnText: { ...textStyles.button, fontSize: scale(17), letterSpacing: 0.3, color: "#FFFFFF" },
-      below: { width: "100%", alignItems: "center" },
+      below: { width: "100%", alignItems: "center", marginTop: "auto", paddingTop: spacing.sm },
       orRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, alignSelf: "stretch", marginTop: spacing.md },
       orLine: { flex: 1, height: 1, backgroundColor: colors.border },
       orText: { fontFamily: fonts.bodyMedium, fontSize: scale(12.5), color: colors.textMuted },

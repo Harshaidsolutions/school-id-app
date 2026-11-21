@@ -11,6 +11,10 @@ export type RootStackParamList = {
   Settings: undefined;
   StudentList: {
     classSection: string;
+    /** Configured grouping field + the selected group value (general grouping). */
+    groupKey?: string;
+    groupValue?: string;
+    groupLabel?: string;
     openStudentId?: string;
     patchStudent?: TeacherStudent;
   };

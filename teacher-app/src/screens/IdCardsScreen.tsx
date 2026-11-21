@@ -104,6 +104,9 @@ function SchoolIdCardsScreen() {
     }, [load])
   );
 
+  const groupLabel = data?.groupLabel ?? "Class";
+  const groupKey = data?.groupKey;
+  const orgIsInstitute = data?.orgType === "institute";
   const classes = useMemo(
     () =>
       sortClassSections(
@@ -187,7 +190,7 @@ function SchoolIdCardsScreen() {
         <SchoolParentLinkCard />
         <View style={styles.sectionRow}>
           <Text style={[styles.sectionTitle, { color: colors.brandGreen }]}>
-            Select Classes
+            Select {groupLabel}
           </Text>
         </View>
 
@@ -202,10 +205,12 @@ function SchoolIdCardsScreen() {
             ]}
           >
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              No classes yet
+              No {groupLabel.toLowerCase()} yet
             </Text>
             <Text style={[styles.emptyText, { color: colors.textBody }]}>
-              Ask an admin to upload students for this school.
+              {orgIsInstitute
+                ? "Members will appear here grouped by " + groupLabel.toLowerCase() + " once the admin adds them or uploads an Excel."
+                : "Ask an admin to upload students for this " + (orgIsInstitute ? "institute" : "school") + "."}
             </Text>
           </View>
         ) : (
@@ -227,9 +232,13 @@ function SchoolIdCardsScreen() {
                   },
                 ]}
                 onPress={() => {
-                  setLastClassSection(item.class_section);
+                  const value = item.value ?? item.class_section;
+                  setLastClassSection(value);
                   navigation.navigate("StudentList", {
-                    classSection: item.class_section,
+                    classSection: value,
+                    groupKey,
+                    groupValue: value,
+                    groupLabel,
                   });
                 }}
               >
@@ -238,7 +247,7 @@ function SchoolIdCardsScreen() {
                     style={[styles.classLabel, { color: colors.text }]}
                     numberOfLines={1}
                   >
-                    {item.class_section}
+                    {item.label ?? item.class_section}
                   </Text>
                   <Text
                     style={[styles.classCount, { color: colors.textMuted }]}
