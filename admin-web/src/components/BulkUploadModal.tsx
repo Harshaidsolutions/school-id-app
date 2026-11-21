@@ -29,6 +29,9 @@ export function BulkUploadModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasExistingExcel, setHasExistingExcel] = useState(false);
   const [showReplaceConfirm, setShowReplaceConfirm] = useState(false);
+  const [sheets, setSheets] = useState<string[] | null>(null);
+  const [chosenSheet, setChosenSheet] = useState<string>("");
+  const [groupingFields, setGroupingFields] = useState<string[] | null>(null);
 
   const orgId = organizationId || schoolId || instituteId;
 
@@ -39,6 +42,9 @@ export function BulkUploadModal({
     setErrors(null);
     setErrorMessage(null);
     setShowReplaceConfirm(false);
+    setSheets(null);
+    setChosenSheet("");
+    setGroupingFields(null);
     if (organizationId) { setHasExistingExcel(false); return; }
     void api
       .get<{ importBatchCount?: number }>("/admin/form-config", {
@@ -55,9 +61,12 @@ export function BulkUploadModal({
     setSuccessMessage(null);
     setErrors(null);
     setErrorMessage(null);
+    setSheets(null);
+    setChosenSheet("");
+    setGroupingFields(null);
   }
 
-  async function performUpload(replaceExisting: boolean) {
+  async function performUpload(replaceExisting: boolean, sheet?: string) {
     if (!file || !orgId) return;
 
     const formData = new FormData();
@@ -65,18 +74,40 @@ export function BulkUploadModal({
     if (schoolId) formData.append("schoolId", schoolId);
     if (instituteId) formData.append("instituteId", instituteId);
     if (replaceExisting) formData.append("replaceExisting", "true");
+    if (sheet) formData.append("sheet", sheet);
 
     setLoading(true);
     setErrorMessage(null);
     setErrors(null);
     setSuccessMessage(null);
     try {
-      const { data } = await api.post<BulkUploadResponse>(
+      const { data } = await api.post<
+        BulkUploadResponse & {
+          needSheet?: boolean;
+          sheets?: string[];
+          needsGrouping?: boolean;
+          fields?: string[];
+        }
+      >(
         organizationId ? `/admin/organizations/${organizationId}/excel` : "/admin/students/bulk-upload",
         formData
       );
 
+      // Multi-sheet workbook: ask which worksheet to import, then re-upload.
+      if (data.needSheet && Array.isArray(data.sheets) && data.sheets.length > 0) {
+        setSheets(data.sheets);
+        setChosenSheet(data.sheets[0] ?? "");
+        setShowReplaceConfirm(false);
+        setLoading(false);
+        return;
+      }
+
       if (data.success || (organizationId && (data as unknown as {status: string}).status === "ok")) {
+        // Headers-only sheet: records couldn't be auto-grouped. Point the admin to
+        // Form Setup to choose one grouping field (any field) and its options.
+        if (data.needsGrouping) {
+          setGroupingFields(Array.isArray(data.fields) ? data.fields : []);
+        }
         setSuccessMessage(
           replaceExisting || ("replaced" in data && data.replaced)
             ? "Excel replaced successfully."
@@ -159,9 +190,63 @@ export function BulkUploadModal({
         {successMessage ? (
           <div className="space-y-4 text-center">
             <div className="alert-success">{successMessage}</div>
+            {groupingFields ? (
+              <div className="rounded-lg border border-border bg-surface p-3 text-left text-sm text-text-navy">
+                <p className="font-semibold">This sheet has only column headings — there are no records to group yet.</p>
+                <p className="mt-1 text-text-muted">
+                  Open <b>Form Setup</b> and choose <b>one</b> field to group by (any field you need).
+                  Set its type to <b>Dropdown</b>, add the options, turn on grouping, and save. You can add
+                  more grouping fields later. Fields found in this sheet:
+                </p>
+                <p className="mt-2 font-medium">{groupingFields.join(", ") || "—"}</p>
+              </div>
+            ) : null}
             <button type="button" className="btn-primary w-full" onClick={onClose}>
               Close
             </button>
+          </div>
+        ) : sheets ? (
+          <div className="space-y-4">
+            <p className="text-sm text-text-navy">
+              This workbook has multiple sheets. Choose the one to import:
+            </p>
+            <select
+              className="input-field"
+              value={chosenSheet}
+              onChange={(e) => setChosenSheet(e.target.value)}
+            >
+              {sheets.map((sn) => (
+                <option key={sn} value={sn}>
+                  {sn}
+                </option>
+              ))}
+            </select>
+            {errorBlock()}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                className="btn-secondary flex-1"
+                disabled={loading}
+                onClick={() => setSheets(null)}
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                className="btn-primary flex-1"
+                disabled={loading || !chosenSheet}
+                onClick={() => {
+                  if (hasExistingExcel) {
+                    setSheets(null);
+                    setShowReplaceConfirm(true);
+                  } else {
+                    void performUpload(false, chosenSheet);
+                  }
+                }}
+              >
+                {loading ? "Importing…" : "Import sheet"}
+              </button>
+            </div>
           </div>
         ) : showReplaceConfirm ? (
           <div className="space-y-4 text-center">
@@ -186,12 +271,12 @@ export function BulkUploadModal({
                 type="button"
                 className="btn-primary flex-1"
                 disabled={loading || !file}
-                onClick={() => void performUpload(true)}
+                onClick={() => void performUpload(true, chosenSheet || undefined)}
               >
                 {loading ? "Uploading…" : "Replace"}
               </button>
               <button type="button" className="btn-primary flex-1" disabled={loading || !file}
-                onClick={() => void performUpload(false)}>
+                onClick={() => void performUpload(false, chosenSheet || undefined)}>
                 Update / Add
               </button>
             </div>

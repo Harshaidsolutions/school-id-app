@@ -62,18 +62,41 @@ function getSheetRange(sheet: XLSX.WorkSheet): XLSX.Range {
   return XLSX.utils.decode_range(ref);
 }
 
-function openFirstSheet(buffer: Buffer): { sheet: XLSX.WorkSheet; range: XLSX.Range } | null {
+/** List the worksheet names in a workbook (fast: names only). */
+export function listSheetNames(buffer: Buffer): string[] {
+  try {
+    const wb = XLSX.read(buffer, { type: "buffer", bookSheets: true });
+    return (wb.SheetNames ?? []).filter((n): n is string => Boolean(n));
+  } catch {
+    return [];
+  }
+}
+
+/** Resolve the worksheet to import: the named sheet when given and present, else the first. */
+function openWorkbookSheet(
+  buffer: Buffer,
+  sheetName?: string | null
+): { sheet: XLSX.WorkSheet; range: XLSX.Range } | null {
   let workbook: XLSX.WorkBook;
   try {
     workbook = XLSX.read(buffer, { type: "buffer", cellDates: true, raw: true });
   } catch {
     return null;
   }
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) return null;
-  const sheet = workbook.Sheets[sheetName];
+  const wanted = (sheetName ?? "").trim();
+  const chosen =
+    wanted && workbook.SheetNames.includes(wanted) ? wanted : workbook.SheetNames[0];
+  if (!chosen) return null;
+  const sheet = workbook.Sheets[chosen];
   if (!sheet) return null;
   return { sheet, range: getSheetRange(sheet) };
+}
+
+function openFirstSheet(
+  buffer: Buffer,
+  sheetName?: string | null
+): { sheet: XLSX.WorkSheet; range: XLSX.Range } | null {
+  return openWorkbookSheet(buffer, sheetName);
 }
 
 function countNonEmptyCellsInRow(
@@ -203,31 +226,14 @@ function applyCanonicalFromExtra(
 
 export function parseStudentExcel(
   buffer: Buffer,
-  formFields?: FormFieldConfig[]
+  formFields?: FormFieldConfig[],
+  sheetName?: string | null
 ): StudentRowInput[] {
-  let workbook: XLSX.WorkBook;
-
-  try {
-    workbook = XLSX.read(buffer, {
-      type: "buffer",
-      cellDates: true,
-      raw: true,
-    });
-  } catch {
-    throw new AppError("Malformed Excel file: unable to parse workbook", 400);
-  }
-
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) {
-    throw new AppError("Excel file has no sheets", 400);
-  }
-
-  const sheet = workbook.Sheets[sheetName];
-  if (!sheet) {
+  const opened = openWorkbookSheet(buffer, sheetName);
+  if (!opened) {
     throw new AppError("Excel file has no readable sheet", 400);
   }
-
-  const range = getSheetRange(sheet);
+  const { sheet, range } = opened;
   if (range.e.r < 0 || range.e.c < 0) {
     throw new AppError("Excel file is empty", 400);
   }
@@ -282,8 +288,8 @@ function inferSemanticPhoneColumn(col: ExcelColumnDef): boolean {
 }
 
 /** Read header labels preserving sheet column order (includes empty cells as skipped columns). */
-export function extractExcelHeaders(buffer: Buffer): string[] {
-  const opened = openFirstSheet(buffer);
+export function extractExcelHeaders(buffer: Buffer, sheetName?: string | null): string[] {
+  const opened = openFirstSheet(buffer, sheetName);
   if (!opened) return [];
   const { sheet, range } = opened;
   const headerRowIndex = detectHeaderRowIndex(sheet, range.e.r, range.e.c);
@@ -371,14 +377,14 @@ export function studentFieldValue(
   return getStudentFieldValue(row, key, { fieldLabel });
 }
 
-export function inferSchemaFromExcelBuffer(buffer: Buffer): FormFieldConfig[] {
-  const rawRows = readRawHeaderRow(buffer);
+export function inferSchemaFromExcelBuffer(buffer: Buffer, sheetName?: string | null): FormFieldConfig[] {
+  const rawRows = readRawHeaderRow(buffer, sheetName);
   return inferFormFieldsFromExcelHeaders(rawRows);
 }
 
 /** Full column schema with stable fld_N keys and sheet column indices. */
-export function inferColumnSchemaFromExcelBuffer(buffer: Buffer): ExcelColumnDef[] {
-  return buildExcelColumnSchema(readRawHeaderRow(buffer));
+export function inferColumnSchemaFromExcelBuffer(buffer: Buffer, sheetName?: string | null): ExcelColumnDef[] {
+  return buildExcelColumnSchema(readRawHeaderRow(buffer, sheetName));
 }
 
 export function formFieldsFromColumnSchema(columns: ExcelColumnDef[]): FormFieldConfig[] {
@@ -391,8 +397,8 @@ export function formFieldsFromColumnSchema(columns: ExcelColumnDef[]): FormField
   }));
 }
 
-function readRawHeaderRow(buffer: Buffer): string[] {
-  const opened = openFirstSheet(buffer);
+function readRawHeaderRow(buffer: Buffer, sheetName?: string | null): string[] {
+  const opened = openFirstSheet(buffer, sheetName);
   if (!opened) return [];
   const { sheet, range } = opened;
   const headerRowIndex = detectHeaderRowIndex(sheet, range.e.r, range.e.c);

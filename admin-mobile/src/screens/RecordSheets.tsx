@@ -339,6 +339,8 @@ export function ExcelUploadSheet({ visible, onClose, target, onDone }: { visible
   const [done, setDone] = useState<string | null>(null);
   const [hasExisting, setHasExisting] = useState(false);
   const [replace, setReplace] = useState(false);
+  const [sheets, setSheets] = useState<string[] | null>(null);
+  const [chosenSheet, setChosenSheet] = useState<string>("");
   useEffect(() => {
     if (!visible) return;
     setFile(null);
@@ -346,6 +348,8 @@ export function ExcelUploadSheet({ visible, onClose, target, onDone }: { visible
     setRowErrors([]);
     setDone(null);
     setReplace(false);
+    setSheets(null);
+    setChosenSheet("");
     if (target.organizationId) {
       setHasExisting(false);
       return;
@@ -356,7 +360,7 @@ export function ExcelUploadSheet({ visible, onClose, target, onDone }: { visible
       .catch(() => setHasExisting(false));
   }, [visible, target.organizationId, target.schoolId, target.instituteId]);
 
-  async function upload() {
+  async function upload(sheet?: string) {
     if (!file) return setError("Choose an .xlsx file first.");
     if (hasExisting && !replace) return setError("This list already has an Excel. Tick “Replace existing Excel” to continue.");
     setBusy(true);
@@ -368,14 +372,27 @@ export function ExcelUploadSheet({ visible, onClose, target, onDone }: { visible
       if (target.schoolId) form.append("schoolId", target.schoolId);
       if (target.instituteId) form.append("instituteId", target.instituteId);
       if (replace) form.append("replaceExisting", "true");
+      if (sheet) form.append("sheet", sheet);
       const url = target.organizationId ? `/admin/organizations/${target.organizationId}/excel` : "/admin/students/bulk-upload";
       const { data } = await api.post(url, form, { timeout: 600000 });
+      // Multi-sheet workbook: ask which worksheet to import.
+      if (data?.needSheet && Array.isArray(data.sheets) && data.sheets.length > 0) {
+        setSheets(data.sheets as string[]);
+        setChosenSheet((data.sheets as string[])[0] ?? "");
+        return;
+      }
       if (data?.success === false) {
         setRowErrors(data.errors ?? []);
         return;
       }
-      const msg = data?.imported !== undefined ? `Imported ${data.imported} record(s)${data.inserted !== undefined ? ` — ${data.inserted} new, ${data.updated ?? 0} updated` : ""}.` : "Excel uploaded successfully.";
+      let msg = data?.imported !== undefined ? `Imported ${data.imported} record(s)${data.inserted !== undefined ? ` — ${data.inserted} new, ${data.updated ?? 0} updated` : ""}.` : "Excel uploaded successfully.";
+      // Headers-only sheet: no records to group. Direct the admin to Form Setup.
+      if (data?.needsGrouping) {
+        const fields = Array.isArray(data.fields) ? (data.fields as string[]).join(", ") : "";
+        msg = `This sheet has only column headings — no records yet. Open Form Setup and choose one field to group by (set it to Dropdown, add options, turn on grouping, save).${fields ? ` Fields: ${fields}.` : ""}`;
+      }
       setDone(msg);
+      setSheets(null);
       setFile(null);
       setHasExisting(!target.organizationId);
       onDone();
@@ -389,7 +406,7 @@ export function ExcelUploadSheet({ visible, onClose, target, onDone }: { visible
   }
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Upload Excel" subtitle="The first row must have the column names." footer={<Button title={replace ? "Replace Excel" : "Upload"} icon="cloud-upload-outline" onPress={() => void upload()} loading={busy} disabled={!file} />}>
+    <Sheet visible={visible} onClose={onClose} title="Upload Excel" subtitle="The first row must have the column names." footer={<Button title={sheets ? "Import sheet" : replace ? "Replace Excel" : "Upload"} icon="cloud-upload-outline" onPress={() => void upload(sheets ? chosenSheet : undefined)} loading={busy} disabled={sheets ? !chosenSheet : !file} />}>
       <Banner text={error} />
       <Banner text={done} tone="green" />
       {rowErrors.length ? (
@@ -402,22 +419,33 @@ export function ExcelUploadSheet({ visible, onClose, target, onDone }: { visible
           ))}
         </View>
       ) : null}
-      <Tap
-        onPress={async () => {
-          const [f] = await pickDocuments(DOC_TYPES.excel);
-          if (f) {
-            setFile(f);
-            setError(null);
-            setDone(null);
-          }
-        }}
-        style={st.drop}
-      >
-        <Ionicons name={file ? "document-text" : "cloud-upload-outline"} size={34} color={C.primary} />
-        <Text style={st.dropTitle}>{file ? file.name : "Choose Excel file (.xlsx)"}</Text>
-        <Muted>{file ? "Tap to choose a different file" : "From your phone, Drive or WhatsApp downloads"}</Muted>
-      </Tap>
-      {hasExisting ? <Check checked={replace} onPress={() => setReplace((r) => !r)} label="Replace existing Excel (existing photos are kept)" /> : null}
+      {sheets ? (
+        <View>
+          <Text style={st.dropTitle}>This workbook has multiple sheets. Choose one to import:</Text>
+          {sheets.map((sn) => (
+            <Check key={sn} checked={chosenSheet === sn} onPress={() => setChosenSheet(sn)} label={sn} />
+          ))}
+        </View>
+      ) : (
+        <>
+          <Tap
+            onPress={async () => {
+              const [f] = await pickDocuments(DOC_TYPES.excel);
+              if (f) {
+                setFile(f);
+                setError(null);
+                setDone(null);
+              }
+            }}
+            style={st.drop}
+          >
+            <Ionicons name={file ? "document-text" : "cloud-upload-outline"} size={34} color={C.primary} />
+            <Text style={st.dropTitle}>{file ? file.name : "Choose Excel file (.xlsx)"}</Text>
+            <Muted>{file ? "Tap to choose a different file" : "From your phone, Drive or WhatsApp downloads"}</Muted>
+          </Tap>
+          {hasExisting ? <Check checked={replace} onPress={() => setReplace((r) => !r)} label="Replace existing Excel (existing photos are kept)" /> : null}
+        </>
+      )}
     </Sheet>
   );
 }

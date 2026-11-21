@@ -13,6 +13,7 @@ import {
 import {
   parseStudentExcel,
   extractExcelHeaders,
+  listSheetNames,
   uniquenessKey,
   validateStudentRows,
   inferSchemaFromExcelBuffer,
@@ -175,14 +176,25 @@ export async function bulkUploadStudents(
 
     const orgScope = schoolId ? { schoolId } : { instituteId };
 
+    // Worksheet selection: if the workbook has more than one sheet and the
+    // admin has not yet chosen one, return the sheet names so the client can ask.
+    const requestedSheet =
+      typeof req.body?.sheet === "string" ? req.body.sheet.trim() : "";
+    const sheetNames = listSheetNames(req.file.buffer);
+    if (sheetNames.length > 1 && !requestedSheet) {
+      res.status(200).json({ needSheet: true, sheets: sheetNames });
+      return;
+    }
+    const activeSheet = requestedSheet || sheetNames[0] || "";
+
     let rows;
     let excelHeaders: string[] = [];
     let uploadSchema;
     try {
-      excelHeaders = extractExcelHeaders(req.file.buffer);
-      uploadSchema = inferSchemaFromExcelBuffer(req.file.buffer);
+      excelHeaders = extractExcelHeaders(req.file.buffer, activeSheet);
+      uploadSchema = inferSchemaFromExcelBuffer(req.file.buffer, activeSheet);
       // Always map from the uploaded sheet headers — never from saved form config keys.
-      rows = parseStudentExcel(req.file.buffer);
+      rows = parseStudentExcel(req.file.buffer, undefined, activeSheet);
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -198,6 +210,7 @@ export async function bulkUploadStudents(
       });
       return;
     }
+
 
     const fieldLabels = buildFieldLabelsFromConfig(uploadSchema);
     const preparedRows = rows.map((row) => ({
@@ -378,6 +391,11 @@ export async function bulkUploadStudents(
       inserted,
       updated,
       importBatchId,
+      sheet: activeSheet,
+      // Headers-only sheet: the fields now exist in Form Setup; prompt the admin
+      // to choose one grouping field (any field; configure type/options there).
+      needsGrouping: rows.length === 0,
+      fields: rows.length === 0 ? excelHeaders : undefined,
     });
   } catch (error) {
     try {
