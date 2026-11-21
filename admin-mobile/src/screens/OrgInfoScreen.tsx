@@ -52,6 +52,16 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
     api.get(lockPath).then((r) => alive && setSelection(r.data.selection)).catch(() => alive && setSelection(null));
     return () => { alive = false; };
   }, [lockPath]);
+  const imgKind = isOrg ? "organizations" : kind === "institute" ? "institutes" : "schools";
+  async function deleteImage(type: "logo" | "signature" | "organization") {
+    try {
+      await api.delete(`/admin/org-image/${imgKind}/${id}/${type}`);
+      setSaved("Image deleted.");
+      void load();
+    } catch (e) {
+      setError(errMsg(e, "Failed to delete image."));
+    }
+  }
   async function saveSelection(body: { locked?: boolean; templateLocked?: boolean; modelLocked?: boolean; clearFinal?: boolean }) {
     setSaving(true);
     setError(null);
@@ -129,13 +139,13 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
   }
 
   const sw = (key: string) => <Toggle value={vis[key] !== false} disabled={saving} onChange={(on) => void toggleDetail(key, on)} />;
-  const images: { label: string; url: string; key: string }[] = [];
+  const images: { label: string; url: string; key: string; type?: "logo" | "signature" | "organization" }[] = [];
   if (org?.model_image_url) images.push({ label: `Model${org.model ? ` — ${org.model}` : ""}`, url: org.model_image_url, key: "detail_model" });
   for (const t of org?.tag_items ?? []) if (t.image_url) images.push({ label: `Tag — ${t.name}`, url: t.image_url, key: "detail_tags" });
   if (org?.template_image_url) images.push({ label: `Template${org.template_name ? ` — ${org.template_name}` : ""}`, url: org.template_image_url, key: "detail_template" });
-  if (org?.logo_url) images.push({ label: "Logo", url: org.logo_url, key: "detail_logo" });
-  if (org?.signature_url) images.push({ label: "Signature", url: org.signature_url, key: "detail_signature" });
-  if (org?.organization_photo_url) images.push({ label: "Building / organisation photo", url: org.organization_photo_url, key: "detail_organization_photo" });
+  if (org?.logo_url) images.push({ label: "Logo", url: org.logo_url, key: "detail_logo", type: "logo" });
+  if (org?.signature_url) images.push({ label: "Signature", url: org.signature_url, key: "detail_signature", type: "signature" });
+  if (org?.organization_photo_url) images.push({ label: "Building / organisation photo", url: org.organization_photo_url, key: "detail_organization_photo", type: "organization" });
 
   return (
     <Screen title={kind === "school" ? "School Info" : kind === "institute" ? "Institution Info" : "Organization Info"} subtitle={name} refreshing={false} onRefresh={() => void load()}>
@@ -178,6 +188,11 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
                       </Text>
                       {sw(im.key)}
                     </View>
+                    {im.type ? (
+                      <Tap onPress={() => { const t = im.type; if (t) void deleteImage(t); }} style={{ paddingVertical: 6, alignItems: "center" }}>
+                        <Text style={{ color: C.danger, fontFamily: F.body, fontSize: 13, fontWeight: "600" }}>Delete</Text>
+                      </Tap>
+                    ) : null}
                   </View>
                 ))}
               </View>
