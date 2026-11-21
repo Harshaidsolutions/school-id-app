@@ -175,6 +175,7 @@ export function EditStudentScreen({ navigation, route }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [fieldImageBusyKey, setFieldImageBusyKey] = useState<string | null>(null);
   const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
   const [signatureUri, setSignatureUri] = useState<string | null>(student.signature_url ?? null);
   const [savedStudent, setSavedStudent] = useState<TeacherStudent | null>(null);
@@ -184,6 +185,54 @@ export function EditStudentScreen({ navigation, route }: Props) {
       setExtraValues(initialExtraValuesFromStudent(currentStudent, formFields));
     }
   }, [currentStudent, formFields]);
+
+  // Current image URL for each "Image/Photo"-typed field, read from extra_fields.
+  const fieldImages = useMemo(() => {
+    const raw = currentStudent.extra_fields as unknown;
+    let obj: Record<string, unknown> = {};
+    if (typeof raw === "string") {
+      try { obj = JSON.parse(raw) as Record<string, unknown>; } catch { obj = {}; }
+    } else if (raw && typeof raw === "object") {
+      obj = raw as Record<string, unknown>;
+    }
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (typeof v === "string" && v.trim()) out[k] = v.trim();
+    }
+    return out;
+  }, [currentStudent.extra_fields]);
+
+  async function doFieldImage(key: string, source: "camera" | "gallery") {
+    const uri = await pickStudentPhotoForFormUpload(source);
+    if (!uri) return;
+    setFieldImageBusyKey(key);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append("image", { uri, type: "image/jpeg", name: `${key}.jpg` } as unknown as Blob);
+      form.append("key", key);
+      const { data } = await api.post<{ student: TeacherStudent }>(
+        `/teacher/students/${currentStudent.id}/field-image`,
+        form,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      if (data.student) setCurrentStudent(data.student);
+      showToast("Image saved.");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to save image."));
+    } finally {
+      setFieldImageBusyKey(null);
+    }
+  }
+
+  function pickFieldImage(key: string) {
+    if (fieldImageBusyKey || saving) return;
+    Alert.alert("Add image", "Choose a source", [
+      { text: "Camera", onPress: () => void doFieldImage(key, "camera") },
+      { text: "Gallery", onPress: () => void doFieldImage(key, "gallery") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
 
   async function handleRetakePhoto() {
     if (photoBusy || saving) return;
@@ -497,6 +546,9 @@ export function EditStudentScreen({ navigation, route }: Props) {
               onExtraChange={(key, value) =>
                 setExtraValues((prev) => ({ ...prev, [key]: value }))
               }
+              fieldImages={fieldImages}
+              onFieldImagePick={pickFieldImage}
+              fieldImageBusyKey={fieldImageBusyKey}
               classSectionReadOnly
               onInputFocus={(target) =>
                 scrollToFocusedInput(scrollRef, target)

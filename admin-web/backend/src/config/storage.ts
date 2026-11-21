@@ -104,6 +104,32 @@ export async function uploadMemberSignatureToStorage(
   );
 }
 
+export function studentFieldImageStoragePath(
+  orgId: string,
+  studentId: string,
+  fieldKey: string,
+  ext: "jpg" | "png"
+): string {
+  const safeKey = fieldKey.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 60) || "field";
+  return `${orgId}/field-images/${studentId}/${safeKey}.${ext}`;
+}
+
+/** Upload an image for an arbitrary "Image/Photo"-typed form field. */
+export async function uploadStudentFieldImageToStorage(
+  orgId: string,
+  studentId: string,
+  fieldKey: string,
+  file: Express.Multer.File
+): Promise<string> {
+  const ext = file.mimetype === "image/png" ? "png" : "jpg";
+  return uploadBufferToBucket(
+    STUDENT_PHOTOS_BUCKET,
+    studentFieldImageStoragePath(orgId, studentId, fieldKey, ext),
+    file.buffer,
+    file.mimetype
+  );
+}
+
 export function studentPhotoOrgId(
   schoolId: string | null | undefined,
   instituteId: string | null | undefined

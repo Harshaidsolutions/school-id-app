@@ -1,6 +1,7 @@
 import { Pressable } from "./Pressable";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   FlatList,
   Image,
   Modal,
@@ -84,6 +85,29 @@ export function AddStudentForm({
   const [custom2, setCustom2] = useState("");
   const [custom3, setCustom3] = useState("");
   const [extraValues, setExtraValues] = useState<Record<string, string>>({});
+  // Image/Photo-typed fields: local uris chosen before the record is created.
+  const [fieldImageUris, setFieldImageUris] = useState<Record<string, string>>({});
+  function pickFieldImage(key: string) {
+    Alert.alert("Add image", "Choose a source", [
+      {
+        text: "Camera",
+        onPress: () => {
+          void pickStudentPhotoForFormUpload("camera").then((uri) => {
+            if (uri) setFieldImageUris((prev) => ({ ...prev, [key]: uri }));
+          });
+        },
+      },
+      {
+        text: "Gallery",
+        onPress: () => {
+          void pickStudentPhotoForFormUpload("gallery").then((uri) => {
+            if (uri) setFieldImageUris((prev) => ({ ...prev, [key]: uri }));
+          });
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const submitBusy = useRef(false);
@@ -275,6 +299,22 @@ export function AddStudentForm({
         uploadedSignature.current = signatureUri;
       }
 
+      // Upload any Image/Photo-typed field pictures chosen in the form.
+      for (const [key, uri] of Object.entries(fieldImageUris)) {
+        if (!uri) continue;
+        const fieldForm = new FormData();
+        fieldForm.append("image", {
+          uri,
+          name: `${data.student.id}-${key}.jpg`,
+          type: "image/jpeg",
+        } as unknown as Blob);
+        fieldForm.append("key", key);
+        await api.post(`/teacher/students/${data.student.id}/field-image`, fieldForm, {
+          headers: { "Content-Type": "multipart/form-data" },
+          transformRequest: (body) => body,
+        });
+      }
+
       setLastClassSection(classSection.trim());
       // Return the server's final record, including uploaded photo/signature and status flags.
       const refreshed = await api.get<{ student: TeacherStudent }>(`/teacher/students/${data.student.id}`);
@@ -441,6 +481,8 @@ export function AddStudentForm({
         onExtraChange={(key, value) =>
           setExtraValues((prev) => ({ ...prev, [key]: value }))
         }
+        fieldImages={fieldImageUris}
+        onFieldImagePick={pickFieldImage}
         nameRequired
         classRequired={!instituteMode}
         onInputFocus={onInputFocus}

@@ -13,6 +13,7 @@ import {
 import {
   deleteStudentPhotoFromStorage,
   uploadMemberSignatureToStorage,
+  uploadStudentFieldImageToStorage,
   uploadStudentPhotoToStorage,
 } from "../config/storage";
 import { loadFormConfigForOrg } from "./formConfigController";
@@ -751,6 +752,67 @@ export async function uploadMemberSignature(
     const row = updated.rows[0];
     if (!row) throw new AppError("Failed to save signature", 500);
     res.status(200).json({ status: "ok", student: await presentStudent(row) });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /teacher/students/:id/field-image — upload an image for an arbitrary
+ * form field the admin set to "Image/Photo" type. Stored as a URL in
+ * extra_fields[key] (merge-safe: never wipes other fields).
+ */
+export async function uploadStudentFieldImage(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const studentId = req.params.id;
+    if (!studentId) throw new AppError("Record id is required", 400);
+    const fieldKey = typeof req.body?.key === "string" ? req.body.key.trim() : "";
+    if (!fieldKey) throw new AppError("Field key is required", 400);
+    if (!req.file) {
+      throw new AppError("Image file is required (field name: image)", 400);
+    }
+
+    const studentResult = await pool.query<TeacherStudentRow>(
+      `SELECT ${TEACHER_STUDENT_SELECT} FROM students WHERE id = $1 LIMIT 1`,
+      [studentId]
+    );
+    const student = studentResult.rows[0];
+    if (!student) throw new AppError("Record not found", 404);
+    assertStudentBelongsToOrg(req.user, student);
+    const orgId = student.institute_id ?? student.school_id;
+    if (!orgId) throw new AppError("Record is not assigned to an organization", 400);
+
+    const formFields = await loadFormConfigForOrg({
+      schoolId: student.school_id,
+      instituteId: student.institute_id,
+    });
+    const field = formFields.find((f) => f.key === fieldKey);
+    if (!field || field.enabled === false) {
+      throw new AppError("That field is not part of this form", 400);
+    }
+    if (field.fieldType !== "photo") {
+      throw new AppError("That field is not an image field", 400);
+    }
+
+    const stored = await uploadStudentFieldImageToStorage(orgId, student.id, fieldKey, req.file);
+    const url = `${stored}?v=${Date.now()}`;
+
+    const updated = await pool.query<TeacherStudentRow>(
+      `UPDATE students
+       SET extra_fields = COALESCE(extra_fields, '{}'::jsonb) || jsonb_build_object($1::text, $2::text),
+           updated_at = NOW()
+       WHERE id = $3 AND (school_id = $4 OR institute_id = $4)
+       RETURNING ${TEACHER_STUDENT_SELECT}`,
+      [fieldKey, url, student.id, orgId]
+    );
+    const row = updated.rows[0];
+    if (!row) throw new AppError("Failed to save image", 500);
+    res.status(200).json({ status: "ok", url, student: await presentStudent(row) });
   } catch (error) {
     next(error);
   }

@@ -1,6 +1,6 @@
 import { Pressable } from "./Pressable";
 import type { ReactNode } from "react";
-import { Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Pressable as RNPressable, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { FormFieldConfig } from "../constants/formFields";
 import { sortFormFields } from "../constants/formFields";
@@ -33,6 +33,56 @@ function Field({
       </Text>
       {children}
     </View>
+  );
+}
+
+function ImageFieldPicker({
+  uri,
+  busy,
+  colors,
+  onPick,
+}: {
+  uri: string;
+  busy: boolean;
+  colors: AppColors;
+  onPick: () => void;
+}) {
+  const hasImage = Boolean(uri);
+  return (
+    <RNPressable
+      onPress={onPick}
+      disabled={busy}
+      style={{
+        minHeight: 110,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        borderStyle: hasImage ? "solid" : "dashed",
+        borderColor: colors.border,
+        backgroundColor: colors.inputBg ?? "#F6F7FC",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+        padding: 10,
+      }}
+    >
+      {busy ? (
+        <ActivityIndicator color={colors.primaryOrange} />
+      ) : hasImage ? (
+        <View style={{ alignItems: "center", gap: 8 }}>
+          <Image source={{ uri }} style={{ width: 120, height: 120, borderRadius: 10 }} resizeMode="cover" />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Ionicons name="camera-outline" size={16} color={colors.primaryOrange} />
+            <Text style={{ fontSize: 12.5, fontWeight: "600", color: colors.primaryOrange }}>Change image</Text>
+          </View>
+        </View>
+      ) : (
+        <View style={{ alignItems: "center", gap: 6 }}>
+          <Ionicons name="cloud-upload-outline" size={30} color={colors.primaryOrange} />
+          <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text }}>Upload or capture image</Text>
+          <Text style={{ fontSize: 11.5, color: colors.textMuted }}>Tap to choose camera or gallery</Text>
+        </View>
+      )}
+    </RNPressable>
   );
 }
 
@@ -110,6 +160,12 @@ export type DynamicStudentFieldListProps = {
   photoId?: string;
   studentName?: string;
   onInputFocus?: (nativeTarget: number) => void;
+  /** Current image URL (or local uri) for each "Image/Photo"-typed field, by key. */
+  fieldImages?: Record<string, string>;
+  /** Called when the user taps an image field to capture/upload a picture. */
+  onFieldImagePick?: (key: string) => void;
+  /** Key of the image field currently uploading (shows a spinner). */
+  fieldImageBusyKey?: string | null;
 };
 
 const SINGLETON_KINDS = new Set([
@@ -220,6 +276,9 @@ export function DynamicStudentFieldList({
   photoId = "",
   studentName = "",
   onInputFocus,
+  fieldImages = {},
+  onFieldImagePick,
+  fieldImageBusyKey = null,
 }: DynamicStudentFieldListProps) {
   const focus = focusProps(onInputFocus);
   const ordered = dedupeFormFields(formFields);
@@ -287,7 +346,17 @@ export function DynamicStudentFieldList({
           field.key !== "photo_id" &&
           !isIdentityAliasLabel(field.label)
         ) {
-          return null;
+          // Arbitrary field the admin set to "Image/Photo": capture/upload a picture.
+          return (
+            <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
+              <ImageFieldPicker
+                uri={fieldImages[field.key] || ""}
+                busy={fieldImageBusyKey === field.key}
+                colors={colors}
+                onPick={() => onFieldImagePick?.(field.key)}
+              />
+            </Field>
+          );
         }
         if (lockIdentityFields && isIdentityAliasLabel(field.label)) {
           return null;
