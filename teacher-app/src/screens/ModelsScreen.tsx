@@ -440,7 +440,7 @@ export function ModelsScreen() {
                 },
               ]}
               onPress={() => {
-                if (videoUrl && !imageUrl) {
+                if (videoUrl) {
                   setVideoUri(videoUrl);
                   return;
                 }
@@ -462,11 +462,18 @@ export function ModelsScreen() {
                 ]}
               >
                 {imageUrl ? (
-                  <Image
-                    source={{ uri: imageUrl }}
-                    style={styles.modelImageFull}
-                    resizeMode="contain"
-                  />
+                  <>
+                    <Image
+                      source={{ uri: imageUrl }}
+                      style={styles.modelImageFull}
+                      resizeMode="contain"
+                    />
+                    {videoUrl ? (
+                      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
+                        <Ionicons name="play-circle" size={40} color="#FFFFFF" style={{ opacity: 0.95 }} />
+                      </View>
+                    ) : null}
+                  </>
                 ) : videoUrl ? (
                   <View style={{ alignItems: "center" }}>
                     <Ionicons name="play-circle" size={36} color={colors.primaryOrange} />
