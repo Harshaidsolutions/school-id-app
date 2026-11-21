@@ -15,6 +15,7 @@ import {
 } from "../utils/adminScope";
 import { sanitizeFieldVisibility } from "../utils/recordStatus";
 import { routeParam } from "../utils/routeParams";
+import { uploadSchoolAsset } from "../config/storage";
 
 /** GET /admin/schools/:id/organization-info — read-only teacher-submitted school details */
 export async function getSchoolOrganizationInfo(
@@ -257,6 +258,81 @@ export async function clearOrganizationImage(req: Request, res: Response, next: 
     }
     await pool.query(`UPDATE ${table} SET ${column} = NULL WHERE id = $1`, [id]);
     res.json({ status: "ok" });
+  } catch (e) {
+    next(e);
+  }
+}
+
+const ORG_DETAIL_COLUMN: Record<string, string> = {
+  year: "detail_year",
+  phone: "detail_phone",
+  phone2: "detail_phone2",
+  code: "detail_code",
+  address: "detail_address",
+  instructions: "detail_instructions",
+};
+const ORG_SELECTION_COLUMN: Record<string, string> = {
+  model: "model",
+  tags: "tags",
+  template: "template_id",
+};
+
+/** PATCH /admin/org-detail/:kind/:id — admin edits or clears one org field (text/selection). */
+export async function updateOrganizationDetailField(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const kind = String(req.params.kind);
+    const id = routeParam(req.params.id);
+    if (!id) throw new AppError("Id is required", 400);
+    const field = String(req.body?.field ?? "");
+    const table =
+      kind === "schools" ? "schools" :
+      kind === "institutes" ? "institutes" :
+      kind === "organizations" ? "organizations" : null;
+    if (!table) throw new AppError("Unknown organization type", 400);
+    const detailCol = ORG_DETAIL_COLUMN[field];
+    const selectionCol = ORG_SELECTION_COLUMN[field];
+    const column = detailCol ?? selectionCol;
+    if (!column) throw new AppError("Unknown field", 400);
+    if (table === "organizations") await assertOrganizationOwned(scope, id);
+    else if (table === "institutes") await assertInstituteOwnedByAdmin(scope, id);
+    else await assertSchoolOwnedByAdmin(scope, id);
+    const raw = req.body?.value;
+    const value = raw == null ? null : String(raw).trim() || null;
+    await pool.query(`UPDATE ${table} SET ${column} = $2 WHERE id = $1`, [id, value]);
+    res.json({ status: "ok" });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/** POST /admin/org-image/:kind/:id/:type — admin replaces an org logo/signature/building photo. */
+export async function uploadOrganizationImage(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const kind = String(req.params.kind);
+    const id = routeParam(req.params.id);
+    const type = String(req.params.type);
+    if (!id) throw new AppError("Id is required", 400);
+    if (!req.file) throw new AppError("Image file is required (field name: file)", 400);
+    const column =
+      type === "logo" ? "logo_url" :
+      type === "signature" ? "signature_url" :
+      type === "organization" ? "organization_photo_url" : null;
+    const assetKind = type === "organization" ? "organization" : type === "signature" ? "signature" : type === "logo" ? "logo" : null;
+    if (!column || !assetKind) throw new AppError("Unknown image type", 400);
+    const table =
+      kind === "schools" ? "schools" :
+      kind === "institutes" ? "institutes" :
+      kind === "organizations" ? "organizations" : null;
+    if (!table) throw new AppError("Unknown organization type", 400);
+    if (table === "organizations") await assertOrganizationOwned(scope, id);
+    else if (table === "institutes") await assertInstituteOwnedByAdmin(scope, id);
+    else await assertSchoolOwnedByAdmin(scope, id);
+    const uploaded = await uploadSchoolAsset(id, assetKind as "logo" | "signature" | "organization", req.file);
+    const url = `${uploaded}${uploaded.includes("?") ? "&" : "?"}v=${Date.now()}`;
+    await pool.query(`UPDATE ${table} SET ${column} = $2 WHERE id = $1`, [id, url]);
+    res.json({ status: "ok", url });
   } catch (e) {
     next(e);
   }

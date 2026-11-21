@@ -1,6 +1,6 @@
 import { HeaderBack } from "../components/HeaderBack";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
 import { ImagePreviewModal } from "../components/ImagePreviewModal";
@@ -95,6 +95,9 @@ function InfoRow({
   emptyLabel = "-",
   control,
   secret,
+  onSaveValue,
+  onDeleteValue,
+  multiline,
 }: {
   label: string;
   value: string | null | undefined;
@@ -102,30 +105,52 @@ function InfoRow({
   emptyLabel?: string;
   control?: ReactNode;
   secret?: string;
+  onSaveValue?: (next: string) => void;
+  onDeleteValue?: () => void;
+  multiline?: boolean;
 }) {
-  if (secret && value?.trim()) {
-    return (
-      <div className="org-info-row flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
-        <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
-          <div className="mt-1 text-sm text-text-navy"><PasswordCell value={value} label={secret} /></div>
-        </div>
-        {control}
-      </div>
-    );
-  }
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const startEdit = () => { setDraft(value?.trim() ?? ""); setEditing(true); };
+  const actions = (
+    <div className="flex items-center gap-3">
+      {onSaveValue ? (
+        <button type="button" onClick={startEdit} className="text-xs font-semibold text-button-blue hover:underline">Edit</button>
+      ) : null}
+      {onDeleteValue && value?.trim() ? (
+        <button type="button" onClick={onDeleteValue} className="text-xs font-semibold text-danger hover:underline">Delete</button>
+      ) : null}
+      {control}
+    </div>
+  );
   const display = value?.trim()
     ? value.trim()
     : showWhenEmpty
       ? emptyLabel
       : "-";
+  const body =
+    editing && onSaveValue ? (
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        {multiline ? (
+          <textarea rows={2} value={draft} onChange={(e) => setDraft(e.target.value)} className="input-field w-full sm:w-72" />
+        ) : (
+          <input value={draft} onChange={(e) => setDraft(e.target.value)} className="input-field w-full sm:w-72" />
+        )}
+        <button type="button" onClick={() => { onSaveValue(draft.trim()); setEditing(false); }} className="btn-primary px-3 py-1 text-xs">Save</button>
+        <button type="button" onClick={() => setEditing(false)} className="btn-secondary px-3 py-1 text-xs">Cancel</button>
+      </div>
+    ) : secret && value?.trim() ? (
+      <div className="mt-1 text-sm text-text-navy"><PasswordCell value={value} label={secret} /></div>
+    ) : (
+      <div className="mt-1 whitespace-pre-wrap text-sm text-text-navy">{display}</div>
+    );
   return (
     <div className="org-info-row flex items-start justify-between gap-3 border-b border-border px-5 py-3 last:border-b-0">
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
-        <div className="mt-1 whitespace-pre-wrap text-sm text-text-navy">{display}</div>
+        {body}
       </div>
-      {control}
+      {actions}
     </div>
   );
 }
@@ -137,6 +162,7 @@ function ImageBlock({
   onPreview,
   control,
   onDelete,
+  onReplace,
 }: {
   label: string;
   url: string | null | undefined;
@@ -144,6 +170,7 @@ function ImageBlock({
   onPreview: (label: string, url: string) => void;
   control?: ReactNode;
   onDelete?: () => void;
+  onReplace?: (file: File) => void;
 }) {
   if (!url?.trim()) {
     return (
@@ -152,7 +179,15 @@ function ImageBlock({
           <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
           <div className="mt-1 text-sm text-text-navy">-</div>
         </div>
-        {control}
+        <div className="flex items-center gap-3">
+          {onReplace ? (
+            <label className="cursor-pointer text-xs font-semibold text-button-blue hover:underline">
+              Upload
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onReplace(f); e.currentTarget.value = ""; }} />
+            </label>
+          ) : null}
+          {control}
+        </div>
       </div>
     );
   }
@@ -161,6 +196,12 @@ function ImageBlock({
       <div className="mb-2 flex items-start justify-between gap-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
         <div className="flex items-center gap-3">
+          {onReplace ? (
+            <label className="cursor-pointer text-xs font-semibold text-button-blue hover:underline">
+              Replace
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onReplace(f); e.currentTarget.value = ""; }} />
+            </label>
+          ) : null}
           {onDelete ? (
             <button type="button" onClick={onDelete} className="text-xs font-semibold text-danger hover:underline">Delete</button>
           ) : null}
@@ -194,6 +235,7 @@ function SelectionImageBlock({
   emptyLabel = "-",
   onPreview,
   control,
+  onDelete,
 }: {
   label: string;
   imageUrl?: string | null;
@@ -201,6 +243,7 @@ function SelectionImageBlock({
   emptyLabel?: string;
   onPreview: (label: string, url: string) => void;
   control?: ReactNode;
+  onDelete?: () => void;
 }) {
   const name = caption?.trim() ?? "";
   if (!imageUrl && !name) {
@@ -215,7 +258,7 @@ function SelectionImageBlock({
     );
   }
   if (!imageUrl) {
-    return <InfoRow label={label} value={name} control={control} />;
+    return <InfoRow label={label} value={name} control={control} onDeleteValue={onDelete} />;
   }
   return (
     <ImageBlock
@@ -224,6 +267,7 @@ function SelectionImageBlock({
       caption={name || undefined}
       onPreview={onPreview}
       control={control}
+      onDelete={onDelete}
     />
   );
 }
@@ -295,12 +339,16 @@ function OrganizationSelectionBlocks({
   modelControl,
   tagsControl,
   templateControl,
+  onModelDelete,
+  onTemplateDelete,
 }: {
   org: OrganizationSelections;
   onPreview: (label: string, url: string) => void;
   modelControl?: ReactNode;
   tagsControl?: ReactNode;
   templateControl?: ReactNode;
+  onModelDelete?: () => void;
+  onTemplateDelete?: () => void;
 }) {
   return (
     <>
@@ -310,6 +358,7 @@ function OrganizationSelectionBlocks({
         caption={org.model}
         onPreview={onPreview}
         control={modelControl}
+        onDelete={onModelDelete}
       />
       <TagSelectionsBlock items={org.tag_items} onPreview={onPreview} control={tagsControl} />
       <SelectionImageBlock
@@ -318,6 +367,7 @@ function OrganizationSelectionBlocks({
         caption={org.template_name}
         onPreview={onPreview}
         control={templateControl}
+        onDelete={onTemplateDelete}
       />
     </>
   );
@@ -330,9 +380,22 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
   const orgId = searchParams.get(isOrganization ? "organizationId" : isInstitute ? "instituteId" : "schoolId") ?? "";
   const orgName = searchParams.get(isOrganization ? "organizationName" : isInstitute ? "instituteName" : "schoolName") ?? "";
   const kindPath = isOrganization ? "organizations" : isInstitute ? "institutes" : "schools";
+  async function reloadInfo() {
+    if (!orgId) return;
+    try {
+      const path = isOrganization ? `/admin/organizations/${orgId}/organization-info` : isInstitute
+        ? `/admin/institutes/${orgId}/organization-info`
+        : `/admin/schools/${orgId}/organization-info`;
+      const { data } = await api.get<{ organization: SchoolOrganization | InstituteOrganization }>(path);
+      if (isInstitute) setInstitute(data.organization as InstituteOrganization);
+      else setSchool(data.organization as SchoolOrganization);
+    } catch {
+      /* ignore */
+    }
+  }
   async function deleteOrgImage(type: "logo" | "signature" | "organization") {
     if (!orgId) return;
-    if (!window.confirm("Delete this image? You can re-upload it from the Edit page.")) return;
+    if (!window.confirm("Delete this image?")) return;
     try {
       await api.delete(`/admin/org-image/${kindPath}/${orgId}/${type}`);
       const col = type === "logo" ? "logo_url" : type === "signature" ? "signature_url" : "organization_photo_url";
@@ -340,6 +403,26 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
       else setSchool((p) => (p ? { ...p, [col]: null } : p));
     } catch {
       /* ignore */
+    }
+  }
+  async function replaceOrgImage(type: "logo" | "signature" | "organization", file: File) {
+    if (!orgId) return;
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      await api.post(`/admin/org-image/${kindPath}/${orgId}/${type}`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+      await reloadInfo();
+    } catch {
+      setError("Could not upload the image.");
+    }
+  }
+  async function saveDetailField(field: string, value: string | null) {
+    if (!orgId) return;
+    try {
+      await api.patch(`/admin/org-detail/${kindPath}/${orgId}`, { field, value });
+      await reloadInfo();
+    } catch {
+      setError("Could not save this field.");
     }
   }
 
@@ -469,19 +552,9 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
 
   return (
     <div className="centered-page-shell org-info-page">
-      <div className="flex items-center justify-between gap-3">
-        <HeaderBack to={backHref}>
-          ← Back
-        </HeaderBack>
-        {!isOrganization && orgId ? (
-          <Link
-            to={isInstitute ? `/institutes/${orgId}/edit` : `/schools/${orgId}/edit`}
-            className="btn-secondary text-sm"
-          >
-            Edit details
-          </Link>
-        ) : null}
-      </div>
+      <HeaderBack to={backHref}>
+        ← Back
+      </HeaderBack>
 
       {error && <div className="w-full alert-error">{error}</div>}
 
@@ -505,27 +578,30 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
                   </div>
                 }
               />
-              <InfoRow label="Year" value={institute.year} control={detailSwitch("detail_year")} />
-              <InfoRow label="Phone" secret="phone number" value={institute.phone} control={detailSwitch("detail_phone")} />
-              <InfoRow label="Secondary Phone" secret="phone number" value={institute.phone2} control={detailSwitch("detail_phone2")} />
-              <InfoRow label="Institute Code" value={institute.institute_code} control={detailSwitch("detail_code")} />
-              <InfoRow label="Address" value={institute.address} control={detailSwitch("detail_address")} />
-              <InfoRow label="Instructions" value={institute.instructions} control={detailSwitch("detail_instructions")} />
+              <InfoRow label="Year" value={institute.year} control={detailSwitch("detail_year")} onSaveValue={(v) => void saveDetailField("year", v)} onDeleteValue={() => void saveDetailField("year", null)} />
+              <InfoRow label="Phone" secret="phone number" value={institute.phone} control={detailSwitch("detail_phone")} onSaveValue={(v) => void saveDetailField("phone", v)} onDeleteValue={() => void saveDetailField("phone", null)} />
+              <InfoRow label="Secondary Phone" secret="phone number" value={institute.phone2} control={detailSwitch("detail_phone2")} onSaveValue={(v) => void saveDetailField("phone2", v)} onDeleteValue={() => void saveDetailField("phone2", null)} />
+              <InfoRow label="Institute Code" value={institute.institute_code} control={detailSwitch("detail_code")} onSaveValue={(v) => void saveDetailField("code", v)} onDeleteValue={() => void saveDetailField("code", null)} />
+              <InfoRow label="Address" value={institute.address} control={detailSwitch("detail_address")} onSaveValue={(v) => void saveDetailField("address", v)} onDeleteValue={() => void saveDetailField("address", null)} multiline />
+              <InfoRow label="Instructions" value={institute.instructions} control={detailSwitch("detail_instructions")} onSaveValue={(v) => void saveDetailField("instructions", v)} onDeleteValue={() => void saveDetailField("instructions", null)} multiline />
               <OrganizationSelectionBlocks
                 org={institute}
                 onPreview={(l, u) => setPreview({ label: l, url: u })}
                 modelControl={detailSwitch("detail_model")}
                 tagsControl={detailSwitch("detail_tags")}
                 templateControl={detailSwitch("detail_template")}
+                onModelDelete={() => void saveDetailField("model", null)}
+                onTemplateDelete={() => void saveDetailField("template", null)}
               />
-              <ImageBlock label="Logo" url={institute.logo_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_logo")} onDelete={() => void deleteOrgImage("logo")} />
-              <ImageBlock label="Signature" url={institute.signature_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_signature")} onDelete={() => void deleteOrgImage("signature")} />
+              <ImageBlock label="Logo" url={institute.logo_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_logo")} onDelete={() => void deleteOrgImage("logo")} onReplace={(f) => void replaceOrgImage("logo", f)} />
+              <ImageBlock label="Signature" url={institute.signature_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_signature")} onDelete={() => void deleteOrgImage("signature")} onReplace={(f) => void replaceOrgImage("signature", f)} />
               <ImageBlock
                 label="Building / Organization Photo"
                 url={institute.organization_photo_url}
                 onPreview={(l, u) => setPreview({ label: l, url: u })}
                 control={detailSwitch("detail_organization_photo")}
                 onDelete={() => void deleteOrgImage("organization")}
+                onReplace={(f) => void replaceOrgImage("organization", f)}
               />
             </>
           ) : null}
@@ -541,12 +617,12 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
                   </div>
                 }
               />
-              <InfoRow label="Year" value={school.year} control={detailSwitch("detail_year")} />
-              <InfoRow label="Phone" secret="phone number" value={school.phone} control={detailSwitch("detail_phone")} />
-              <InfoRow label="Secondary Phone" secret="phone number" value={school.phone2} control={detailSwitch("detail_phone2")} />
-              <InfoRow label={isOrganization ? "Organization Code" : "School Code"} value={school.school_code} control={detailSwitch("detail_code")} />
-              <InfoRow label="Address" value={school.address} control={detailSwitch("detail_address")} />
-              <InfoRow label="Instructions" value={school.instructions} control={detailSwitch("detail_instructions")} />
+              <InfoRow label="Year" value={school.year} control={detailSwitch("detail_year")} onSaveValue={(v) => void saveDetailField("year", v)} onDeleteValue={() => void saveDetailField("year", null)} />
+              <InfoRow label="Phone" secret="phone number" value={school.phone} control={detailSwitch("detail_phone")} onSaveValue={(v) => void saveDetailField("phone", v)} onDeleteValue={() => void saveDetailField("phone", null)} />
+              <InfoRow label="Secondary Phone" secret="phone number" value={school.phone2} control={detailSwitch("detail_phone2")} onSaveValue={(v) => void saveDetailField("phone2", v)} onDeleteValue={() => void saveDetailField("phone2", null)} />
+              <InfoRow label={isOrganization ? "Organization Code" : "School Code"} value={school.school_code} control={detailSwitch("detail_code")} onSaveValue={(v) => void saveDetailField("code", v)} onDeleteValue={() => void saveDetailField("code", null)} />
+              <InfoRow label="Address" value={school.address} control={detailSwitch("detail_address")} onSaveValue={(v) => void saveDetailField("address", v)} onDeleteValue={() => void saveDetailField("address", null)} multiline />
+              <InfoRow label="Instructions" value={school.instructions} control={detailSwitch("detail_instructions")} onSaveValue={(v) => void saveDetailField("instructions", v)} onDeleteValue={() => void saveDetailField("instructions", null)} multiline />
               <>
               <OrganizationSelectionBlocks
                 org={school}
@@ -554,15 +630,18 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
                 modelControl={detailSwitch("detail_model")}
                 tagsControl={detailSwitch("detail_tags")}
                 templateControl={detailSwitch("detail_template")}
+                onModelDelete={() => void saveDetailField("model", null)}
+                onTemplateDelete={() => void saveDetailField("template", null)}
               />
-              <ImageBlock label="Logo" url={school.logo_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_logo")} onDelete={() => void deleteOrgImage("logo")} />
-              <ImageBlock label="Signature" url={school.signature_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_signature")} onDelete={() => void deleteOrgImage("signature")} />
+              <ImageBlock label="Logo" url={school.logo_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_logo")} onDelete={() => void deleteOrgImage("logo")} onReplace={(f) => void replaceOrgImage("logo", f)} />
+              <ImageBlock label="Signature" url={school.signature_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_signature")} onDelete={() => void deleteOrgImage("signature")} onReplace={(f) => void replaceOrgImage("signature", f)} />
               <ImageBlock
                 label="Building / Organization Photo"
                 url={school.organization_photo_url}
                 onPreview={(l, u) => setPreview({ label: l, url: u })}
                 control={detailSwitch("detail_organization_photo")}
                 onDelete={() => void deleteOrgImage("organization")}
+                onReplace={(f) => void replaceOrgImage("organization", f)}
               />
               </>
             </>
