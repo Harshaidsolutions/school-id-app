@@ -579,14 +579,12 @@ export function DynamicStudentFieldList({
                 style={inputStyle}
                 value={parentPhone}
                 onChangeText={(text) => {
-                  if (parentPhoneTenDigits) {
-                    onParentPhoneChange(text.replace(/\D/g, "").slice(0, 10));
-                    return;
-                  }
-                  onParentPhoneChange(text);
+                  // Digits only; if a country code / +91 is included, keep the last 10.
+                  const d = text.replace(/\D/g, "");
+                  onParentPhoneChange(d.length > 10 ? d.slice(-10) : d);
                 }}
                 keyboardType="phone-pad"
-                maxLength={parentPhoneTenDigits ? 10 : undefined}
+                maxLength={13}
                 placeholderTextColor={colors.textSubtle}
                 {...focus}
               />

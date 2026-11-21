@@ -219,11 +219,15 @@ export function AddStudentForm({
       setError("Class / Section is required.");
       return;
     }
-    const phone = String(payload.parent_phone ?? parentPhone).trim();
-    if (phone && !/^\d+$/.test(phone)) {
-      setError("Parent phone must be numeric.");
+    // Accept numbers typed with +91, spaces or a country code: keep the last 10
+    // digits and save when exactly 10 remain.
+    let phone = String(payload.parent_phone ?? parentPhone).replace(/\D/g, "");
+    if (phone.length > 10) phone = phone.slice(-10);
+    if (phone && phone.length !== 10) {
+      setError("Phone number must be 10 digits.");
       return;
     }
+    payload.parent_phone = phone || null;
 
     // Required fields the admin configured must be filled before submit (point 4).
     const valueForField = (f: (typeof displayFields)[number]): string => {
