@@ -251,6 +251,18 @@ export function EditStudentModal({
     const label = field.label;
     const key = field.key;
 
+    if (field.fieldType === "dropdown" && (field.options?.length ?? 0) > 0 && key !== "class_section" && key !== "student_name") {
+      return (
+        <label key={key} className="block text-sm">
+          <span className="mb-1 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
+          <select required={field.required !== false} value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field">
+            <option value="">{`Select ${label}`}</option>
+            {(field.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </label>
+      );
+    }
+
     if (isClassField(field)) {
       return (
         <label key={key} className="block text-sm">
@@ -283,7 +295,7 @@ export function EditStudentModal({
       );
     }
 
-    if (key === "gender") {
+    if (key === "gender" && field.fieldType !== "text") {
       return (
         <label key={key} className="block text-sm">
           <span className="mb-1 block font-medium text-text-navy">{label}</span>
@@ -297,7 +309,7 @@ export function EditStudentModal({
       );
     }
 
-    if (key === "blood_group") {
+    if (key === "blood_group" && field.fieldType !== "text") {
       return (
         <label key={key} className="block text-sm">
           <span className="mb-1 block font-medium text-text-navy">{label}</span>

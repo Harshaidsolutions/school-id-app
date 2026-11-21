@@ -280,8 +280,8 @@ export function RecordFormSheet({
                   <Field key={f.key} label={f.label} required value={val(f.key)} onChangeText={(t) => set(f.key, t)} />
                 );
               }
-              if (f.key === "gender") return <Select key={f.key} label={f.label} value={val(f.key)} onChange={(v) => set(f.key, v)} options={GENDERS.map((g) => ({ value: g, label: g }))} placeholder="Select gender" />;
-              if (f.key === "blood_group") return <Select key={f.key} label={f.label} value={val(f.key)} onChange={(v) => set(f.key, v)} options={BLOOD.map((g) => ({ value: g, label: g }))} placeholder="Select blood group" />;
+              if (f.key === "gender" && f.fieldType !== "dropdown" && f.fieldType !== "text") return <Select key={f.key} label={f.label} value={val(f.key)} onChange={(v) => set(f.key, v)} options={GENDERS.map((g) => ({ value: g, label: g }))} placeholder="Select gender" />;
+              if (f.key === "blood_group" && f.fieldType !== "dropdown" && f.fieldType !== "text") return <Select key={f.key} label={f.label} value={val(f.key)} onChange={(v) => set(f.key, v)} options={BLOOD.map((g) => ({ value: g, label: g }))} placeholder="Select blood group" />;
               if (f.key === "dob") return <DateField key={f.key} label={f.label} value={val(f.key)} onChange={(v) => set(f.key, v)} />;
               if (f.key === "address") return <Field key={f.key} label={f.label} value={val(f.key)} onChangeText={(t) => set(f.key, t)} multiline />;
               if (f.fieldType === "dropdown" && (f.options?.length ?? 0) > 0) {
