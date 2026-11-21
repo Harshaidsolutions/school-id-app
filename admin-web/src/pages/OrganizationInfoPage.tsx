@@ -136,12 +136,14 @@ function ImageBlock({
   caption,
   onPreview,
   control,
+  onDelete,
 }: {
   label: string;
   url: string | null | undefined;
   caption?: string | null;
   onPreview: (label: string, url: string) => void;
   control?: ReactNode;
+  onDelete?: () => void;
 }) {
   if (!url?.trim()) {
     return (
@@ -158,7 +160,12 @@ function ImageBlock({
     <div className="org-info-media border-b border-border px-5 py-4 last:border-b-0">
       <div className="mb-2 flex items-start justify-between gap-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</div>
-        {control}
+        <div className="flex items-center gap-3">
+          {onDelete ? (
+            <button type="button" onClick={onDelete} className="text-xs font-semibold text-danger hover:underline">Delete</button>
+          ) : null}
+          {control}
+        </div>
       </div>
       <button
         type="button"
@@ -322,6 +329,19 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
   const isInstitute = mode === "institute";
   const orgId = searchParams.get(isOrganization ? "organizationId" : isInstitute ? "instituteId" : "schoolId") ?? "";
   const orgName = searchParams.get(isOrganization ? "organizationName" : isInstitute ? "instituteName" : "schoolName") ?? "";
+  const kindPath = isOrganization ? "organizations" : isInstitute ? "institutes" : "schools";
+  async function deleteOrgImage(type: "logo" | "signature" | "organization") {
+    if (!orgId) return;
+    if (!window.confirm("Delete this image? You can re-upload it from the Edit page.")) return;
+    try {
+      await api.delete(`/admin/org-image/${kindPath}/${orgId}/${type}`);
+      const col = type === "logo" ? "logo_url" : type === "signature" ? "signature_url" : "organization_photo_url";
+      if (isInstitute) setInstitute((p) => (p ? { ...p, [col]: null } : p));
+      else setSchool((p) => (p ? { ...p, [col]: null } : p));
+    } catch {
+      /* ignore */
+    }
+  }
 
   const backHref = isOrganization ? `/extra-2/${encodeURIComponent(orgId)}` : isInstitute
     ? `/institute-members?instituteId=${encodeURIComponent(orgId)}${orgName ? `&instituteName=${encodeURIComponent(orgName)}` : ""}`
@@ -488,13 +508,14 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
                 tagsControl={detailSwitch("detail_tags")}
                 templateControl={detailSwitch("detail_template")}
               />
-              <ImageBlock label="Logo" url={institute.logo_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_logo")} />
-              <ImageBlock label="Signature" url={institute.signature_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_signature")} />
+              <ImageBlock label="Logo" url={institute.logo_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_logo")} onDelete={() => void deleteOrgImage("logo")} />
+              <ImageBlock label="Signature" url={institute.signature_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_signature")} onDelete={() => void deleteOrgImage("signature")} />
               <ImageBlock
                 label="Building / Organization Photo"
                 url={institute.organization_photo_url}
                 onPreview={(l, u) => setPreview({ label: l, url: u })}
                 control={detailSwitch("detail_organization_photo")}
+                onDelete={() => void deleteOrgImage("organization")}
               />
             </>
           ) : null}
@@ -524,13 +545,14 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
                 tagsControl={detailSwitch("detail_tags")}
                 templateControl={detailSwitch("detail_template")}
               />
-              <ImageBlock label="Logo" url={school.logo_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_logo")} />
-              <ImageBlock label="Signature" url={school.signature_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_signature")} />
+              <ImageBlock label="Logo" url={school.logo_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_logo")} onDelete={() => void deleteOrgImage("logo")} />
+              <ImageBlock label="Signature" url={school.signature_url} onPreview={(l, u) => setPreview({ label: l, url: u })} control={detailSwitch("detail_signature")} onDelete={() => void deleteOrgImage("signature")} />
               <ImageBlock
                 label="Building / Organization Photo"
                 url={school.organization_photo_url}
                 onPreview={(l, u) => setPreview({ label: l, url: u })}
                 control={detailSwitch("detail_organization_photo")}
+                onDelete={() => void deleteOrgImage("organization")}
               />
               </>
             </>

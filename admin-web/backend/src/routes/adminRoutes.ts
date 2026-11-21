@@ -111,6 +111,7 @@ import {
 import { getDashboardSummary } from "../controllers/dashboardController";
 import { getFormConfig, putFormConfig, syncFormConfig } from "../controllers/formConfigController";
 import {
+  clearOrganizationImage,
   getInstituteOrganizationInfo,
   getSchoolOrganizationInfo,
   updateInstituteAppSettings,
@@ -180,6 +181,7 @@ router.get('/app-instructions',instructionContent);
 router.put('/app-instructions',instructionContent);
 router.get('/selection-lock/:kind/:id',adminSelectionLock);
 router.patch('/selection-lock/:kind/:id',adminSelectionLock);
+router.delete('/org-image/:kind/:id/:type', clearOrganizationImage);
 router.get('/service-registrations',registrations);
 router.patch('/service-registrations/:id',registrations);
 router.patch('/students/visibility',setCandidateVisibility);

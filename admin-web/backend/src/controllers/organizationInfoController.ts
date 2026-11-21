@@ -230,3 +230,34 @@ export async function updateInstituteAppSettings(
     next(error);
   }
 }
+
+/** DELETE /admin/org-image/:kind/:id/:type — admin clears an org logo / signature / building photo. */
+export async function clearOrganizationImage(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const scope = await requireAdminScope(req);
+    const kind = String(req.params.kind);
+    const id = routeParam(req.params.id);
+    const type = String(req.params.type);
+    if (!id) throw new AppError("Id is required", 400);
+    const column =
+      type === "logo" ? "logo_url" :
+      type === "signature" ? "signature_url" :
+      type === "organization" ? "organization_photo_url" : null;
+    if (!column) throw new AppError("Unknown image type", 400);
+    const table =
+      kind === "schools" ? "schools" :
+      kind === "institutes" ? "institutes" :
+      kind === "organizations" ? "organizations" : null;
+    if (!table) throw new AppError("Unknown organization type", 400);
+    if (table === "schools" || table === "organizations") {
+      if (table === "organizations") await assertOrganizationOwned(scope, id);
+      else await assertSchoolOwnedByAdmin(scope, id);
+    } else {
+      await assertInstituteOwnedByAdmin(scope, id);
+    }
+    await pool.query(`UPDATE ${table} SET ${column} = NULL WHERE id = $1`, [id]);
+    res.json({ status: "ok" });
+  } catch (e) {
+    next(e);
+  }
+}
