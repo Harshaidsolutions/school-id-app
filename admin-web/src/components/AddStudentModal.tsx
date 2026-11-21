@@ -41,6 +41,7 @@ export function AddStudentModal({
   const uploadedPhoto = useRef<File | null>(null);
   const uploadedSignature = useRef<File | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [fieldImageFiles, setFieldImageFiles] = useState<Record<string, File>>({});
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
@@ -48,6 +49,7 @@ export function AddStudentModal({
   useEffect(() => {
     if (!open) return;
     createdRecord.current = null;
+    setFieldImageFiles({});
     uploadedPhoto.current = null;
     uploadedSignature.current = null;
     setValues({});
@@ -200,6 +202,22 @@ export function AddStudentModal({
             setError("Record saved, but the photo could not be uploaded.");
           }
           return;
+        }
+      }
+      for (const [fieldKey, fl] of Object.entries(fieldImageFiles)) {
+        try {
+          const imgForm = new FormData();
+          imgForm.append("image", fl);
+          imgForm.append("key", fieldKey);
+          const up = await api.post<{ student: Student }>(
+            `/admin/students/${student.id}/field-image`,
+            imgForm,
+            { headers: { "Content-Type": "multipart/form-data" } }
+          );
+          student = up.data.student ?? student;
+          createdRecord.current = student;
+        } catch {
+          /* non-fatal: the record is saved; the image can be added from Edit */
         }
       }
       onCreated(student);
@@ -367,6 +385,31 @@ export function AddStudentModal({
             {(field.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
           </select>
         </label>
+      );
+    }
+
+    if (field.fieldType === "photo" && key !== "photo_id" && key !== "signature_upload") {
+      const cur = fieldValue(key);
+      const picked = fieldImageFiles[key];
+      return (
+        <div key={key} className="block text-sm">
+          <span className="mb-1.5 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
+          {cur && !picked ? <img src={cur} alt={label} className="mb-2 h-24 w-24 rounded object-cover" /> : null}
+          <label className="relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy">
+            {picked ? picked.name : cur ? "Change image" : "Upload / choose image"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png"
+              className="absolute inset-0 cursor-pointer opacity-0"
+              onChange={(e) => {
+                const fl = e.target.files?.[0];
+                e.target.value = "";
+                if (fl) setFieldImageFiles((p) => ({ ...p, [key]: fl }));
+              }}
+            />
+          </label>
+          {picked ? <p className="mt-1 text-xs text-text-muted">Will upload when you save.</p> : null}
+        </div>
       );
     }
 

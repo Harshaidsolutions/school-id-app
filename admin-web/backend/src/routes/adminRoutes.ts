@@ -40,6 +40,7 @@ import {
   requestStudentBulkDeleteOtp,
   uploadStudentPhotoAdmin,
   uploadStudentSignatureAdmin,
+  uploadStudentFieldImageAdmin,
   listStudentsAdmin,
   listStudentsBySchool,
   requestSchoolExcelDeleteOtp,
@@ -322,6 +323,11 @@ router.post(
   "/students/:id/signature",
   uploadStudentPhoto.single("signature"),
   uploadStudentSignatureAdmin
+);
+router.post(
+  "/students/:id/field-image",
+  uploadStudentPhoto.single("image"),
+  uploadStudentFieldImageAdmin
 );
 router.delete("/students/:id/photo", deleteStudentPhotoAdmin);
 router.delete("/students/:id/signature", deleteStudentSignatureAdmin);

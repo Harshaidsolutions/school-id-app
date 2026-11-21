@@ -45,6 +45,7 @@ export function EditStudentModal({
   const [photoPreview, setPhotoPreview] = useState<string | null>(student.photo_url);
   const [signaturePreview, setSignaturePreview] = useState<string | null>(student.signature_url ?? null);
   const [uploadingSignature, setUploadingSignature] = useState(false);
+  const [fieldImageBusyKey, setFieldImageBusyKey] = useState<string | null>(null);
 
   useEffect(() => {
     const next: Record<string, string> = {
@@ -247,6 +248,33 @@ export function EditStudentModal({
     new Set([fieldValue("class_section"), ...classOptions].filter(Boolean))
   ).sort();
 
+  async function handleFieldImageChange(key: string, event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!["image/jpeg", "image/png"].includes(file.type) || file.size > 10 * 1024 * 1024) {
+      setError("Choose a JPG or PNG image under 10MB.");
+      return;
+    }
+    setFieldImageBusyKey(key);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append("image", file);
+      form.append("key", key);
+      const { data } = await api.post<{ url?: string; student?: { extra_fields?: Record<string, unknown> } }>(
+        `/admin/students/${student.id}/field-image`,
+        form
+      );
+      const url = data?.url || (data?.student?.extra_fields?.[key] as string | undefined);
+      if (url) setField(key, url);
+    } catch {
+      setError("Failed to upload image.");
+    } finally {
+      setFieldImageBusyKey(null);
+    }
+  }
+
   function renderField(field: FormFieldConfig) {
     const label = field.label;
     const key = field.key;
@@ -382,6 +410,26 @@ export function EditStudentModal({
           <span className="mb-1 block font-medium text-text-navy">{label} <span className="text-xs font-normal text-text-muted">(cannot be changed)</span></span>
           <input value={fieldValue(key)} readOnly disabled className="input-field cursor-not-allowed bg-content-bg text-text-muted" />
         </label>
+      );
+    }
+
+    if (field.fieldType === "photo" && key !== "photo_id" && key !== numberField?.key && key !== "signature_upload") {
+      const cur = fieldValue(key);
+      return (
+        <div key={key} className="block text-sm">
+          <span className="mb-1 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
+          {cur ? <img src={cur} alt={label} className="mb-2 h-24 w-24 rounded object-cover" /> : null}
+          <label className="relative flex h-10 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-white px-3 text-sm font-semibold text-text-navy">
+            {fieldImageBusyKey === key ? "Uploading…" : cur ? "Change image" : "Upload / choose image"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png"
+              className="absolute inset-0 cursor-pointer opacity-0"
+              disabled={fieldImageBusyKey === key}
+              onChange={(e) => void handleFieldImageChange(key, e)}
+            />
+          </label>
+        </div>
       );
     }
 

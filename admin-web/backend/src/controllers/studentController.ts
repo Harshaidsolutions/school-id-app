@@ -9,6 +9,7 @@ import {
   deleteStudentPhotoFromStorage,
   uploadMemberSignatureToStorage,
   uploadStudentPhotoToStorage,
+  uploadStudentFieldImageToStorage,
 } from "../config/storage";
 import {
   parseStudentExcel,
@@ -1080,6 +1081,49 @@ export async function uploadStudentPhotoAdmin(
     } finally {
       client.release();
     }
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** POST /admin/students/:id/field-image — image for an arbitrary Image/Photo field */
+export async function uploadStudentFieldImageAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) throw new AppError("Authentication required", 401);
+    const studentId = routeParam(req.params.id);
+    if (!studentId) throw new AppError("Student id is required", 400);
+    const fieldKey = typeof req.body?.key === "string" ? req.body.key.trim() : "";
+    if (!fieldKey) throw new AppError("Field key is required", 400);
+    if (!req.file) throw new AppError("Image file is required (field name: image)", 400);
+
+    const scope = await requireAdminScope(req);
+    const studentResult = await pool.query<Student>(
+      `SELECT ${STUDENT_SELECT} FROM students WHERE id = $1 LIMIT 1`,
+      [studentId]
+    );
+    const student = studentResult.rows[0];
+    if (!student) throw new AppError("Student not found", 404);
+    await assertStudentOwnedByAdmin(scope, student);
+    const orgId = student.school_id ?? student.institute_id;
+    if (!orgId) throw new AppError("Student is not assigned to an organization", 400);
+
+    const stored = await uploadStudentFieldImageToStorage(orgId, student.id, fieldKey, req.file);
+    const url = `${stored}?v=${Date.now()}`;
+    const updated = await pool.query<Student>(
+      `UPDATE students
+       SET extra_fields = COALESCE(extra_fields, '{}'::jsonb) || jsonb_build_object($1::text, $2::text),
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING ${STUDENT_SELECT}`,
+      [fieldKey, url, studentId]
+    );
+    const row = updated.rows[0];
+    if (!row) throw new AppError("Failed to save image", 500);
+    res.status(200).json({ status: "ok", url, student: row });
   } catch (error) {
     next(error);
   }
