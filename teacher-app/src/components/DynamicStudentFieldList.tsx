@@ -296,7 +296,8 @@ export function DynamicStudentFieldList({
         if (
           field.fieldType === "dropdown" &&
           (field.options?.length ?? 0) > 0 &&
-          (kind === "generic" || /^fld_\d+$/.test(field.key) || field.key.startsWith("dyn_"))
+          kind !== "student_name" &&
+          kind !== "class_section"
         ) {
           const current = extraValues[field.key] ?? "";
           return (
@@ -425,6 +426,13 @@ export function DynamicStudentFieldList({
         }
 
         if (kind === "gender") {
+          if (field.fieldType === "text") {
+            return (
+              <Field key={field.key} label={label} colors={colors}>
+                <TextInput style={inputStyle} value={gender} onChangeText={onGenderChange} placeholderTextColor={colors.textSubtle} {...focus} />
+              </Field>
+            );
+          }
           return (
             <StudentGenderField
               key={field.key}
@@ -438,6 +446,13 @@ export function DynamicStudentFieldList({
         }
 
         if (kind === "blood_group") {
+          if (field.fieldType === "text") {
+            return (
+              <Field key={field.key} label={label} colors={colors}>
+                <TextInput style={inputStyle} value={bloodGroup} onChangeText={onBloodGroupChange} placeholderTextColor={colors.textSubtle} {...focus} />
+              </Field>
+            );
+          }
           return (
             <StudentBloodGroupField
               key={field.key}

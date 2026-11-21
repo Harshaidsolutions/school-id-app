@@ -443,9 +443,17 @@ export function TemplateScreen() {
         />
       </View>
 
-      <SelectionLockBanner lock={selectionLock} />
-
-      {loading && templates.length === 0 ? (
+      {selectionLock.blockedMessage ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 }}>
+          <Ionicons name="lock-closed" size={40} color={colors.textMuted} />
+          <Text style={{ fontFamily: fonts.bodyMedium, fontSize: 15, lineHeight: 22, color: colors.text, textAlign: "center" }}>
+            {selectionLock.blockedMessage}
+          </Text>
+          <Text style={{ fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textMuted, textAlign: "center" }}>
+            Please contact your admin.
+          </Text>
+        </View>
+      ) : loading && templates.length === 0 ? (
         <LoadingBlock label="Loading templates…" />
       ) : error && templates.length === 0 ? (
         <ErrorRetry message={error} onRetry={() => void load()} />

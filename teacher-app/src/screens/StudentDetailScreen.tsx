@@ -3,7 +3,10 @@ import { GeneratedIdCard } from "../components/GeneratedIdCard";
 import { ScreenBackdrop } from "../components/ScreenBackdrop";
 import { contentMaxStyle } from "../theme/responsive";
 import { Pressable } from "../components/Pressable";
+import { useCallback, useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import api from "../api/client";
 
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
@@ -86,7 +89,20 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
   const { colors } = useTheme();
 
-  const { student, classSection } = route.params;
+  const { classSection } = route.params;
+  const [student, setStudent] = useState(route.params.student);
+
+  // Always show the latest server copy (photo, signature, generated card, fields).
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      void api
+        .get<{ student: typeof route.params.student }>(`/teacher/students/${route.params.student.id}`)
+        .then((r) => { if (alive && r.data?.student) setStudent(r.data.student); })
+        .catch(() => undefined);
+      return () => { alive = false; };
+    }, [route.params.student.id])
+  );
 
   const hasPhoto = Boolean(student.photo_url);
   const { fields: formFields, allowNumberEdit, allowRecordEdit } = useFormConfig();

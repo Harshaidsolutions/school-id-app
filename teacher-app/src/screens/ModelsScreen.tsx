@@ -303,8 +303,17 @@ export function ModelsScreen() {
         </View>
       </View>
 
-      <SelectionLockBanner lock={selectionLock} />
-
+      {selectionLock.blockedMessage ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 }}>
+          <Ionicons name="lock-closed" size={40} color={colors.textMuted} />
+          <Text style={{ fontFamily: fonts.bodyMedium, fontSize: 15, lineHeight: 22, color: colors.text, textAlign: "center" }}>
+            {selectionLock.blockedMessage}
+          </Text>
+          <Text style={{ fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textMuted, textAlign: "center" }}>
+            Please contact your admin.
+          </Text>
+        </View>
+      ) : (
       <FlatList
         key={`${modelTab}-${modelCols}`}
         ref={listRef}
@@ -494,6 +503,7 @@ export function ModelsScreen() {
           );
         }}
       />
+      )}
 
       <FullScreenImageViewer
         visible={previewIndex !== null}
