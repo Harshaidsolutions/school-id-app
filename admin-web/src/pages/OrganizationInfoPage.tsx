@@ -1,6 +1,6 @@
 import { HeaderBack } from "../components/HeaderBack";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
 import { ImagePreviewModal } from "../components/ImagePreviewModal";
@@ -469,9 +469,19 @@ export function OrganizationInfoPage({ mode = "school" }: { mode?: "school" | "i
 
   return (
     <div className="centered-page-shell org-info-page">
-      <HeaderBack to={backHref}>
-        ← Back
-      </HeaderBack>
+      <div className="flex items-center justify-between gap-3">
+        <HeaderBack to={backHref}>
+          ← Back
+        </HeaderBack>
+        {!isOrganization && orgId ? (
+          <Link
+            to={isInstitute ? `/institutes/${orgId}/edit` : `/schools/${orgId}/edit`}
+            className="btn-secondary text-sm"
+          >
+            Edit details
+          </Link>
+        ) : null}
+      </div>
 
       {error && <div className="w-full alert-error">{error}</div>}
 
