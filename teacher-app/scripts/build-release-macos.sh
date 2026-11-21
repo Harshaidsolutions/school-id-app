@@ -23,10 +23,14 @@ trap 'unset SCHOOL_ID_STORE_PASSWORD SCHOOL_ID_KEY_PASSWORD' EXIT
 npm ci
 npm run assets:generate
 npm run assets:verify
-if [[ ! -f android/gradlew ]]; then
-  # Generates native folders on a fresh Git clone; never --clean an existing native project.
-  npx expo prebuild --platform android --no-install
-fi
+# Always regenerate the native Android project so newly added native modules
+# (e.g. expo-video for the in-app model video player) get autolinked. Skipping
+# this when android/ already existed left old builds without the module, which
+# crashed the app to the home screen the moment a video was tapped.
+# Safe to --clean here: android/ is gitignored, release signing is injected at
+# Gradle time (below), google-services.json is copied via app.json
+# googleServicesFile, and android:network re-applies the release network config.
+npx expo prebuild --platform android --clean --no-install
 node scripts/verify-push-config.cjs
 node scripts/sync-release-version.mjs
 npm run android:network
