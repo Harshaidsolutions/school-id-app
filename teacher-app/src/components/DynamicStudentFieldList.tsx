@@ -426,42 +426,42 @@ export function DynamicStudentFieldList({
         }
 
         if (kind === "gender") {
-          if (field.fieldType === "text") {
+          if (field.fieldType === "dropdown") {
             return (
-              <Field key={field.key} label={label} colors={colors}>
-                <TextInput style={inputStyle} value={gender} onChangeText={onGenderChange} placeholderTextColor={colors.textSubtle} {...focus} />
-              </Field>
+              <StudentGenderField
+                key={field.key}
+                label={label}
+                colors={colors}
+                inputStyle={inputStyle}
+                value={gender}
+                onChange={onGenderChange}
+              />
             );
           }
           return (
-            <StudentGenderField
-              key={field.key}
-              label={label}
-              colors={colors}
-              inputStyle={inputStyle}
-              value={gender}
-              onChange={onGenderChange}
-            />
+            <Field key={field.key} label={label} colors={colors}>
+              <TextInput style={inputStyle} value={gender} onChangeText={onGenderChange} placeholderTextColor={colors.textSubtle} {...focus} />
+            </Field>
           );
         }
 
         if (kind === "blood_group") {
-          if (field.fieldType === "text") {
+          if (field.fieldType === "dropdown") {
             return (
-              <Field key={field.key} label={label} colors={colors}>
-                <TextInput style={inputStyle} value={bloodGroup} onChangeText={onBloodGroupChange} placeholderTextColor={colors.textSubtle} {...focus} />
-              </Field>
+              <StudentBloodGroupField
+                key={field.key}
+                label={label}
+                colors={colors}
+                inputStyle={inputStyle}
+                value={bloodGroup}
+                onChange={onBloodGroupChange}
+              />
             );
           }
           return (
-            <StudentBloodGroupField
-              key={field.key}
-              label={label}
-              colors={colors}
-              inputStyle={inputStyle}
-              value={bloodGroup}
-              onChange={onBloodGroupChange}
-            />
+            <Field key={field.key} label={label} colors={colors}>
+              <TextInput style={inputStyle} value={bloodGroup} onChangeText={onBloodGroupChange} placeholderTextColor={colors.textSubtle} {...focus} />
+            </Field>
           );
         }
 

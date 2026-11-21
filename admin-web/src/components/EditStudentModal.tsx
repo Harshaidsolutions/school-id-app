@@ -295,7 +295,7 @@ export function EditStudentModal({
       );
     }
 
-    if (key === "gender" && field.fieldType !== "text") {
+    if (key === "gender" && field.fieldType === "dropdown") {
       return (
         <label key={key} className="block text-sm">
           <span className="mb-1 block font-medium text-text-navy">{label}</span>
@@ -309,7 +309,7 @@ export function EditStudentModal({
       );
     }
 
-    if (key === "blood_group" && field.fieldType !== "text") {
+    if (key === "blood_group" && field.fieldType === "dropdown") {
       return (
         <label key={key} className="block text-sm">
           <span className="mb-1 block font-medium text-text-navy">{label}</span>

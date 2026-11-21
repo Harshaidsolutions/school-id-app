@@ -249,7 +249,7 @@ export function AddStudentModal({
       );
     }
 
-    if (key === "gender") {
+    if (key === "gender" && field.fieldType === "dropdown" && (field.options?.length ?? 0) === 0) {
       return (
         <label key={key} className="block text-sm">
           <span className="mb-1.5 block font-medium text-text-navy">{label}</span>
@@ -265,7 +265,7 @@ export function AddStudentModal({
       );
     }
 
-    if (key === "blood_group") {
+    if (key === "blood_group" && field.fieldType === "dropdown" && (field.options?.length ?? 0) === 0) {
       return (
         <label key={key} className="block text-sm">
           <span className="mb-1.5 block font-medium text-text-navy">{label}</span>
