@@ -75,9 +75,14 @@ export function initialExtraValuesFromStudent(
   for (const field of sortFormFields(formFields)) {
     if (!field.enabled) continue;
     if (resolveFieldKind(field) === "photo" && !isIdentityAliasLabel(field.label)) continue;
-    if (/^fld_\d+$/.test(field.key) || field.key.startsWith("dyn_")) {
-      const v = studentFieldValueForForm(student, field, student.class_section ?? undefined);
-      if (v.trim()) out[field.key] = v.trim();
+    // Resolve every field through the canonical-aware resolver so a value stored
+    // on a student column (e.g. address) shows up even when the field key is a
+    // plain name rather than an Excel key. Previously plain keys read only from
+    // extra_fields, so Address/other canonical fields loaded blank on Edit and
+    // could then be saved empty. extra/dynamic fields are kept as a fallback.
+    const resolved = studentFieldValueForForm(student, field, student.class_section ?? undefined);
+    if (resolved.trim()) {
+      out[field.key] = resolved.trim();
       continue;
     }
     const direct = merged[field.key];
