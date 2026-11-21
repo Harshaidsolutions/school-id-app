@@ -275,7 +275,7 @@ function PageSteps({ active, width }: { active: boolean; width: number }) {
       <Reveal active={active} style={{ alignItems: "center" }}>
         <Eyebrow text="How it works" />
         <Text style={st.headline}>
-          <Text style={{ color: "#6A2C9E" }}>Enter.</Text> <Text style={{ color: "#1EA0E1" }}>Capture.</Text> <Text style={{ color: "#16A34A" }}>Submit.</Text>
+          <Text style={{ color: "#6A2C9E" }}>Enter</Text> <Text style={{ color: INK }}>-</Text> <Text style={{ color: "#1EA0E1" }}>Capture</Text> <Text style={{ color: INK }}>-</Text> <Text style={{ color: "#16A34A" }}>Submit</Text>
         </Text>
       </Reveal>
 
