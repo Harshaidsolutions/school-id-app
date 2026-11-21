@@ -67,7 +67,7 @@ export function useFormConfig(options?: { refreshOnFocus?: boolean }) {
     void reload(false);
     const timer = setInterval(() => {
       if (AppState.currentState === "active") void reload(true);
-    }, 5000);
+    }, 2000);
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") void reload(true);
     });
