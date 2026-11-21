@@ -83,6 +83,7 @@ export function RecordFormSheet({
   const [values, setValues] = useState<Record<string, string>>({});
   const [photo, setPhoto] = useState<PickedFile | null>(null);
   const [signature, setSignature] = useState<PickedFile | null>(null);
+  const [fieldImageFiles, setFieldImageFiles] = useState<Record<string, PickedFile>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const isNew = !record;
@@ -97,6 +98,7 @@ export function RecordFormSheet({
     if (!visible) return;
     setPhoto(null);
     setSignature(null);
+    setFieldImageFiles({});
     setError(null);
     if (!record) {
       setValues({});
@@ -136,6 +138,13 @@ export function RecordFormSheet({
       const form = new FormData();
       form.append("photo", asFormFile(photo));
       latest = (await api.post<{ student: Student }>(`/admin/students/${id}/photo`, form)).data.student;
+    }
+    for (const [key, fl] of Object.entries(fieldImageFiles)) {
+      if (!fl) continue;
+      const form = new FormData();
+      form.append("image", asFormFile(fl));
+      form.append("key", key);
+      latest = (await api.post<{ student: Student }>(`/admin/students/${id}/field-image`, form)).data.student;
     }
     return latest;
   }
@@ -294,6 +303,20 @@ export function RecordFormSheet({
                     onChange={(v) => set(f.key, v)}
                     options={(f.options ?? []).map((o) => ({ value: o, label: o }))}
                     placeholder={`Select ${f.label}`}
+                  />
+                );
+              }
+              if (f.fieldType === "photo" && f.key !== "photo_id" && f.key !== "signature_upload" && !isIdentity(f)) {
+                const existing = typeof record?.extra_fields?.[f.key] === "string" ? (record!.extra_fields![f.key] as string) : null;
+                return (
+                  <PhotoPick
+                    key={f.key}
+                    label={f.label}
+                    wide
+                    value={fieldImageFiles[f.key] ?? null}
+                    onChange={(pf) => setFieldImageFiles((p) => ({ ...p, [f.key]: pf as PickedFile }))}
+                    current={existing ? { uri: existing } : null}
+                    hint="Upload or capture an image for this field."
                   />
                 );
               }
