@@ -531,12 +531,16 @@ export async function uploadManagedAdminPhoto(
     if (!file) throw new AppError("Photo file is required", 400);
 
     const ext = file.mimetype === "image/png" ? "png" : "jpg";
-    const photoUrl = await uploadBufferToBucket(
+    const uploadedUrl = await uploadBufferToBucket(
       SCHOOL_ASSETS_BUCKET,
       `admin-users/${id}/photo.${ext}`,
       file.buffer,
       file.mimetype
     );
+    // The storage key is stable, so re-uploads would otherwise serve a cached
+    // old image. Version the stored URL so every re-upload is a fresh URL
+    // everywhere it is shown (admin web, admin app, teacher app hero).
+    const photoUrl = `${uploadedUrl}${uploadedUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
     const updated = await pool.query(
       `UPDATE users SET photo_url = $2 WHERE id = $1 AND role = 'admin'
        RETURNING id, email, username, display_name, phone, photo_url`,
