@@ -209,17 +209,21 @@ function SortableFieldRow({
           </div>
         )}
       </div>
-      {onConfigure ? <div className="flex items-center gap-3">
-        <select aria-label={`${field.label} type`} className="input-field w-auto" value={field.key === "signature_upload" ? "photo" : (field.fieldType ?? "text")} disabled={Boolean(field.organizationFieldId) || field.key === "photo_id" || field.key === "signature_upload"} onChange={e => onConfigure(rowId, {fieldType:e.target.value as "text"|"photo"|"dropdown"})}><option value="text">Text / Data</option><option value="photo">Image / Photo</option><option value="dropdown">Dropdown</option></select>
-        <select aria-label={`${field.label} requirement`} className="input-field w-auto" value={field.required !== false ? "required" : "optional"} onChange={e => onConfigure(rowId, { required: e.target.value === "required" })}><option value="required">Required</option><option value="optional">Optional</option></select>
-        {field.fieldType === "dropdown" ? <DropdownOptionsEditor options={field.options ?? []} onChange={(next) => onConfigure(rowId, { options: next })} /> : null}
-        {field.fieldType === "dropdown" ? <label className="flex items-center gap-1.5 text-xs font-medium text-text-navy whitespace-nowrap"><input type="checkbox" checked={field.isGroup === true} onChange={e => onConfigure(rowId, { isGroup: e.target.checked })} />Group by this</label> : null}
+      {onConfigure ? <div className="flex shrink-0 items-center gap-3">
+        <select aria-label={`${field.label} type`} className="input-field w-40" value={field.key === "signature_upload" ? "photo" : (field.fieldType ?? "text")} disabled={Boolean(field.organizationFieldId) || field.key === "photo_id" || field.key === "signature_upload"} onChange={e => onConfigure(rowId, {fieldType:e.target.value as "text"|"photo"|"dropdown"})}><option value="text">Text / Data</option><option value="photo">Image / Photo</option><option value="dropdown">Dropdown</option></select>
+        <select aria-label={`${field.label} requirement`} className="input-field w-32" value={field.required !== false ? "required" : "optional"} onChange={e => onConfigure(rowId, { required: e.target.value === "required" })}><option value="required">Required</option><option value="optional">Optional</option></select>
       </div> : null}
-      <label className="form-field-visibility flex items-center gap-2 text-sm">Visible<ToggleSwitch
+      <label className="form-field-visibility flex shrink-0 items-center gap-2 text-sm">Visible<ToggleSwitch
         checked={field.enabled}
         onChange={() => onToggle(rowId)}
         label={`${field.label} enabled`}
       /></label>
+      {onConfigure && field.fieldType === "dropdown" ? (
+        <div className="mt-2 flex w-full flex-wrap items-center gap-3 pl-9">
+          <DropdownOptionsEditor options={field.options ?? []} onChange={(next) => onConfigure(rowId, { options: next })} />
+          <label className="flex items-center gap-1.5 text-xs font-medium text-text-navy whitespace-nowrap"><input type="checkbox" checked={field.isGroup === true} onChange={e => onConfigure(rowId, { isGroup: e.target.checked })} />Group by this</label>
+        </div>
+      ) : null}
     </li>
   );
 }
