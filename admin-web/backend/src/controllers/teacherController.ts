@@ -857,15 +857,15 @@ export async function updateTeacherStudent(
       optionalBodyString(body, ["blood_group", "bloodGroup"]) !== undefined
         ? optionalBodyString(body, ["blood_group", "bloodGroup"]) ?? null
         : student.blood_group;
-    const custom1 =
+    let custom1 =
       optionalBodyString(body, ["custom_1", "custom1"]) !== undefined
         ? optionalBodyString(body, ["custom_1", "custom1"]) ?? null
         : student.custom_1;
-    const custom2 =
+    let custom2 =
       optionalBodyString(body, ["custom_2", "custom2"]) !== undefined
         ? optionalBodyString(body, ["custom_2", "custom2"]) ?? null
         : student.custom_2;
-    const custom3 =
+    let custom3 =
       optionalBodyString(body, ["custom_3", "custom3"]) !== undefined
         ? optionalBodyString(body, ["custom_3", "custom3"]) ?? null
         : student.custom_3;
@@ -881,12 +881,29 @@ export async function updateTeacherStudent(
       );
     }
 
+    // Data safety (point 13): an empty/missing value must NEVER wipe an existing
+    // value. Editing or uploading one field keeps every other field unchanged.
+    if (!parentName && student.parent_name) parentName = student.parent_name;
+    if (!parentPhone && student.parent_phone) parentPhone = student.parent_phone;
+    if (!address && student.address) address = student.address;
+    if (!rollNo && student.roll_no) rollNo = student.roll_no;
+    if (!dob && student.dob) dob = student.dob;
+    if (!gender && student.gender) gender = student.gender;
+    if (!bloodGroup && student.blood_group) bloodGroup = student.blood_group;
+    if (!custom1 && student.custom_1) custom1 = student.custom_1;
+    if (!custom2 && student.custom_2) custom2 = student.custom_2;
+    if (!custom3 && student.custom_3) custom3 = student.custom_3;
+
     const existingExtra = parseExtraFields(student.extra_fields);
     const incomingExtra = parseExtraFields(body.extra_fields ?? body.extraFields);
-    const mergedExtra =
-      Object.keys(incomingExtra).length > 0
-        ? { ...existingExtra, ...incomingExtra }
-        : existingExtra;
+    const mergedExtra: Record<string, string | null> = { ...existingExtra };
+    for (const [k, v] of Object.entries(incomingExtra)) {
+      const nv = v == null ? "" : String(v).trim();
+      const had = (existingExtra[k] == null ? "" : String(existingExtra[k]).trim());
+      if (nv) mergedExtra[k] = nv;        // non-empty incoming overwrites
+      else if (!had) mergedExtra[k] = null; // empty incoming only when nothing existed
+      // else: keep the existing non-empty value (do not wipe)
+    }
     delete mergedExtra.photo_id;
     delete mergedExtra.photoId;
     delete mergedExtra.student_name;

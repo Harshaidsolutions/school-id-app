@@ -679,9 +679,20 @@ export async function updateStudentAdmin(
     let dob = requestedDob === undefined ? student.dob : requestedDob;
     let gender = nextText("gender", student.gender);
     let bloodGroup = nextText("blood_group", student.blood_group, "bloodGroup");
-    const custom1 = nextText("custom_1", student.custom_1, "custom1");
-    const custom2 = nextText("custom_2", student.custom_2, "custom2");
-    const custom3 = nextText("custom_3", student.custom_3, "custom3");
+    let custom1 = nextText("custom_1", student.custom_1, "custom1");
+    let custom2 = nextText("custom_2", student.custom_2, "custom2");
+    let custom3 = nextText("custom_3", student.custom_3, "custom3");
+    // Data safety (point 13): an empty/missing value never wipes an existing one.
+    if (!parentName && student.parent_name) parentName = student.parent_name;
+    if (!parentPhone && student.parent_phone) parentPhone = student.parent_phone;
+    if (!address && student.address) address = student.address;
+    if (!rollNo && student.roll_no) rollNo = student.roll_no;
+    if (!dob && student.dob) dob = student.dob;
+    if (!gender && student.gender) gender = student.gender;
+    if (!bloodGroup && student.blood_group) bloodGroup = student.blood_group;
+    if (!custom1 && student.custom_1) custom1 = student.custom_1;
+    if (!custom2 && student.custom_2) custom2 = student.custom_2;
+    if (!custom3 && student.custom_3) custom3 = student.custom_3;
     // Data integrity: the photo number links a record to its photo files, so it can never
     // be changed after the record exists — whatever the request sends is ignored.
     const photoIdProvided = false;

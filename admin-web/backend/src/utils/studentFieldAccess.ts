@@ -239,8 +239,12 @@ export function mergeExtraFieldsForSave(
   for (const field of formFields) {
     if (!field.enabled) continue;
     if (values[field.key] !== undefined) {
-      merged[field.key] =
-        values[field.key] == null ? null : String(values[field.key]).trim() || null;
+      const nv = values[field.key] == null ? "" : String(values[field.key]).trim();
+      const had = merged[field.key] == null ? "" : String(merged[field.key]).trim();
+      // Data safety: a non-empty value overwrites; an empty one only applies when
+      // nothing existed, so editing one field never wipes another (point 13).
+      if (nv) merged[field.key] = nv;
+      else if (!had) merged[field.key] = null;
     }
   }
   return merged;

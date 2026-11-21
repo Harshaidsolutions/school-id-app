@@ -32,7 +32,7 @@ import {
 import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import { useFormConfig } from "../hooks/useFormConfig";
 import { buildTeacherStudentPayload } from "../utils/studentFieldForm";
-import { resolveFieldLabelKind } from "../utils/formFieldKinds";
+import { resolveFieldKind, resolveFieldLabelKind } from "../utils/formFieldKinds";
 
 type Props = {
   classSection?: string;
@@ -199,6 +199,42 @@ export function AddStudentForm({
     if (phone && !/^\d+$/.test(phone)) {
       setError("Parent phone must be numeric.");
       return;
+    }
+
+    // Required fields the admin configured must be filled before submit (point 4).
+    const valueForField = (f: (typeof displayFields)[number]): string => {
+      const kind = /^fld_\d+$/.test(f.key) || f.key.startsWith("dyn_")
+        ? resolveFieldLabelKind(f)
+        : resolveFieldKind(f);
+      switch (kind) {
+        case "student_name": return [firstName, lastName].filter(Boolean).join(" ");
+        case "class_section": return effectiveClass;
+        case "roll_no": return rollNo;
+        case "dob": return dob;
+        case "gender": return gender;
+        case "blood_group": return bloodGroup;
+        case "parent_name": return parentName;
+        case "parent_phone": return parentPhone;
+        case "address": return address;
+        case "custom_1": return custom1;
+        case "custom_2": return custom2;
+        case "custom_3": return custom3;
+        default: return extraValues[f.key] ?? "";
+      }
+    };
+    for (const f of displayFields) {
+      if (f.required !== true) continue;
+      if (f.key === "signature_upload") {
+        if (!signatureUri) { setError(`${f.label} is required.`); return; }
+        continue;
+      }
+      const kind = resolveFieldKind(f);
+      if (kind === "photo" || resolveFieldLabelKind(f) === "photo") continue;
+      if (!valueForField(f).trim()) { setError(`${f.label} is required.`); return; }
+    }
+    if (showPhotoCapture) {
+      const photoField = formFields.find((f) => f.key === "photo_id");
+      if (photoField?.required === true && !photoUri) { setError("Student Photo is required."); return; }
     }
 
     if (submitBusy.current) return;
