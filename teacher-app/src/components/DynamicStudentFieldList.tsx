@@ -341,12 +341,16 @@ export function DynamicStudentFieldList({
         const kind = effectiveKind(field);
         const labelKind = resolveFieldLabelKind(field);
         const label = shownLabel(field);
+        // Image field ONLY when the admin explicitly set this field to Image/Photo
+        // in Form Setup. A field merely NAMED "photo" (e.g. the Excel photo-number
+        // column) stays Text/Data and must not become an image box (rule: the
+        // configured type wins over the field name).
         if (
-          (kind === "photo" || labelKind === "photo") &&
+          field.fieldType === "photo" &&
           field.key !== "photo_id" &&
+          field.key !== "signature_upload" &&
           !isIdentityAliasLabel(field.label)
         ) {
-          // Arbitrary field the admin set to "Image/Photo": capture/upload a picture.
           return (
             <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
               <ImageFieldPicker
@@ -357,6 +361,15 @@ export function DynamicStudentFieldList({
               />
             </Field>
           );
+        }
+        // A field that only looks like a photo column (label "PHOTO") but is NOT an
+        // image type duplicates the locked Photo Number, so keep it hidden.
+        if (
+          (kind === "photo" || labelKind === "photo") &&
+          field.key !== "photo_id" &&
+          !isIdentityAliasLabel(field.label)
+        ) {
+          return null;
         }
         if (lockIdentityFields && isIdentityAliasLabel(field.label)) {
           return null;

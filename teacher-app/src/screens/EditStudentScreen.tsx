@@ -55,6 +55,8 @@ import {
   buildTeacherStudentPayload,
   initialExtraValuesFromStudent,
 } from "../utils/studentFieldForm";
+import { studentFieldValueForForm } from "../utils/studentFields";
+import { resolveFieldKind, resolveFieldLabelKind } from "../utils/formFieldKinds";
 import { pickStudentPhotoForFormUpload } from "../utils/studentPhotoPicker";
 import { scrollToFocusedInput } from "../utils/scrollToFocusedInput";
 import { uploadStudentPhoto } from "../utils/uploadStudentPhoto";
@@ -184,6 +186,35 @@ export function EditStudentScreen({ navigation, route }: Props) {
     if (formFields.length > 0) {
       setExtraValues(initialExtraValuesFromStudent(currentStudent, formFields));
     }
+  }, [currentStudent, formFields]);
+
+  // Seed canonical fields (address, dob, gender, …) from the full resolver so a
+  // value stored in an Excel column shows in the edit form instead of appearing
+  // blank. Only fills empty values, so it never clobbers what the user typed.
+  useEffect(() => {
+    if (formFields.length === 0) return;
+    for (const field of formFields) {
+      if (field.enabled === false) continue;
+      const v = studentFieldValueForForm(
+        currentStudent,
+        field,
+        currentStudent.class_section ?? undefined
+      ).trim();
+      if (!v) continue;
+      const isExcel = /^fld_\d+$/.test(field.key) || field.key.startsWith("dyn_");
+      const k = isExcel ? resolveFieldLabelKind(field) : resolveFieldKind(field);
+      switch (k) {
+        case "address": setAddress((p) => p || v); break;
+        case "dob": setDob((p) => p || v); break;
+        case "gender": setGender((p) => p || v); break;
+        case "blood_group": setBloodGroup((p) => p || v); break;
+        case "roll_no": setRollNo((p) => p || v); break;
+        case "parent_phone": setParentPhone((p) => p || v); break;
+        case "parent_name": setFatherName((p) => p || v); break;
+        default: break;
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStudent, formFields]);
 
   // Current image URL for each "Image/Photo"-typed field, read from extra_fields.
