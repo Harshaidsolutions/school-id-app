@@ -176,7 +176,6 @@ export function LoginScreen({ navigation }: Props) {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
-          scrollEnabled={false}
           bounces={false}
         >
           {/* Top: the same "My School ID Card" logo as the splash screen, gently floating */}
@@ -306,8 +305,16 @@ export function LoginScreen({ navigation }: Props) {
                   <Ionicons name="globe-outline" size={21} color="#FFFFFF" />
                 </Pressable>
               </View>
-              <Text style={[styles.contactText, { textAlign: "center" }]} numberOfLines={2}>
-                www.harshaidsolutions.in · {SUPPORT_EMAIL}
+              <Text style={[styles.contactText, { textAlign: "center" }]} numberOfLines={1}>
+                www.harshaidsolutions.in
+              </Text>
+              <Text
+                style={[styles.contactText, { textAlign: "center" }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {SUPPORT_EMAIL}
               </Text>
             </View>
           </View>
@@ -330,7 +337,7 @@ function useLoginStyles() {
       safe: { flex: 1 },
       flex: { flex: 1 },
       scroll: { flexGrow: 1, alignItems: "center" },
-      top: { width: "100%", alignItems: "center", paddingBottom: scale(40), overflow: "hidden" },
+      top: { width: "100%", alignItems: "center", paddingBottom: scale(20), overflow: "hidden" },
       dotsRow: { flexDirection: "row", gap: 6, marginTop: scale(10) },
       dot: { width: 7, height: 7, borderRadius: 4 },
       introBack: { position: "absolute", left: 14, zIndex: 5, width: 40, height: 40, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.9)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#E8E9F3" },
@@ -361,7 +368,7 @@ function useLoginStyles() {
         fontFamily: fonts.headingExtraBold,
         color: colors.textPrimary,
       },
-      subtitle: { fontFamily: fonts.body, fontSize: scale(14), lineHeight: scale(20), color: colors.textSecondary, marginTop: 2, marginBottom: spacing.md },
+      subtitle: { fontFamily: fonts.body, fontSize: scale(14), lineHeight: scale(20), color: colors.textSecondary, marginTop: 2, marginBottom: spacing.sm },
       label: { fontFamily: fonts.headingSemiBold, fontSize: scale(13.5), color: colors.textPrimary, marginBottom: 6 },
       field: {
         flexDirection: "row",
@@ -404,14 +411,14 @@ function useLoginStyles() {
       loginBtnDisabled: { opacity: 0.65 },
       loginBtnText: { ...textStyles.button, fontSize: scale(17), letterSpacing: 0.3, color: "#FFFFFF" },
       below: { width: "100%", alignItems: "center" },
-      orRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, alignSelf: "stretch", marginTop: spacing.lg },
+      orRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, alignSelf: "stretch", marginTop: spacing.md },
       orLine: { flex: 1, height: 1, backgroundColor: colors.border },
       orText: { fontFamily: fonts.bodyMedium, fontSize: scale(12.5), color: colors.textMuted },
       contactCard: {
         width: "100%",
-        marginTop: spacing.md,
+        marginTop: spacing.sm,
         alignItems: "center",
-        gap: spacing.xs,
+        gap: scale(3),
       },
       contactPrompt: { fontFamily: fonts.headingSemiBold, fontSize: scale(14.5), color: colors.textPrimary },
       contactBtns: { flexDirection: "row", gap: spacing.md },
