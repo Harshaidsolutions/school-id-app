@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import { Image } from "expo-image";
 import api, { authedSource, errMsg } from "../api/client";
 import { C, F, R, S } from "../theme";
@@ -8,6 +8,7 @@ import { Banner, Card, InfoRow, Loading, Muted, Pill, Rise, Section, Toggle } fr
 import { Ionicons } from "@expo/vector-icons";
 import { ImageViewer } from "../ui/Sheet";
 import { Tap } from "../ui/Pressable";
+import { pickImages, asFormFile } from "../lib/files";
 import type { ScreenProps } from "../navigation/types";
 
 type Org = {
@@ -44,6 +45,8 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
   const [saved, setSaved] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [viewer, setViewer] = useState<number | null>(null);
+  const [editField, setEditField] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
   // Template & Model choice in the school app (off while teachers only collect data; "final" choice protected).
   const lockPath = `/admin/selection-lock/${isOrg ? "organizations" : kind === "institute" ? "institutes" : "schools"}/${id}`;
   const [selection, setSelection] = useState<{ locked: boolean; templateLocked: boolean; modelLocked: boolean; finalBy: string | null; finalByName: string | null } | null>(null);
@@ -60,6 +63,29 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
       void load();
     } catch (e) {
       setError(errMsg(e, "Failed to delete image."));
+    }
+  }
+  async function replaceImage(type: "logo" | "signature" | "organization") {
+    try {
+      const [file] = await pickImages(false);
+      if (!file) return;
+      const fd = new FormData();
+      fd.append("file", asFormFile(file) as unknown as Blob);
+      await api.post(`/admin/org-image/${imgKind}/${id}/${type}`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setSaved("Image updated.");
+      void load();
+    } catch (e) {
+      setError(errMsg(e, "Failed to upload image."));
+    }
+  }
+  async function saveField(field: string, value: string | null) {
+    try {
+      await api.patch(`/admin/org-detail/${imgKind}/${id}`, { field, value });
+      setEditField(null);
+      setSaved("Saved.");
+      void load();
+    } catch (e) {
+      setError(errMsg(e, "Could not save."));
     }
   }
   async function saveSelection(body: { locked?: boolean; templateLocked?: boolean; modelLocked?: boolean; clearFinal?: boolean }) {
@@ -139,6 +165,37 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
   }
 
   const sw = (key: string) => <Toggle value={vis[key] !== false} disabled={saving} onChange={(on) => void toggleDetail(key, on)} />;
+  const EditRow = ({ field, label, value, toggleKey, secret }: { field: string; label: string; value?: string | null; toggleKey: string; secret?: boolean }) => {
+    const editing = editField === field;
+    return (
+      <View style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.line }}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: F.body, fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</Text>
+            {editing ? (
+              <TextInput value={editDraft} onChangeText={setEditDraft} style={{ marginTop: 4, borderWidth: 1, borderColor: C.line, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, fontFamily: F.body, fontSize: 15, color: C.ink }} />
+            ) : (
+              <Text style={{ marginTop: 2, fontFamily: F.body, fontSize: 15, color: C.ink }}>{secret && value ? "•••••••" : (value?.trim() || "—")}</Text>
+            )}
+          </View>
+          {sw(toggleKey)}
+        </View>
+        <View style={{ flexDirection: "row", gap: 16, marginTop: 6 }}>
+          {editing ? (
+            <>
+              <Tap onPress={() => void saveField(field, editDraft.trim())}><Text style={{ color: C.primary, fontFamily: F.body, fontWeight: "600", fontSize: 13 }}>Save</Text></Tap>
+              <Tap onPress={() => setEditField(null)}><Text style={{ color: C.muted, fontFamily: F.body, fontSize: 13 }}>Cancel</Text></Tap>
+            </>
+          ) : (
+            <>
+              <Tap onPress={() => { setEditField(field); setEditDraft(value?.trim() ?? ""); }}><Text style={{ color: C.primary, fontFamily: F.body, fontWeight: "600", fontSize: 13 }}>Edit</Text></Tap>
+              {value?.trim() ? <Tap onPress={() => void saveField(field, null)}><Text style={{ color: C.danger, fontFamily: F.body, fontWeight: "600", fontSize: 13 }}>Delete</Text></Tap> : null}
+            </>
+          )}
+        </View>
+      </View>
+    );
+  };
   const images: { label: string; url: string; key: string; type?: "logo" | "signature" | "organization" }[] = [];
   if (org?.model_image_url) images.push({ label: `Model${org.model ? ` — ${org.model}` : ""}`, url: org.model_image_url, key: "detail_model" });
   for (const t of org?.tag_items ?? []) if (t.image_url) images.push({ label: `Tag — ${t.name}`, url: t.image_url, key: "detail_tags" });
@@ -159,12 +216,12 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
           <Rise>
             <Card>
               <InfoRow label="Name" value={org.name} />
-              <InfoRow label="Year" value={org.year} right={sw("detail_year")} />
-              <InfoRow label="Phone" secret="phone number" value={org.phone} right={sw("detail_phone")} />
-              <InfoRow label="Secondary phone" secret="phone number" value={org.phone2} right={sw("detail_phone2")} />
-              <InfoRow label={kind === "institute" ? "Institute code" : kind === "school" ? "School code" : "Organisation code"} value={org.school_code ?? org.institute_code} right={sw("detail_code")} />
-              <InfoRow label="Address" value={org.address} right={sw("detail_address")} />
-              <InfoRow label="Instructions" value={org.instructions} right={sw("detail_instructions")} />
+              <EditRow field="year" label="Year" value={org.year} toggleKey="detail_year" />
+              <EditRow field="phone" label="Phone" value={org.phone} toggleKey="detail_phone" secret />
+              <EditRow field="phone2" label="Secondary phone" value={org.phone2} toggleKey="detail_phone2" secret />
+              <EditRow field="code" label={kind === "institute" ? "Institute code" : kind === "school" ? "School code" : "Organisation code"} value={org.school_code ?? org.institute_code} toggleKey="detail_code" />
+              <EditRow field="address" label="Address" value={org.address} toggleKey="detail_address" />
+              <EditRow field="instructions" label="Instructions" value={org.instructions} toggleKey="detail_instructions" />
               <View style={{ flexDirection: "row", alignItems: "center", paddingTop: 10 }}>
                 <Text style={st.req}>Required details</Text>
                 {sw("required_details")}
@@ -189,9 +246,14 @@ export function OrgInfoScreen({ route }: ScreenProps<"OrgInfo">) {
                       {sw(im.key)}
                     </View>
                     {im.type ? (
-                      <Tap onPress={() => { const t = im.type; if (t) void deleteImage(t); }} style={{ paddingVertical: 6, alignItems: "center" }}>
-                        <Text style={{ color: C.danger, fontFamily: F.body, fontSize: 13, fontWeight: "600" }}>Delete</Text>
-                      </Tap>
+                      <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, paddingVertical: 6 }}>
+                        <Tap onPress={() => { const t = im.type; if (t) void replaceImage(t); }}>
+                          <Text style={{ color: C.primary, fontFamily: F.body, fontSize: 13, fontWeight: "600" }}>Replace</Text>
+                        </Tap>
+                        <Tap onPress={() => { const t = im.type; if (t) void deleteImage(t); }}>
+                          <Text style={{ color: C.danger, fontFamily: F.body, fontSize: 13, fontWeight: "600" }}>Delete</Text>
+                        </Tap>
+                      </View>
                     ) : null}
                   </View>
                 ))}
