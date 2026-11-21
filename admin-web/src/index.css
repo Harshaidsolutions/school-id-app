@@ -353,6 +353,8 @@ body.student-photo-viewer-open .students-table-scroll, body.student-photo-viewer
 .list-data-table td a:hover { color: var(--accent-strong); }
 .list-data-table td:last-child > div, .list-data-table td:last-child { text-align: right; }
 .list-data-table td:last-child > div { display: inline-flex; align-items: center; gap: 4px; justify-content: flex-end; }
+/* Right-align the last header so "Actions" sits above the right-aligned Edit/Delete buttons */
+.list-data-table thead th:last-child { text-align: right; }
 .capture-protection-label { min-width: 90px; line-height: 1.35; font-size: 12px; color: var(--muted); }
 
 .list-data-table th.bulk-check-cell, .list-data-table td.bulk-check-cell, .students-data-table th.bulk-check-cell,
