@@ -337,7 +337,7 @@ function useLoginStyles() {
       safe: { flex: 1 },
       flex: { flex: 1 },
       scroll: { flexGrow: 1, alignItems: "center" },
-      top: { width: "100%", alignItems: "center", paddingBottom: scale(20), overflow: "hidden" },
+      top: { width: "100%", alignItems: "center", paddingBottom: scale(14), overflow: "hidden" },
       dotsRow: { flexDirection: "row", gap: 6, marginTop: scale(10) },
       dot: { width: 7, height: 7, borderRadius: 4 },
       introBack: { position: "absolute", left: 14, zIndex: 5, width: 40, height: 40, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.9)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#E8E9F3" },
