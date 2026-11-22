@@ -168,45 +168,32 @@ export function LoginScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={[styles.safe, { backgroundColor: isDark ? colors.background : "#F6F7FC" }]}>
+    <View style={[styles.safe, { backgroundColor: isDark ? colors.background : "#FFFFFF" }]}>
       <ScreenBackdrop />
+      <RainbowBar style={styles.rainbowTop} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing.lg }]}
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + spacing.md }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          {/* Top: the same "My School ID Card" logo as the splash screen, gently floating */}
-          <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
-            <LinearGradient colors={isDark ? [colors.background, colors.background] : ["#F3EDFA", "#E9F6FD", "#F6F7FC"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-            <FloatingShapes color={colors.primaryOrange} />
-            <RainbowBar style={{ position: "absolute", top: 0, left: 0, right: 0 }} />
+          <View style={styles.col}>
             <View style={styles.topBar}>
               <Pressable onPress={backToIntro} style={styles.backBtn} accessibilityLabel="Back to introduction" hitSlop={10}>
                 <Ionicons name="chevron-back" size={22} color={colors.text} />
               </Pressable>
             </View>
-            <Animated.View style={{ transform: [{ translateY: float.interpolate({ inputRange: [0, 1], outputRange: [4, -6] }) }] }}>
-              <BrandLockup variant="hero" title={BRAND.appName} subtitle={BRAND.headerSubtitle} showTagline={false} singleLine />
-            </Animated.View>
-            <View style={styles.dotsRow}>
-              {RAINBOW.map((c) => (
-                <View key={c} style={[styles.dot, { backgroundColor: c }]} />
-              ))}
-            </View>
-          </View>
 
-          {/* White sheet that rises over the top area */}
-          <View style={styles.sheet}>
-          <View style={styles.sheetInner}>
-          {/* Login form (plain View — no animated layer over the inputs) */}
-          <View style={styles.authPanel}>
-            <Text style={styles.title} accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-              <Text style={{ color: SKY }}>Welcome</Text> <Text style={{ color: colors.primaryOrange }}>Back!</Text>
+            <View style={styles.logoWrap}>
+              <BrandLockup variant="hero" title={BRAND.appName} subtitle={BRAND.headerSubtitle} showTagline={false} singleLine />
+            </View>
+
+            <Text style={styles.welcome} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+              <Text style={{ color: colors.primaryOrange }}>Welcome</Text> <Text style={{ color: SKY }}>Back!</Text>
             </Text>
-            <Text style={styles.subtitle}>Login with the username and password from your school.</Text>
+            <Text style={styles.subtitle}>Sign in with the username and password from your school.</Text>
 
             <Text style={styles.label}>Username</Text>
             <RNPressable style={[styles.field, focused === "user" && styles.fieldFocused]} onPress={() => userRef.current?.focus()} accessible={false}>
@@ -280,18 +267,12 @@ export function LoginScreen({ navigation }: Props) {
                 ) : null}
               </LinearGradient>
             </Pressable>
-          </View>
 
-          <View style={styles.below}>
-            <View style={styles.orRow}>
-              <View style={styles.orLine} />
-              <Text style={styles.orText}>New here?</Text>
-              <View style={styles.orLine} />
+            <View style={styles.registerWrap}>
+              <ServiceRegistration />
             </View>
-            <ServiceRegistration />
 
-            {/* Help: compact row of round buttons */}
-            <View style={styles.contactCard}>
+            <View style={styles.contact}>
               <Text style={styles.contactPrompt}>Need a login? Contact us</Text>
               <View style={styles.contactBtns}>
                 <Pressable style={[styles.circleBtn, { backgroundColor: "#25D366" }]} onPress={handleWhatsAppPress} accessibilityLabel="WhatsApp">
@@ -307,20 +288,9 @@ export function LoginScreen({ navigation }: Props) {
                   <Ionicons name="globe-outline" size={21} color="#FFFFFF" />
                 </Pressable>
               </View>
-              <Text style={[styles.contactText, { textAlign: "center" }]} numberOfLines={1}>
-                www.harshaidsolutions.in
-              </Text>
-              <Text
-                style={[styles.contactText, { textAlign: "center" }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.8}
-              >
-                {SUPPORT_EMAIL}
-              </Text>
+              <Text style={styles.contactText} numberOfLines={1}>www.harshaidsolutions.in</Text>
+              <Text style={styles.contactText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{SUPPORT_EMAIL}</Text>
             </View>
-          </View>
-          </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -338,95 +308,35 @@ function useLoginStyles() {
     return {
       safe: { flex: 1 },
       flex: { flex: 1 },
-      scroll: { flexGrow: 1, alignItems: "center" },
-      top: { width: "100%", alignItems: "center", paddingBottom: scale(14), overflow: "hidden" },
-      dotsRow: { flexDirection: "row", gap: 6, marginTop: scale(10) },
-      dot: { width: 7, height: 7, borderRadius: 4 },
-      topBar: { width: "100%", paddingHorizontal: spacing.md, alignItems: "flex-start", marginBottom: scale(6) },
-      backBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.92)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#E8E9F3" },
-      sheet: {
-        width: "100%",
-        flexGrow: 1,
-        marginTop: -scale(24),
-        zIndex: 2,
-        backgroundColor: card,
-        borderTopLeftRadius: scale(32),
-        borderTopRightRadius: scale(32),
-        paddingTop: spacing.lg,
-        shadowColor: "#1B1F3B",
-        shadowOpacity: 0.08,
-        shadowRadius: 20,
-        shadowOffset: { width: 0, height: -6 },
-        elevation: 10,
-        alignItems: "center",
-      },
-      sheetInner: { width: formW, flex: 1 },
-      authPanel: { width: "100%" },
-      title: {
-        fontSize: scale(29),
-        lineHeight: scale(38),
-        paddingTop: scale(2),
-        includeFontPadding: true,
-        letterSpacing: -0.6,
-        fontFamily: fonts.headingExtraBold,
-        color: colors.textPrimary,
-      },
-      subtitle: { fontFamily: fonts.body, fontSize: scale(14), lineHeight: scale(20), color: colors.textSecondary, marginTop: 2, marginBottom: spacing.sm },
+      rainbowTop: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 3 },
+      scroll: { flexGrow: 1, alignItems: "center", paddingHorizontal: spacing.pagePad },
+      col: { width: formW },
+      topBar: { alignItems: "flex-start", marginBottom: scale(2) },
+      backBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: isDark ? colors.inputBg : "#F3F2F8", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border },
+      logoWrap: { alignItems: "center", marginTop: scale(2), marginBottom: scale(6) },
+      welcome: { fontSize: scale(26), lineHeight: scale(34), textAlign: "center", letterSpacing: -0.4, fontFamily: fonts.headingExtraBold, marginTop: scale(2) },
+      subtitle: { fontFamily: fonts.body, fontSize: scale(13.5), lineHeight: scale(19), color: colors.textSecondary, textAlign: "center", marginTop: 2, marginBottom: spacing.md },
       label: { fontFamily: fonts.headingSemiBold, fontSize: scale(13.5), color: colors.textPrimary, marginBottom: 6 },
-      field: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: spacing.xs,
-        minHeight: scale(54),
-        paddingHorizontal: spacing.sm,
-        marginBottom: spacing.sm,
-        borderRadius: scale(16),
-        borderWidth: 1.5,
-        borderColor: colors.border,
-        backgroundColor: isDark ? colors.inputBg : "#F6F7FC",
-      },
-      fieldFocused: { borderColor: SKY, backgroundColor: card },
-      input: {
-        flex: 1,
-        ...textStyles.input,
-        color: colors.textPrimary,
-        paddingVertical: Platform.OS === "ios" ? spacing.sm : spacing.xs,
-      },
+      field: { flexDirection: "row", alignItems: "center", gap: spacing.xs, minHeight: scale(52), paddingHorizontal: spacing.sm, marginBottom: spacing.sm, borderRadius: scale(14), borderWidth: 1.5, borderColor: colors.border, backgroundColor: isDark ? colors.inputBg : "#F5F4FB" },
+      fieldFocused: { borderColor: SKY, backgroundColor: isDark ? colors.inputBg : "#FFFFFF" },
+      input: { flex: 1, ...textStyles.input, color: colors.textPrimary, paddingVertical: Platform.OS === "ios" ? spacing.sm : spacing.xs },
       rememberRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: spacing.sm, alignSelf: "flex-start" },
-      check: { width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: card },
+      check: { width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: isDark ? colors.inputBg : "#FFFFFF" },
       checkOn: { backgroundColor: colors.primaryOrange, borderColor: colors.primaryOrange },
       rememberText: { fontFamily: fonts.bodyMedium, fontSize: scale(13.5), color: colors.textSecondary },
       errorBox: { flexDirection: "row", alignItems: "flex-start", gap: spacing.xs, padding: spacing.sm, borderRadius: scale(14), backgroundColor: colors.dangerSoft, marginBottom: spacing.sm },
       error: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: typeScale.label, color: colors.danger },
-      loginBtn: {
-        width: "100%",
-        borderRadius: 999,
-        minHeight: scale(56),
-        overflow: "hidden",
-        elevation: 6,
-        shadowColor: "#F26A1B",
-        shadowOpacity: 0.3,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 8 },
-      },
-      loginGradient: { width: "100%", minHeight: scale(56), borderRadius: 999, flexDirection: "row", gap: spacing.sm, alignItems: "center", justifyContent: "center" },
+      loginBtn: { width: "100%", borderRadius: 999, minHeight: scale(54), overflow: "hidden", elevation: 6, shadowColor: "#F26A1B", shadowOpacity: 0.3, shadowRadius: 14, shadowOffset: { width: 0, height: 8 } },
+      loginGradient: { width: "100%", minHeight: scale(54), borderRadius: 999, flexDirection: "row", gap: spacing.sm, alignItems: "center", justifyContent: "center" },
       loginArrow: { width: scale(28), height: scale(28), borderRadius: scale(14), backgroundColor: "rgba(255,255,255,0.22)", alignItems: "center", justifyContent: "center" },
       loginBtnDisabled: { opacity: 0.65 },
       loginBtnText: { ...textStyles.button, fontSize: scale(17), letterSpacing: 0.3, color: "#FFFFFF" },
-      below: { width: "100%", alignItems: "center", marginTop: "auto", paddingTop: spacing.sm },
-      orRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, alignSelf: "stretch", marginTop: spacing.md },
-      orLine: { flex: 1, height: 1, backgroundColor: colors.border },
-      orText: { fontFamily: fonts.bodyMedium, fontSize: scale(12.5), color: colors.textMuted },
-      contactCard: {
-        width: "100%",
-        marginTop: spacing.sm,
-        alignItems: "center",
-        gap: scale(3),
-      },
-      contactPrompt: { fontFamily: fonts.headingSemiBold, fontSize: scale(14.5), color: colors.textPrimary },
-      contactBtns: { flexDirection: "row", gap: spacing.md },
-      circleBtn: { width: scale(48), height: scale(48), borderRadius: scale(24), alignItems: "center", justifyContent: "center" },
-      contactText: { fontFamily: fonts.body, fontSize: scale(12), color: colors.textMuted },
+      registerWrap: { width: "100%", marginTop: spacing.sm },
+      contact: { width: "100%", marginTop: spacing.md, alignItems: "center", gap: scale(4) },
+      contactPrompt: { fontFamily: fonts.headingSemiBold, fontSize: scale(14), color: colors.textPrimary },
+      contactBtns: { flexDirection: "row", gap: spacing.md, marginTop: scale(2) },
+      circleBtn: { width: scale(46), height: scale(46), borderRadius: scale(23), alignItems: "center", justifyContent: "center" },
+      contactText: { fontFamily: fonts.body, fontSize: scale(12), color: colors.textMuted, textAlign: "center" },
     };
   }, [colors, isDark]);
 }
