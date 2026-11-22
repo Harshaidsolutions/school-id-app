@@ -252,8 +252,8 @@ export async function createOrganization(req: Request, res: Response, next: Next
     await assertOwnerPasswordAvailable(client, username, password);
     const email = await allocateOwnerEmail(client, preferredEmail);
     const created = await client.query(
-      `INSERT INTO organizations (name, phone, owner_admin_id, owner_username_plain, owner_password_plain)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO organizations (name, phone, owner_admin_id, owner_username_plain, owner_password_plain, allow_screenshot, allow_screen_recording)
+       VALUES ($1, $2, $3, $4, $5, false, false)
        RETURNING id, name, phone, is_active, created_at, owner_username_plain AS username`,
       [name, phone, scope.adminUserId, username, password]
     );
