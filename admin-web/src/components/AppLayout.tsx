@@ -25,7 +25,7 @@ const NAV: NavItem[] = [
   { label: "Models", icon: "model", to: "/models" },
   { label: "Brochures", icon: "brochure", to: "/brochures" },
   { label: "Notifications", icon: "notification", to: "/notifications" },
-  { label: "Instructions & Enquiries", icon: "help", to: "/workspace-help" },
+  { label: "Registration Enquiries", icon: "help", to: "/workspace-help" },
   { label: "Admin Management", icon: "shield", to: "/extra-1", superOnly: true },
   { label: "Generate Licences", icon: "key", to: "/desktop-licenses", superOnly: true },
 ];
@@ -37,7 +37,7 @@ const TITLES: Record<string, string> = {
   "/templates": "Templates",
   "/models": "Models",
   "/notifications": "Notifications",
-  "/workspace-help": "Instructions & Enquiries",
+  "/workspace-help": "Registration Enquiries",
   "/desktop-licenses": "Generate Licences",
   "/id-card-generator": "ID Card Generator",
   "/brochures": "Brochures",

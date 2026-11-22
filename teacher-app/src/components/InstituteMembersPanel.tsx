@@ -127,10 +127,15 @@ export function InstituteMembersPanel({
 
   // Group members by the admin-configured "Group by this" field (e.g. Designation).
   const groupField = useMemo(
-    () => formFields.find((ff) => ff.enabled !== false && ff.isGroup === true) ?? null,
+    () =>
+      formFields.find(
+        (ff) =>
+          ff.enabled !== false &&
+          ff.label.toLowerCase().replace(/[^a-z0-9]/g, "").includes("designation")
+      ) ?? null,
     [formFields]
   );
-  const groupLabel = (groupField?.label ?? "Group").trim();
+  const groupLabel = "Designation";
   const memberGroupValue = useCallback(
     (s: TeacherStudent) =>
       groupField ? studentFieldValueForForm(s, groupField, s.class_section ?? undefined).trim() : "",

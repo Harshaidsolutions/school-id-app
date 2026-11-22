@@ -221,7 +221,6 @@ function SortableFieldRow({
       {onConfigure && field.fieldType === "dropdown" ? (
         <div className="mt-2 flex w-full flex-wrap items-center gap-3 pl-9">
           <DropdownOptionsEditor options={field.options ?? []} onChange={(next) => onConfigure(rowId, { options: next })} />
-          <label className="flex items-center gap-1.5 text-xs font-medium text-text-navy whitespace-nowrap"><input type="checkbox" checked={field.isGroup === true} onChange={e => onConfigure(rowId, { isGroup: e.target.checked })} />Group by this</label>
         </div>
       ) : null}
     </li>

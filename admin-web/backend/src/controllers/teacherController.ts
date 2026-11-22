@@ -1207,18 +1207,20 @@ function resolveGroupField(
   orgType: "school" | "institute"
 ): GroupFieldInfo {
   const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const canonicalColumn = (label: string, key: string): string | null => {
-    const n = normalize(label);
-    if (key === "class_section" || n.includes("class") || n.includes("standard") || n.includes("section") || n.includes("grade") || n === "std") return "class_section";
-    if (n.includes("blood")) return "blood_group";
-    if (n === "gender" || n.includes("gender") || n.includes("sex")) return "gender";
-    return null;
-  };
-  const group = fields.find((ff) => ff.enabled !== false && ff.isGroup === true);
-  if (group) {
-    return { key: group.key, label: (group.label || "Group").trim(), column: canonicalColumn(group.label, group.key) };
+  if (orgType === "school") {
+    // Schools always group by Class (class_section column).
+    const classField = fields.find(
+      (ff) =>
+        ff.enabled !== false &&
+        (ff.key === "class_section" || /class|standard|section|grade|std/.test(normalize(ff.label)))
+    );
+    return { key: classField?.key ?? "class_section", label: "Class", column: "class_section" };
   }
-  return { key: "class_section", label: orgType === "institute" ? "Group" : "Class", column: "class_section" };
+  // Institutes always group by Designation (stored in extra_fields[key]).
+  const desig = fields.find(
+    (ff) => ff.enabled !== false && normalize(ff.label).includes("designation")
+  );
+  return { key: desig?.key ?? "__designation__", label: "Designation", column: null };
 }
 
 /** SQL expression yielding the group value; $keyParam binds the field key for the extra_fields lookup. */
