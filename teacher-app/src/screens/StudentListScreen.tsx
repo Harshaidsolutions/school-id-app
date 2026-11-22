@@ -49,11 +49,12 @@ import { useResponsiveStyles } from "../hooks/useResponsiveStyles";
 import { useFormConfig } from "../hooks/useFormConfig";
 import {
   studentHasPhoto,
+  studentHasSignature,
   studentPendingData,
 } from "../utils/recordStatus";
 
 type Props = NativeStackScreenProps<RootStackParamList, "StudentList">;
-type TabKey = "all" | "pending-photos" | "pending-data" | "captured";
+type TabKey = "all" | "pending-photos" | "pending-data" | "captured" | "uncaptured-signatures";
 
 const PHONE_COLS = 2;
 
@@ -164,14 +165,12 @@ export function StudentListScreen({ navigation, route }: Props) {
     () => students.filter((s) => studentHasPhoto(s)).length,
     [students]
   );
+  const uncapturedSignatureCount = useMemo(
+    () => students.filter((s) => !studentHasSignature(s)).length,
+    [students]
+  );
   const tabs: { key: TabKey; label: string; color: string; count: number }[] = [
     { key: "all", label: "All", color: colors.brandGreen, count: students.length },
-    {
-      key: "pending-photos",
-      label: "Pending",
-      color: colors.brandGreen,
-      count: pendingPhotoCount,
-    },
     ...(showCapturedSection
       ? [
           {
@@ -182,11 +181,26 @@ export function StudentListScreen({ navigation, route }: Props) {
           },
         ]
       : []),
+    {
+      key: "pending-photos",
+      label: "Uncaptured Photos",
+      color: colors.brandGreen,
+      count: pendingPhotoCount,
+    },
+    {
+      key: "uncaptured-signatures",
+      label: "Uncaptured Signatures",
+      color: colors.brandGreen,
+      count: uncapturedSignatureCount,
+    },
   ];
 
   const filtered = useMemo(() => {
     if (tab === "pending-photos") {
       return students.filter((s) => !studentHasPhoto(s));
+    }
+    if (tab === "uncaptured-signatures") {
+      return students.filter((s) => !studentHasSignature(s));
     }
     if (tab === "pending-data") {
       return students.filter((s) => studentPendingData(s, false));

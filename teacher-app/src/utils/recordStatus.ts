@@ -5,6 +5,10 @@ export function studentHasPhoto(student: TeacherStudent): boolean {
   return Boolean(student.photo_url?.trim());
 }
 
+export function studentHasSignature(student: TeacherStudent): boolean {
+  return Boolean(student.signature_url?.trim());
+}
+
 export function studentPendingData(
   student: TeacherStudent,
   institute: boolean
