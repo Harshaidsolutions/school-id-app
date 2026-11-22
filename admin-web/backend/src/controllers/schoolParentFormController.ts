@@ -74,8 +74,19 @@ export function parentFormFields(config: FormFieldConfig[]) {
     .map((f) => ({
       id: f.key,
       fieldName: f.label,
-      fieldType: f.key === "signature_upload" ? "photo" : "text",
-      required: f.key === name.key || f.key === classField.key,
+      // Keep every configured dropdown as a real select on the shared/public form,
+      // not only the grouping field (#12).
+      fieldType:
+        f.key === "signature_upload"
+          ? "photo"
+          : f.fieldType === "dropdown"
+            ? "select"
+            : "text",
+      options:
+        f.fieldType === "dropdown"
+          ? (f.options ?? []).map((o) => String(o).trim()).filter(Boolean)
+          : undefined,
+      required: f.key === name.key || f.key === classField.key || f.required === true,
     }));
   return {
     fields: [
