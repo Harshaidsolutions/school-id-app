@@ -421,17 +421,12 @@ export function FormSetupPage() {
 
       {loading ? (
         <div className="mt-6 text-sm text-text-muted">Loading form fields from imported data…</div>
-      ) : fields.length === 0 && !organizationId ? (
-        <div className="centered-page-card px-6 py-12 text-center">
-          <p className="text-sm font-medium text-text-navy">No form fields yet</p>
-            <p className="mt-2 text-sm text-text-muted">
-            Upload an Excel file for this {instituteId ? "institute" : "school"} first.
-          </p>
-        </div>
       ) : (
         <form onSubmit={handleSave} className="centered-page-card">
           <div className="border-b border-border px-5 py-3 text-center text-xs text-text-muted">
-            {organizationId ? "Drag fields to reorder. Configure field names, required details, and visibility. Removed fields with existing data are disabled to preserve records." : "Drag fields to reorder. Excel fields can be edited and toggled. Only manually added fields can be deleted."}
+            {fields.length === 0
+              ? "Add the fields you need below. You can set up the form with or without an Excel upload."
+              : organizationId ? "Drag fields to reorder. Configure field names, required details, and visibility. Removed fields with existing data are disabled to preserve records." : "Drag fields to reorder. Excel fields can be edited and toggled. Only manually added fields can be deleted."}
           </div>
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

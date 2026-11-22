@@ -178,12 +178,14 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
       ) : null}
       {loading ? (
         <Loading text="Loading form fields…" />
-      ) : !fields.length && !isOrg ? (
-        <Empty icon="document-attach-outline" title="No form fields yet" text={`Upload an Excel file for this ${kind} first.`} />
       ) : (
         <>
           <Muted style={{ marginBottom: S.md }}>
-            Use the arrows to change the order. {isOrg ? "Set each field's type and whether it is required." : "Excel fields can be renamed and hidden. Only fields you add can be deleted."}
+            {fields.length === 0
+              ? `Add the fields you need below. You can set up the form with or without an Excel upload.`
+              : isOrg
+                ? "Use the arrows to change the order. Set each field's type and whether it is required."
+                : "Use the arrows to change the order. Excel fields can be renamed and hidden. Only fields you add can be deleted."}
           </Muted>
           {fields.map((f, i) => (
             <View key={`${f.key}-${i}`} style={[st.row, !f.enabled && { opacity: 0.6 }]}>
