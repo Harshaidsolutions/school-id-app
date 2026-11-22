@@ -44,7 +44,8 @@
     "react-native-share": "^12.3.1",
     "react-native-svg": "15.12.1",
     "react-native-vision-camera": "^5.2.0",
-    "react-native-vision-camera-face-detector": "^2.0.6"
+    "react-native-vision-camera-face-detector": "^2.0.6",
+    "react-native-webview": "13.15.0"
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
