@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Animated, Easing, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Keyboard, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
@@ -8,6 +8,7 @@ import api, { errMsg } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import type { LoginResponse } from "../shared/types";
 import { C, F, R, RAINBOW, S } from "../theme";
+import { loadSavedCredentials, saveCredential, removeCredential, type SavedCredential } from "../lib/savedCredentials";
 import { RainbowBar } from "../ui/Screen";
 import { Banner, Button, Field, Muted, Rise } from "../ui/kit";
 import { Tap } from "../ui/Pressable";
@@ -37,10 +38,18 @@ function LogoHalo({ children }: { children: ReactNode }) {
 
 function AuthShell({ title, subtitle, eyebrow = "Admin console", children, onBack }: { title: string; subtitle: string; eyebrow?: string; children: ReactNode; onBack?: () => void }) {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    // When the keyboard opens, bring the form (username/password + button) fully into view.
+    const sub = Keyboard.addListener("keyboardDidShow", () => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    });
+    return () => sub.remove();
+  }, []);
   return (
     <View style={{ flex: 1, backgroundColor: C.white }}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={0}>
+        <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
           {/* Dark "console" header with the admin app icon */}
           <LinearGradient colors={["#1B1F3B", "#2C2163", "#4A2A86"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.hero, { paddingTop: insets.top + 20 }]}>
             <View style={[st.glow, { backgroundColor: "#1EA0E1", top: -60, left: -50 }]} />
@@ -91,6 +100,7 @@ export function LoginScreen({ navigation }: ScreenProps<"Login">) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [savedAccounts, setSavedAccounts] = useState<SavedCredential[]>([]);
   const [contacts, setContacts] = useState<{ email?: string | null; phone?: string | null; whatsapp?: string | null }>({});
 
   useEffect(() => {
@@ -98,6 +108,7 @@ export function LoginScreen({ navigation }: ScreenProps<"Login">) {
       .get("/auth/support-contacts")
       .then(({ data }) => setContacts(data ?? {}))
       .catch(() => undefined);
+    void loadSavedCredentials().then(setSavedAccounts);
   }, []);
 
   async function submit() {
@@ -113,6 +124,7 @@ export function LoginScreen({ navigation }: ScreenProps<"Login">) {
         setError("This app is for admin accounts only.");
         return;
       }
+      await saveCredential(email.trim(), password);
       await login(data.token, data.user);
     } catch (e) {
       setError(errMsg(e, "Login failed. Check your username and password."));
@@ -124,6 +136,26 @@ export function LoginScreen({ navigation }: ScreenProps<"Login">) {
   return (
     <AuthShell title="Welcome back" subtitle="Log in to manage schools, students and ID cards.">
       <Banner text={error} />
+      {savedAccounts.length > 0 ? (
+        <View style={{ marginBottom: S.md }}>
+          <Text style={{ fontFamily: F.hSemi, fontSize: 12.5, color: C.muted, marginBottom: 6 }}>Saved logins</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {savedAccounts.map((acc) => (
+              <Tap
+                key={acc.username}
+                onPress={() => { setEmail(acc.username); setPassword(acc.password); }}
+                onLongPress={async () => { await removeCredential(acc.username); setSavedAccounts(await loadSavedCredentials()); }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1.5, borderColor: C.line, backgroundColor: C.white }}
+                accessibilityLabel={`Use saved login ${acc.username}`}
+              >
+                <Ionicons name="person-circle-outline" size={16} color={C.primary} />
+                <Text style={{ fontFamily: F.body, fontSize: 13, color: C.ink, flexShrink: 1 }} numberOfLines={1}>{acc.username}</Text>
+              </Tap>
+            ))}
+          </View>
+          <Text style={{ fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 5 }}>Tap to fill · long-press to remove</Text>
+        </View>
+      ) : null}
       <Field label="Username or email" icon="person-outline" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" placeholder="admin@school.com" returnKeyType="next" />
       <Field label="Password" icon="lock-closed-outline" value={password} onChangeText={setPassword} secure placeholder="Your password" returnKeyType="go" onSubmitEditing={() => void submit()} />
       <Tap onPress={() => navigation.navigate("Forgot")} style={{ alignSelf: "flex-end", marginBottom: S.lg }} hitSlop={8}>

@@ -23,6 +23,7 @@ import {
   View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { loadSavedCredentials, saveCredential, removeCredential, type SavedCredential } from "../utils/savedCredentials";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -87,6 +88,7 @@ export function LoginScreen({ navigation }: Props) {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [savedAccounts, setSavedAccounts] = useState<SavedCredential[]>([]);
 
   useEffect(() => {
     void (async () => {
@@ -99,6 +101,7 @@ export function LoginScreen({ navigation }: Props) {
           setRememberMe(true);
           setUsername(saved);
         }
+        setSavedAccounts(await loadSavedCredentials());
       } catch {
         // ignore
       }
@@ -132,6 +135,7 @@ export function LoginScreen({ navigation }: Props) {
       if (rememberMe) {
         await AsyncStorage.setItem(REMEMBER_FLAG, "1");
         await AsyncStorage.setItem(REMEMBER_KEY, username.trim());
+        await saveCredential(username.trim(), password);
       } else {
         await AsyncStorage.removeItem(REMEMBER_FLAG);
         await AsyncStorage.removeItem(REMEMBER_KEY);
@@ -194,6 +198,34 @@ export function LoginScreen({ navigation }: Props) {
               <Text style={{ color: colors.primaryOrange }}>Welcome</Text> <Text style={{ color: SKY }}>Back!</Text>
             </Text>
             <Text style={styles.subtitle}>Sign in with the username and password from your school.</Text>
+
+            {savedAccounts.length > 0 ? (
+              <View style={styles.savedWrap}>
+                <Text style={styles.savedTitle}>Saved logins</Text>
+                <View style={styles.savedRow}>
+                  {savedAccounts.map((acc) => (
+                    <RNPressable
+                      key={acc.username}
+                      style={styles.savedChip}
+                      onPress={() => {
+                        setUsername(acc.username);
+                        setPassword(acc.password);
+                        setRememberMe(true);
+                      }}
+                      onLongPress={async () => {
+                        await removeCredential(acc.username);
+                        setSavedAccounts(await loadSavedCredentials());
+                      }}
+                      accessibilityLabel={`Use saved login ${acc.username}`}
+                    >
+                      <Ionicons name="person-circle-outline" size={16} color={SKY} />
+                      <Text style={styles.savedChipText} numberOfLines={1}>{acc.username}</Text>
+                    </RNPressable>
+                  ))}
+                </View>
+                <Text style={styles.savedHint}>Tap to fill · long-press to remove</Text>
+              </View>
+            ) : null}
 
             <Text style={styles.label}>Username</Text>
             <RNPressable style={[styles.field, focused === "user" && styles.fieldFocused]} onPress={() => userRef.current?.focus()} accessible={false}>
@@ -317,6 +349,12 @@ function useLoginStyles() {
       welcome: { fontSize: scale(26), lineHeight: scale(34), textAlign: "center", letterSpacing: -0.4, fontFamily: fonts.headingExtraBold, marginTop: scale(2) },
       subtitle: { fontFamily: fonts.body, fontSize: scale(13.5), lineHeight: scale(19), color: colors.textSecondary, textAlign: "center", marginTop: 2, marginBottom: spacing.md },
       label: { fontFamily: fonts.headingSemiBold, fontSize: scale(13.5), color: colors.textPrimary, marginBottom: 6 },
+      savedWrap: { marginBottom: spacing.sm },
+      savedTitle: { fontFamily: fonts.headingSemiBold, fontSize: scale(12.5), color: colors.textSecondary, marginBottom: 6 },
+      savedRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+      savedChip: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface },
+      savedChipText: { fontFamily: fonts.bodyMedium, fontSize: scale(13), color: colors.textPrimary, flexShrink: 1 },
+      savedHint: { fontFamily: fonts.bodyMedium, fontSize: scale(11), color: colors.textMuted, marginTop: 5 },
       field: { flexDirection: "row", alignItems: "center", gap: spacing.xs, minHeight: scale(52), paddingHorizontal: spacing.sm, marginBottom: spacing.sm, borderRadius: scale(14), borderWidth: 1.5, borderColor: colors.border, backgroundColor: isDark ? colors.inputBg : "#F5F4FB" },
       fieldFocused: { borderColor: SKY, backgroundColor: isDark ? colors.inputBg : "#FFFFFF" },
       input: { flex: 1, ...textStyles.input, color: colors.textPrimary, paddingVertical: Platform.OS === "ios" ? spacing.sm : spacing.xs },
