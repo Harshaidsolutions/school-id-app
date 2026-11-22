@@ -122,6 +122,19 @@ function OptionSelectField({
             <FlatList
               data={[...options]}
               keyExtractor={(item) => item}
+              ListHeaderComponent={
+                <Pressable
+                  style={[styles.optionRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  onPress={() => {
+                    onChange("");
+                    setOpen(false);
+                  }}
+                >
+                  <Text style={[styles.optionText, { color: colors.textMuted, fontFamily: fonts.regular, fontStyle: "italic" }]}>
+                    Select
+                  </Text>
+                </Pressable>
+              }
               renderItem={({ item }) => {
                 const selected = item === value;
                 return (
