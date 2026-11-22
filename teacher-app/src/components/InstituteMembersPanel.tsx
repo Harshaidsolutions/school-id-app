@@ -166,19 +166,19 @@ export function InstituteMembersPanel({
 
   const pendingPhotoCount = useMemo(
     () => scopedStudents.filter((s) => !studentHasPhoto(s)).length,
-    [students]
+    [scopedStudents]
   );
   const pendingDataCount = useMemo(
     () => scopedStudents.filter((s) => studentPendingData(s, true)).length,
-    [students]
+    [scopedStudents]
   );
   const capturedCount = useMemo(
     () => scopedStudents.filter((s) => studentHasPhoto(s)).length,
-    [students]
+    [scopedStudents]
   );
   const uncapturedSignatureCount = useMemo(
     () => scopedStudents.filter((s) => !studentHasSignature(s)).length,
-    [students]
+    [scopedStudents]
   );
   const tabs: { key: TabKey; label: string; color: string; count: number }[] = [
     { key: "all", label: "All", color: colors.brandGreen, count: scopedStudents.length },

@@ -6,7 +6,7 @@ import type { StudentsResponse } from "../shared/types";
 import { isManualFormField, sortFormFields, withSequentialDisplayOrder, type FormFieldConfig } from "../shared/formFields";
 import { C, F, R, S } from "../theme";
 import { Screen } from "../ui/Screen";
-import { Banner, Button, Card, Empty, Field, Loading, Muted, Pill, Toggle } from "../ui/kit";
+import { Banner, Button, Card, Field, Loading, Muted, Pill, Toggle } from "../ui/kit";
 import { Tap } from "../ui/Pressable";
 import type { ScreenProps } from "../navigation/types";
 

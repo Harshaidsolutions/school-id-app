@@ -47,7 +47,7 @@ export function MoreScreen() {
     { title: "Templates", icon: "albums-outline", onPress: () => nav.navigate("Templates") },
     { title: "Models", icon: "cube-outline", onPress: () => nav.navigate("Catalog", { kind: "model" }) },
     { title: "Brochures", icon: "book-outline", onPress: () => nav.navigate("Catalog", { kind: "brochure" }) },
-    { title: "Registration Enquiries", icon: "help-circle-outline", onPress: () => nav.navigate("Help") },
+    { title: isSuperAdmin ? "Registration Enquiries" : "Help & Guides", icon: "help-circle-outline", onPress: () => nav.navigate("Help") },
     { title: "Admin Management", icon: "shield-checkmark-outline", onPress: () => nav.navigate("Admins"), superOnly: true },
     { title: "Generate Licences", icon: "key-outline", onPress: () => nav.navigate("Licences"), superOnly: true },
   ];
