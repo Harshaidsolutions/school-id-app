@@ -103,7 +103,7 @@ export function OrangeGradientHeader({
           <View style={[styles.iconSlot, { width: iconSize, height: iconSize }]} />
         )}
       </View>
-      <RainbowBar rounded style={{ position: "absolute", left: radius.xl, right: radius.xl, bottom: 3 }} />
+      <RainbowBar rounded style={{ position: "absolute", left: radius.xl, right: radius.xl, bottom: 0 }} />
     </LinearGradient>
   );
 }

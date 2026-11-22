@@ -963,6 +963,8 @@ export async function listStudentsAdmin(
       students = students.filter((row) => Boolean(row.photo_url?.trim()));
     } else if (photoFilter === "missing" || photoFilter === "uncaptured") {
       students = students.filter((row) => !row.photo_url?.trim());
+    } else if (photoFilter === "missing-signature") {
+      students = students.filter((row) => !row.signature_url?.trim());
     }
     if (pendingDataFilter === "yes") {
       students = students.filter((row) => row.pending_data);

@@ -44,14 +44,13 @@ import { scrollToFocusedInput } from "../utils/scrollToFocusedInput";
 import { useFormConfig } from "../hooks/useFormConfig";
 import {
   studentHasPhoto,
-  studentHasSignature,
   studentPendingData,
 } from "../utils/recordStatus";
 
 const INSTITUTE_CACHE_KEY = "__institute__";
 const PHONE_COLS = 2;
 
-type TabKey = "all" | "pending-photos" | "pending-data" | "captured" | "uncaptured-signatures";
+type TabKey = "all" | "pending-photos" | "pending-data" | "captured";
 
 type Props = {
   colors: AppColors;
@@ -176,12 +175,14 @@ export function InstituteMembersPanel({
     () => scopedStudents.filter((s) => studentHasPhoto(s)).length,
     [scopedStudents]
   );
-  const uncapturedSignatureCount = useMemo(
-    () => scopedStudents.filter((s) => !studentHasSignature(s)).length,
-    [scopedStudents]
-  );
   const tabs: { key: TabKey; label: string; color: string; count: number }[] = [
     { key: "all", label: "All", color: colors.brandGreen, count: scopedStudents.length },
+    {
+      key: "pending-photos",
+      label: "Pending",
+      color: colors.brandGreen,
+      count: pendingPhotoCount,
+    },
     ...(showCapturedSection
       ? [
           {
@@ -192,26 +193,11 @@ export function InstituteMembersPanel({
           },
         ]
       : []),
-    {
-      key: "pending-photos",
-      label: "Uncaptured Photos",
-      color: colors.brandGreen,
-      count: pendingPhotoCount,
-    },
-    {
-      key: "uncaptured-signatures",
-      label: "Uncaptured Signatures",
-      color: colors.brandGreen,
-      count: uncapturedSignatureCount,
-    },
   ];
 
   const filtered = useMemo(() => {
     if (tab === "pending-photos") {
       return scopedStudents.filter((s) => !studentHasPhoto(s));
-    }
-    if (tab === "uncaptured-signatures") {
-      return scopedStudents.filter((s) => !studentHasSignature(s));
     }
     if (tab === "pending-data") {
       return scopedStudents.filter((s) => studentPendingData(s, true));

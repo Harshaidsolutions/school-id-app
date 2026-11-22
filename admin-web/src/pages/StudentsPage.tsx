@@ -862,7 +862,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
           <div className="detail-toolbar-row1">
             <button
               type="button"
-              disabled={!orgId || !hasExcelUploaded}
+              disabled={!orgId}
               onClick={() => {
                 if (isInstitute) {
                   navigate(

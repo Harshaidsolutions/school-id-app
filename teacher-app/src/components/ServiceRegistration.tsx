@@ -118,7 +118,7 @@ export function ServiceRegistration() {
             </View>
             <Text style={st.headTitle}>Register your interest</Text>
             <Text style={st.headText}>Share your details and our team will contact you. This does not create a login.</Text>
-            <RainbowBar rounded style={{ position: "absolute", left: 26, right: 26, bottom: 3 }} />
+            <RainbowBar rounded style={{ position: "absolute", left: 26, right: 26, bottom: 0 }} />
           </LinearGradient>
 
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>

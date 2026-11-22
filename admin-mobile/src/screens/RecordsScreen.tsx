@@ -59,6 +59,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
   const [students, setStudents] = useState<Student[]>([]);
   const [facets, setFacets] = useState<RecordFacets | null>(null);
   const [fields, setFields] = useState<FormFieldConfig[]>([]);
+  const hasSignatureField = fields.some((f) => f.key === "signature_upload" && f.enabled !== false);
   const [batchCount, setBatchCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -95,7 +96,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
     try {
       const p: Record<string, string> = { ...params };
       if (filters.classSection) p.classSection = filters.classSection;
-      if (filters.photo) p.photo = filters.photo === "uncaptured" ? "missing" : filters.photo;
+      if (filters.photo) p.photo = filters.photo;
       if (filters.pendingData) p.pendingData = filters.pendingData;
       if (filters.capturedOn) p.capturedOn = filters.capturedOn;
       if (filters.group) p.group = filters.group;
@@ -319,7 +320,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
   type Tool = { label: string; icon: IconName; sub?: string; onPress: () => void; hidden?: boolean; danger?: boolean; feature?: boolean };
   /** Same buttons, order and names as the website's records toolbar. */
   const tools: Tool[] = [
-    { label: "Form Setup", icon: "list-outline", sub: batchCount ? "Fields, order and visibility" : "Upload Excel first", onPress: () => (batchCount ? navigation.navigate("FormSetup", { kind, id: orgId, name }) : setError("Upload an Excel file first, then use Form Setup.")) },
+    { label: "Form Setup", icon: "list-outline", sub: "Fields, order and visibility", onPress: () => navigation.navigate("FormSetup", { kind, id: orgId, name }) },
     { label: "Upload Excel", icon: "document-attach-outline", onPress: () => setSheet("excel-up") },
     { label: "Upload Photos", icon: "images-outline", sub: "ZIP named by photo number", onPress: () => setSheet("photos-up") },
     { label: "Download Excel", icon: "download-outline", sub: "All, captured, pending, date-wise…", onPress: () => setSheet("excel-down") },
@@ -644,7 +645,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
         }
       >
         <Select label="School app visibility" value={visibility} onChange={(v) => setVisibility(v as typeof visibility)} options={[{ value: "all", label: "All records" }, { value: "visible", label: "Visible records" }, { value: "hidden", label: "Hidden records" }]} />
-        <Select label="Photo" value={filters.photo} onChange={(v) => setFilters((f) => ({ ...f, photo: v }))} options={[{ value: "", label: "Any" }, { value: "captured", label: "Captured" }, { value: "uncaptured", label: "Not captured" }]} />
+        <Select label="Photo" value={filters.photo} onChange={(v) => setFilters((f) => ({ ...f, photo: v }))} options={[{ value: "", label: "Any" }, { value: "captured", label: "Captured" }, { value: "missing", label: "Uncaptured Photos" }, ...(hasSignatureField ? [{ value: "missing-signature", label: "Uncaptured Signatures" }] : [])]} />
         <Select label="Pending data" value={filters.pendingData} onChange={(v) => setFilters((f) => ({ ...f, pendingData: v }))} options={[{ value: "", label: "Any" }, { value: "yes", label: "Has missing data" }, { value: "no", label: "Complete" }]} />
         <Select label="Captured on" value={filters.capturedOn} onChange={(v) => setFilters((f) => ({ ...f, capturedOn: v }))} options={[{ value: "", label: "Any date" }, ...(facets?.captureDates ?? []).map((d) => ({ value: d.name, label: `${dayLabel(d.name)} (${d.count})` }))]} />
         {classOptions.length ? (
