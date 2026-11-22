@@ -87,7 +87,7 @@ export function OfferMarqueeBanner({
 const styles = StyleSheet.create({
   wrap: {
     overflow: "hidden",
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     alignSelf: "stretch",
   },
   track: {
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontFamily: fonts.headingSemiBold,
-    fontSize: typeScale.body,
+    fontSize: typeScale.label,
     flexShrink: 0,
   },
 });

@@ -45,7 +45,7 @@ export function IdCardsProgressSection({
 const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: spacing.pagePad,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
   },
   track: {

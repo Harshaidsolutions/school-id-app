@@ -22,7 +22,7 @@ function initials(name: string): string {
 export function AdminHeroCard({ adminName, photoUrl, loading }: Props) {
   const { headerGradient, colors } = useTheme();
   const { scale } = useResponsiveLayout();
-  const avatar = scale(76);
+  const avatar = scale(94);
   const isHarsha = /harsha\s*id/i.test(adminName);
 
   if (loading) {
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     elevation: 8,
   },
-  row: { flexDirection: "row", alignItems: "center", gap: 14 },
+  row: { flexDirection: "row", alignItems: "center", gap: 18 },
   avatar: {
     backgroundColor: "#FFFFFF",
     alignItems: "center",

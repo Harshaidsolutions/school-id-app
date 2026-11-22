@@ -181,7 +181,7 @@ export function HomeScreen() {
         ]}
       >
         <View style={styles.headerLogoWrap}>
-          <AppIcon size={Math.min(screenW * .58,264)} variant="header" />
+          <AppIcon size={Math.min(screenW * .66,296)} variant="header" />
         </View>
         <View style={styles.headerTextWrap}>
           <Text
