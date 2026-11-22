@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, Modal, Text, View } from "react-native";
+import { Animated, Easing, Modal, Platform, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Pressable } from "./Pressable";
@@ -49,7 +49,7 @@ export function LogoutModal({ visible, onCancel, onConfirm }: { visible: boolean
             shadowRadius: 24,
             shadowOffset: { width: 0, height: 14 },
             elevation: 14,
-            opacity: anim,
+            opacity: Platform.OS === "android" ? 1 : anim,
             transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] }) }],
           }}
         >

@@ -16,5 +16,21 @@ export function Entrance({ children, style, delay = 0, distance = 14 }: { childr
     animation.start();
     return () => animation.stop();
   }, [delay, progress, reducedMotion]);
-  return <Animated.View needsOffscreenAlphaCompositing={Platform.OS === "android"} style={[style, { opacity: progress.interpolate({ inputRange: [0, 1], outputRange: [0.001, 1] }), transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] }) }] }]}>{children}</Animated.View>;
+  // On Android, elevation shadows are drawn by the framework and are NOT faded by alpha
+  // compositing, so fading an elevated card flashes its full black shadow. Slide only (no
+  // opacity fade) on Android; keep the fade on iOS where shadows composite correctly.
+  const isAndroid = Platform.OS === "android";
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          opacity: isAndroid ? 1 : progress.interpolate({ inputRange: [0, 1], outputRange: [0.001, 1] }),
+          transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] }) }],
+        },
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
 }

@@ -80,7 +80,7 @@ function Reveal({ active, delay = 0, children, style }: { active: boolean; delay
     return () => a.stop();
   }, [active, delay, reduced, v]);
   return (
-    <Animated.View style={[style, { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [22, 0] }) }] }]}>
+    <Animated.View style={[style, { opacity: Platform.OS === "android" ? 1 : v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [22, 0] }) }] }]}>
       {children}
     </Animated.View>
   );
@@ -314,7 +314,7 @@ function StepHero({ step, size }: { step: number; size: number }) {
           { translateY: float.interpolate({ inputRange: [0, 1], outputRange: [4, -6] }) },
           { scale: fade.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) },
         ],
-        opacity: fade,
+        opacity: Platform.OS === "android" ? 1 : fade,
       }}
     >
       <View style={[st.heroCard, { width: size, height: size }]}>

@@ -73,7 +73,7 @@ export function AlertHost() {
         <Animated.View
           onStartShouldSetResponder={() => true}
           needsOffscreenAlphaCompositing={Platform.OS === "android"}
-          style={[st.card, { opacity: anim, transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }] }]}
+          style={[st.card, { opacity: Platform.OS === "android" ? 1 : anim, transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }] }]}
         >
           <RainbowBar style={{ position: "absolute", top: 0, left: 0, right: 0 }} />
           <View style={[st.icon, { backgroundColor: destructive ? C.dangerSoft : C.primarySoft }]}>

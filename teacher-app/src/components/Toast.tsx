@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.buttonPill,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
-    elevation: 4,
+    elevation: 0,
     shadowColor: BRAND.primaryDeep,
     shadowOpacity: 0.12,
     shadowRadius: 6,

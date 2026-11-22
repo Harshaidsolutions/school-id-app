@@ -55,8 +55,7 @@ export function Rise({ children, delay = 0, style }: { children: ReactNode; dela
   }, [delay, v]);
   return (
     <Animated.View
-      needsOffscreenAlphaCompositing={Platform.OS === "android"}
-      style={[style, { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }] }]}
+      style={[style, { opacity: Platform.OS === "android" ? 1 : v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }] }]}
     >
       {children}
     </Animated.View>
