@@ -58,6 +58,14 @@ export async function registerServiceInterest(req:Request,res:Response,next:Next
 export async function registrations(req:Request,res:Response,next:NextFunction){try{
  await requireSuperAdmin(req);
  if(req.method==='PATCH'){const id=String(req.params.id);if(!uuid.test(id)||!['new','contacted','closed'].includes(req.body.status))throw new AppError('Invalid status',400);await pool.query('UPDATE service_registrations SET status=$1 WHERE id=$2',[req.body.status,id]);res.json({status:'ok'});return;}
+ if(req.method==='DELETE'){
+  const single=req.params.id?[String(req.params.id)]:[];
+  const bulk=Array.isArray(req.body?.ids)?req.body.ids.map((x:unknown)=>String(x)):[];
+  const ids=[...new Set([...single,...bulk])];
+  if(!ids.length||ids.length>500||ids.some(id=>!uuid.test(id)))throw new AppError('Select up to 500 valid registrations to delete',400);
+  await pool.query('DELETE FROM service_registrations WHERE id = ANY($1::uuid[])',[ids]);
+  res.json({status:'ok',deleted:ids.length});return;
+ }
  res.json({registrations:(await pool.query('SELECT * FROM service_registrations ORDER BY created_at DESC LIMIT 500')).rows});
 }catch(e){next(e);}}
 export async function setCandidateVisibility(req:Request,res:Response,next:NextFunction){const client=await pool.connect();try{

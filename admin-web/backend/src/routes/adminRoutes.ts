@@ -189,6 +189,8 @@ router.patch('/org-detail/:kind/:id', updateOrganizationDetailField);
 router.post('/org-image/:kind/:id/:type', uploadImage.single('file'), uploadOrganizationImage);
 router.get('/service-registrations',registrations);
 router.patch('/service-registrations/:id',registrations);
+router.delete('/service-registrations/:id',registrations);
+router.delete('/service-registrations',registrations);
 router.patch('/students/visibility',setCandidateVisibility);
 
 router.get("/organizations", listOrganizations);
