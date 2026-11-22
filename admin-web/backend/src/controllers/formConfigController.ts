@@ -14,6 +14,7 @@ import {
   withSignatureUploadField,
 } from "../constants/formFields";
 import { isKnownFieldKey } from "../utils/excelSchema";
+import { isMetaColumn as isMetaFieldLabel } from "../utils/excelSchema";
 import {
   isExcelFormField,
   isManualFormField,
@@ -221,11 +222,16 @@ async function loadStudentColumnCounts(options: {
 }
 
 /** Excel columns + admin custom fields — preserve admin displayOrder from saved config. */
+/** Drop system/meta columns (Created At, S.No...) from any assembled field list. */
+function stripMetaFields(fields: FormFieldConfig[]): FormFieldConfig[] {
+  return fields.filter((ff) => !isMetaFieldLabel(ff.label));
+}
+
 function mergeExcelSchemaWithSavedFields(
   saved: FormFieldConfig[],
   excelSchema: FormFieldConfig[]
 ): FormFieldConfig[] {
-  if (excelSchema.length === 0) return sortFormFields(saved);
+  if (excelSchema.length === 0) return stripMetaFields(sortFormFields(saved));
 
   const excelByKey = new Map(excelSchema.map((f) => [f.key, f]));
   const excelKeys = new Set(excelSchema.map((f) => f.key));
@@ -288,7 +294,7 @@ function mergeExcelSchemaWithSavedFields(
     );
   }
 
-  return sortFormFields(merged);
+  return stripMetaFields(sortFormFields(merged));
 }
 
 function formFieldListsEqual(a: FormFieldConfig[], b: FormFieldConfig[]): boolean {
@@ -712,7 +718,7 @@ export async function loadFormConfigForOrg(options: {
     schoolId: schoolId ?? undefined,
     instituteId: instituteId ?? undefined,
   });
-  if (fields.length > 0) return withSignatureUploadField(fields);
+  if (fields.length > 0) return stripMetaFields(withSignatureUploadField(fields));
 
   const hasData = await orgHasImportedData({
     schoolId: schoolId ?? undefined,
@@ -723,7 +729,7 @@ export async function loadFormConfigForOrg(options: {
       schoolId: schoolId ?? undefined,
       instituteId: instituteId ?? undefined,
     });
-    if (rebuilt.length > 0) return rebuilt;
+    if (rebuilt.length > 0) return stripMetaFields(rebuilt);
   }
 
   return [];
