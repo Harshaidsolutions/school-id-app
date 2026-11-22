@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { Animated, Easing, type StyleProp, type ViewStyle } from "react-native";
+import { Animated, Easing, Platform, type StyleProp, type ViewStyle } from "react-native";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 
 /**
@@ -16,5 +16,5 @@ export function Entrance({ children, style, delay = 0, distance = 14 }: { childr
     animation.start();
     return () => animation.stop();
   }, [delay, progress, reducedMotion]);
-  return <Animated.View style={[style, { opacity: progress.interpolate({ inputRange: [0, 1], outputRange: [0.001, 1] }), transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] }) }] }]}>{children}</Animated.View>;
+  return <Animated.View needsOffscreenAlphaCompositing={Platform.OS === "android"} style={[style, { opacity: progress.interpolate({ inputRange: [0, 1], outputRange: [0.001, 1] }), transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] }) }] }]}>{children}</Animated.View>;
 }

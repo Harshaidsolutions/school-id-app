@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { C, F, headerGradient } from "../theme";
@@ -44,6 +44,7 @@ export function LogoutModal({
       <Pressable style={st.backdrop} onPress={onCancel} accessibilityLabel="Close">
         <Animated.View
           onStartShouldSetResponder={() => true}
+          needsOffscreenAlphaCompositing={Platform.OS === "android"}
           style={[st.card, { opacity: pop, transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }) }] }]}
         >
           <LinearGradient colors={headerGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.top}>

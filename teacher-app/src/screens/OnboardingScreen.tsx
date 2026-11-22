@@ -4,6 +4,7 @@ import {
   Easing,
   FlatList,
   Image,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -274,7 +275,7 @@ function PageSteps({ active, width }: { active: boolean; width: number }) {
     <View style={st.page}>
       <Reveal active={active} style={{ alignItems: "center" }}>
         <Eyebrow text="How it works" />
-        <Text style={st.headline}>
+        <Text style={st.headline} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
           <Text style={{ color: "#6A2C9E" }}>Enter</Text> <Text style={{ color: INK }}>-</Text> <Text style={{ color: "#1EA0E1" }}>Capture</Text> <Text style={{ color: INK }}>-</Text> <Text style={{ color: "#16A34A" }}>Submit</Text>
         </Text>
       </Reveal>
