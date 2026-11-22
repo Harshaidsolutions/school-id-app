@@ -31,7 +31,7 @@ import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import type { AppColors } from "../theme/palettes";
 
 import { getVisibleStudentFields } from "../utils/studentFields";
-import { formatCapturedAt } from "../utils/recordStatus";
+import { formatCapturedAt, studentHasPhoto, studentHasSignature } from "../utils/recordStatus";
 import { useFormConfig } from "../hooks/useFormConfig";
 
 
@@ -200,11 +200,52 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           </View>
           )}
 
-          {formatCapturedAt(student.photo_captured_at) ? (
-            <Text style={{ marginTop: 8, color: colors.textMuted, textAlign: "center" }}>
-              Captured: {formatCapturedAt(student.photo_captured_at)}
+          <View style={{ marginTop: 10, alignItems: "center", gap: 3 }}>
+            {/* Photo status — shows "Captured" once a photo exists, else "Pending" (#25). */}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                paddingHorizontal: 12,
+                paddingVertical: 5,
+                borderRadius: 999,
+                backgroundColor: studentHasPhoto(student) ? colors.greenSoft : colors.blueSoft,
+              }}
+            >
+              <Ionicons
+                name={studentHasPhoto(student) ? "checkmark-circle" : "time-outline"}
+                size={15}
+                color={studentHasPhoto(student) ? colors.brandGreen : colors.primaryOrange}
+              />
+              <Text
+                style={{
+                  color: studentHasPhoto(student) ? colors.brandGreen : colors.primaryOrange,
+                  fontWeight: "700",
+                  fontSize: 13,
+                }}
+              >
+                {studentHasPhoto(student) ? "Captured" : "Pending"}
+              </Text>
+            </View>
+            {student.photo_id ? (
+              <Text style={{ color: colors.textMuted, fontSize: 12.5 }}>Photo No: {student.photo_id}</Text>
+            ) : null}
+            {formatCapturedAt(student.photo_captured_at) ? (
+              <Text style={{ color: colors.textMuted, fontSize: 12.5 }}>
+                Captured: {formatCapturedAt(student.photo_captured_at)}
+              </Text>
+            ) : null}
+            {formatCapturedAt(student.created_at) ? (
+              <Text style={{ color: colors.textMuted, fontSize: 12.5 }}>
+                Created: {formatCapturedAt(student.created_at)}
+              </Text>
+            ) : null}
+            {/* Signature status — number matches the photo number (#27). */}
+            <Text style={{ color: colors.textMuted, fontSize: 12.5 }}>
+              Signature: {studentHasSignature(student) ? `Uploaded${student.photo_id ? ` (No: ${student.photo_id})` : ""}` : "Not uploaded"}
             </Text>
-          ) : null}
+          </View>
           {student.signature_url ? (
             <View style={{ marginTop: 12, alignItems: "center" }}>
               <Text style={{ color: colors.textMuted, marginBottom: 4 }}>Signature</Text>
@@ -452,7 +493,9 @@ const styles = StyleSheet.create({
 
   editBtn: {
 
-    flex: 1,
+    flexGrow: 0,
+
+    flexShrink: 0,
 
     flexDirection: "row",
 
@@ -466,7 +509,9 @@ const styles = StyleSheet.create({
 
     borderRadius: radius.md,
 
-    paddingVertical: spacing.sm + 2,
+    paddingVertical: spacing.sm,
+
+    paddingHorizontal: spacing.md,
 
   },
 

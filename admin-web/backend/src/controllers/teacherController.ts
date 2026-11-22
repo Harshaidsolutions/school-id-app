@@ -110,6 +110,7 @@ interface TeacherStudentRow {
   field_labels: Record<string, string> | null;
   id_card_url: string | null;
   id_card_updated_at: string | null;
+  created_at: string | null;
 }
 
 interface TeacherModelRow {
@@ -127,7 +128,7 @@ const TEACHER_STUDENT_SELECT = `
   app_visible, id, student_name, roll_no, photo_url, photo_captured_at, signature_url, status, school_id, institute_id, class_section,
   parent_name, parent_phone, address, photo_id,
   dob, gender, blood_group, custom_1, custom_2, custom_3, extra_fields, field_labels,
-  id_card_url, id_card_updated_at
+  id_card_url, id_card_updated_at, created_at
 `;
 
 function nullableText(value: unknown): string | null {
@@ -197,6 +198,7 @@ function toStudentJson(row: TeacherStudentRow, ctx?: RequiredDataContext) {
     field_labels: fieldLabels,
     id_card_url: row.id_card_url,
     id_card_updated_at: row.id_card_updated_at,
+    created_at: row.created_at,
     pending_photo: !hasCapturedPhoto(row.photo_url),
     pending_data: !dataComplete || !signatureOk,
     fully_captured: hasCapturedPhoto(row.photo_url) && dataComplete && signatureOk,

@@ -41,6 +41,8 @@ export interface TeacherStudent {
   parent_phone?: string | null;
   address?: string | null;
   photo_id?: string | null;
+  /** ISO timestamp when the record was created (shown in student details). */
+  created_at?: string | null;
   custom_1?: string | null;
   custom_2?: string | null;
   custom_3?: string | null;
