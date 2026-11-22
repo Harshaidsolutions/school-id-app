@@ -195,12 +195,28 @@ export function isFieldKeyColumnIndex(key: string): boolean {
  * Build one schema entry per non-empty Excel header.
  * Uses stable fld_N keys tied to actual sheet column indices.
  */
+/** Obvious system/meta columns that should not become form fields (e.g. a
+ * re-uploaded export's "Created At" / "S.No"). Matched on the whole normalized
+ * header so real fields like "Date of Birth" or "Join Date" are never dropped. */
+const META_COLUMN_KEYS = new Set([
+  "created", "createdat", "createdon", "createddate", "createddatetime",
+  "datecreated", "dateadded", "addedon",
+  "updated", "updatedat", "updatedon", "updateddate", "modified",
+  "lastmodified", "lastupdated", "timestamp", "datetime",
+  "sno", "slno", "srno", "serialno", "serial", "serialnumber", "rowno", "rownumber",
+]);
+function isMetaColumn(label: string): boolean {
+  const n = label.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return META_COLUMN_KEYS.has(n);
+}
+
 export function buildExcelColumnSchema(rawHeaders: string[]): ExcelColumnDef[] {
   const columns: ExcelColumnDef[] = [];
 
   rawHeaders.forEach((raw, colIndex) => {
     const label = raw.trim();
     if (!label) return;
+    if (isMetaColumn(label)) return;
 
     columns.push({
       label,
