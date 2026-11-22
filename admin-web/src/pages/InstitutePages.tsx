@@ -1,6 +1,7 @@
 import { phoneError } from "../utils/validate";
 import { PasswordCell, PasswordInput } from "../components/PasswordCell";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import api from "../api/client";
@@ -14,6 +15,7 @@ import type { ApiErrorBody, Institute } from "../types";
 import { formatCalendarDate } from "../utils/formatCalendarDate";
 
 export function InstituteListPage() {
+  const { user } = useAuth();
   const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -259,6 +261,11 @@ export function InstituteListPage() {
                     <div className="mt-1 text-xs text-text-muted md:hidden">
                       {institute.owner_username ?? "—"}
                     </div>
+                    {user?.isSuperAdmin && institute.responsible_admin_is_super === false && institute.responsible_admin_name ? (
+                      <div className="mt-1 text-[11px] font-medium text-button-blue">
+                        Managed by {institute.responsible_admin_name}
+                      </div>
+                    ) : null}
                   </td>
                   <td className="hidden truncate px-2 py-3 text-text md:table-cell sm:px-3">
                     {institute.owner_username ?? "—"}

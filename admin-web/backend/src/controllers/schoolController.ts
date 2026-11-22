@@ -315,9 +315,13 @@ export async function listSchools(
          COALESCE(s.is_active, true) AS is_active,
          owner.id AS owner_user_id,
          ${ownerUsernameSelect("s.owner_username_plain")} AS owner_username,
-         ${ownerPasswordSelect("s.owner_password_plain")} AS owner_password
+         ${ownerPasswordSelect("s.owner_password_plain")} AS owner_password,
+         ra.display_name AS responsible_admin_name,
+         ra.username AS responsible_admin_username,
+         ra.is_super_admin AS responsible_admin_is_super
        FROM schools s
        ${ownerUserLateralJoin("s", "school_id")}
+       LEFT JOIN users ra ON ra.id = s.owner_admin_id
        ${where}
        ORDER BY s.created_at DESC NULLS LAST, s.name ASC`,
       values

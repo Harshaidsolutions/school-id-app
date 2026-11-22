@@ -158,6 +158,10 @@ export interface School {
   owner_username?: string | null;
   owner_user_id?: string | null;
   owner_password?: string | null;
+  /** Admin responsible for this record (shown to super admin when a child admin created it). */
+  responsible_admin_name?: string | null;
+  responsible_admin_username?: string | null;
+  responsible_admin_is_super?: boolean | null;
   /** Active/Inactive — defaults to true when API omits it */
   is_active?: boolean | null;
   /** Existing organizations default to allowed until an admin turns one off. */
@@ -177,6 +181,9 @@ export interface Institute {
   signature_url: string | null;
   created_at: string | null;
   owner_username?: string | null;
+  responsible_admin_name?: string | null;
+  responsible_admin_username?: string | null;
+  responsible_admin_is_super?: boolean | null;
   owner_user_id?: string | null;
   owner_password?: string | null;
   is_active?: boolean | null;

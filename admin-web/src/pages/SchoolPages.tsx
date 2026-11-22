@@ -11,8 +11,10 @@ import { SearchInput } from "../components/ui/SearchInput";
 import { ToggleSwitch } from "../components/ui/ToggleSwitch";
 import type { ApiErrorBody, School } from "../types";
 import { formatCalendarDate } from "../utils/formatCalendarDate";
+import { useAuth } from "../context/AuthContext";
 
 export function SchoolListPage() {
+  const { user } = useAuth();
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -252,6 +254,11 @@ export function SchoolListPage() {
                     <div className="mt-1 text-xs text-text-muted md:hidden">
                       {school.owner_username ?? "—"}
                     </div>
+                    {user?.isSuperAdmin && school.responsible_admin_is_super === false && school.responsible_admin_name ? (
+                      <div className="mt-1 text-[11px] font-medium text-button-blue">
+                        Managed by {school.responsible_admin_name}
+                      </div>
+                    ) : null}
                   </td>
                   <td className="hidden truncate px-2 py-3 text-text md:table-cell sm:px-3">
                     {school.owner_username ?? "—"}

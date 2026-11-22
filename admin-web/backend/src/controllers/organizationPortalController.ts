@@ -214,9 +214,13 @@ export async function listOrganizations(req: Request, res: Response, next: NextF
               COALESCE(o.allow_screen_recording, true) AS allow_screen_recording,
               o.created_at,
               ${ownerUsernameSelect("o.owner_username_plain")} AS username,
-              ${ownerPasswordSelect("o.owner_password_plain")} AS password
+              ${ownerPasswordSelect("o.owner_password_plain")} AS password,
+              ra.display_name AS responsible_admin_name,
+              ra.username AS responsible_admin_username,
+              ra.is_super_admin AS responsible_admin_is_super
        FROM organizations o
        ${ownerUserLateralJoin("o", "organization_id")}
+       LEFT JOIN users ra ON ra.id = o.owner_admin_id
        WHERE ${owner}
        ORDER BY o.created_at DESC`,
       values
