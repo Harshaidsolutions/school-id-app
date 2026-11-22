@@ -179,13 +179,15 @@ export function LoginScreen({ navigation }: Props) {
           bounces={false}
         >
           {/* Top: the same "My School ID Card" logo as the splash screen, gently floating */}
-          <View style={[styles.top, { paddingTop: insets.top + spacing.md }]}>
+          <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
             <LinearGradient colors={isDark ? [colors.background, colors.background] : ["#F3EDFA", "#E9F6FD", "#F6F7FC"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
             <FloatingShapes color={colors.primaryOrange} />
             <RainbowBar style={{ position: "absolute", top: 0, left: 0, right: 0 }} />
-            <Pressable onPress={backToIntro} style={[styles.introBack, { top: insets.top + 10 }]} accessibilityLabel="Back to introduction" hitSlop={10}>
-              <Ionicons name="chevron-back" size={22} color={colors.text} />
-            </Pressable>
+            <View style={styles.topBar}>
+              <Pressable onPress={backToIntro} style={styles.backBtn} accessibilityLabel="Back to introduction" hitSlop={10}>
+                <Ionicons name="chevron-back" size={22} color={colors.text} />
+              </Pressable>
+            </View>
             <Animated.View style={{ transform: [{ translateY: float.interpolate({ inputRange: [0, 1], outputRange: [4, -6] }) }] }}>
               <BrandLockup variant="hero" title={BRAND.appName} subtitle={BRAND.headerSubtitle} showTagline={false} singleLine />
             </Animated.View>
@@ -340,7 +342,8 @@ function useLoginStyles() {
       top: { width: "100%", alignItems: "center", paddingBottom: scale(14), overflow: "hidden" },
       dotsRow: { flexDirection: "row", gap: 6, marginTop: scale(10) },
       dot: { width: 7, height: 7, borderRadius: 4 },
-      introBack: { position: "absolute", left: 14, zIndex: 5, width: 40, height: 40, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.9)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#E8E9F3" },
+      topBar: { width: "100%", paddingHorizontal: spacing.md, alignItems: "flex-start", marginBottom: scale(6) },
+      backBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.92)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#E8E9F3" },
       sheet: {
         width: "100%",
         flexGrow: 1,
