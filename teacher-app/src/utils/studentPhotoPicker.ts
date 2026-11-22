@@ -1,9 +1,9 @@
 import * as ImagePicker from "expo-image-picker";
 
-/** Camera/gallery at full quality — no crop, no extra compression. */
+/** Camera/gallery compressed for fast upload (ID photos are small on the card). */
 const PICKER_OPTIONS: ImagePicker.ImagePickerOptions = {
   mediaTypes: ["images"],
-  quality: 1,
+  quality: 0.6,
   allowsEditing: false,
   exif: false,
 };
@@ -11,7 +11,7 @@ const PICKER_OPTIONS: ImagePicker.ImagePickerOptions = {
 /** Lighter images for Add/Edit form upload (faster upload, still full frame). */
 const FORM_UPLOAD_PICKER_OPTIONS: ImagePicker.ImagePickerOptions = {
   ...PICKER_OPTIONS,
-  quality: 0.82,
+  quality: 0.65,
 };
 
 export async function pickStudentPhotoFromCamera(): Promise<string | null> {
@@ -40,7 +40,7 @@ export async function pickStudentPhotoFromGallery(): Promise<string | null> {
   const result = await ImagePicker.launchImageLibraryAsync({
     ...PICKER_OPTIONS,
     // Below 1 makes the phone hand back a normal JPG (not HEIC / huge originals).
-    quality: 0.92,
+    quality: 0.65,
     selectionLimit: 1,
   });
 

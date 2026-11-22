@@ -183,6 +183,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
   const hasLoadedRef = useRef(false);
   const pickerActiveRef = useRef(false);
   const skipServerHydrateRef = useRef(false);
+  const initialCollapseDoneRef = useRef(false);
   const [savedBaseline, setSavedBaseline] = useState<OrgFormSnapshot | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [pendingSignature, setPendingSignature] = useState<LocalImage | null>(null);
@@ -367,13 +368,18 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
   );
 
   useEffect(() => {
+    // Collapse the saved School Info once, on first load — NEVER while the user
+    // is typing (otherwise the form closes/disables mid-entry).
+    if (initialCollapseDoneRef.current) return;
     const phoneReady = !showDetail("detail_phone") || Boolean(phone.trim());
     const addressReady = !showDetail("detail_address") || Boolean(address.trim());
     const yearReady = !showDetail("detail_year") || Boolean(establishYear.trim());
     if (hasSavedSchoolInfo && phoneReady && addressReady && yearReady) {
+      initialCollapseDoneRef.current = true;
       setSchoolInfoEditing(false);
     }
-  }, [address, establishYear, fieldVisibility, hasSavedSchoolInfo, phone]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasSavedSchoolInfo]);
 
   const applyPendingRouteParams = useCallback(() => {
     if (pickerActiveRef.current) {
