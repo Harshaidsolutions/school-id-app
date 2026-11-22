@@ -34,6 +34,7 @@ PROPS=android/gradle.properties
 grep -q '^org.gradle.jvmargs=' "$PROPS" && sed -i '' 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8/' "$PROPS" || echo 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8' >> "$PROPS"
 grep -q '^reactNativeArchitectures=' "$PROPS" && sed -i '' 's/^reactNativeArchitectures=.*/reactNativeArchitectures=arm64-v8a,armeabi-v7a/' "$PROPS" || echo 'reactNativeArchitectures=arm64-v8a,armeabi-v7a' >> "$PROPS"
 
+node scripts/ensure-android-release-memory.mjs
 node scripts/patch-signing.js
 
 echo ""

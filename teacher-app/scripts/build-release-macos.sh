@@ -34,6 +34,7 @@ npx expo prebuild --platform android --clean --no-install
 node scripts/verify-push-config.cjs
 node scripts/sync-release-version.mjs
 npm run android:network
+node scripts/ensure-android-release-memory.mjs
 cd android
 chmod +x gradlew
 # Sign with the keystore passed in the environment. Uses the Android Gradle Plugin's
