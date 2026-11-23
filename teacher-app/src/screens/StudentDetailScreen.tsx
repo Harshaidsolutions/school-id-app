@@ -201,49 +201,13 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           )}
 
           <View style={{ marginTop: 10, alignItems: "center", gap: 3 }}>
-            {/* Photo status — shows "Captured" once a photo exists, else "Pending" (#25). */}
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                paddingHorizontal: 12,
-                paddingVertical: 5,
-                borderRadius: 999,
-                backgroundColor: studentHasPhoto(student) ? colors.greenSoft : colors.blueSoft,
-              }}
-            >
-              <Ionicons
-                name={studentHasPhoto(student) ? "checkmark-circle" : "time-outline"}
-                size={15}
-                color={studentHasPhoto(student) ? colors.brandGreen : colors.primaryOrange}
-              />
-              <Text
-                style={{
-                  color: studentHasPhoto(student) ? colors.brandGreen : colors.primaryOrange,
-                  fontWeight: "700",
-                  fontSize: 13,
-                }}
-              >
-                {studentHasPhoto(student) ? "Captured" : "Pending"}
-              </Text>
-            </View>
+            {/* Teacher app shows only the photo number and a simple signature state —
+               no system metadata (created/captured time, status chip). */}
             {student.photo_id ? (
               <Text style={{ color: colors.textMuted, fontSize: 12.5 }}>Photo No: {student.photo_id}</Text>
             ) : null}
-            {formatCapturedAt(student.photo_captured_at) ? (
-              <Text style={{ color: colors.textMuted, fontSize: 12.5 }}>
-                Captured: {formatCapturedAt(student.photo_captured_at)}
-              </Text>
-            ) : null}
-            {formatCapturedAt(student.created_at) ? (
-              <Text style={{ color: colors.textMuted, fontSize: 12.5 }}>
-                Created: {formatCapturedAt(student.created_at)}
-              </Text>
-            ) : null}
-            {/* Signature status — number matches the photo number (#27). */}
             <Text style={{ color: colors.textMuted, fontSize: 12.5 }}>
-              Signature: {studentHasSignature(student) ? `Uploaded${student.photo_id ? ` (No: ${student.photo_id})` : ""}` : "Not uploaded"}
+              Signature: {studentHasSignature(student) ? "Uploaded" : "Not uploaded"}
             </Text>
           </View>
           {student.signature_url ? (

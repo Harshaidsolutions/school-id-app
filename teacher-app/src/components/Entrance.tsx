@@ -22,6 +22,7 @@ export function Entrance({ children, style, delay = 0, distance = 14 }: { childr
   const isAndroid = Platform.OS === "android";
   return (
     <Animated.View
+      renderToHardwareTextureAndroid={isAndroid}
       style={[
         style,
         {

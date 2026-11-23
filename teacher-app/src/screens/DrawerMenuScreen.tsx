@@ -254,6 +254,7 @@ export function DrawerMenuScreen({ navigation }: Props) {
     <View style={styles.root}>
       <Pressable style={styles.backdrop} onPress={() => navigation.goBack()} />
       <View
+        renderToHardwareTextureAndroid
         style={[
           styles.panel,
           {

@@ -204,6 +204,7 @@ const META_COLUMN_KEYS = new Set([
   "updated", "updatedat", "updatedon", "updateddate", "modified",
   "lastmodified", "lastupdated", "timestamp", "datetime",
   "sno", "slno", "srno", "serialno", "serial", "serialnumber", "rowno", "rownumber",
+  "status", "captured", "capturedon", "capturedat", "captureddate", "capturedate",
 ]);
 export function isMetaColumn(label: string): boolean {
   const n = label.toLowerCase().replace(/[^a-z0-9]/g, "");
