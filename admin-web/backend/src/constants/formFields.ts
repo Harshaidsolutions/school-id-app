@@ -36,6 +36,25 @@ export const FORM_FIELD_KEYS = DEFAULT_FORM_FIELDS.map((f) => f.key);
 
 export const SIGNATURE_UPLOAD_KEY = "signature_upload";
 
+export const PHOTO_ID_KEY = "photo_id";
+
+/** The PHOTO (photo number) column — present when Excel is uploaded, and guaranteed
+ * for manual Form Setup too. The number itself is auto-generated; this just makes the
+ * field exist and show everywhere (Form Setup, records, add/edit). No duplicate if present. */
+export function withPhotoIdField(fields: FormFieldConfig[]): FormFieldConfig[] {
+  if (fields.some((field) => field.key === PHOTO_ID_KEY)) return fields;
+  return [
+    {
+      key: PHOTO_ID_KEY,
+      label: "PHOTO",
+      enabled: true,
+      source: "manual",
+      displayOrder: -2,
+    },
+    ...fields,
+  ];
+}
+
 export const STUDENT_NAME_KEY = "student_name";
 
 /** Name is the record identity and must always exist (Excel maps any name column to

@@ -13,6 +13,7 @@ import {
   withSequentialDisplayOrder,
   withSignatureUploadField,
   withNameField,
+  withPhotoIdField,
 } from "../constants/formFields";
 import { isKnownFieldKey } from "../utils/excelSchema";
 import { isMetaColumn as isMetaFieldLabel } from "../utils/excelSchema";
@@ -565,7 +566,7 @@ export async function getFormConfig(
       configured: fields.some((field) => field.key !== "signature_upload") || fields.length > 0,
       studentCount,
       importBatchCount,
-      fields: sortFormFields(fields),
+      fields: sortFormFields(withPhotoIdField(withNameField(fields))),
     });
   } catch (error) {
     next(error);
@@ -642,7 +643,7 @@ export async function putFormConfig(
     });
 
     let normalized = withSignatureUploadField(withSequentialDisplayOrder(
-      withNameField(fields
+      withPhotoIdField(withNameField(fields
         .map((f) => {
           const colIndex = (f as { colIndex?: number }).colIndex;
           const displayOrder = (f as { displayOrder?: number }).displayOrder;
@@ -662,7 +663,7 @@ export async function putFormConfig(
           };
         })
         .filter((f) => f.key && f.label && isKnownFieldKey(f.key))
-    )));
+    ))));
 
     if (normalized.length === 0) {
       throw new AppError("At least one valid field is required", 400);
@@ -719,7 +720,7 @@ export async function loadFormConfigForOrg(options: {
     schoolId: schoolId ?? undefined,
     instituteId: instituteId ?? undefined,
   });
-  if (fields.length > 0) return stripMetaFields(withSignatureUploadField(withNameField(fields)));
+  if (fields.length > 0) return stripMetaFields(withSignatureUploadField(withNameField(withPhotoIdField(fields))));
 
   const hasData = await orgHasImportedData({
     schoolId: schoolId ?? undefined,
@@ -730,7 +731,7 @@ export async function loadFormConfigForOrg(options: {
       schoolId: schoolId ?? undefined,
       instituteId: instituteId ?? undefined,
     });
-    if (rebuilt.length > 0) return stripMetaFields(withNameField(rebuilt));
+    if (rebuilt.length > 0) return stripMetaFields(withNameField(withPhotoIdField(rebuilt)));
   }
 
   return [];
