@@ -87,7 +87,7 @@ export function parentFormFields(config: FormFieldConfig[]) {
         f.fieldType === "dropdown"
           ? (f.options ?? []).map((o) => String(o).trim()).filter(Boolean)
           : undefined,
-      required: f.key === name.key || f.key === classField.key || f.required === true,
+      required: f.key === name.key || f.key === classField.key || f.required !== false,
     }));
   return {
     fields: [

@@ -251,7 +251,7 @@ export function AddStudentForm({
       }
     };
     for (const f of displayFields) {
-      if (f.required !== true) continue;
+      if (f.required === false) continue; // enforce every field except ones set Optional in Form Setup
       if (f.key === "signature_upload") {
         if (!signatureUri) { setError(`${f.label} is required.`); return; }
         continue;

@@ -400,7 +400,7 @@ export function DynamicStudentFieldList({
           // One "Name" field that follows the configured label (single NAME column),
           // instead of separate First/Last inputs.
           return (
-            <Field key={field.key} label={label} colors={colors} required={nameRequired}>
+            <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
               <TextInput
                 style={inputStyle}
                 value={[firstName, lastName].filter(Boolean).join(" ")}
@@ -421,7 +421,7 @@ export function DynamicStudentFieldList({
           const locked = lockedClassSection?.trim();
           if (locked) {
             return (
-              <Field key={field.key} label={label} colors={colors} required={classRequired}>
+              <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
                 <View style={[inputStyle, { justifyContent: "center" }]}>
                   <Text style={{ color: colors.text }} numberOfLines={1}>
                     {locked}
@@ -432,7 +432,7 @@ export function DynamicStudentFieldList({
           }
           if (classInputMode === "picker" && onClassSectionPress) {
             return (
-              <Field key={field.key} label={label} colors={colors} required={classRequired}>
+              <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
                 <Pressable
                   style={[inputStyle, { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }]}
                   onPress={onClassSectionPress}
@@ -449,7 +449,7 @@ export function DynamicStudentFieldList({
             );
           }
           return (
-            <Field key={field.key} label={label} colors={colors} required={classRequired}>
+            <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
               <TextInput
                 style={inputStyle}
                 value={classSection}
