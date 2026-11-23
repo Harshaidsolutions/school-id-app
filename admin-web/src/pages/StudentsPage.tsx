@@ -1225,13 +1225,13 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
 
       {error && <div className="mb-4 alert-error">{error}</div>}
 
-      {isDetailView && !hasExcelUploaded && !loading ? (
+      {isDetailView && !hasExcelUploaded && enabledFields.length === 0 && !loading ? (
         <div className="card px-6 py-16 text-center text-sm text-text-muted">
-          Upload an Excel file to import {isInstitute ? "members" : "students"} and configure fields.
+          Upload an Excel file, or add fields in Form Setup, to {isInstitute ? "add members" : "add students"}.
         </div>
       ) : null}
 
-      {(hasExcelUploaded || !isDetailView) && (
+      {(hasExcelUploaded || !isDetailView || enabledFields.length > 0) && (
       <div
         className={
           isDetailView

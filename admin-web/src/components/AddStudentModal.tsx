@@ -415,8 +415,8 @@ export function AddStudentModal({
 
     return (
       <label key={key} className="block text-sm">
-        <span className="mb-1.5 block font-medium text-text-navy">{label}{field.required !== false && field.fieldType ? " *" : ""}</span>
-        <input required={field.required !== false && Boolean(field.fieldType)} value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field" />
+        <span className="mb-1.5 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
+        <input required={field.required !== false} value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field" />
       </label>
     );
   }
