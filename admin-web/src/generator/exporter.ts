@@ -272,13 +272,14 @@ function textProblems(layout: Layout, side: Side, row: Row, issues: RenderIssue[
 }
 
 /**
- * One ZIP "folder" with everything for the batch:
- *   <Job>/Front/<PhotoID>.jpg      — every front side, exactly the template's pixel size
- *   <Job>/Back/<PhotoID>.jpg       — every back side
- *   <Job>/Print sheets (<paper>).pdf                     — cards on the chosen paper with crop marks
- *   <Job>/Print sheets (<paper>).zip                     — the same sheets as JPG images
- *   <Job>/Card details.csv                               — every column for every card
- *   <Job>/ERRORS - cards to correct.csv                  — only when some text was cut off
+ * One "folder" (saved to disk, or a ZIP of the same tree to download) for the batch:
+ *   <School>/Single/Front/<PhotoID>.jpg          — every front side, exactly the template's pixel size
+ *   <School>/Single/Back/<PhotoID>.jpg           — every back side (only when a back template exists)
+ *   <School>/Print Sheets/Front/Sheet NN.jpg     — imposed print sheets (front) as images
+ *   <School>/Print Sheets/Back/Sheet NN.jpg      — imposed print sheets (back) as images
+ *   <School>/PDF/Print sheets (<paper>).pdf      — the print sheets as one PDF with crop marks
+ *   <School>/Excel Correction/Card details.csv   — every column for every card
+ *   <School>/Excel Correction/ERRORS - cards to correct.csv — only when some text was cut off
  */
 export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
   // The template's own resolution, exactly (300 stays 300 — never rounded to 313 or reset to 72).
@@ -306,7 +307,6 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
   // Print sheets are also saved as images (one JPG per sheet side) in a ZIP, next to the PDF.
   const sheetDpi = Math.min(dpi, 300, 14000 / (Math.max(sheet.w, sheet.h) / 25.4));
   const smm = sheetDpi / 25.4;
-  const sheetZip = new ZipWriter();
   const sheetCanvas = document.createElement("canvas");
   sheetCanvas.width = Math.round(sheet.w * smm);
   sheetCanvas.height = Math.round(sheet.h * smm);
@@ -344,7 +344,7 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
         }
         // Same pixel size as the uploaded template, saved as JPG (with the print DPI in the file).
         const out = atTemplateSize(canvas, o.templates[side], scaled);
-        await put(`${folder}/${side === "front" ? "Front" : "Back"}/${fileBase}.jpg`, await jpegWithDpi(out, dpi));
+        await put(`${folder}/Single/${side === "front" ? "Front" : "Back"}/${fileBase}.jpg`, await jpegWithDpi(out, dpi));
         if (side === "front" && o.onFront) await o.onFront(item.index, canvas);
         const ref = pdf.addJpeg(await canvasBlob(canvas, "image/jpeg", 0.93), canvas.width, canvas.height);
         const slot = side === "back" ? mirrorSlot(imp.slots[k], imp.cellW, sheet.w) : imp.slots[k];
@@ -363,7 +363,7 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
       sctx.beginPath();
       for (const l of cutMarks) { sctx.moveTo(mx(l.x1) * smm, l.y1 * smm); sctx.lineTo(mx(l.x2) * smm, l.y2 * smm); }
       sctx.stroke();
-      await sheetZip.add(`Sheet ${String(s + 1).padStart(2, "0")} - ${side === "front" ? "Front" : "Back"}.jpg`, await jpegWithDpi(sheetCanvas, sheetDpi));
+      await put(`${folder}/Print Sheets/${side === "front" ? "Front" : "Back"}/Sheet ${String(s + 1).padStart(2, "0")}.jpg`, await jpegWithDpi(sheetCanvas, sheetDpi));
       if (o.print.margin >= 5 && base.key !== "card") ops.push({ type: "text", x: 6, y: sheet.h - 2.5, size: 6, text: `${o.jobName} | Sheet ${s + 1} | ${side.toUpperCase()} | ${group.length} cards | ${dpi} DPI` });
       pdf.addPage(sheet.w, sheet.h, ops);
     }
@@ -371,18 +371,17 @@ export async function exportBundle(o: BundleOptions): Promise<BundleResult> {
   o.onProgress(total, total, "Packing the folder…");
   const sheetName = /^\d+x\d+$/.test(base.key) ? `${base.key} in` : base.label.split(" (")[0];
   const sheetTitle = `Print sheets (${sheetName}${o.print.landscape ? ", landscape" : ""})`;
-  await put(`${folder}/${sheetTitle}.pdf`, pdf.finish());
-  await put(`${folder}/${sheetTitle}.zip`, sheetZip.finish());
+  await put(`${folder}/PDF/${sheetTitle}.pdf`, pdf.finish());
   const header = ["S.No", "File name", ...o.columns];
   const lines = [header.map(csvCell).join(",")];
   o.rows.forEach((item, i) => lines.push([String(i + 1), names.get(item.index) ?? "", ...o.columns.map((c) => item.row[c] ?? "")].map(csvCell).join(",")));
-  await put(`${folder}/Card details.csv`, new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv" }));
+  await put(`${folder}/Excel Correction/Card details.csv`, new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv" }));
   if (problems.length) {
     const report = [["S.No", "Photo ID", "Name", "Side", "Field", "Current value (wrong)", "What is wrong", "How to correct it"].join(",")];
     problems.forEach((p, i) =>
       report.push([String(i + 1), p.id, p.name, p.side === "front" ? "Front" : "Back", p.field, p.value, p.message, p.fix].map(csvCell).join(","))
     );
-    await put(`${folder}/ERRORS - cards to correct.csv`, new Blob(["\ufeff" + report.join("\r\n")], { type: "text/csv" }));
+    await put(`${folder}/Excel Correction/ERRORS - cards to correct.csv`, new Blob(["\ufeff" + report.join("\r\n")], { type: "text/csv" }));
   }
   if (o.outputFolder) return { file: null, problems, savedTo: `${o.outputFolder.name}/${folder}` };
   return { file: { name: `${folder}.zip`, blob: zip.finish() }, problems };
