@@ -250,6 +250,7 @@ export async function createSchoolWithOwner(
       [email, username, passwordHash, password, school.id]
     );
 
+    await seedDefaultFormConfig({ schoolId: school.id }, client);
     await client.query("COMMIT");
 
     await notifySuperAdminOrgCreated(req, scope, {
