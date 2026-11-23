@@ -135,9 +135,8 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
   );
 
   useEffect(() => {
-    if (institute) return;
     void api
-      .get<{ link: string | null }>(`/admin/schools/${orgId}/parent-link`)
+      .get<{ link: string | null }>(`/admin/${institute ? "institutes" : "schools"}/${orgId}/parent-link`)
       .then(({ data }) => setParentLink(data.link))
       .catch(() => undefined);
   }, [institute, orgId]);
@@ -345,7 +344,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
     },
     { label: "Cropping Tool", icon: "crop-outline", feature: true, onPress: () => navigation.navigate("WebTool", { title: "Cropping Tool", path: `/crop-tool?${orgQuery}` }) },
     { label: "ID Card Generator", icon: "card-outline", feature: true, onPress: () => navigation.navigate("WebTool", { title: "ID Card Generator", path: `/id-card-generator?${orgQuery}` }) },
-    { label: "Link", icon: "link-outline", sub: "Parent form link", hidden: institute, onPress: () => setSheet("link") },
+    { label: "Link", icon: "link-outline", sub: "Parent form link", onPress: () => setSheet("link") },
   ];
 
   function toggleSelect(id: string) {
@@ -778,7 +777,7 @@ export function RecordsScreen({ route, navigation }: ScreenProps<"Records">) {
             loading={busy}
             onPress={() =>
               void run("Could not create link.", async () => {
-                const { data } = await api.post<{ link: string }>(`/admin/schools/${orgId}/parent-link`);
+                const { data } = await api.post<{ link: string }>(`/admin/${institute ? "institutes" : "schools"}/${orgId}/parent-link`);
                 setParentLink(data.link);
                 setSheet("link");
               })

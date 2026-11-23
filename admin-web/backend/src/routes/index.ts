@@ -1,6 +1,6 @@
 import { activateDesktopLicense, checkDesktopLicense, getDesktopLicensePublicKey } from "../controllers/desktopLicenseController";
 import {registerServiceInterest,getAppInstructions} from "../controllers/workspaceToolsController";
-import {getSchoolParentForm,submitSchoolParentForm,limitParentSubmission} from "../controllers/schoolParentFormController";
+import {getSchoolParentForm,submitSchoolParentForm,limitParentSubmission,getInstituteParentForm,submitInstituteParentForm} from "../controllers/schoolParentFormController";
 import {uploadParentForm} from "../middleware/upload";
 import { Router } from "express";
 import { healthCheck } from "../controllers/healthController";
@@ -27,6 +27,8 @@ const router = Router();
 
 router.get("/public/school-forms/:token", getSchoolParentForm);
 router.post("/public/school-forms/:token", limitParentSubmission, uploadParentForm.fields([{name:"student_photo",maxCount:1},{name:"signature_upload",maxCount:1}]), submitSchoolParentForm);
+router.get("/public/institute-forms/:token", getInstituteParentForm);
+router.post("/public/institute-forms/:token", limitParentSubmission, uploadParentForm.fields([{name:"student_photo",maxCount:1},{name:"signature_upload",maxCount:1}]), submitInstituteParentForm);
 router.get("/health", healthCheck);
 router.post("/public/desktop-license/activate", activateDesktopLicense);
 router.post("/public/desktop-license/check", checkDesktopLicense);

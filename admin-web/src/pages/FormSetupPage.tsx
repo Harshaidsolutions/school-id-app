@@ -241,7 +241,8 @@ export function FormSetupPage() {
 
   const [parentFormEnabled,setParentFormEnabled]=useState(false);
   const [parentFormBusy,setParentFormBusy]=useState(false);
-  useEffect(()=>{if(schoolId)void api.get(`/admin/schools/${schoolId}/parent-link`).then(({data})=>setParentFormEnabled(data.enabled===true)).catch(()=>{});},[schoolId]);
+  const parentOrgPath = schoolId ? `/admin/schools/${schoolId}` : instituteId ? `/admin/institutes/${instituteId}` : "";
+  useEffect(()=>{if(parentOrgPath)void api.get(`${parentOrgPath}/parent-link`).then(({data})=>setParentFormEnabled(data.enabled===true)).catch(()=>{});},[parentOrgPath]);
   const [fields, setFields] = useState<FormFieldConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -414,9 +415,9 @@ export function FormSetupPage() {
       {error && <div className="w-full alert-error">{error}</div>}
       {success && <div className="mt-4 w-full alert-success">{success}</div>}
 
-          {schoolId && <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[#FECDD6] bg-[#FFF1F3] p-4">
+          {parentOrgPath && <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[#FECDD6] bg-[#FFF1F3] p-4">
               <div><p className="font-semibold text-text-navy">Parent student form</p><p className="text-sm text-slate-600">Show the parent form link on the app’s ID Cards screen.</p></div>
-              <ToggleSwitch checked={parentFormEnabled} disabled={parentFormBusy} label="Parent student form" onChange={()=>{const previous=parentFormEnabled;setParentFormEnabled(!previous);setParentFormBusy(true);void api.patch(`/admin/schools/${schoolId}/parent-link/settings`,{enabled:!parentFormEnabled}).then(({data})=>setParentFormEnabled(data.enabled)).catch(err=>{setParentFormEnabled(previous);setError(err.response?.data?.message || "Could not update parent form visibility.");}).finally(()=>setParentFormBusy(false));}} />
+              <ToggleSwitch checked={parentFormEnabled} disabled={parentFormBusy} label="Parent student form" onChange={()=>{const previous=parentFormEnabled;setParentFormEnabled(!previous);setParentFormBusy(true);void api.patch(`${parentOrgPath}/parent-link/settings`,{enabled:!parentFormEnabled}).then(({data})=>setParentFormEnabled(data.enabled)).catch(err=>{setParentFormEnabled(previous);setError(err.response?.data?.message || "Could not update parent form visibility.");}).finally(()=>setParentFormBusy(false));}} />
             </div>}
 
       {loading ? (

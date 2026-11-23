@@ -4,7 +4,7 @@ import {photoArchiveUpload,importPhotos} from "../controllers/photoImportControl
 import {photoChunkBody,receivePhotoChunk,finishPhotoUpload,photoImportJobStatus} from "../controllers/photoImportJobs";
 import { adminSelectionLock } from "../controllers/selectionLockController";
 import {uploadInstructionMedia,messageTemplates,instructionContent,registrations,setCandidateVisibility} from "../controllers/workspaceToolsController";
-import {getSchoolParentLink, setSchoolParentFormEnabled,createSchoolParentLink} from "../controllers/schoolParentFormController";
+import {getSchoolParentLink, setSchoolParentFormEnabled,createSchoolParentLink, getInstituteParentLink, setInstituteParentFormEnabled, createInstituteParentLink} from "../controllers/schoolParentFormController";
 import {
   convertGeneratorPdfToCmyk,
   generatorCapabilities,
@@ -228,6 +228,9 @@ router.get("/dashboard-summary", getDashboardSummary);
 router.get("/schools/:id/parent-link", getSchoolParentLink);
 router.post("/schools/:id/parent-link", createSchoolParentLink);
 router.patch("/schools/:id/parent-link/settings",setSchoolParentFormEnabled);
+router.get("/institutes/:id/parent-link", getInstituteParentLink);
+router.post("/institutes/:id/parent-link", createInstituteParentLink);
+router.patch("/institutes/:id/parent-link/settings", setInstituteParentFormEnabled);
 router.post("/schools", uploadSchoolAssets, createSchool);
 router.post("/schools-with-owner", createSchoolWithOwner);
 router.get("/schools", listSchools);

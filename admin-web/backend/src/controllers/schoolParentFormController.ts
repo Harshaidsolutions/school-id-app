@@ -8,6 +8,7 @@ import { consumeAttempt } from "../middleware/attemptLimit";
 import {
   requireAdminScope,
   assertSchoolOwnedByAdmin,
+  assertInstituteOwnedByAdmin,
 } from "../utils/adminScope";
 import { loadFormConfigForOrg } from "./formConfigController";
 import { FormFieldConfig } from "../constants/formFields";
@@ -431,6 +432,292 @@ export async function setSchoolParentFormEnabled(
     }
     await pool.query(
       "UPDATE schools SET parent_form_enabled=$2,parent_form_token=CASE WHEN $2 THEN COALESCE(parent_form_token,$3) ELSE parent_form_token END WHERE id=$1",
+      [id, req.body.enabled, randomBytes(24).toString("hex")],
+    );
+    res.json({ enabled: req.body.enabled });
+  } catch (e) {
+    next(e);
+  }
+}
+
+
+/* ============================================================================
+ * Institute member share link (#13) — same shape as the school parent form,
+ * but keyed on institute_id and grouped by the institute's dropdown
+ * (e.g. Designation). Kept self-contained so the school flow is untouched.
+ * ========================================================================== */
+
+async function instituteGroupChoices(
+  instituteId: string,
+  classField: FormFieldConfig,
+): Promise<string[]> {
+  const opts = (classField.options ?? [])
+    .map((o) => String(o).trim())
+    .filter(Boolean);
+  if (opts.length) return [...new Set(opts)];
+  const r = await pool.query<{ v: string }>(
+    "SELECT DISTINCT extra_fields->>$2 AS v FROM students WHERE institute_id=$1 AND NULLIF(TRIM(extra_fields->>$2),'') IS NOT NULL ORDER BY 1",
+    [instituteId, classField.key],
+  );
+  return r.rows.map((x) => x.v);
+}
+
+async function instituteForToken(token: string) {
+  if (!/^[a-f0-9]{48}$/.test(token))
+    throw new AppError("This member form is not available.", 404);
+  const result = await pool.query<{ id: string; name: string }>(
+    `SELECT id,name FROM institutes WHERE parent_form_token=$1 AND COALESCE(is_active,true)=true`,
+    [token],
+  );
+  if (!result.rows[0])
+    throw new AppError("This member form is not available.", 404);
+  return result.rows[0];
+}
+
+export async function getInstituteParentLink(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const instituteId =
+      req.user?.role === "teacher" ? req.user.schoolId : routeParam(req.params.id);
+    if (!instituteId) throw new AppError("Institute is required", 400);
+    if (req.user?.role !== "teacher")
+      await assertInstituteOwnedByAdmin(await requireAdminScope(req), instituteId);
+    const inst = await pool.query<{ parent_form_token: string | null; parent_form_enabled: boolean }>(
+      `SELECT parent_form_token, parent_form_enabled FROM institutes WHERE id=$1 AND COALESCE(is_active,true)=true`,
+      [instituteId],
+    );
+    if (!inst.rows[0]) throw new AppError("Institute not found", 404);
+    const token = inst.rows[0].parent_form_token;
+    const enabled = inst.rows[0].parent_form_enabled === true;
+    let classes: string[] = [];
+    try {
+      const { classField } = parentFormFields(
+        await loadFormConfigForOrg({ instituteId }),
+      );
+      classes = await instituteGroupChoices(instituteId, classField);
+    } catch {
+      classes = [];
+    }
+    res.json({
+      enabled,
+      link:
+        token && (req.user?.role !== "teacher" || enabled)
+          ? `${origin()}/institute-form/${token}`
+          : null,
+      classes,
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function createInstituteParentLink(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const id = routeParam(req.params.id);
+    await assertInstituteOwnedByAdmin(await requireAdminScope(req), id);
+    const { classField } = parentFormFields(
+      await loadFormConfigForOrg({ instituteId: id }),
+    );
+    const classes = parseClasses(await instituteGroupChoices(id, classField));
+    const result = await pool.query<{ parent_form_token: string }>(
+      `UPDATE institutes SET parent_form_token=COALESCE(parent_form_token,$2),parent_form_classes=$3::jsonb WHERE id=$1 AND COALESCE(is_active,true)=true RETURNING parent_form_token`,
+      [id, randomBytes(24).toString("hex"), JSON.stringify(classes)],
+    );
+    if (!result.rows[0]) throw new AppError("Active institute not found", 404);
+    res.json({
+      link: `${origin()}/institute-form/${result.rows[0].parent_form_token}`,
+      classes,
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function getInstituteParentForm(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const inst = await instituteForToken(routeParam(req.params.token));
+    const { fields, classKey, classField } = parentFormFields(
+      await loadFormConfigForOrg({ instituteId: inst.id }),
+    );
+    const classes = await instituteGroupChoices(inst.id, classField);
+    res.json({
+      organizationName: inst.name,
+      fields: fields.map((f) =>
+        f.id === classKey ? { ...f, fieldType: "select", options: classes } : f,
+      ),
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function submitInstituteParentForm(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  let client: PoolClient | undefined;
+  let photoOrg: string | null = null,
+    signaturePath: string | null = null;
+  const id = randomUUID();
+  let committed = false;
+  try {
+    const inst = await instituteForToken(routeParam(req.params.token));
+    const config = await loadFormConfigForOrg({ instituteId: inst.id });
+    const { fields, nameKey, classKey, classField } = parentFormFields(config);
+    const files = Array.isArray(req.files)
+      ? req.files
+      : Object.values(req.files ?? {}).flat();
+    const photo = files.find((f) => f.fieldname === "student_photo");
+    if (!photo) throw new AppError("Photo is required", 400);
+    const extra: Record<string, string | null> = {};
+    for (const f of fields) {
+      if (f.fieldType === "photo") continue;
+      const value = String(req.body[f.id] ?? "").trim();
+      if (value.length > 2000)
+        throw new AppError(`${f.fieldName} is too long`, 400);
+      if (f.required && !value)
+        throw new AppError(`${f.fieldName} is required`, 400);
+      extra[f.id] = value || null;
+    }
+    const groups = await instituteGroupChoices(inst.id, classField);
+    if (!groups.includes(extra[classKey] ?? ""))
+      throw new AppError("Choose an option from the available list.", 400);
+    const signature = fields.some((f) => f.id === "signature_upload")
+      ? files.find((f) => f.fieldname === "signature_upload")
+      : undefined;
+    for (const file of [photo, signature].filter(
+      Boolean,
+    ) as Express.Multer.File[]) {
+      try {
+        const meta = await sharp(file.buffer, {
+          limitInputPixels: 40000000,
+        }).metadata();
+        if (!["jpeg", "png"].includes(meta.format ?? "")) throw Error("type");
+      } catch {
+        throw new AppError("Choose a valid JPG or PNG image.", 400);
+      }
+    }
+    const canonical = deriveCanonicalValuesFromExtraFields(
+      config.map((f, index) => ({ key: f.key, label: f.label, colIndex: index })),
+      extra,
+    );
+    client = await pool.connect();
+    await client.query("BEGIN");
+    const number = await allocateReusableAddSerial(client, {
+      instituteId: inst.id,
+    });
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+      `record:${inst.id}`,
+    ]);
+    const expected = fields
+      .filter((f) => f.fieldType === "text")
+      .map((f) => ({
+        key: f.id,
+        value: extra[f.id] ?? "",
+        canonical:
+          inferSemanticKey(normalizeHeaderForMatch(f.fieldName)) ?? f.id,
+      }));
+    const duplicate = await client.query(
+      `SELECT s.id FROM students s WHERE s.institute_id=$1 AND NOT EXISTS (
+      SELECT 1 FROM jsonb_array_elements($2::jsonb) e WHERE record_normalize(COALESCE(NULLIF(s.extra_fields->>(e->>'key'),''),to_jsonb(s)->>(e->>'canonical'),'')) <> record_normalize(e->>'value')
+    ) LIMIT 1`,
+      [inst.id, JSON.stringify(expected)],
+    );
+    if (duplicate.rows.length)
+      throw new AppError("Data already exists. Please contact admin.", 409);
+    for (const field of config.filter(
+      (f) =>
+        f.enabled &&
+        (f.key === "photo_id" ||
+          inferSemanticKey(normalizeHeaderForMatch(f.label)) === "photo_id"),
+    ))
+      extra[field.key] = number;
+    const labels = Object.fromEntries(
+      config.filter((f) => f.enabled).map((f) => [f.key, f.label]),
+    );
+    // Institutes group by the dropdown (stored in extra_fields); class_section is a
+    // required placeholder ("ALL"), matching how the admin/teacher apps add members.
+    await client.query(
+      `INSERT INTO students (id,institute_id,photo_id,student_name,class_section,parent_name,parent_phone,address,roll_no,gender,blood_group,dob,extra_fields,field_labels,status)
+      VALUES ($1,$2,$3,$4,'ALL',$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13::jsonb,'pending')`,
+      [
+        id,
+        inst.id,
+        number,
+        extra[nameKey],
+        canonical.parent_name || null,
+        canonical.parent_phone || null,
+        canonical.address || null,
+        canonical.roll_no || null,
+        canonical.gender || null,
+        canonical.blood_group || null,
+        null,
+        JSON.stringify(extra),
+        JSON.stringify(labels),
+      ],
+    );
+    photoOrg = inst.id;
+    const url = await uploadStudentPhotoToStorage(inst.id, id, photo);
+    let signatureUrl: string | null = null;
+    if (signature) {
+      signaturePath = memberSignatureStoragePath(
+        inst.id,
+        id,
+        signature.mimetype === "image/png" ? "png" : "jpg",
+      );
+      signatureUrl = await uploadMemberSignatureToStorage(inst.id, id, signature);
+    }
+    await client.query(
+      `UPDATE students SET photo_url=$2,signature_url=$3,status='captured',photo_captured_at=NOW(),photo_cropped=false,signature_cropped=false,updated_at=NOW() WHERE id=$1`,
+      [id, url, signatureUrl],
+    );
+    await client.query("COMMIT");
+    committed = true;
+    res.status(201).json({ status: "ok", photoNumber: number });
+  } catch (e) {
+    if (!committed) {
+      await client?.query("ROLLBACK").catch(() => {});
+      if (photoOrg)
+        await deleteStudentPhotoFromStorage(photoOrg, id).catch(() => {});
+      if (signaturePath)
+        await deleteFromBucket(STUDENT_PHOTOS_BUCKET, signaturePath).catch(() => {});
+    }
+    next(e);
+  } finally {
+    client?.release();
+  }
+}
+
+export async function setInstituteParentFormEnabled(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const id = routeParam(req.params.id);
+    await assertInstituteOwnedByAdmin(await requireAdminScope(req), id);
+    if (typeof req.body.enabled !== "boolean")
+      throw new AppError("Enabled must be true or false", 400);
+    if (req.body.enabled) {
+      const { classField } = parentFormFields(
+        await loadFormConfigForOrg({ instituteId: id }),
+      );
+      parseClasses(await instituteGroupChoices(id, classField));
+    }
+    await pool.query(
+      "UPDATE institutes SET parent_form_enabled=$2,parent_form_token=CASE WHEN $2 THEN COALESCE(parent_form_token,$3) ELSE parent_form_token END WHERE id=$1",
       [id, req.body.enabled, randomBytes(24).toString("hex")],
     );
     res.json({ enabled: req.body.enabled });

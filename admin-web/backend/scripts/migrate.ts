@@ -950,6 +950,11 @@ async function migrate() {
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS parent_form_classes JSONB;
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS parent_form_enabled BOOLEAN NOT NULL DEFAULT false;
     CREATE UNIQUE INDEX IF NOT EXISTS schools_parent_form_token ON schools(parent_form_token) WHERE parent_form_token IS NOT NULL;`);
+  // Institute parent/member share link (same shape as schools; #13).
+  await pool.query(`ALTER TABLE institutes ADD COLUMN IF NOT EXISTS parent_form_token TEXT;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS parent_form_classes JSONB;
+    ALTER TABLE institutes ADD COLUMN IF NOT EXISTS parent_form_enabled BOOLEAN NOT NULL DEFAULT false;
+    CREATE UNIQUE INDEX IF NOT EXISTS institutes_parent_form_token ON institutes(parent_form_token) WHERE parent_form_token IS NOT NULL;`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS admin_message_templates (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(), owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

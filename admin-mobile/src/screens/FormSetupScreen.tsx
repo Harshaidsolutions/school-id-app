@@ -85,9 +85,9 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
         if (!cancelled) setLoading(false);
       }
     })();
-    if (kind === "school")
+    if (kind === "school" || kind === "institute")
       void api
-        .get(`/admin/schools/${id}/parent-link`)
+        .get(`/admin/${kind === "institute" ? "institutes" : "schools"}/${id}/parent-link`)
         .then(({ data }) => !cancelled && setParentForm(data.enabled === true))
         .catch(() => undefined);
     return () => {
@@ -159,7 +159,7 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
     const prev = parentForm;
     setParentForm(next);
     try {
-      const { data } = await api.patch(`/admin/schools/${id}/parent-link/settings`, { enabled: next });
+      const { data } = await api.patch(`/admin/${kind === "institute" ? "institutes" : "schools"}/${id}/parent-link/settings`, { enabled: next });
       setParentForm(data.enabled === true);
     } catch (e) {
       setParentForm(prev);
@@ -171,7 +171,7 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
     <Screen title="Form Setup" subtitle={name} footer={fields.length ? <Button title="Save" icon="save-outline" onPress={() => void save()} loading={saving} /> : undefined}>
       <Banner text={error} onClose={() => setError(null)} />
       <Banner text={notice} tone="green" onClose={() => setNotice(null)} />
-      {kind === "school" && parentForm !== null ? (
+      {kind !== "organization" && parentForm !== null ? (
         <Card style={{ marginBottom: S.lg, backgroundColor: C.primarySoft }}>
           <Toggle label="Parent student form" sub="Show the parent form link on the app’s ID Cards screen." value={parentForm} onChange={(v) => void toggleParentForm(v)} />
         </Card>

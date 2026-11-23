@@ -39,6 +39,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/school-form/:token" element={<PublicOrgFormPage school />} />
+          <Route path="/institute-form/:token" element={<PublicOrgFormPage institute />} />
           <Route path="/org-form/:token" element={<PublicOrgFormPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/verify-otp" element={<VerifyOtpPage />} />

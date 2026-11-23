@@ -289,6 +289,8 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
   const [schools, setSchools] = useState<School[]>([]);
   const [schoolId, setSchoolId] = useState(searchParams.get("schoolId") ?? "");
   const [instituteId, setInstituteId] = useState(searchParams.get("instituteId") ?? "");
+  const parentOrgId = isInstitute ? instituteId : schoolId;
+  const parentOrgPath = isInstitute ? `/admin/institutes/${instituteId}` : `/admin/schools/${schoolId}`;
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -361,12 +363,12 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
 
   useEffect(() => {
     let cancelled=false;setParentLink(null);setParentLinkMessage("");setParentLinkOpen(false);
-    if(!isInstitute && schoolId) void api.get<{link:string|null;classes?:string[]}>(`/admin/schools/${schoolId}/parent-link`).then(({data})=>{if(!cancelled){setParentLink(data.link);}}).catch(()=>{});
+    if(parentOrgId) void api.get<{link:string|null;classes?:string[]}>(`${parentOrgPath}/parent-link`).then(({data})=>{if(!cancelled){setParentLink(data.link);}}).catch(()=>{});
     return ()=>{cancelled=true;};
-  },[schoolId,isInstitute]);
+  },[schoolId,instituteId,isInstitute,parentOrgId,parentOrgPath]);
   async function createParentLink() {
-    if(parentLinkBusy||!schoolId)return;setParentLinkBusy(true);setParentLinkMessage("");
-    try {const {data}=await api.post<{link:string}>(`/admin/schools/${schoolId}/parent-link`);setParentLink(data.link);}
+    if(parentLinkBusy||!parentOrgId)return;setParentLinkBusy(true);setParentLinkMessage("");
+    try {const {data}=await api.post<{link:string}>(`${parentOrgPath}/parent-link`);setParentLink(data.link);}
     catch(err){setParentLinkMessage(axios.isAxiosError(err)?err.response?.data?.message||"Could not create link.":"Could not create link.");}
     finally{setParentLinkBusy(false);}
   }
@@ -1008,7 +1010,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   className="input-field w-full pl-10 text-sm"
                 />
               </div>
-            {!isInstitute && <button type="button" disabled={!schoolId} className="btn-primary shrink-0" aria-label="Parent form link options" aria-expanded={parentLinkOpen} onClick={()=>{setParentLinkOpen(open=>!open);if(!parentLink&&!parentLinkOpen)void createParentLink();}}>{parentLinkOpen?"−":"+"} Link</button>}
+            {<button type="button" disabled={!parentOrgId} className="btn-primary shrink-0" aria-label="Parent form link options" aria-expanded={parentLinkOpen} onClick={()=>{setParentLinkOpen(open=>!open);if(!parentLink&&!parentLinkOpen)void createParentLink();}}>{parentLinkOpen?"−":"+"} Link</button>}
             </div>
             <button
               ref={filterButtonRef}
@@ -1084,9 +1086,9 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
               </button>
             </div>
           </div>
-          {!isInstitute && parentLinkOpen && <div className="col-span-full space-y-3 rounded-xl border border-border bg-white p-4">
+          {parentLinkOpen && <div className="col-span-full space-y-3 rounded-xl border border-border bg-white p-4">
             {parentLinkBusy && <p className="text-sm text-text-muted">Preparing link…</p>}
-            {!isInstitute && parentLink && <div className="col-span-full flex w-full flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-3">
+            {parentLink && <div className="col-span-full flex w-full flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-3">
               <input aria-label="Parent form link" readOnly value={parentLink} className="input-field min-w-0 flex-1" onFocus={event=>event.target.select()}/>
               <button type="button" className="btn-secondary" onClick={()=>void navigator.clipboard.writeText(parentShareText(parentLink, selectedSchoolName)).then(()=>setParentLinkMessage("Message with link copied.")).catch(()=>setParentLinkMessage("Select the link and copy it."))}>Copy</button>
               <button type="button" className="btn-primary" onClick={()=>{
@@ -1096,7 +1098,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                 else window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
               }}>Share</button>
             </div>}
-            {!isInstitute && parentLinkMessage && <p role="status" className="col-span-full text-sm text-text-muted">{parentLinkMessage}</p>}
+            {parentLinkMessage && <p role="status" className="col-span-full text-sm text-text-muted">{parentLinkMessage}</p>}
           </div>}
           {filterOpen
             ? createPortal(

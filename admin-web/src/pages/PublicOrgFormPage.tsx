@@ -12,9 +12,9 @@ type PublicField = {
   options?: string[];
 };
 
-export function PublicOrgFormPage({ school = false }: {school?:boolean}) {
+export function PublicOrgFormPage({ school = false, institute = false }: {school?:boolean; institute?:boolean}) {
   const { token = "" } = useParams();
-  const endpoint = `/public/${school ? "school" : "org"}-forms/${token}`;
+  const endpoint = `/public/${institute ? "institute" : school ? "school" : "org"}-forms/${token}`;
   const [organizationName, setOrganizationName] = useState("");
   const [fields, setFields] = useState<PublicField[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
@@ -32,7 +32,7 @@ export function PublicOrgFormPage({ school = false }: {school?:boolean}) {
       })
       .catch((err) => setError(messageOf(err, "This form is not available.")))
       .finally(() => setLoading(false));
-  }, [token, school]);
+  }, [token, school, institute]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
