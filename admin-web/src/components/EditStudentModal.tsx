@@ -319,7 +319,7 @@ export function EditStudentModal({
     if (key === "class_section") {
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1 block font-medium text-text-navy">{label} *</span>
+          <span className="mb-1 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           <select
             required
             value={fieldValue(key)}
@@ -340,7 +340,7 @@ export function EditStudentModal({
     if (key === "gender" && field.fieldType === "dropdown") {
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1 block font-medium text-text-navy">{label}</span>
+          <span className="mb-1 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           <select value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field">
             <option value="">Select gender</option>
             {GENDER_OPTIONS.map((g) => (
@@ -354,7 +354,7 @@ export function EditStudentModal({
     if (key === "blood_group" && field.fieldType === "dropdown") {
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1 block font-medium text-text-navy">{label}</span>
+          <span className="mb-1 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           <select value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field">
             <option value="">Select blood group</option>
             {BLOOD_GROUP_OPTIONS.map((g) => (
@@ -368,7 +368,7 @@ export function EditStudentModal({
     if (key === "dob") {
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1 block font-medium text-text-navy">{label}</span>
+          <span className="mb-1 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           <input type="date" value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field" />
         </label>
       );
@@ -377,7 +377,7 @@ export function EditStudentModal({
     if (key === "address") {
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1 block font-medium text-text-navy">{label}</span>
+          <span className="mb-1 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           <textarea rows={2} value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field" />
         </label>
       );
@@ -386,7 +386,7 @@ export function EditStudentModal({
     if (key === "student_name") {
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1 block font-medium text-text-navy">{label}</span>
+          <span className="mb-1 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           <input value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field" />
         </label>
       );
@@ -395,7 +395,7 @@ export function EditStudentModal({
     if (key === "signature_upload") {
       return (
         <div key={key} className="block text-sm">
-          <span className="mb-1 block font-medium text-text-navy">{label}</span>
+          <span className="mb-1 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           {signaturePreview ? (
             <img
               src={signaturePreview}
@@ -449,7 +449,7 @@ export function EditStudentModal({
 
     return (
       <label key={key} className="block text-sm">
-        <span className="mb-1 block font-medium text-text-navy">{label}</span>
+        <span className="mb-1 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
         <input value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field" />
       </label>
     );

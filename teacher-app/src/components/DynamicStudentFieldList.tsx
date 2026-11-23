@@ -384,7 +384,7 @@ export function DynamicStudentFieldList({
         ) {
           const current = extraValues[field.key] ?? "";
           return (
-            <Field key={field.key} label={label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
               <InlineDropdown
                 value={current}
                 options={field.options ?? []}
@@ -466,7 +466,7 @@ export function DynamicStudentFieldList({
 
         if (kind === "roll_no") {
           return (
-            <Field key={field.key} label={label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
               <TextInput
                 style={inputStyle}
                 value={rollNo}
@@ -505,7 +505,7 @@ export function DynamicStudentFieldList({
             );
           }
           return (
-            <Field key={field.key} label={label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
               <TextInput style={inputStyle} value={gender} onChangeText={onGenderChange} placeholderTextColor={colors.textSubtle} {...focus} />
             </Field>
           );
@@ -525,7 +525,7 @@ export function DynamicStudentFieldList({
             );
           }
           return (
-            <Field key={field.key} label={label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
               <TextInput style={inputStyle} value={bloodGroup} onChangeText={onBloodGroupChange} placeholderTextColor={colors.textSubtle} {...focus} />
             </Field>
           );
@@ -534,7 +534,7 @@ export function DynamicStudentFieldList({
         if (kind === "parent_name") {
           const primary = field.key === primaryParentKey;
           return (
-            <Field key={field.key} label={label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
               <TextInput
                 style={inputStyle}
                 value={primary ? parentName : (extraValues[field.key] ?? "")}
@@ -557,7 +557,7 @@ export function DynamicStudentFieldList({
               key={field.key}
               label={label}
               colors={colors}
-              required={parentPhoneTenDigits}
+              required={field.required !== false}
             >
               <TextInput
                 style={inputStyle}
@@ -578,7 +578,7 @@ export function DynamicStudentFieldList({
 
         if (kind === "address") {
           return (
-            <Field key={field.key} label={label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
               <TextInput
                 style={[inputStyle, { minHeight: 72, textAlignVertical: "top" }]}
                 value={address}
@@ -593,7 +593,7 @@ export function DynamicStudentFieldList({
 
         if (kind === "custom_1") {
           return (
-            <Field key={field.key} label={label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
               <TextInput
                 style={inputStyle}
                 value={custom1}
@@ -607,7 +607,7 @@ export function DynamicStudentFieldList({
 
         if (kind === "custom_2") {
           return (
-            <Field key={field.key} label={label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
               <TextInput
                 style={inputStyle}
                 value={custom2}
@@ -621,7 +621,7 @@ export function DynamicStudentFieldList({
 
         if (kind === "custom_3") {
           return (
-            <Field key={field.key} label={label} colors={colors}>
+            <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
               <TextInput
                 style={inputStyle}
                 value={custom3}
@@ -634,7 +634,7 @@ export function DynamicStudentFieldList({
         }
 
         return (
-          <Field key={field.key} label={label} colors={colors}>
+          <Field key={field.key} label={label} colors={colors} required={field.required !== false}>
             <TextInput
               style={inputStyle}
               value={extraValues[field.key] ?? ""}

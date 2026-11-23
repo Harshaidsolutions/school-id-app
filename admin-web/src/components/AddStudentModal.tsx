@@ -252,7 +252,7 @@ export function AddStudentModal({
     if (isClassCategoryField(field)) {
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1.5 block font-medium text-text-navy">{label} *</span>
+          <span className="mb-1.5 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           {key === "class_section" && classOptions.length > 0 ? (
             <select
               required
@@ -282,7 +282,7 @@ export function AddStudentModal({
     if (key === "gender" && field.fieldType === "dropdown" && (field.options?.length ?? 0) === 0) {
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1.5 block font-medium text-text-navy">{label}</span>
+          <span className="mb-1.5 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           <select value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field">
             <option value="">Select gender</option>
             {GENDER_OPTIONS.map((g) => (
@@ -298,7 +298,7 @@ export function AddStudentModal({
     if (key === "blood_group" && field.fieldType === "dropdown" && (field.options?.length ?? 0) === 0) {
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1.5 block font-medium text-text-navy">{label}</span>
+          <span className="mb-1.5 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           <select value={fieldValue(key)} onChange={(e) => setField(key, e.target.value)} className="input-field">
             <option value="">Select blood group</option>
             {BLOOD_GROUP_OPTIONS.map((g) => (
@@ -314,7 +314,7 @@ export function AddStudentModal({
     if (key === "dob") {
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1.5 block font-medium text-text-navy">{label}</span>
+          <span className="mb-1.5 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           <input
             type="date"
             value={fieldValue(key)}
@@ -328,7 +328,7 @@ export function AddStudentModal({
     if (key === "address") {
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1.5 block font-medium text-text-navy">{label}</span>
+          <span className="mb-1.5 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           <textarea
             rows={3}
             value={fieldValue(key)}
@@ -342,7 +342,7 @@ export function AddStudentModal({
     if (key === "signature_upload") {
       return (
         <div key={key} className="text-sm">
-          <span className="mb-1.5 block font-medium text-text-navy">{label}</span>
+          <span className="mb-1.5 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           {signaturePreview ? (
             <img
               src={signaturePreview}
@@ -377,7 +377,7 @@ export function AddStudentModal({
     if (key === "student_name") {
       return (
         <label key={key} className="block text-sm">
-          <span className="mb-1.5 block font-medium text-text-navy">{label} *</span>
+          <span className="mb-1.5 block font-medium text-text-navy">{label}{field.required !== false ? " *" : ""}</span>
           <input
             required
             value={fieldValue(key)}
