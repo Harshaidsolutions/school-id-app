@@ -89,13 +89,15 @@ export function parentFormFields(config: FormFieldConfig[]) {
           : undefined,
       required: f.key === name.key || f.key === classField.key || f.required !== false,
     }));
+  const photoCfg = enabled.find((f) => f.key === "photo_id");
   return {
     fields: [
       {
         id: "student_photo",
         fieldName: "Student Photo",
         fieldType: "photo",
-        required: true,
+        // Follows the PHOTO field's Required/Optional setting in Form Setup.
+        required: photoCfg ? photoCfg.required !== false : true,
       },
       ...fields,
     ],
@@ -286,7 +288,8 @@ export async function submitSchoolParentForm(
       ? req.files
       : Object.values(req.files ?? {}).flat();
     const photo = files.find((f) => f.fieldname === "student_photo");
-    if (!photo) throw new AppError("Student Photo is required", 400);
+    const photoRequired = fields.find((f) => f.id === "student_photo")?.required !== false;
+    if (!photo && photoRequired) throw new AppError("Student Photo is required", 400);
     const extra: Record<string, string | null> = {};
     for (const f of fields) {
       if (f.fieldType === "photo") continue;
@@ -378,8 +381,11 @@ export async function submitSchoolParentForm(
         JSON.stringify(labels),
       ],
     );
-    photoOrg = school.id;
-    const url = await uploadStudentPhotoToStorage(school.id, id, photo);
+    let url: string | null = null;
+    if (photo) {
+      photoOrg = school.id;
+      url = await uploadStudentPhotoToStorage(school.id, id, photo);
+    }
     let signatureUrl: string | null = null;
     if (signature) {
       signaturePath = memberSignatureStoragePath(
@@ -394,8 +400,8 @@ export async function submitSchoolParentForm(
       );
     }
     await client.query(
-      `UPDATE students SET photo_url=$2,signature_url=$3,status='captured',photo_captured_at=NOW(),photo_cropped=false,signature_cropped=false,updated_at=NOW() WHERE id=$1`,
-      [id, url, signatureUrl],
+      `UPDATE students SET photo_url=$2,signature_url=$3,status=$4,photo_captured_at=${"$5"},photo_cropped=false,signature_cropped=false,updated_at=NOW() WHERE id=$1`,
+      [id, url, signatureUrl, url ? "captured" : "pending", url ? new Date() : null],
     );
     await client.query("COMMIT");
     committed = true;
@@ -580,7 +586,8 @@ export async function submitInstituteParentForm(
       ? req.files
       : Object.values(req.files ?? {}).flat();
     const photo = files.find((f) => f.fieldname === "student_photo");
-    if (!photo) throw new AppError("Photo is required", 400);
+    const photoRequired = fields.find((f) => f.id === "student_photo")?.required !== false;
+    if (!photo && photoRequired) throw new AppError("Photo is required", 400);
     const extra: Record<string, string | null> = {};
     for (const f of fields) {
       if (f.fieldType === "photo") continue;
@@ -668,8 +675,11 @@ export async function submitInstituteParentForm(
         JSON.stringify(labels),
       ],
     );
-    photoOrg = inst.id;
-    const url = await uploadStudentPhotoToStorage(inst.id, id, photo);
+    let url: string | null = null;
+    if (photo) {
+      photoOrg = inst.id;
+      url = await uploadStudentPhotoToStorage(inst.id, id, photo);
+    }
     let signatureUrl: string | null = null;
     if (signature) {
       signaturePath = memberSignatureStoragePath(
@@ -680,8 +690,8 @@ export async function submitInstituteParentForm(
       signatureUrl = await uploadMemberSignatureToStorage(inst.id, id, signature);
     }
     await client.query(
-      `UPDATE students SET photo_url=$2,signature_url=$3,status='captured',photo_captured_at=NOW(),photo_cropped=false,signature_cropped=false,updated_at=NOW() WHERE id=$1`,
-      [id, url, signatureUrl],
+      `UPDATE students SET photo_url=$2,signature_url=$3,status=$4,photo_captured_at=${"$5"},photo_cropped=false,signature_cropped=false,updated_at=NOW() WHERE id=$1`,
+      [id, url, signatureUrl, url ? "captured" : "pending", url ? new Date() : null],
     );
     await client.query("COMMIT");
     committed = true;

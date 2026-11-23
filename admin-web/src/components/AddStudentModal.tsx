@@ -110,6 +110,11 @@ export function AddStudentModal({
         return;
       }
     }
+    const photoField = fields.find((f) => f.key === "photo_id");
+    if (photoField && photoField.required !== false && !photoFile) {
+      setError("Please add the student photo.");
+      return;
+    }
     for (const field of fields) {
       const problem = fieldProblem(field.key, field.label, fieldValue(field.key));
       if (problem) {

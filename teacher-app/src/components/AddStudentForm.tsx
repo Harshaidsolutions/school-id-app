@@ -262,7 +262,7 @@ export function AddStudentForm({
     }
     if (showPhotoCapture) {
       const photoField = formFields.find((f) => f.key === "photo_id");
-      if (photoField?.required === true && !photoUri) { setError("Student Photo is required."); return; }
+      if (photoField && photoField.required !== false && !photoUri) { setError("Please capture the student photo."); return; }
     }
 
     if (submitBusy.current) return;
