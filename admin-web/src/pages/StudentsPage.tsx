@@ -421,7 +421,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
         if (isInstitute && instituteId) params.instituteId = instituteId;
         else if (schoolId) params.schoolId = schoolId;
         if (classFilter) params.classSection = classFilter;
-        if (photoFilter) params.photo = photoFilter === "uncaptured" ? "missing" : photoFilter;
+        if (photoFilter) params.photo = photoFilter;
         if (pendingDataFilter) params.pendingData = pendingDataFilter;
         if (capturedOn) params.capturedOn = capturedOn;
         if (groupFilter) params.group = groupFilter;
@@ -513,6 +513,10 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
     [formFields]
   );
 
+  const hasSignatureField = useMemo(
+    () => formFields.some((f) => f.key === "signature_upload" && f.enabled !== false),
+    [formFields]
+  );
   const tableColSpan = enabledFields.length + 4 + (selecting && isDetailView ? 1 : 0);
 
   const categoryLabels = useMemo(() => {
@@ -1109,6 +1113,7 @@ export function StudentsPage({ mode = "school" }: { mode?: "school" | "institute
                   setDesignationFilter={setDesignationFilter}
                   photoFilter={photoFilter}
                   setPhotoFilter={setPhotoFilter}
+                  hasSignatureField={hasSignatureField}
                   pendingDataFilter={pendingDataFilter}
                   setPendingDataFilter={setPendingDataFilter}
                   facets={facets}
@@ -1738,6 +1743,7 @@ function StudentFilterPanel({
   departmentLabel,
   photoFilter,
   setPhotoFilter,
+  hasSignatureField,
   pendingDataFilter,
   setPendingDataFilter,
   facets,
@@ -1761,6 +1767,7 @@ function StudentFilterPanel({
   departmentLabel: string;
   photoFilter: string;
   setPhotoFilter: (value: string) => void;
+  hasSignatureField: boolean;
   pendingDataFilter: string;
   setPendingDataFilter: (value: string) => void;
   facets: RecordFacets | null;
@@ -1861,7 +1868,8 @@ function StudentFilterPanel({
         ) : null}
         <FilterSelect label="Photo" value={photoFilter} onChange={setPhotoFilter}>
           <option value="captured">Captured</option>
-          <option value="uncaptured">Uncaptured</option>
+          <option value="missing">Uncaptured Photos</option>
+          {hasSignatureField ? <option value="missing-signature">Uncaptured Signatures</option> : null}
         </FilterSelect>
         <FilterSelect label="Required data" value={pendingDataFilter} onChange={setPendingDataFilter}>
           <option value="yes">Pending</option>
