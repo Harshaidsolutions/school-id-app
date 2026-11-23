@@ -95,13 +95,20 @@ export function AddStudentModal({
 
     const nameField = findStudentNameField(fields);
     const classField = findClassField(fields);
-    if (nameField && !fieldValue(nameField.key).trim()) {
-      setError(`${nameField.label} is required.`);
-      return;
-    }
-    if (classField && !fieldValue(classField.key).trim()) {
-      setError(`${classField.label} is required.`);
-      return;
+    // Every field the admin left Required must be filled; Optional fields may be empty.
+    // The photo number is auto-generated and image/signature fields are validated below.
+    for (const field of fields) {
+      if (
+        field.key === "photo_id" ||
+        field.key === "signature_upload" ||
+        field.fieldType === "photo"
+      )
+        continue;
+      if (field.required === false) continue;
+      if (!fieldValue(field.key).trim()) {
+        setError(`Please fill the required field: ${field.label}.`);
+        return;
+      }
     }
     for (const field of fields) {
       const problem = fieldProblem(field.key, field.label, fieldValue(field.key));

@@ -58,7 +58,15 @@ export function requiredDataFields(
   fields: FormFieldConfig[],
   visibility?: Record<string, boolean> | null
 ): FormFieldConfig[] {
-  return fields.filter((field) => field.enabled !== false && visibility?.[field.key] !== false && !isNonDataField(field));
+  // Only fields the admin left Required (required !== false) count toward "Pending Data".
+  // Optional fields never make a record incomplete, even when empty.
+  return fields.filter(
+    (field) =>
+      field.enabled !== false &&
+      visibility?.[field.key] !== false &&
+      !isNonDataField(field) &&
+      field.required !== false
+  );
 }
 
 export function hasAllRequiredFieldData(

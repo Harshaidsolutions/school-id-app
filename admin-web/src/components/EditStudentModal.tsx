@@ -172,6 +172,20 @@ export function EditStudentModal({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    // Required fields (required !== false) cannot be saved empty; Optional ones may be cleared.
+    for (const field of changeableFields) {
+      if (
+        field.key === "photo_id" ||
+        field.key === "signature_upload" ||
+        field.fieldType === "photo"
+      )
+        continue;
+      if (field.required === false) continue;
+      if (!fieldValue(field.key).trim()) {
+        setError(`Please fill the required field: ${field.label}.`);
+        return;
+      }
+    }
     for (const field of changeableFields) {
       const problem = fieldProblem(field.key, field.label, fieldValue(field.key));
       if (problem) {

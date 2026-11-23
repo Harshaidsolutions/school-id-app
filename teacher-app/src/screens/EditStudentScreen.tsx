@@ -346,6 +346,22 @@ export function EditStudentScreen({ navigation, route }: Props) {
       return;
     }
 
+    // Required fields (required !== false) cannot be saved empty; Optional ones may be cleared.
+    const fieldFilled = (key: string): boolean => {
+      const direct = (payload as Record<string, unknown>)[key];
+      if (direct != null && String(direct).trim() !== "") return true;
+      const ex = (payload.extra_fields as Record<string, unknown> | undefined)?.[key];
+      return ex != null && String(ex).trim() !== "";
+    };
+    for (const field of displayFields) {
+      if (field.key === "photo_id" || field.key === "signature_upload" || field.fieldType === "photo") continue;
+      if (field.required === false) continue;
+      if (!fieldFilled(field.key)) {
+        setError(`Please fill the required field: ${field.label}.`);
+        return;
+      }
+    }
+
     // Emptying a field that had data: ask first. The field is then empty everywhere
     // (app, admin website, Excel) and the record moves to Pending Data.
     const cleared = clearedFieldLabels(currentStudent, payload, formFields);
