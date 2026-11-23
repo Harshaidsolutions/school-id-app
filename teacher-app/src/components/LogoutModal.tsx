@@ -35,6 +35,7 @@ export function LogoutModal({ visible, onCancel, onConfirm }: { visible: boolean
       <Pressable style={{ flex: 1, backgroundColor: colors.overlay, alignItems: "center", justifyContent: "center", padding: 24 }} onPress={onCancel} accessibilityLabel="Close">
         <Animated.View
           onStartShouldSetResponder={() => true}
+          renderToHardwareTextureAndroid
           style={{
             width: "100%",
             maxWidth: 380,

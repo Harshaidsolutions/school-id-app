@@ -44,7 +44,7 @@ export function LogoutModal({
       <Pressable style={st.backdrop} onPress={onCancel} accessibilityLabel="Close">
         <Animated.View
           onStartShouldSetResponder={() => true}
-          needsOffscreenAlphaCompositing={Platform.OS === "android"}
+          renderToHardwareTextureAndroid
           style={[st.card, { opacity: Platform.OS === "android" ? 1 : pop, transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }) }] }]}
         >
           <LinearGradient colors={headerGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.top}>

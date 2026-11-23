@@ -72,7 +72,7 @@ export function AlertHost() {
       <Pressable style={st.backdrop} onPress={onBackdrop} accessibilityLabel="Close">
         <Animated.View
           onStartShouldSetResponder={() => true}
-          needsOffscreenAlphaCompositing={Platform.OS === "android"}
+          renderToHardwareTextureAndroid
           style={[st.card, { opacity: Platform.OS === "android" ? 1 : anim, transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }] }]}
         >
           <RainbowBar style={{ position: "absolute", top: 0, left: 0, right: 0 }} />

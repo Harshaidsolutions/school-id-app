@@ -91,6 +91,7 @@ export function LaunchSplashScreen({ onReady, fontsReady = true }: Props) {
       <Animated.View pointerEvents="none" style={[styles.ring, styles.ringAccent, { width: circleSize * 1.6, height: circleSize * 1.6, borderRadius: circleSize * 0.8 }, ringStyle(ringB)]} />
       {fontsReady ? (
         <Animated.View
+          renderToHardwareTextureAndroid
           style={[
             styles.wordmark,
             { opacity, transform: [{ scale: scaleAnim }] },
