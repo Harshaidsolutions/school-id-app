@@ -12,6 +12,7 @@ import {
   sortFormFields,
   withSequentialDisplayOrder,
   withSignatureUploadField,
+  withNameField,
 } from "../constants/formFields";
 import { isKnownFieldKey } from "../utils/excelSchema";
 import { isMetaColumn as isMetaFieldLabel } from "../utils/excelSchema";
@@ -641,7 +642,7 @@ export async function putFormConfig(
     });
 
     let normalized = withSignatureUploadField(withSequentialDisplayOrder(
-      fields
+      withNameField(fields
         .map((f) => {
           const colIndex = (f as { colIndex?: number }).colIndex;
           const displayOrder = (f as { displayOrder?: number }).displayOrder;
@@ -661,7 +662,7 @@ export async function putFormConfig(
           };
         })
         .filter((f) => f.key && f.label && isKnownFieldKey(f.key))
-    ));
+    )));
 
     if (normalized.length === 0) {
       throw new AppError("At least one valid field is required", 400);
@@ -718,7 +719,7 @@ export async function loadFormConfigForOrg(options: {
     schoolId: schoolId ?? undefined,
     instituteId: instituteId ?? undefined,
   });
-  if (fields.length > 0) return stripMetaFields(withSignatureUploadField(fields));
+  if (fields.length > 0) return stripMetaFields(withSignatureUploadField(withNameField(fields)));
 
   const hasData = await orgHasImportedData({
     schoolId: schoolId ?? undefined,
@@ -729,7 +730,7 @@ export async function loadFormConfigForOrg(options: {
       schoolId: schoolId ?? undefined,
       instituteId: instituteId ?? undefined,
     });
-    if (rebuilt.length > 0) return stripMetaFields(rebuilt);
+    if (rebuilt.length > 0) return stripMetaFields(withNameField(rebuilt));
   }
 
   return [];

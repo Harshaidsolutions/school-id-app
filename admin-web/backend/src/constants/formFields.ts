@@ -36,6 +36,25 @@ export const FORM_FIELD_KEYS = DEFAULT_FORM_FIELDS.map((f) => f.key);
 
 export const SIGNATURE_UPLOAD_KEY = "signature_upload";
 
+export const STUDENT_NAME_KEY = "student_name";
+
+/** Name is the record identity and must always exist (Excel maps any name column to
+ * this key; for manual Form Setup we guarantee it). Prepended so it reads first. */
+export function withNameField(fields: FormFieldConfig[]): FormFieldConfig[] {
+  if (fields.some((field) => field.key === STUDENT_NAME_KEY)) return fields;
+  return [
+    {
+      key: STUDENT_NAME_KEY,
+      label: "Name",
+      enabled: true,
+      required: true,
+      source: "manual",
+      displayOrder: -1,
+    },
+    ...fields,
+  ];
+}
+
 export function withSignatureUploadField(fields: FormFieldConfig[]): FormFieldConfig[] {
   if (fields.some((field) => field.key === SIGNATURE_UPLOAD_KEY)) return fields;
   return [
