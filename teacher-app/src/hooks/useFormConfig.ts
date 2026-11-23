@@ -31,7 +31,12 @@ async function pull(token: string, isOrganization: boolean): Promise<void> {
       api.get<{ school?: Settings }>("/teacher/organization"),
     ]);
     if (session !== token) return;
-    cached = { fields: sortFormFields(form.data.fields ?? []), settings: organization.data.school ?? {} };
+    const next: Snapshot = { fields: sortFormFields(form.data.fields ?? []), settings: organization.data.school ?? {} };
+    // Only publish a new snapshot when the config actually changed. The focus poll
+    // runs every 2s; emitting a fresh array each time gave consumers a new `fields`
+    // reference, which re-ran their seeding effects and wiped what the user typed.
+    if (cached && JSON.stringify(cached) === JSON.stringify(next)) return;
+    cached = next;
     listeners.forEach((listener) => listener(cached!));
   })();
   pending = task;

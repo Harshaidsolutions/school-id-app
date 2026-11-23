@@ -41,6 +41,8 @@ function hasPhoto(student: TeacherStudent): boolean {
   return Boolean(student.photo_url);
 }
 
+import { KeyboardAwareFormScrollView } from "./KeyboardAwareFormScrollView";
+
 export function StudentFlowModal({
   visible,
   students,
@@ -147,11 +149,10 @@ export function StudentFlowModal({
           <View style={styles.topSpacer} />
         </View>
 
-        <ScrollView
+        <KeyboardAwareFormScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.photoCenter}>
             {student.id_card_url ? (
@@ -241,7 +242,7 @@ export function StudentFlowModal({
               ))
             )}
           </View>
-        </ScrollView>
+        </KeyboardAwareFormScrollView>
 
         <View
           style={[

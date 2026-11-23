@@ -182,17 +182,17 @@ export function EditStudentScreen({ navigation, route }: Props) {
   const [signatureUri, setSignatureUri] = useState<string | null>(student.signature_url ?? null);
   const [savedStudent, setSavedStudent] = useState<TeacherStudent | null>(null);
 
-  useEffect(() => {
-    if (formFields.length > 0) {
-      setExtraValues(initialExtraValuesFromStudent(currentStudent, formFields));
-    }
-  }, [currentStudent, formFields]);
-
-  // Seed canonical fields (address, dob, gender, …) from the full resolver so a
-  // value stored in an Excel column shows in the edit form instead of appearing
-  // blank. Only fills empty values, so it never clobbers what the user typed.
+  // Seed the form from the record ONCE per record identity (and once form fields load).
+  // Not on every formFields change: the config poll hands back a new array ~every 2s,
+  // and re-seeding then would wipe what the user is typing / refill cleared fields.
+  const seededStudentRef = useRef<TeacherStudent | null>(null);
   useEffect(() => {
     if (formFields.length === 0) return;
+    if (seededStudentRef.current === currentStudent) return;
+    seededStudentRef.current = currentStudent;
+    setExtraValues(initialExtraValuesFromStudent(currentStudent, formFields));
+    // Fill canonical fields (address, dob, …) from the resolver so Excel-column values
+    // show instead of blank. Fill-only, and only on this one seeding pass.
     for (const field of formFields) {
       if (field.enabled === false) continue;
       const v = studentFieldValueForForm(
@@ -214,8 +214,9 @@ export function EditStudentScreen({ navigation, route }: Props) {
         default: break;
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStudent, formFields]);
+
+
 
   // Current image URL for each "Image/Photo"-typed field, read from extra_fields.
   const fieldImages = useMemo(() => {

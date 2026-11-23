@@ -179,6 +179,8 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
   const [templatePreviewUrlState, setTemplatePreviewUrlState] = useState<string | null>(null);
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [schoolInfoEditing, setSchoolInfoEditing] = useState(true);
+  const schoolInfoEditingRef = useRef(true);
+  schoolInfoEditingRef.current = schoolInfoEditing;
   const templateImagesRef = useRef<Record<string, string>>({});
   const hasLoadedRef = useRef(false);
   const pickerActiveRef = useRef(false);
@@ -318,7 +320,7 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
         setSchool(data.school);
         setSavedBaseline(baselineFromSchool(data.school));
 
-        if (!skipServerHydrateRef.current || options?.pullRefresh) {
+        if ((!skipServerHydrateRef.current && (!schoolInfoEditingRef.current || !hasLoadedRef.current)) || options?.pullRefresh) {
           applyOrgSchoolFromServer(
             data.school,
             imgs,
@@ -731,11 +733,12 @@ export function OrganizationDetailsScreen({ navigation, route }: Props) {
         styles.scroll,
         {
           paddingBottom:
-            spacing.xxl + insets.bottom + (isDirty ? scale(76) : 0),
+            spacing.xxl + insets.bottom + scale(220) + (isDirty ? scale(76) : 0),
         },
       ]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
+      automaticallyAdjustKeyboardInsets
       showsVerticalScrollIndicator={false}
       nestedScrollEnabled={false}
       scrollEventThrottle={16}
