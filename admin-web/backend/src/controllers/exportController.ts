@@ -553,13 +553,16 @@ export async function exportStudentsExcel(
         matchesExportScope(row, exportScope, dataCtx) &&
         rowMatchesExportExtras(row, captureDate, category, fieldKey)
     );
-    if (scopedRows.length === 0) {
-      throw new AppError("No records match this download.", 404);
-    }
 
     const formFields = await loadFormConfigForOrg({ schoolId });
     const exportColumns = buildExportHeaders(formFields);
     const header = [...exportColumns.map((c) => c.label), "Created Date", "Created Time"];
+    // A full download with no records yet returns a blank template carrying the
+    // configured Form Setup columns (so admins can fill it in and re-upload).
+    // Scoped/filtered downloads still report when nothing matches.
+    if (scopedRows.length === 0 && exportScope !== "all") {
+      throw new AppError("No records match this download.", 404);
+    }
 
     const rows = scopedRows.map((s) => [
       ...exportColumns.map((col) =>
@@ -633,13 +636,13 @@ export async function exportInstituteMembersExcel(
         matchesExportScope(row, exportScope, dataCtx) &&
         rowMatchesExportExtras(row, captureDate, category, fieldKey)
     );
-    if (scopedRows.length === 0) {
-      throw new AppError("No records match this download.", 404);
-    }
-
     const formFields = await loadFormConfigForOrg({ instituteId });
     const exportColumns = buildExportHeaders(formFields);
     const header = [...exportColumns.map((c) => c.label), "Created Date", "Created Time"];
+    // Blank template with configured columns on a full download with no members yet.
+    if (scopedRows.length === 0 && exportScope !== "all") {
+      throw new AppError("No records match this download.", 404);
+    }
     const rows = scopedRows.map((s) => [
       ...exportColumns.map((col) =>
         studentFieldValue(s as Record<string, string | null>, col.key, col.label)
