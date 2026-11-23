@@ -12,8 +12,6 @@ import {
   sortFormFields,
   withSequentialDisplayOrder,
   withSignatureUploadField,
-  withNameField,
-  withPhotoIdField,
 } from "../constants/formFields";
 import { isKnownFieldKey } from "../utils/excelSchema";
 import { isMetaColumn as isMetaFieldLabel } from "../utils/excelSchema";
@@ -391,6 +389,26 @@ export async function groupFieldKeyForOrg(opts: { schoolId?: string; instituteId
   return group?.key ?? null;
 }
 
+/** Default fields seeded when a school/institute is created. Photo + Name are visible,
+ * Signature Upload is hidden; none required by default. The admin can delete or change
+ * any of them in Form Setup, and the deletion persists (they are not re-injected). */
+export const DEFAULT_SEED_FIELDS: FormFieldConfig[] = [
+  { key: "photo_id", label: "PHOTO", enabled: true, required: false, source: "manual", displayOrder: 0 },
+  { key: "student_name", label: "Name", enabled: true, required: false, source: "manual", displayOrder: 1 },
+  { key: "signature_upload", label: "Signature Upload", enabled: false, required: false, source: "manual", displayOrder: 2 },
+];
+
+export async function seedDefaultFormConfig(
+  options: { schoolId?: string; instituteId?: string },
+  db: Pick<PoolClient, "query"> = pool
+): Promise<void> {
+  try {
+    await persistFormConfigFields(options, DEFAULT_SEED_FIELDS, db);
+  } catch (error) {
+    console.error("[form-config] seed default config failed:", error);
+  }
+}
+
 export async function persistFormConfigFields(
   options: { schoolId?: string; instituteId?: string },
   fields: FormFieldConfig[],
@@ -538,6 +556,22 @@ export async function getFormConfig(
 
     const studentCount = await countOrgStudents({ schoolId, instituteId });
     const importBatchCount = await countImportBatchesForOrg({ schoolId, instituteId });
+
+    // Existing org that never got the default fields (created before seeding, no data,
+    // no saved config row): seed Photo + Name + Signature once. If a config row already
+    // exists (admin configured or deleted fields), we respect it and never re-seed.
+    if (fields.length === 0 && studentCount === 0 && importBatchCount === 0) {
+      const existingRow = await pool.query(
+        schoolId
+          ? `SELECT 1 FROM form_configs WHERE school_id = $1::uuid LIMIT 1`
+          : `SELECT 1 FROM form_configs WHERE institute_id = $1::uuid LIMIT 1`,
+        [schoolId || instituteId]
+      );
+      if ((existingRow.rowCount ?? 0) === 0) {
+        await seedDefaultFormConfig({ schoolId: schoolId || undefined, instituteId: instituteId || undefined });
+        fields = await ensureFormConfigForOrg({ schoolId, instituteId });
+      }
+    }
     const excelSchema = await loadExcelSchemaFromLatestBatch({ schoolId, instituteId });
 
     if (fields.length === 0 && (studentCount > 0 || importBatchCount > 0)) {
@@ -566,7 +600,7 @@ export async function getFormConfig(
       configured: fields.some((field) => field.key !== "signature_upload") || fields.length > 0,
       studentCount,
       importBatchCount,
-      fields: sortFormFields(withPhotoIdField(withNameField(fields))),
+      fields: sortFormFields(fields),
     });
   } catch (error) {
     next(error);
@@ -643,7 +677,7 @@ export async function putFormConfig(
     });
 
     let normalized = withSignatureUploadField(withSequentialDisplayOrder(
-      withPhotoIdField(withNameField(fields
+      (fields
         .map((f) => {
           const colIndex = (f as { colIndex?: number }).colIndex;
           const displayOrder = (f as { displayOrder?: number }).displayOrder;
@@ -663,7 +697,7 @@ export async function putFormConfig(
           };
         })
         .filter((f) => f.key && f.label && isKnownFieldKey(f.key))
-    ))));
+    )));
 
     if (normalized.length === 0) {
       throw new AppError("At least one valid field is required", 400);
@@ -720,7 +754,7 @@ export async function loadFormConfigForOrg(options: {
     schoolId: schoolId ?? undefined,
     instituteId: instituteId ?? undefined,
   });
-  if (fields.length > 0) return stripMetaFields(withSignatureUploadField(withNameField(withPhotoIdField(fields))));
+  if (fields.length > 0) return stripMetaFields(withSignatureUploadField(fields));
 
   const hasData = await orgHasImportedData({
     schoolId: schoolId ?? undefined,
@@ -731,7 +765,7 @@ export async function loadFormConfigForOrg(options: {
       schoolId: schoolId ?? undefined,
       instituteId: instituteId ?? undefined,
     });
-    if (rebuilt.length > 0) return stripMetaFields(withNameField(withPhotoIdField(rebuilt)));
+    if (rebuilt.length > 0) return stripMetaFields(rebuilt);
   }
 
   return [];

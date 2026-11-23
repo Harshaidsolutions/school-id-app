@@ -15,6 +15,7 @@ import {
   ownerUsernameSelect,
 } from "../utils/ownerCredentials";
 import type { SchoolRow } from "../types/admin";
+import { seedDefaultFormConfig } from "./formConfigController";
 import { captureAllowedFromBody, parseBooleanField } from "../utils/parseBoolean";
 import {
   requestAdminActionOtp,
@@ -150,6 +151,7 @@ export async function createSchool(
 
     const school = inserted.rows[0];
     if (!school) throw new AppError("Failed to create school", 500);
+    await seedDefaultFormConfig({ schoolId: school.id });
 
     const { logo, signature } = filesMap(req);
     let logoUrl = school.logo_url;

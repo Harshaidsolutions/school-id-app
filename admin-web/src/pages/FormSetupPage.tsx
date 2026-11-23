@@ -221,6 +221,10 @@ function SortableFieldRow({
       {onConfigure && field.fieldType === "dropdown" ? (
         <div className="mt-2 flex w-full flex-wrap items-center gap-3 pl-9">
           <DropdownOptionsEditor options={field.options ?? []} onChange={(next) => onConfigure(rowId, { options: next })} />
+          <label className="flex items-center gap-2 text-sm font-medium text-text-navy">
+            <input type="checkbox" checked={field.isGroup === true} onChange={(e) => onConfigure(rowId, { isGroup: e.target.checked })} />
+            Group by this
+          </label>
         </div>
       ) : null}
     </li>
@@ -352,16 +356,28 @@ export function FormSetupPage() {
     }
 
     const used = new Set(fields.map((f) => f.key));
-    const baseSlug = label
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "")
-      .slice(0, 48) || "field";
-    let key = `dyn_${baseSlug}`;
-    let n = 2;
-    while (used.has(key)) {
-      key = `dyn_${baseSlug}_${n}`;
-      n += 1;
+    // Re-adding a Name / Photo / Signature field maps back to the canonical field,
+    // so it behaves exactly as the default one did before it was deleted.
+    const norm = label.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    let key: string;
+    if ((norm === "name" || norm.includes("studentname") || norm.includes("fullname") || norm.includes("membername")) && !used.has("student_name")) {
+      key = "student_name";
+    } else if (norm.includes("photo") && !norm.includes("url") && !used.has("photo_id")) {
+      key = "photo_id";
+    } else if (norm.includes("signature") && !used.has("signature_upload")) {
+      key = "signature_upload";
+    } else {
+      const baseSlug = label
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 48) || "field";
+      key = `dyn_${baseSlug}`;
+      let n = 2;
+      while (used.has(key)) {
+        key = `dyn_${baseSlug}_${n}`;
+        n += 1;
+      }
     }
 
     setError(null);
@@ -451,7 +467,12 @@ export function FormSetupPage() {
                     onCancelEdit={() => setEditingKey(null)}
                     onRemove={removeField}
                     onToggle={toggleField}
-                    onConfigure={(id, patch) => setFields(current => current.map((f,i) => formFieldRowId(f,i) === id ? {...f,...patch} : f))}
+                    onConfigure={(id, patch) => setFields(current => current.map((f,i) => {
+                      const match = formFieldRowId(f,i) === id;
+                      // Only one dropdown can be the grouping field: turning one on clears the rest.
+                      if (patch.isGroup === true) return match ? {...f,...patch} : {...f, isGroup: false};
+                      return match ? {...f,...patch} : f;
+                    }))}
                   />
                   );
                 })}

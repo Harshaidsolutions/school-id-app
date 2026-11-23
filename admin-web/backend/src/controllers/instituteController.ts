@@ -10,6 +10,7 @@ import {
 } from "../utils/adminOtp";
 import { routeParam } from "../utils/routeParams";
 import { captureAllowedFromBody, parseBooleanField } from "../utils/parseBoolean";
+import { seedDefaultFormConfig } from "./formConfigController";
 import {
   bulkResourceId,
   parseBulkIds,
@@ -109,6 +110,7 @@ export async function createInstitute(
     );
 
     const institute = inserted.rows[0];
+    if (institute) await seedDefaultFormConfig({ instituteId: institute.id });
     if (!institute) throw new AppError("Failed to create institute", 500);
 
     const { logo, signature } = filesMap(req);
@@ -201,6 +203,7 @@ export async function createInstituteWithOwner(
       [email, username, passwordHash, password, institute.id]
     );
 
+    await seedDefaultFormConfig({ instituteId: institute.id }, client);
     await client.query("COMMIT");
 
     await notifySuperAdminOrgCreated(req, scope, {

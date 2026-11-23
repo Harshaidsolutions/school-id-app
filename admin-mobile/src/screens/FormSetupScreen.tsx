@@ -111,10 +111,20 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
     if (!label) return;
     if (fields.some((f) => f.label.trim().toLowerCase() === label.toLowerCase())) return setError("This field already exists.");
     const used = new Set(fields.map((f) => f.key));
-    const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 48) || "field";
-    let key = `dyn_${slug}`;
-    let n = 2;
-    while (used.has(key)) key = `dyn_${slug}_${n++}`;
+    const norm = label.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    let key: string;
+    if ((norm === "name" || norm.includes("studentname") || norm.includes("fullname") || norm.includes("membername")) && !used.has("student_name")) {
+      key = "student_name";
+    } else if (norm.includes("photo") && !norm.includes("url") && !used.has("photo_id")) {
+      key = "photo_id";
+    } else if (norm.includes("signature") && !used.has("signature_upload")) {
+      key = "signature_upload";
+    } else {
+      const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 48) || "field";
+      key = `dyn_${slug}`;
+      let n = 2;
+      while (used.has(key)) key = `dyn_${slug}_${n++}`;
+    }
     setFields(withSequentialDisplayOrder([...fields, { key, label, enabled: true, source: "manual", displayOrder: fields.length, ...(isOrg ? { fieldType: "text" as const, required: true } : {}) }]));
     setNewLabel("");
     setError(null);
@@ -228,7 +238,7 @@ export function FormSetupScreen({ route, navigation }: ScreenProps<"FormSetup">)
                       <OptionsEditor options={f.options ?? []} onChange={(next) => patch(i, { options: next })} />
                     ) : null}
                     {f.fieldType === "dropdown" ? (
-                      <Tap onPress={() => patch(i, { isGroup: !f.isGroup })} style={{ marginTop: 6, alignSelf: "flex-start" }}>
+                      <Tap onPress={() => setFields((prev) => prev.map((x, k) => k === i ? { ...x, isGroup: !f.isGroup } : { ...x, isGroup: false }))} style={{ marginTop: 6, alignSelf: "flex-start" }}>
                         <Pill text={f.isGroup ? "Grouping by this ✓" : "Use for grouping"} tone={f.isGroup ? "green" : "grey"} icon="funnel" />
                       </Tap>
                     ) : null}
