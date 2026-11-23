@@ -47,6 +47,8 @@
 .idg-progress > div .btn-secondary { min-height: 32px; padding: 0 12px; }
 .idg-progress i { display: block; height: 6px; margin-top: 8px; border-radius: 6px; background: var(--brand-grad); transition: width 0.25s; }
 .idg-progress i.is-indeterminate { animation: idg-slide 1.2s ease-in-out infinite; }
+.idg-live-preview { margin-top: 10px; display: flex; justify-content: center; }
+.idg-live-preview img { max-width: 240px; max-height: 150px; width: auto; height: auto; border-radius: 8px; border: 1px solid var(--line); box-shadow: var(--shadow-sm); background: #fff; }
 @keyframes idg-slide { 0% { margin-left: 0; } 50% { margin-left: 65%; } 100% { margin-left: 0; } }
 
 /* Panels */

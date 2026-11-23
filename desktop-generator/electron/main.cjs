@@ -10,11 +10,52 @@ const APP_NAME = "Harsha ID Solutions – ID Card Generator";
 // Keep the licence and settings where earlier versions stored them (the app was renamed).
 app.setPath("userData", path.join(app.getPath("appData"), "My School ID Card Generator"));
 let win = null;
+let splash = null;
 let license = null;
 
 // One running copy only.
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on("second-instance", () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
+
+const SPLASH_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
+  html,body{margin:0;height:100%;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden}
+  .wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    background:linear-gradient(135deg,#6a2c9e 0%,#8e3bd1 45%,#f26a1b 120%);color:#fff;text-align:center;padding:24px}
+  .bar{display:flex;gap:4px;margin-bottom:2px}
+  .bar i{width:26px;height:5px;border-radius:3px;display:block}
+  .title{font-size:19px;font-weight:800;letter-spacing:.2px}
+  .sub{font-size:12.5px;opacity:.92;font-weight:500}
+  .dots{display:flex;gap:7px;margin-top:6px}
+  .dots span{width:9px;height:9px;border-radius:50%;background:#fff;opacity:.5;animation:b 1s infinite}
+  .dots span:nth-child(2){animation-delay:.15s}.dots span:nth-child(3){animation-delay:.3s}
+  @keyframes b{0%,100%{opacity:.4;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+</style></head><body><div class="wrap">
+  <div class="bar"><i style="background:#e8243c"></i><i style="background:#1ea0e1"></i><i style="background:#f0b500"></i><i style="background:#2bb24c"></i><i style="background:#f26a1b"></i></div>
+  <div class="title">Harsha ID Solutions</div>
+  <div class="sub">ID Card Generator</div>
+  <div class="dots"><span></span><span></span><span></span></div>
+</div></body></html>`;
+
+function createSplash() {
+  splash = new BrowserWindow({
+    width: 420,
+    height: 280,
+    frame: false,
+    resizable: false,
+    center: true,
+    alwaysOnTop: true,
+    backgroundColor: "#6a2c9e",
+    icon: path.join(__dirname, "..", "installer", "icon.png"),
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, devTools: false },
+  });
+  splash.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(SPLASH_HTML));
+  splash.on("closed", () => { splash = null; });
+}
+
+function closeSplash() {
+  if (splash && !splash.isDestroyed()) splash.close();
+  splash = null;
+}
 
 function createWindow() {
   win = new BrowserWindow({
@@ -35,7 +76,7 @@ function createWindow() {
       spellcheck: false,
     },
   });
-  win.once("ready-to-show", () => { win.maximize(); win.show(); });
+  win.once("ready-to-show", () => { closeSplash(); win.maximize(); win.show(); });
 
   // Fully offline: block every network request from the window except local files.
   win.webContents.session.webRequest.onBeforeRequest((details, cb) => {
@@ -107,6 +148,7 @@ app.whenReady().then(() => {
   }));
   ipcMain.handle("app:info", () => ({ version: app.getVersion() }));
 
+  createSplash();
   createWindow();
 
   // Licence: check online now and every hour; a disabled / expired licence locks the open app at once.

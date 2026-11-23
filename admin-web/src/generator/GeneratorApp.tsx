@@ -172,6 +172,7 @@ export function GeneratorApp() {
   const [library, setLibrary] = useState<Template[]>([]);
   const [libraryLoaded, setLibraryLoaded] = useState(false);
   const [busy, setBusy] = useState<{ label: string; done: number; total: number } | null>(null);
+  const [livePreview, setLivePreview] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const textStyle = useRef<TextStyle>({});
@@ -551,6 +552,18 @@ export function GeneratorApp() {
         nameColumn: "Name",
         dpi: outputDpi,
         onFront: async (index, canvas) => {
+          // Live preview: show each card on screen as it is generated.
+          try {
+            const pw = 420;
+            const ps = Math.min(1, pw / canvas.width);
+            const pc = document.createElement("canvas");
+            pc.width = Math.max(1, Math.round(canvas.width * ps));
+            pc.height = Math.max(1, Math.round(canvas.height * ps));
+            pc.getContext("2d")!.drawImage(canvas, 0, 0, pc.width, pc.height);
+            setLivePreview(pc.toDataURL("image/jpeg", 0.7));
+          } catch {
+            /* preview is best-effort */
+          }
           const s = students[index];
           if (!s) return;
           const blob = await phoneCopy(canvas);
@@ -595,6 +608,7 @@ export function GeneratorApp() {
       else say(e instanceof Error ? e.message : "ID cards could not be generated.", "error");
     } finally {
       setBusy(null);
+      setLivePreview(null);
       abortRef.current = null;
     }
   }
@@ -665,6 +679,11 @@ export function GeneratorApp() {
         <div className="idg-progress" role="progressbar" aria-valuenow={busy.done} aria-valuemax={busy.total || undefined}>
           <div><span>{busy.label}</span>{busy.total > 0 && <b>{busy.done} / {busy.total}</b>}{abortRef.current && <button type="button" className="btn-secondary" onClick={() => abortRef.current?.abort()}>Cancel</button>}</div>
           <i style={{ width: busy.total ? `${(busy.done / busy.total) * 100}%` : "35%" }} className={busy.total ? "" : "is-indeterminate"} />
+          {livePreview && (
+            <div className="idg-live-preview">
+              <img src={livePreview} alt="Card being generated" />
+            </div>
+          )}
         </div>
       )}
     </>
