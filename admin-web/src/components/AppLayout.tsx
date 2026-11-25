@@ -8,6 +8,7 @@ import { BulkModeButtons } from "./BulkActionBar";
 import { AdminAvatar } from "./AdminAvatar";
 import { GlobalImageZoom } from "./GlobalImageZoom";
 import { OtpConfirmModal } from "./OtpConfirmModal";
+import { parseNoticeDetails, orderedNoticeRows, noticeHeadline } from "../utils/noticeDetails";
 import { PasswordCell } from "./PasswordCell";
 
 interface NavItem {
@@ -184,59 +185,6 @@ type IncomingNotice = {
   created_at?: string | null;
   audience?: string | null;
 };
-
-function parseNoticeDetails(message: string): { label: string; value: string }[] {
-  const rows: { label: string; value: string }[] = [];
-  let label: string | null = null;
-  for (const line of message.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    if (trimmed.endsWith(":") && trimmed.length < 40 && !trimmed.includes(" ")) {
-      label = trimmed.slice(0, -1);
-      continue;
-    }
-    if (trimmed.endsWith(":") && trimmed.length < 48) {
-      label = trimmed.slice(0, -1);
-      continue;
-    }
-    if (label) {
-      rows.push({ label, value: trimmed });
-      label = null;
-    }
-  }
-  return rows;
-}
-
-/** Notification detail rows: type, name, username, password (no creator, date/time is in the header). */
-function orderedNoticeRows(details: { label: string; value: string }[]): { label: string; value: string; secret?: boolean }[] {
-  const find = (re: RegExp) => details.find((row) => re.test(row.label.trim()));
-  const org = find(/^(school|institute|organization|college)$/i);
-  const out: { label: string; value: string; secret?: boolean }[] = [];
-  if (org) {
-    out.push({ label: "Type", value: org.label.trim() });
-    out.push({ label: `${org.label.trim()} name`, value: org.value });
-  }
-  const user = find(/^username$/i);
-  if (user) out.push({ label: "Username", value: user.value });
-  const pass = find(/^password$/i);
-  if (pass) out.push({ label: "Password", value: pass.value, secret: true });
-  if (!out.length) return details.filter((row) => !/^(created by|date|time)$/i.test(row.label.trim()));
-  return out;
-}
-
-function noticeHeadline(
-  title: string,
-  details: { label: string; value: string }[]
-): string {
-  // New school / institute: show "School · <name>" (never the admin who created it).
-  const kind = title.match(/(school|institute)/i)?.[1];
-  if (kind && /created/i.test(title)) {
-    const org = details.find((row) => /^(school|institute)$/i.test(row.label.trim()));
-    if (org?.value) return `${org.label.trim()} · ${org.value}`;
-    return `New ${kind.toLowerCase()}`;
-  }
-  return title;
-}
 
 const EMBED_PATHS = new Set(["/id-card-generator", "/crop-tool"]);
 
