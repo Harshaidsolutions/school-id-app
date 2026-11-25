@@ -7,7 +7,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "test": "node --enable-source-maps --experimental-test-module-mocks --import ./tests/helpers/register.mjs --test --experimental-test-coverage \"tests/unit/**/*.test.ts\""
   },
   "dependencies": {
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.1",
@@ -42,6 +43,7 @@
   "devDependencies": {
     "@types/react": "~19.1.10",
     "typescript": "~5.9.2",
-    "babel-preset-expo": "~54.0.12"
+    "babel-preset-expo": "~54.0.12",
+    "sucrase": "^3.35.0"
   }
 }
