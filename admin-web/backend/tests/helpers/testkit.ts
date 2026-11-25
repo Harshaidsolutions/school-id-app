@@ -37,3 +37,14 @@ export function fakeClient(rules: Rule[], fallback: unknown[] = []) {
   });
   return { query, release: () => {}, connect: () => {} } as any;
 }
+
+/** Full stub of config/storage named exports (so transitive importers resolve). */
+export const storageStub = {
+  STUDENT_PHOTOS_BUCKET: "b", PRINT_PDFS_BUCKET: "b", TEMPLATES_BUCKET: "b", SCHOOL_ASSETS_BUCKET: "b", CARD_PREVIEWS_BUCKET: "b", CATALOG_BUCKET: "b",
+  getS3Client: () => ({}), publicObjectUrl: () => "u", studentPhotoStoragePath: () => "p", memberSignatureStoragePath: () => "p",
+  uploadMemberSignatureToStorage: async () => "u", studentFieldImageStoragePath: () => "p", uploadStudentFieldImageToStorage: async () => "u",
+  studentPhotoOrgId: () => "o", uploadBufferToBucket: async () => "u", uploadStudentPhotoToStorage: async () => "u", deleteStudentPhotoFromStorage: async () => {},
+  deleteFromBucket: async () => {}, studentPhotoPathFromUrl: () => "p", deleteStudentPhotoByPath: async () => {}, readBucketObject: async () => Buffer.from(""),
+  fetchImageBytes: async () => Buffer.from(""), uploadPrintPdfToStorage: async () => "u", uploadTemplateImage: async () => "u", uploadCatalogFile: async () => "u",
+  uploadSchoolAsset: async () => "https://cdn/asset", uploadCardPreview: async () => "u", assertS3BucketAccessible: async () => {}, deletePrefixFromBucket: async () => {}, purgeOrgFiles: async () => {},
+};
