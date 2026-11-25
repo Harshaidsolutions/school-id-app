@@ -50,7 +50,8 @@
   "devDependencies": {
     "@types/react": "~19.1.10",
     "sharp": "^0.35.3",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "sucrase": "^3.35.0"
   },
   "scripts": {
     "postinstall": "node scripts/patch-vision-camera.js && node scripts/patch-notification-image.js",
@@ -65,7 +66,8 @@
     "assets:logos": "node scripts/build-header-logo.mjs && node scripts/sync-in-app-logos.mjs",
     "assets:verify": "node scripts/verify-assets.mjs",
     "android:network": "node scripts/ensure-android-release-network.mjs",
-    "prebuild:release": "npm run assets:generate && npm run assets:logos && npm run assets:verify && npm run android:network"
+    "prebuild:release": "npm run assets:generate && npm run assets:logos && npm run assets:verify && npm run android:network",
+    "test": "node --enable-source-maps --experimental-test-module-mocks --import ./tests/helpers/register.mjs --test --experimental-test-coverage \"tests/unit/**/*.test.ts\""
   },
   "private": true,
   "expo": {
