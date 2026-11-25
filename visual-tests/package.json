@@ -1,0 +1,13 @@
+{
+  "name": "visual-tests",
+  "private": true,
+  "description": "Pixel/visual regression tests — isolated so they never touch the apps' production installs.",
+  "scripts": {
+    "test:web": "playwright test tests/web.spec.ts",
+    "test:generator": "playwright test tests/generator-electron.spec.ts",
+    "update": "playwright test --update-snapshots"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1"
+  }
+}
