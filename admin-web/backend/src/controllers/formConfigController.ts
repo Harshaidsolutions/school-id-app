@@ -5,7 +5,7 @@ import { pool } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
 import {
   DEFAULT_FORM_FIELDS,
-  FormFieldConfig,
+  type FormFieldConfig,
   inferFormFieldsFromColumnCounts,
   inferFormFieldsFromExcelHeaders,
   inferFormFieldsFromStudentRows,
