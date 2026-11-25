@@ -311,6 +311,10 @@ export function AppLayout() {
     function onPointerDown(event: MouseEvent) {
       if (noticeRef.current && !noticeRef.current.contains(event.target as Node)) {
         setNoticeOpen(false);
+        setNoticeSelecting(false);
+        setNoticeSelected(new Set());
+        setNoticeOtpOpen(false);
+        setOpenNoticeId(null);
       }
     }
     document.addEventListener("mousedown", onPointerDown);
@@ -495,12 +499,10 @@ export function AppLayout() {
                     return;
                   }
                   setNoticeOpen((open) => {
-                    if (open) {
-                      setNoticeSelecting(false);
-                      setNoticeSelected(new Set());
-                      setNoticeOtpOpen(false);
-                      setOpenNoticeId(null);
-                    }
+                    setNoticeSelecting(false);
+                    setNoticeSelected(new Set());
+                    setNoticeOtpOpen(false);
+                    setOpenNoticeId(null);
                     return !open;
                   });
                 }}
