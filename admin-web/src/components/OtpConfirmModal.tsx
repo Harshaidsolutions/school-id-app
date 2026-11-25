@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 
 export function OtpConfirmModal({
   title,
@@ -58,8 +59,8 @@ export function OtpConfirmModal({
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-navy/40 px-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-text-navy/40 px-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
@@ -138,6 +139,7 @@ export function OtpConfirmModal({
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
