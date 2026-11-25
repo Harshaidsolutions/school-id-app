@@ -19,7 +19,8 @@
     "start": "npm run migrate --prefix backend && npm start --prefix backend",
     "dev:backend": "npm run dev --prefix backend",
     "test": "node --enable-source-maps --experimental-test-module-mocks --import ./tests/helpers/register.mjs --test --experimental-test-coverage \"tests/unit/**/*.test.ts\"",
-    "test:one": "node --enable-source-maps --experimental-test-module-mocks --import ./tests/helpers/register.mjs --test --experimental-test-coverage"
+    "test:one": "node --enable-source-maps --experimental-test-module-mocks --import ./tests/helpers/register.mjs --test --experimental-test-coverage",
+    "test:component": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -35,10 +36,15 @@
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.1.5",
-    "sucrase": "^3.35.0"
+    "sucrase": "^3.35.0",
+    "vitest": "^2.1.8",
+    "jsdom": "^25.0.1",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/user-event": "^14.5.2"
   }
 }

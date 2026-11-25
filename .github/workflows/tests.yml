@@ -1,0 +1,95 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # ---------------- Backend: pure-logic unit tests (Node built-in runner + sucrase) ----------------
+  backend-unit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin-web/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+
+  # ---------------- Backend: integration tests against a real Postgres + the real app ----------------
+  backend-integration:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin-web/backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: idcard_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/idcard_test
+      JWT_SECRET: ci-test-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm install --no-audit --no-fund
+      - name: Create base tables
+        run: psql "$DATABASE_URL" -f scripts/test-schema.sql
+      - name: Apply migrations
+        run: npm run migrate
+      - name: Run integration tests
+        run: npm run test:integration
+
+  # ---------------- admin-web: unit (Node) + component (Vitest + jsdom) ----------------
+  admin-web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run test:component
+
+  # ---------------- React Native apps: unit (Node) + component (jest-expo) ----------------
+  teacher-app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: teacher-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run test:component
+
+  admin-mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin-mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run test:component

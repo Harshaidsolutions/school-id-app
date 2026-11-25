@@ -174,11 +174,14 @@ app.use((req, res, next) => {
 
 app.use(errorHandler);
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server listening on 0.0.0.0:${PORT} (NODE_ENV=${process.env.NODE_ENV ?? "undefined"})`);
-  console.log(`  Static dir:  ${publicDir}`);
-  schedulePhotoCleanup();
-});
+// In tests the app is imported by supertest and must not bind a port or start cron.
+if (process.env.NODE_ENV !== "test") {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server listening on 0.0.0.0:${PORT} (NODE_ENV=${process.env.NODE_ENV ?? "undefined"})`);
+    console.log(`  Static dir:  ${publicDir}`);
+    schedulePhotoCleanup();
+  });
+}
 
 process.on("SIGINT", async () => {
   await pool.end();

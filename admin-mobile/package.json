@@ -8,7 +8,8 @@
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
     "ios": "expo run:ios",
-    "test": "node --enable-source-maps --experimental-test-module-mocks --import ./tests/helpers/register.mjs --test --experimental-test-coverage \"tests/unit/**/*.test.ts\""
+    "test": "node --enable-source-maps --experimental-test-module-mocks --import ./tests/helpers/register.mjs --test --experimental-test-coverage \"tests/unit/**/*.test.ts\"",
+    "test:component": "jest --config jest.config.js"
   },
   "dependencies": {
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.1",
@@ -44,6 +45,10 @@
     "@types/react": "~19.1.10",
     "typescript": "~5.9.2",
     "babel-preset-expo": "~54.0.12",
-    "sucrase": "^3.35.0"
+    "sucrase": "^3.35.0",
+    "jest": "^29.7.0",
+    "jest-expo": "~54.0.0",
+    "@testing-library/react-native": "^12.9.0",
+    "react-test-renderer": "18.3.1"
   }
 }
