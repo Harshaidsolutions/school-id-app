@@ -14,7 +14,9 @@
     "migrate:supabase-to-rds": "tsx scripts/migrateSupabaseToRds.ts",
     "verify:db-counts": "tsx scripts/verifyDbCounts.ts",
     "diagnose:admin-scope": "tsx scripts/diagnoseAdminScope.ts",
-    "test": "npm run build && node --test tests/*.cjs"
+    "test": "node --enable-source-maps --import ./tests/helpers/register.mjs --test --experimental-test-coverage \"tests/unit/**/*.test.ts\"",
+    "test:cov": "node --enable-source-maps --import ./tests/helpers/register.mjs --test --experimental-test-coverage \"tests/unit/**/*.test.ts\"",
+    "test:one": "node --enable-source-maps --import ./tests/helpers/register.mjs --test --experimental-test-coverage"
   },
   "keywords": [],
   "author": "",
@@ -53,6 +55,7 @@
     "@types/sharp": "^0.31.1",
     "@types/xlsx": "^0.0.35",
     "nodemon": "^3.1.14",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "sucrase": "^3.35.0"
   }
 }
